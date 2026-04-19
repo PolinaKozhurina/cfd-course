@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FLIC (Fluid-in-Cell) — Полная лекция с интерактивным расчетом</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$'],['\\[','\\]']]},svg:{fontCache:'global'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8;--sidebar-bg:#2b2520;--sidebar-text:#d9cfc0;--highlight:#fff3cd;--shadow:rgba(44,36,25,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:250px;background:var(--sidebar-bg);color:var(--sidebar-text);padding:1.5rem 1rem;overflow-y:auto;z-index:100;border-right:3px solid var(--accent);font-size:.8rem}
+.sidebar h2{font-family:'Playfair Display',serif;font-size:.85rem;font-weight:700;color:#fff;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.03em}
+.sidebar .g{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--accent);margin:.7rem 0 .15rem;text-transform:uppercase;letter-spacing:.08em}
+.sidebar a{display:block;color:var(--sidebar-text);text-decoration:none;font-size:.76rem;line-height:1.35;padding:.15rem 0 .15rem .5rem;border-left:2px solid transparent;transition:all .15s}
+.sidebar a:hover{color:#fff;border-left-color:var(--accent);background:rgba(180,74,45,.08)}
+.sidebar .sep{height:1px;background:rgba(255,255,255,.07);margin:.4rem 0}
+.main{margin-left:250px;max-width:860px;padding:2.5rem 3rem 5rem}
+.hero{margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:2px solid var(--border)}
+.hero .tag{font-family:'JetBrains Mono',monospace;font-size:.68rem;text-transform:uppercase;letter-spacing:.14em;color:var(--accent);margin-bottom:.4rem}
+.hero h1{font-family:'Playfair Display',serif;font-size:2.3rem;font-weight:900;line-height:1.12;margin-bottom:.5rem}
+.hero .sub{font-size:1rem;color:var(--text2);font-style:italic;max-width:600px}
+h2{font-family:'Playfair Display',serif;font-size:1.65rem;font-weight:900;margin:2.5rem 0 .8rem;padding-top:.6rem}
+h2 .n{color:var(--accent);font-weight:400;margin-right:.15em}
+h3{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;color:var(--accent);margin:1.5rem 0 .5rem}
+h4{font-size:.92rem;font-weight:600;color:var(--accent2);margin:1.2rem 0 .35rem}
+p{margin-bottom:.8rem}
+.fb{background:var(--bg2);border-left:4px solid var(--accent);padding:.85rem 1.1rem;margin:1rem 0;border-radius:0 6px 6px 0}
+.fb.g{border-left-color:var(--accent2)}.fb.b{border-left-color:var(--accent3)}
+.fb.box{background:#fdf6ee;border:2px solid var(--accent);border-left:6px solid var(--accent);padding:1rem 1.2rem}
+.note{background:var(--highlight);border:1px solid #e6d9a8;border-radius:6px;padding:.75rem 1rem;margin:1rem 0;font-size:.9rem}
+.note strong{color:var(--accent)}
+.kp{background:#e8f4f0;border:1px solid #b8d9cf;border-radius:6px;padding:.75rem 1rem;margin:1rem 0}
+.kp strong{color:var(--accent2)}
+.warn{background:#fde8e8;border:1px solid #e8b8b8;border-radius:6px;padding:.75rem 1rem;margin:1rem 0}
+.warn strong{color:#c44}
+.algo{background:var(--code-bg);color:var(--code-text);font-family:'JetBrains Mono',monospace;font-size:.74rem;line-height:1.55;padding:1.3rem 1.4rem;border-radius:8px;margin:1.2rem 0;overflow-x:auto;position:relative;box-shadow:0 4px 16px var(--shadow);white-space:pre}
+.algo::before{content:attr(data-title);position:absolute;top:0;left:1rem;transform:translateY(-50%);background:var(--accent);color:#fff;font-size:.6rem;font-weight:500;padding:.1rem .5rem;border-radius:4px;text-transform:uppercase;letter-spacing:.08em}
+.kw{color:#e6a07c}.cm{color:#7a8a6e;font-style:italic}.vr{color:#8bc6d4}
+code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:.1em .3em;border-radius:3px;color:var(--accent)}
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.88rem}
+thead th{background:var(--bg2);font-weight:700;text-align:left;padding:8px 12px;border:1px solid var(--border)}
+td{padding:6px 12px;border:1px solid var(--border)}
+.steps{counter-reset:step}
+.step{counter-increment:step;display:flex;gap:.8rem;margin:.6rem 0;align-items:flex-start}
+.step::before{content:counter(step);background:var(--accent);color:#fff;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.72rem;min-width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.fig{margin:1.5rem 0;text-align:center}
+.fig img,.fig canvas{max-width:100%;border-radius:6px;box-shadow:0 2px 12px var(--shadow)}
+.cap{font-size:.82rem;color:var(--text2);font-style:italic;margin-top:.4rem}
+.timeline{display:flex;gap:0;margin:1.5rem 0;align-items:stretch}
+.timeline .era{flex:1;padding:.6rem .8rem;text-align:center;font-size:.82rem;border-top:3px solid var(--accent)}
+.timeline .era:nth-child(even){border-top-color:var(--accent2)}
+.timeline .era strong{display:block;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--accent);margin-bottom:.2rem}
+
+.solver-wrap{background:var(--bg2);border:2px solid var(--border);border-radius:10px;padding:1.5rem;margin:1.5rem 0}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.6rem;margin:.8rem 0}
+.ctrl{display:flex;flex-direction:column;gap:.15rem}
+.ctrl label{font-size:.72rem;color:var(--text2);font-family:'JetBrains Mono',monospace}
+.ctrl input,.ctrl select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)}
+.ctrl input:focus{outline:none;border-color:var(--accent)}
+.run-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 24px;font-family:'Source Serif 4',serif;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .15s}
+.run-btn:hover{background:#9a3d24}
+.run-btn:disabled{opacity:.4;cursor:not-allowed}
+.status{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-left:.8rem}
+.plots{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;margin:1rem 0}
+@media(max-width:1000px){.plots{grid-template-columns:1fr}.sidebar{display:none}.main{margin-left:0;padding:1.5rem}}
+.plot{background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border);box-shadow:0 1px 4px var(--shadow)}
+.plot-title{text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace}
+canvas{width:100%;height:auto;display:block}
+.legend-row{display:flex;gap:1.2rem;justify-content:center;margin:.5rem 0;font-size:.78rem;color:var(--text2)}
+.legend-row span{display:flex;align-items:center;gap:.3rem}
+.legend-row i{display:inline-block;width:16px;height:3px;border-radius:2px}
+.vtable{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:.78rem;margin:.6rem 0}
+.vtable th{background:var(--bg3);color:var(--accent);padding:5px 8px;text-align:left;border:1px solid var(--border)}
+.vtable td{padding:4px 8px;border:1px solid var(--border)}
+.pass{color:var(--accent2);font-weight:600}
+.fail{color:#c44;font-weight:600}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin:1rem 0}
+@media(max-width:700px){.two-col{grid-template-columns:1fr}}
+mjx-container{max-width:100%!important}
+mjx-container svg{max-width:100%;height:auto}
+</style>
+</head>
+<body>
+
+<!-- ===================== SIDEBAR ===================== -->
+<nav class="sidebar">
+  <h2>FLIC — Fluid-in-Cell</h2>
+  <div class="g">Теория</div>
+  <a href="#intro">§1 Введение</a>
+  <a href="#history">§2 Историческая справка</a>
+  <a href="#idea">§3 Основная идея</a>
+  <a href="#euler">§4 Уравнения Эйлера</a>
+  <div class="sep"></div>
+  <div class="g">Алгоритм</div>
+  <a href="#stage1">§5 Этап I — Лагранж</a>
+  <a href="#stage2">§6 Этап II — Эйлер</a>
+  <a href="#conservation">§7 Консервативная форма</a>
+  <a href="#2d">§8 Двумерный случай</a>
+  <a href="#full-algo">§9 Полный алгоритм</a>
+  <div class="sep"></div>
+  <div class="g">Расширения</div>
+  <a href="#modern">§10 Модификации</a>
+  <a href="#vof">§11 FLIC-VOF</a>
+  <div class="sep"></div>
+  <div class="g">Практика</div>
+  <a href="#errors">§12 Частые ошибки</a>
+  <a href="#solver">§13 Интерактивный расчет</a>
+  <a href="#verification">§14 Верификация</a>
+</nav>
+
+<!-- ===================== MAIN ===================== -->
+<div class="main">
+
+<div class="hero">
+  <div class="tag">Вычислительная гидродинамика · Лекция</div>
+  <h1>Метод FLIC (Fluid-in-Cell)</h1>
+  <p class="sub">Двухэтапная разностная схема для уравнений газовой динамики. Лагранжев этап, эйлеров перенос, ударные волны, свободные поверхности.</p>
+</div>
+
+<!-- ================================================================ -->
+<!-- §1 ВВЕДЕНИЕ -->
+<!-- ================================================================ -->
+<h2 id="intro"><span class="n">§1</span> Введение</h2>
+
+<p>Уравнения газовой динамики (уравнения Эйлера) описывают движение невязкого сжимаемого газа. Их решения могут содержать <strong>разрывы</strong> — ударные волны и контактные поверхности, — которые возникают за конечное время даже из гладких начальных данных. Это делает аналитические методы неприменимыми для большинства практических задач, и нам нужны <em>численные методы</em>, способные корректно воспроизводить эти разрывы.</p>
+
+<p>Метод FLIC (Fluid-in-Cell) — один из первых успешных численных методов для задач с ударными волнами. Он был предложен Gentry, Martin и Daly в 1966 году и быстро стал стандартным инструментом в вычислительной гидродинамике. Ключевая идея метода — <strong>расщепление вычислений на два этапа</strong>: лагранжев (учет сил давления, без перетекания) и эйлеров (конвективный перенос через неподвижную сетку).</p>
+
+<div class="kp"><strong>Почему FLIC?</strong> Метод значительно проще схемы Годунова (не требует решения задачи Римана на каждой грани), строго <em>консервативен</em> (гарантирует сохранение массы, импульса и энергии), и естественно работает с многомерными задачами через расщепление по направлениям. Это делает его прекрасным введением в вычислительную газодинамику, прежде чем переходить к более сложным методам (Годунов, MUSCL, WENO).</div>
+
+<h3>Для каких задач</h3>
+<p>FLIC предназначен для решения <strong>гиперболических систем законов сохранения</strong> — задач, в которых информация распространяется с конечной скоростью (скоростью звука) и могут формироваться разрывы. Типичные примеры:</p>
+<ul style="margin:.5rem 0 .8rem 1.5rem">
+<li>Ударные трубы и взрывные волны (тест Сода, проблема Седова)</li>
+<li>Обтекание тел сверхзвуковым потоком</li>
+<li>Задачи со свободной поверхностью (FLIC-VOF)</li>
+<li>Детонационные волны в твёрдых взрывчатых веществах (в комбинации с 2DE Мейдера)</li>
+</ul>
+
+<h3>Структура лекции</h3>
+<div class="steps">
+  <div class="step">Выводим уравнения Эйлера в консервативной форме и обсуждаем их свойства (§4)</div>
+  <div class="step">Подробно разбираем каждый этап FLIC с полным выводом формул (§5–§7)</div>
+  <div class="step">Обобщаем на двумерный случай со Strang splitting (§8)</div>
+  <div class="step">Записываем полный алгоритм в виде псевдокода (§9)</div>
+  <div class="step">Реализуем работающий JS-солвер и верифицируем на задаче Сода (§13–§14)</div>
+</div>
+
+<!-- ================================================================ -->
+<!-- §2 ИСТОРИЯ -->
+<!-- ================================================================ -->
+<h2 id="history"><span class="n">§2</span> Историческая справка</h2>
+
+<div class="timeline">
+  <div class="era"><strong>1957</strong>Evans &amp; Harlow<br>PIC</div>
+  <div class="era"><strong>1963</strong>Harlow<br>MAC</div>
+  <div class="era"><strong>1966</strong>Gentry, Martin,<br>Daly — <b>FLIC</b></div>
+  <div class="era"><strong>1970-е</strong>FLIC-II,<br>улучшения</div>
+  <div class="era"><strong>1980-е</strong>PLIC,<br>VOF</div>
+  <div class="era"><strong>2000-е</strong>MPM,<br>ALE</div>
+</div>
+
+<p>Истоки метода FLIC лежат в работах Лос-Аламосской национальной лаборатории, где в 1950-х годах начались первые серьёзные попытки численного моделирования гидродинамических процессов — в первую очередь для задач ядерного оружия.</p>
+
+<h4>PIC — Particle-in-Cell (Evans, Harlow, 1957)</h4>
+<p>Первый метод семейства. Жидкость представлялась набором <em>частиц</em> (material points), несущих массу и энергию. На каждом шаге:</p>
+<div class="steps">
+  <div class="step">Частицы распределяют свои свойства на фиксированную эйлерову сетку</div>
+  <div class="step">На сетке решаются уравнения движения (давление, скорости)</div>
+  <div class="step">Частицы перемещаются по полученным скоростям</div>
+</div>
+<p>Проблема PIC — статистический шум из-за конечного числа частиц в ячейке. При малом числе частиц решение становится «шумным».</p>
+
+<h4>MAC — Marker-and-Cell (Harlow, 1963)</h4>
+<p>Гибридный метод: частицы-маркеры используются только для отслеживания свободной поверхности, а вся гидродинамика решается на сетке. Этот подход позже развился в VOF-методы.</p>
+
+<h4>FLIC — Fluid-in-Cell (Gentry, Martin, Daly, 1966)</h4>
+<p>Главное отличие от PIC: <strong>полный отказ от частиц</strong>. Все величины — плотность, скорость, давление, энергия — хранятся <em>только на сетке</em>. Название подчёркивает: «жидкость в ячейке», а не «частицы в ячейке». Это устранило статистический шум PIC и сделало метод значительно быстрее (не нужно сортировать и перемещать частицы).</p>
+
+<p>Идея расщепления на лагранжев и эйлеров этапы, заложенная в FLIC, стала основой для целого семейства современных методов:</p>
+<table>
+<thead><tr><th>Метод</th><th>Развитие идеи FLIC</th><th>Применение</th></tr></thead>
+<tbody>
+<tr><td><strong>FLIC-II</strong></td><td>Улучшенная аппроксимация потоков, коррекция на невязку</td><td>Ударные трубы</td></tr>
+<tr><td><strong>PLIC</strong></td><td>Кусочно-линейная реконструкция интерфейса вместо донорской схемы</td><td>Многофазные потоки</td></tr>
+<tr><td><strong>ALE</strong></td><td>Произвольное лагранжево-эйлерово описание; сетка может двигаться</td><td>Задачи с большими деформациями</td></tr>
+<tr><td><strong>MPM</strong></td><td>Возврат к частицам, но с формулировкой на сетке; гибрид PIC + FEM</td><td>Разрушение, сыпучие среды</td></tr>
+</tbody>
+</table>
+
+<!-- ================================================================ -->
+<!-- §3 ОСНОВНАЯ ИДЕЯ -->
+<!-- ================================================================ -->
+<h2 id="idea"><span class="n">§3</span> Основная идея — двухэтапное расщепление</h2>
+
+<p>Физические процессы в газе можно разделить на два типа:</p>
+
+<div class="two-col">
+<div class="fb">
+<h4>Акустические процессы</h4>
+<p>Давление создаёт силу $-\nabla p$, которая ускоряет газ и совершает работу $-p \nabla \cdot \mathbf{u}$. Если мы «заморозим» перенос вещества и оставим только давление, мы получим <strong>лагранжеву</strong> картину: каждый элемент газа ускоряется под действием окружающего давления, но не перетекает к соседям.</p>
+</div>
+<div class="fb g">
+<h4>Конвективный перенос</h4>
+<p>Газ движется со скоростью $\mathbf{u}$ и переносит с собой массу, импульс и энергию через неподвижные границы ячеек. Это чисто <strong>эйлеров</strong> процесс — адвекция по неподвижной сетке.</p>
+</div>
+</div>
+
+<p>Рассмотрим уравнение непрерывности $\frac{\partial \rho}{\partial t} + \frac{\partial (\rho u)}{\partial x} = 0$ в лагранжевых координатах. Если двигаться вместе с жидкостью (субстанциональная производная $\frac{D\rho}{Dt} = \frac{\partial \rho}{\partial t} + u\frac{\partial \rho}{\partial x}$), то:</p>
+
+$$\frac{D\rho}{Dt} = -\rho \frac{\partial u}{\partial x}$$
+
+<p>Для одномерного движения без сжатия ($\frac{\partial u}{\partial x} = 0$) плотность не меняется вдоль траектории жидкой частицы. Это объясняет, почему на лагранжевом этапе FLIC плотность остается прежней — мы «замораживаем» конвекцию.</p>
+
+<h3>Оператор расщепления (operator splitting)</h3>
+
+<p>Математически система уравнений Эйлера записывается как:</p>
+
+$$\frac{\partial U}{\partial t} + \frac{\partial F}{\partial x} = 0$$
+
+<p>Мы разделяем правую часть на два оператора:</p>
+
+$$\frac{\partial U}{\partial t} = \underbrace{L_{\text{pressure}}(U)}_{\text{I — Лагранж}} + \underbrace{L_{\text{advection}}(U)}_{\text{II — Эйлер}}$$
+
+<p>и применяем их последовательно. Для первого порядка точности: $U^{n+1} = L_2(\Delta t) \circ L_1(\Delta t)(U^n)$. Ошибка расщепления $\sim O(\Delta t)$ — такая же, как у самой разностной схемы.</p>
+
+<div class="note"><strong>Физическая интерпретация:</strong>
+<br>• <strong>Этап I</strong> — представьте, что стенки ячеек <em>подвижны</em> и двигаются вместе с газом. Давление на стенках создаёт силу, ускоряющую газ. Вещество остаётся в «своей» ячейке.
+<br>• <strong>Этап II</strong> — теперь стенки «возвращаются» на свои фиксированные позиции (эйлерова сетка). Вещество, которое «набежало» на стенку, перетекает в соседнюю ячейку. Количество перетекшего вещества определяется скоростью на границе.</div>
+
+<!-- ================================================================ -->
+<!-- §4 УРАВНЕНИЯ ЭЙЛЕРА -->
+<!-- ================================================================ -->
+<h2 id="euler"><span class="n">§4</span> Уравнения Эйлера для идеального газа</h2>
+
+<h3>4.1 Система в консервативной форме</h3>
+
+<p>Одномерные уравнения Эйлера — это система из трёх законов сохранения. Каждый описывает баланс некоторой интенсивной величины:</p>
+
+<h4>Сохранение массы</h4>
+$$\frac{\partial \rho}{\partial t} + \frac{\partial (\rho u)}{\partial x} = 0$$
+<p>Масса в любом объёме меняется только за счёт потока через границы. Источников или стоков массы нет.</p>
+
+<h4>Сохранение импульса</h4>
+$$\frac{\partial (\rho u)}{\partial t} + \frac{\partial (\rho u^2 + p)}{\partial x} = 0$$
+<p>Импульс меняется за счёт конвекции ($\rho u^2$) и давления ($p$). Обратите внимание: давление входит как <em>часть потоковой функции</em>, а не как правая часть.</p>
+
+<h4>Сохранение полной энергии</h4>
+$$\frac{\partial (\rho E)}{\partial t} + \frac{\partial [u(\rho E + p)]}{\partial x} = 0$$
+<p>где $E = e + \frac{1}{2}u^2$ — полная удельная энергия (внутренняя + кинетическая). Поток энергии $u(\rho E + p)$ включает энтальпию $\rho E + p = \rho h + \frac{1}{2}\rho u^2$.</p>
+
+<h3>4.2 Вектор консервативных переменных и потоковая функция</h3>
+
+<p>В компактной форме:</p>
+
+$$\frac{\partial U}{\partial t} + \frac{\partial F(U)}{\partial x} = 0, \qquad U = \begin{pmatrix} \rho \\ \rho u \\ \rho E \end{pmatrix}, \quad F = \begin{pmatrix} \rho u \\ \rho u^2 + p \\ u(\rho E + p) \end{pmatrix}$$
+
+<p>Система незамкнута — три уравнения, четыре неизвестных ($\rho, u, E, p$). Нужно ещё одно соотношение.</p>
+
+<h3>4.3 Замыкание — уравнение состояния идеального газа</h3>
+
+$$p = (\gamma - 1)\rho e = (\gamma - 1)\left(\rho E - \frac{\rho u^2}{2}\right)$$
+
+<p>где $\gamma = c_p / c_v$ — показатель адиабаты. Для воздуха $\gamma = 1.4$ (двухатомный газ), для аргона $\gamma = 5/3$ (одноатомный), для продуктов детонации часто $\gamma = 3$.</p>
+
+<p>Скорость звука в идеальном газе:</p>
+$$a = \sqrt{\frac{\gamma p}{\rho}} = \sqrt{\gamma(\gamma-1)e}$$
+
+<p>Это максимальная скорость распространения малых возмущений. Она определяет <strong>условие CFL</strong>: шаг по времени ограничен тем, что информация не должна «перепрыгнуть» через ячейку за один шаг:</p>
+
+$$\Delta t \leq \frac{\Delta x}{\max_i(|u_i| + a_i)} \cdot \text{CFL}, \qquad \text{CFL} \leq 1$$
+
+<h3>4.4 Типы волн в решениях</h3>
+
+<p>Система уравнений Эйлера является <strong>строго гиперболической</strong> — она имеет три вещественных собственных значения:</p>
+
+$$\lambda_1 = u - a, \quad \lambda_2 = u, \quad \lambda_3 = u + a$$
+
+<p>Каждому собственному значению соответствует свой тип волны:</p>
+
+<table>
+<thead><tr><th>Волна</th><th>Скорость</th><th>Тип</th><th>Что происходит</th></tr></thead>
+<tbody>
+<tr><td>1-волна</td><td>$u - a$</td><td>Ударная или разрежение</td><td>Скачок или плавное изменение $\rho, p, u$</td></tr>
+<tr><td>2-волна</td><td>$u$</td><td>Контактный разрыв</td><td>Скачок $\rho$, но $p$ и $u$ непрерывны</td></tr>
+<tr><td>3-волна</td><td>$u + a$</td><td>Ударная или разрежение</td><td>Скачок или плавное изменение $\rho, p, u$</td></tr>
+</tbody>
+</table>
+
+<p>В задаче Сода (тест §13) мы увидим все три типа: <strong>волну разрежения</strong> (1-волна, движется влево), <strong>контактный разрыв</strong> (2-волна, движется вправо), и <strong>ударную волну</strong> (3-волна, движется вправо). Метод FLIC должен корректно воспроизвести все три.</p>
+
+<!-- ================================================================ -->
+<!-- §5 ЭТАП I — ЛАГРАНЖ -->
+<!-- ================================================================ -->
+<h2 id="stage1"><span class="n">§5</span> Этап I — Лагранжев шаг (подробный вывод)</h2>
+
+<div class="fb box"><strong>Физика этапа:</strong> мы «замораживаем» конвекцию (перенос вещества) и учитываем только <strong>силы давления</strong>. Элементы газа ускоряются и меняют энергию, но масса каждой ячейки остаётся прежней. Это эквивалентно движению в лагранжевых координатах.</div>
+
+<h3>5.1 Вывод формулы для скорости</h3>
+
+<p>Уравнение импульса в лагранжевой форме (второй закон Ньютона для элемента газа):</p>
+
+$$\rho \frac{Du}{Dt} = -\frac{\partial p}{\partial x}$$
+
+<p>Дискретизация: элемент газа — ячейка $i$. Давление действует на её левую и правую границы. Сила на единицу площади — разность давлений:</p>
+
+$$\rho_i \frac{\tilde{u}_i - u_i^n}{\Delta t} = -\frac{p_{i+1/2} - p_{i-1/2}}{\Delta x}$$
+
+<p>Отсюда:</p>
+
+$$\boxed{\tilde{u}_i = u_i^n - \frac{\Delta t}{\rho_i^n} \cdot \frac{p_{i+1/2}^n - p_{i-1/2}^n}{\Delta x}}$$
+
+<p>Давление на границе — среднее арифметическое соседних ячеек:</p>
+
+$$p_{i+1/2}^n = \frac{p_i^n + p_{i+1}^n}{2}$$
+
+<div class="note"><strong>Почему среднее арифметическое?</strong> Это простейшая аппроксимация 2-го порядка. В более продвинутых методах (Годунов) здесь решается задача Римана, что даёт точное значение на границе. В FLIC мы жертвуем точностью ради простоты — и компенсируем это искусственной вязкостью (§5.4).</div>
+
+<h3>5.2 Вывод формулы для энергии</h3>
+
+<p>Уравнение энергии в лагранжевой форме:</p>
+
+$$\rho \frac{DE}{Dt} = -\frac{\partial (pu)}{\partial x}$$
+
+<p>Правая часть $-\frac{\partial (pu)}{\partial x}$ — это мощность сил давления: давление $p$ на границе, умноженное на скорость $u$ на этой границе, даёт поток энергии.</p>
+
+<p>Дискретизация:</p>
+
+$$\rho_i \frac{\tilde{E}_i - E_i^n}{\Delta t} = -\frac{(pu)_{i+1/2}^n - (pu)_{i-1/2}^n}{\Delta x}$$
+
+$$\boxed{\tilde{E}_i = E_i^n - \frac{\Delta t}{\rho_i^n} \cdot \frac{(pu)_{i+1/2}^n - (pu)_{i-1/2}^n}{\Delta x}}$$
+
+<p>где произведение давления на скорость на границе:</p>
+
+$$(pu)_{i+1/2}^n = p_{i+1/2}^n \cdot u_{i+1/2}^n, \qquad u_{i+1/2}^n = \frac{u_i^n + u_{i+1}^n}{2}$$
+
+<h3>5.3 Плотность на лагранжевом этапе</h3>
+
+$$\boxed{\tilde{\rho}_i = \rho_i^n}$$
+
+<p>Плотность <em>не меняется</em>. Вещество не перетекает — мы ещё не перешли к эйлеровой сетке. Масса ячейки $m_i = \rho_i \Delta x$ сохраняется точно.</p>
+
+<h3>5.4 Граничные условия (лагранжев этап)</h3>
+
+<p>На границах области нужно определить $p_{1/2}$ (левая граница) и $p_{N+1/2}$ (правая). Для задачи Сода используются <strong>отражающие (зеркальные) условия</strong>:</p>
+
+$$p_{1/2} = p_1, \quad p_{N+1/2} = p_N, \quad u_{1/2} = 0, \quad u_{N+1/2} = 0$$
+
+<p>Физически это означает, что на границе стоит жёсткая стенка — давление от неё равно давлению в ячейке, а скорость нормальная к стенке обнуляется.</p>
+
+<!-- ================================================================ -->
+<!-- §6 ЭТАП II — ЭЙЛЕР -->
+<!-- ================================================================ -->
+<h2 id="stage2"><span class="n">§6</span> Этап II — Эйлеров перенос (подробный вывод)</h2>
+
+<div class="fb box"><strong>Физика этапа:</strong> возвращаемся к неподвижной сетке. Газ, который на лагранжевом этапе «сдвинулся», теперь должен перетечь через фиксированные границы ячеек. Мы вычисляем потоки массы, импульса и энергии через каждую границу.</div>
+
+<h3>6.1 Скорость на границе</h3>
+
+<p>Скорость на границе ячеек $i$ и $i+1$ берётся из лагранжева этапа (тильдовые значения):</p>
+
+$$u_{i+1/2}^* = \tilde{u}_{i+1/2} = \frac{\tilde{u}_i + \tilde{u}_{i+1}}{2}$$
+
+<div class="warn"><strong>Ошибка №2:</strong> Нельзя использовать $u^{n+1}$ (которого ещё нет) или $u^n$ (начало шага). Для переноса нужны именно <em>промежуточные</em> скорости $\tilde{u}$, полученные после лагранжева этапа.</div>
+
+<h3>6.2 Масса через границу</h3>
+
+<p>Масса, перетекающая через границу $i+1/2$ за время $\Delta t$:</p>
+
+$$\Delta M_{i+1/2} = \rho_{i+1/2}^* \cdot u_{i+1/2}^* \cdot \Delta t$$
+
+<p>Если $\Delta M > 0$ — масса течёт <em>вправо</em> (из ячейки $i$ в $i+1$). Если $\Delta M < 0$ — масса течёт <em>влево</em>.</p>
+
+<h3>6.3 Донорская ячейка (upwind) — ключевой момент</h3>
+
+<p>Какую плотность использовать на границе — $\rho_i$ или $\rho_{i+1}$? Ответ даёт <strong>принцип апвиндинга</strong>: берём значение из ячейки, <em>откуда</em> течёт вещество (донор):</p>
+
+$$\rho_{i+1/2}^* = \begin{cases} \tilde{\rho}_i & \text{если } u_{i+1/2}^* \geq 0 \quad \text{(поток вправо → донор слева)} \\ \tilde{\rho}_{i+1} & \text{если } u_{i+1/2}^* < 0 \quad \text{(поток влево → донор справа)} \end{cases}$$
+
+<p>Аналогично для импульса и энергии — каждая величина «уносится» с потоком из ячейки-донора:</p>
+
+$$(\rho u)_{i+1/2}^* = \begin{cases} \rho_i \tilde{u}_i & \text{если } u^* \geq 0 \\ \rho_{i+1} \tilde{u}_{i+1} & \text{если } u^* < 0 \end{cases}, \qquad (\rho E)_{i+1/2}^* = \begin{cases} \rho_i \tilde{E}_i & \text{если } u^* \geq 0 \\ \rho_{i+1} \tilde{E}_{i+1} & \text{если } u^* < 0 \end{cases}$$
+
+<div class="kp"><strong>Почему upwind, а не центральные разности?</strong> Центральная аппроксимация ($\rho^* = \frac{1}{2}(\rho_i + \rho_{i+1})$) неустойчива для конвективных задач — она порождает нефизические осцилляции вблизи разрывов. Апвиндинг добавляет <em>числовую диффузию</em>, которая стабилизирует схему, но размазывает разрывы на несколько ячеек. Это плата за устойчивость в методе 1-го порядка.</div>
+
+<h3>6.4 Что переносится через границу</h3>
+
+<p>Каждый поток массы $\Delta M$ несёт с собой импульс и энергию пропорционально значениям в ячейке-доноре:</p>
+
+<table>
+<thead><tr><th>Величина</th><th>Поток через $i+1/2$</th><th>Физический смысл</th></tr></thead>
+<tbody>
+<tr><td>Масса</td><td>$\Delta M = \rho^* u^* \Delta t$</td><td>Сколько кг перетекло</td></tr>
+<tr><td>Импульс</td><td>$\Delta(Mu) = (\rho u)^* u^* \Delta t$</td><td>Сколько импульса унесло</td></tr>
+<tr><td>Энергия</td><td>$\Delta(ME) = (\rho E)^* u^* \Delta t$</td><td>Сколько энергии унесло</td></tr>
+</tbody>
+</table>
+
+<!-- ================================================================ -->
+<!-- §7 КОНСЕРВАТИВНАЯ ФОРМА -->
+<!-- ================================================================ -->
+<h2 id="conservation"><span class="n">§7</span> Консервативные уравнения обновления</h2>
+
+<p>После вычисления потоков на всех границах обновляем консервативные переменные. Ключевой принцип — <strong>телескопичность</strong>: что вышло из ячейки $i$ через правую грань, то вошло в ячейку $i+1$ через левую. Это гарантирует точное сохранение.</p>
+
+<h4>Обновление массы</h4>
+$$\boxed{\rho_i^{n+1} = \rho_i^n - \frac{\Delta t}{\Delta x}\left[\rho_{i+1/2}^* u_{i+1/2}^* - \rho_{i-1/2}^* u_{i-1/2}^*\right]}$$
+
+<h4>Обновление импульса</h4>
+$$\boxed{(\rho u)_i^{n+1} = (\rho u)_i^n - \frac{\Delta t}{\Delta x}\left[(\rho u)_{i+1/2}^* u_{i+1/2}^* - (\rho u)_{i-1/2}^* u_{i-1/2}^*\right]}$$
+
+<h4>Обновление полной энергии</h4>
+$$\boxed{(\rho E)_i^{n+1} = (\rho E)_i^n - \frac{\Delta t}{\Delta x}\left[(\rho E)_{i+1/2}^* u_{i+1/2}^* - (\rho E)_{i-1/2}^* u_{i-1/2}^*\right]}$$
+
+<h4>Восстановление примитивных переменных</h4>
+<p>Из консервативных переменных восстанавливаем физические величины:</p>
+
+$$u_i^{n+1} = \frac{(\rho u)_i^{n+1}}{\rho_i^{n+1}}, \qquad E_i^{n+1} = \frac{(\rho E)_i^{n+1}}{\rho_i^{n+1}}$$
+
+$$e_i^{n+1} = E_i^{n+1} - \frac{(u_i^{n+1})^2}{2}, \qquad p_i^{n+1} = (\gamma - 1)\rho_i^{n+1} e_i^{n+1}$$
+
+<div class="note"><strong>Проверка сохранения:</strong> суммарная масса $\sum_i \rho_i \Delta x$, суммарный импульс $\sum_i (\rho u)_i \Delta x$ и суммарная энергия $\sum_i (\rho E)_i \Delta x$ должны сохраняться до машинной точности (~$10^{-14}$) в замкнутой области. Если нет — ошибка в индексации потоков.</div>
+
+<!-- ================================================================ -->
+<!-- §8 ДВУМЕРНЫЙ СЛУЧАЙ -->
+<!-- ================================================================ -->
+<h2 id="2d"><span class="n">§8</span> Двумерный случай и Strang splitting</h2>
+
+<p>В двумерном случае вектор консервативных переменных содержит четыре компоненты:</p>
+
+$$U = (\rho, \; \rho u, \; \rho v, \; \rho E)^T$$
+
+<p>и система уравнений имеет два оператора — по $x$ и по $y$:</p>
+
+$$\frac{\partial U}{\partial t} + \frac{\partial F}{\partial x} + \frac{\partial G}{\partial y} = 0$$
+
+<h3>8.1 Простое расщепление (Lie splitting, 1-й порядок)</h3>
+
+<p>На каждом шаге применяем FLIC сначала по $x$, потом по $y$, с полным $\Delta t$:</p>
+
+$$U^{n+1} = L_y(\Delta t) \circ L_x(\Delta t) \; U^n$$
+
+<p>Порядок точности: $O(\Delta t)$ — первый. Ошибка расщепления $\sim \Delta t \cdot [L_x, L_y]$ (коммутатор операторов).</p>
+
+<h3>8.2 Strang splitting (2-й порядок)</h3>
+
+<p>Чередуем порядок применения операторов с половинным шагом:</p>
+
+$$U^{n+1} = L_x(\tfrac{\Delta t}{2}) \circ L_y(\Delta t) \circ L_x(\tfrac{\Delta t}{2}) \; U^n$$
+
+<p>Ошибка расщепления $\sim \Delta t^2$ — второй порядок. На следующем шаге порядок можно поменять: $L_y(\Delta t/2) \to L_x(\Delta t) \to L_y(\Delta t/2)$.</p>
+
+<div class="warn"><strong>Ошибка №3 (из лекции):</strong> Если применить каждое направление с полным $\Delta t$ вместо $\Delta t/2$, ошибка расщепления станет первого порядка, а при больших градиентах — решение может стать неустойчивым.</div>
+
+<h3>8.3 CFL условие в 2D</h3>
+
+<p>В двумерном случае условие CFL учитывает оба направления:</p>
+
+$$\boxed{\Delta t = \text{CFL} \cdot \frac{1}{\frac{\lambda_x}{\Delta x} + \frac{\lambda_y}{\Delta y}}}, \qquad \lambda_x = \max_{i,j}(|u_{i,j}| + a_{i,j}), \quad \lambda_y = \max_{i,j}(|v_{i,j}| + a_{i,j})$$
+
+<div class="warn"><strong>Ошибка:</strong> Использование одномерной формулы $\Delta t = \text{CFL} \cdot \frac{\Delta x}{\lambda_x}$ в 2D — расчёт «взрывается» из-за нарушения CFL по другому направлению!</div>
+
+<!-- ================================================================ -->
+<!-- §9 ПОЛНЫЙ АЛГОРИТМ -->
+<!-- ================================================================ -->
+<h2 id="full-algo"><span class="n">§9</span> Полный алгоритм (псевдокод)</h2>
+
+<div class="algo" data-title="Алгоритм FLIC — один шаг по времени (1D)">
+<span class="cm">// Дано: ρ[i], u[i], E[i], p[i] — поля на n-м шаге</span>
+
+<span class="kw">0. CFL:</span>
+   <span class="kw">for</span> i = 0..N-1:
+     a[i] = sqrt(γ * p[i] / ρ[i])                <span class="cm">// скорость звука</span>
+     λ = max(λ, |u[i]| + a[i])                    <span class="cm">// максимальная характеристика</span>
+   Δt = CFL * Δx / λ                              <span class="cm">// шаг по времени</span>
+
+<span class="kw">1. ЛАГРАНЖЕВ ЭТАП:</span>                             <span class="cm">// CHECK: FLIC_LAGRANGE</span>
+   <span class="kw">for</span> i = 0..N-1:
+     p_L = (i > 0)   ? (p[i-1] + p[i]) / 2 : p[i]   <span class="cm">// давление на левой грани</span>
+     p_R = (i < N-1)  ? (p[i] + p[i+1]) / 2 : p[i]   <span class="cm">// давление на правой грани</span>
+     u_L = (i > 0)   ? (u[i-1] + u[i]) / 2 : 0       <span class="cm">// скорость на левой грани</span>
+     u_R = (i < N-1)  ? (u[i] + u[i+1]) / 2 : 0       <span class="cm">// скорость на правой грани</span>
+     ũ[i] = u[i] − (Δt / (ρ[i] * Δx)) * (p_R − p_L)  <span class="cm">// обновить скорость</span>
+     Ẽ[i] = E[i] − (Δt / (ρ[i] * Δx)) * (p_R*u_R − p_L*u_L)  <span class="cm">// обновить энергию</span>
+
+<span class="kw">2. ЭЙЛЕРОВ ЭТАП:</span>                                <span class="cm">// CHECK: FLIC_EULER</span>
+   ρ_new = copy(ρ);  ρu_new = ρ * ũ;  ρE_new = ρ * Ẽ
+   <span class="kw">for</span> i = 0..N-2:                                  <span class="cm">// граница i+½</span>
+     u_half = (ũ[i] + ũ[i+1]) / 2                    <span class="cm">// скорость на грани</span>
+     <span class="kw">if</span> u_half ≥ 0:                                   <span class="cm">// донор = ячейка i</span>
+       ρ* = ρ[i],  (ρu)* = ρ[i]*ũ[i],  (ρE)* = ρ[i]*Ẽ[i]
+     <span class="kw">else:</span>                                            <span class="cm">// донор = ячейка i+1</span>
+       ρ* = ρ[i+1],  (ρu)* = ρ[i+1]*ũ[i+1],  (ρE)* = ρ[i+1]*Ẽ[i+1]
+     dM = ρ* * u_half * Δt                            <span class="cm">// CHECK: FLIC_CONSERV</span>
+     ρ_new[i]   −= dM / Δx;    ρ_new[i+1]   += dM / Δx
+     ρu_new[i]  −= (ρu)*u_half*Δt / Δx;  ρu_new[i+1] += ...
+     ρE_new[i]  −= (ρE)*u_half*Δt / Δx;  ρE_new[i+1] += ...
+
+<span class="kw">3. ВОССТАНОВЛЕНИЕ:</span>
+   <span class="kw">for</span> i = 0..N-1:
+     ρ[i] = ρ_new[i]
+     u[i] = ρu_new[i] / ρ[i]
+     E[i] = ρE_new[i] / ρ[i]
+     e[i] = E[i] − 0.5 * u[i]²
+     p[i] = (γ − 1) * ρ[i] * e[i]                    <span class="cm">// EOS</span></div>
+
+<!-- ================================================================ -->
+<!-- §10 МОДИФИКАЦИИ -->
+<!-- ================================================================ -->
+<h2 id="modern"><span class="n">§10</span> Современные модификации и развитие</h2>
+
+<p>Оригинальный FLIC — схема первого порядка точности. Её главный недостаток — <strong>числовая диффузия</strong>: разрывы (ударные волны, контактные поверхности) размазываются на 5-10 ячеек. Развитие метода шло в двух направлениях.</p>
+
+<h4>Повышение порядка аппроксимации</h4>
+<p>Замена донорской схемы на <strong>реконструкцию второго порядка</strong> (MUSCL, van Leer, 1979): вместо постоянного значения в ячейке используется линейный профиль с ограничителем наклона (minmod, superbee). Это уменьшает размазывание разрывов до 2-3 ячеек.</p>
+
+<h4>Точное решение на границе</h4>
+<p>Замена среднего давления $p_{i+1/2} = \frac{1}{2}(p_i + p_{i+1})$ на <strong>решение задачи Римана</strong> (Годунов, 1959). Это даёт точное давление и скорость на границе, но требует итеративного решения нелинейного уравнения на каждой грани — значительно дороже.</p>
+
+<table>
+<thead><tr><th>Метод</th><th>Год</th><th>Порядок</th><th>Граница</th><th>Сложность</th></tr></thead>
+<tbody>
+<tr><td>FLIC</td><td>1966</td><td>1-й</td><td>Среднее $p$</td><td>Очень простая</td></tr>
+<tr><td>FLIC + MUSCL</td><td>1979</td><td>2-й</td><td>Среднее $p$ + реконструкция</td><td>Простая</td></tr>
+<tr><td>Годунов</td><td>1959</td><td>1-й</td><td>Задача Римана</td><td>Средняя</td></tr>
+<tr><td>Годунов + MUSCL</td><td>1984</td><td>2-й</td><td>Задача Римана + реконструкция</td><td>Средняя</td></tr>
+<tr><td>PPM, WENO</td><td>1990-е</td><td>3-5-й</td><td>Многоточечный стенсил</td><td>Высокая</td></tr>
+</tbody>
+</table>
+
+<!-- ================================================================ -->
+<!-- §11 VOF -->
+<!-- ================================================================ -->
+<h2 id="vof"><span class="n">§11</span> Расширение — FLIC-VOF (задачи со свободной поверхностью)</h2>
+
+<p>Для задач с <strong>границей раздела фаз</strong> (вода–воздух, металл–газ) к FLIC добавляется функция заполнения (Volume of Fluid):</p>
+
+$$F_{i,j} \in [0, 1]$$
+
+<ul style="margin:.5rem 0 .8rem 1.5rem">
+<li>$F = 1$ — ячейка полностью заполнена жидкостью</li>
+<li>$F = 0$ — ячейка полностью газовая (пустая)</li>
+<li>$0 < F < 1$ — смешанная ячейка (содержит интерфейс)</li>
+</ul>
+
+<p>Функция $F$ переносится вместе с жидкостью по тем же потокам, что и масса:</p>
+
+$$F_i^{n+1} = F_i^n - \frac{\Delta t}{\Delta x}(F^* u^*_{i+1/2} - F^* u^*_{i-1/2})$$
+
+<p>Для точной реконструкции интерфейса (граница не размазывается) применяется метод <strong>PLIC</strong> (Piecewise Linear Interface Calculation): в каждой смешанной ячейке проводится прямая линия, отсекающая часть $F$ от объёма ячейки.</p>
+
+<!-- ================================================================ -->
+<!-- §12 ОШИБКИ -->
+<!-- ================================================================ -->
+<h2 id="errors"><span class="n">§12</span> Четыре типичных ошибки реализации</h2>
+
+<div class="warn"><strong>Ошибка 1: Этапы не разделены.</strong><br>
+Лагранжев (давление) и эйлеров (перенос) этапы должны выполняться <em>строго последовательно</em>: сначала обновляем все $\tilde{u}_i$ и $\tilde{E}_i$, и только потом считаем потоки. Нельзя объединять их в один проход — это нарушит причинно-следственную связь (ещё не обновлённые значения будут использоваться для потоков).</div>
+
+<div class="warn"><strong>Ошибка 2: Неправильные скорости при переносе.</strong><br>
+На эйлеровом этапе для определения потоков нужно использовать <em>тильдовые</em> скорости $\tilde{u}$ с лагранжева шага, а не начальные $u^n$ или финальные $u^{n+1}$. Использование $u^n$ — как если бы давление ещё не подействовало; использование $u^{n+1}$ — их ещё нет.</div>
+
+<div class="warn"><strong>Ошибка 3: Неправильное расщепление в 2D.</strong><br>
+Strang splitting: каждое направление обрабатывается с $\Delta t / 2$, а не с полным $\Delta t$. Формула: $L_x(\Delta t/2) \to L_y(\Delta t) \to L_x(\Delta t/2)$. Без этого — потеря порядка точности, а при сильных градиентах — нестабильность.</div>
+
+<div class="warn"><strong>Ошибка 4: Нет проверки $p > 0$ и $\rho > 0$.</strong><br>
+Если внутренняя энергия $e = E - \frac{u^2}{2}$ стала отрицательной — давление $p = (\gamma-1)\rho e < 0$, что нефизично и приведёт к мнимой скорости звука $a = \sqrt{\gamma p / \rho}$. Нужна защита: <code>if (p < p_floor) p = p_floor;</code></div>
+
+<!-- ================================================================ -->
+<!-- §13 СОЛВЕР -->
+<!-- ================================================================ -->
+<h2 id="solver"><span class="n">§13</span> Интерактивный расчет</h2>
+
+<p>Ниже — полный FLIC-солвер, реализованный на JavaScript. Он выполняет все шаги алгоритма из §9 и сравнивает результат с <strong>точным решением задачи Римана</strong>. Точное решение получается итеративным методом Ньютона для давления $p^*$ в промежуточной области (по Toro, 2009).</p>
+
+<p>Все графики строятся с наложением: синяя линия — расчет FLIC, красный пунктир — аналитика. Разрывы на расчетных кривых «размазаны» — это нормальное поведение схемы 1-го порядка (числовая диффузия).</p>
+
+<div class="solver-wrap">
+<h3 style="margin-top:0">Параметры задачи</h3>
+<div class="controls">
+  <div class="ctrl"><label>N (ячеек)</label><input type="number" id="N" value="200" min="20" max="2000"></div>
+  <div class="ctrl"><label>CFL</label><input type="number" id="CFL" value="0.9" min="0.1" max="1.0" step="0.05"></div>
+  <div class="ctrl"><label>γ</label><input type="number" id="gamma" value="1.4" step="0.1"></div>
+  <div class="ctrl"><label>t_end</label><input type="number" id="tend" value="0.2" step="0.01"></div>
+  <div class="ctrl"><label>ρ_L</label><input type="number" id="rhoL" value="1.0" step="0.1"></div>
+  <div class="ctrl"><label>P_L</label><input type="number" id="pL" value="1.0" step="0.1"></div>
+  <div class="ctrl"><label>ρ_R</label><input type="number" id="rhoR" value="0.125" step="0.01"></div>
+  <div class="ctrl"><label>P_R</label><input type="number" id="pR" value="0.1" step="0.01"></div>
+</div>
+<div style="display:flex;align-items:center;margin-top:.5rem">
+  <button class="run-btn" id="runBtn" onclick="runFLIC()">▶ Запустить FLIC</button>
+  <span class="status" id="status">Готов к расчету</span>
+</div>
+</div>
+
+<div class="legend-row">
+  <span><i style="background:var(--accent3)"></i> FLIC (расчет)</span>
+  <span><i style="background:var(--accent);height:2px;border-top:1px dashed var(--accent)"></i> Точное решение</span>
+</div>
+
+<div class="plots">
+  <div class="plot"><div class="plot-title">ρ(x) — плотность</div><canvas id="c_rho" width="480" height="340"></canvas></div>
+  <div class="plot"><div class="plot-title">P(x) — давление</div><canvas id="c_p" width="480" height="340"></canvas></div>
+  <div class="plot"><div class="plot-title">u(x) — скорость</div><canvas id="c_u" width="480" height="340"></canvas></div>
+</div>
+
+<div class="kp"><strong>Совет:</strong> попробуйте разные значения N (50, 100, 200, 400) — вы увидите, как с увеличением числа ячеек разрывы становятся более резкими. Также измените CFL (0.5 vs 0.9) — при меньшем CFL решение чуть более диффузионное, но более устойчивое.</div>
+
+<!-- ================================================================ -->
+<!-- §14 ВЕРИФИКАЦИЯ -->
+<!-- ================================================================ -->
+<h2 id="verification"><span class="n">§14</span> Верификация</h2>
+
+<div id="resultsSection" style="display:none">
+<p>Автоматическое сравнение расчета FLIC с точным решением задачи Римана в контрольных точках. Допуск: отклонение ≤ 5% в промежуточных областях (между волнами).</p>
+
+<table class="vtable">
+<thead><tr><th>Величина</th><th>Область</th><th>FLIC</th><th>Точное</th><th>Ошибка</th><th>Статус</th></tr></thead>
+<tbody id="valuesBody"></tbody>
+</table>
+<div class="status" id="calcInfo"></div>
+
+<h3>Контрольные значения задачи Сода ($t = 0.2$, $\gamma = 1.4$)</h3>
+
+<table>
+<thead><tr><th>Область</th><th>$x$</th><th>$\rho$</th><th>$P$</th><th>$u$</th></tr></thead>
+<tbody>
+<tr><td>Невозмущенный газ (слева)</td><td>$< 0.26$</td><td>1.0000</td><td>1.0000</td><td>0.0000</td></tr>
+<tr><td>Между ВР и КР</td><td>$\approx 0.60$</td><td>0.4263</td><td>0.3031</td><td>0.9274</td></tr>
+<tr><td>Между КР и УВ</td><td>$\approx 0.75$</td><td>0.2656</td><td>0.3031</td><td>0.9274</td></tr>
+<tr><td>Невозмущенный газ (справа)</td><td>$> 0.85$</td><td>0.1250</td><td>0.1000</td><td>0.0000</td></tr>
+</tbody>
+</table>
+
+<h3>Структура решения</h3>
+<p>В задаче Сода решение содержит три волны:</p>
+<div class="steps">
+  <div class="step"><strong>Волна разрежения</strong> ($x \approx 0.26 \ldots 0.49$) — плавный переход. 1-волна, движется влево со скоростью $u - a$. Плотность и давление уменьшаются непрерывно.</div>
+  <div class="step"><strong>Контактный разрыв</strong> ($x \approx 0.685$) — скачок плотности, но давление и скорость <em>непрерывны</em>. 2-волна. На графиках: ρ прыгает, P и u — гладкие.</div>
+  <div class="step"><strong>Ударная волна</strong> ($x \approx 0.85$) — скачок <em>всех</em> величин. 3-волна, самая быстрая. На графике: резкий фронт шириной 3-5 ячеек.</div>
+</div>
+</div>
+
+<div id="noResults" class="fb b">
+<p>Нажмите <strong>«Запустить FLIC»</strong> в §13, чтобы увидеть результаты расчета, графики с наложением точного решения и таблицу верификации.</p>
+</div>
+
+<hr style="margin:3rem 0;border:none;border-top:1px solid var(--border)">
+<p style="font-size:.82rem;color:var(--text2)"><strong>Источники:</strong> Gentry, Martin &amp; Daly, «An Eulerian differencing method for unsteady compressible flow problems», J. Comp. Phys. 1 (1966); Evans &amp; Harlow, «The Particle-in-Cell method», LA-2139 (1957); Toro, <em>Riemann Solvers and Numerical Methods for Fluid Dynamics</em>, 3rd ed. (2009); Sod, «A survey of several finite difference methods for systems of nonlinear hyperbolic conservation laws», J. Comp. Phys. 27 (1978).</p>
+
+</div>
+
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$'],['\\[','\\]']]},svg:{fontCache:'global'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8;--sidebar-bg:#2b2520;--sidebar-text:#d9cfc0;--highlight:#fff3cd;--shadow:rgba(44,36,25,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:250px;background:var(--sidebar-bg);color:var(--sidebar-text);padding:1.5rem 1rem;overflow-y:auto;z-index:100;border-right:3px solid var(--accent);font-size:.8rem}
+.sidebar h2{font-family:'Playfair Display',serif;font-size:.85rem;font-weight:700;color:#fff;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.03em}
+.sidebar .g{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--accent);margin:.7rem 0 .15rem;text-transform:uppercase;letter-spacing:.08em}
+.sidebar a{display:block;color:var(--sidebar-text);text-decoration:none;font-size:.76rem;line-height:1.35;padding:.15rem 0 .15rem .5rem;border-left:2px solid transparent;transition:all .15s}
+.sidebar a:hover{color:#fff;border-left-color:var(--accent);background:rgba(180,74,45,.08)}
+.sidebar .sep{height:1px;background:rgba(255,255,255,.07);margin:.4rem 0}
+.main{margin-left:250px;max-width:860px;padding:2.5rem 3rem 5rem}
+.hero{margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:2px solid var(--border)}
+.hero .tag{font-family:'JetBrains Mono',monospace;font-size:.68rem;text-transform:uppercase;letter-spacing:.14em;color:var(--accent);margin-bottom:.4rem}
+.hero h1{font-family:'Playfair Display',serif;font-size:2.3rem;font-weight:900;line-height:1.12;margin-bottom:.5rem}
+.hero .sub{font-size:1rem;color:var(--text2);font-style:italic;max-width:600px}
+h2{font-family:'Playfair Display',serif;font-size:1.65rem;font-weight:900;margin:2.5rem 0 .8rem;padding-top:.6rem}
+h2 .n{color:var(--accent);font-weight:400;margin-right:.15em}
+h3{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;color:var(--accent);margin:1.5rem 0 .5rem}
+h4{font-size:.92rem;font-weight:600;color:var(--accent2);margin:1.2rem 0 .35rem}
+p{margin-bottom:.8rem}
+.fb{background:var(--bg2);border-left:4px solid var(--accent);padding:.85rem 1.1rem;margin:1rem 0;border-radius:0 6px 6px 0}
+.fb.g{border-left-color:var(--accent2)}.fb.b{border-left-color:var(--accent3)}
+.fb.box{background:#fdf6ee;border:2px solid var(--accent);border-left:6px solid var(--accent);padding:1rem 1.2rem}
+.note{background:var(--highlight);border:1px solid #e6d9a8;border-radius:6px;padding:.75rem 1rem;margin:1rem 0;font-size:.9rem}
+.note strong{color:var(--accent)}
+.kp{background:#e8f4f0;border:1px solid #b8d9cf;border-radius:6px;padding:.75rem 1rem;margin:1rem 0}
+.kp strong{color:var(--accent2)}
+.warn{background:#fde8e8;border:1px solid #e8b8b8;border-radius:6px;padding:.75rem 1rem;margin:1rem 0}
+.warn strong{color:#c44}
+.algo{background:var(--code-bg);color:var(--code-text);font-family:'JetBrains Mono',monospace;font-size:.74rem;line-height:1.55;padding:1.3rem 1.4rem;border-radius:8px;margin:1.2rem 0;overflow-x:auto;position:relative;box-shadow:0 4px 16px var(--shadow);white-space:pre}
+.algo::before{content:attr(data-title);position:absolute;top:0;left:1rem;transform:translateY(-50%);background:var(--accent);color:#fff;font-size:.6rem;font-weight:500;padding:.1rem .5rem;border-radius:4px;text-transform:uppercase;letter-spacing:.08em}
+.kw{color:#e6a07c}.cm{color:#7a8a6e;font-style:italic}.vr{color:#8bc6d4}
+code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:.1em .3em;border-radius:3px;color:var(--accent)}
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.88rem}
+thead th{background:var(--bg2);font-weight:700;text-align:left;padding:8px 12px;border:1px solid var(--border)}
+td{padding:6px 12px;border:1px solid var(--border)}
+.steps{counter-reset:step}
+.step{counter-increment:step;display:flex;gap:.8rem;margin:.6rem 0;align-items:flex-start}
+.step::before{content:counter(step);background:var(--accent);color:#fff;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.72rem;min-width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.fig{margin:1.5rem 0;text-align:center}
+.fig img,.fig canvas{max-width:100%;border-radius:6px;box-shadow:0 2px 12px var(--shadow)}
+.cap{font-size:.82rem;color:var(--text2);font-style:italic;margin-top:.4rem}
+.timeline{display:flex;gap:0;margin:1.5rem 0;align-items:stretch}
+.timeline .era{flex:1;padding:.6rem .8rem;text-align:center;font-size:.82rem;border-top:3px solid var(--accent)}
+.timeline .era:nth-child(even){border-top-color:var(--accent2)}
+.timeline .era strong{display:block;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--accent);margin-bottom:.2rem}
+
+.solver-wrap{background:var(--bg2);border:2px solid var(--border);border-radius:10px;padding:1.5rem;margin:1.5rem 0}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.6rem;margin:.8rem 0}
+.ctrl{display:flex;flex-direction:column;gap:.15rem}
+.ctrl label{font-size:.72rem;color:var(--text2);font-family:'JetBrains Mono',monospace}
+.ctrl input,.ctrl select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)}
+.ctrl input:focus{outline:none;border-color:var(--accent)}
+.run-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 24px;font-family:'Source Serif 4',serif;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .15s}
+.run-btn:hover{background:#9a3d24}
+.run-btn:disabled{opacity:.4;cursor:not-allowed}
+.status{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-left:.8rem}
+.plots{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;margin:1rem 0}
+@media(max-width:1000px){.plots{grid-template-columns:1fr}.sidebar{display:none}.main{margin-left:0;padding:1.5rem}}
+.plot{background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border);box-shadow:0 1px 4px var(--shadow)}
+.plot-title{text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace}
+canvas{width:100%;height:auto;display:block}
+.legend-row{display:flex;gap:1.2rem;justify-content:center;margin:.5rem 0;font-size:.78rem;color:var(--text2)}
+.legend-row span{display:flex;align-items:center;gap:.3rem}
+.legend-row i{display:inline-block;width:16px;height:3px;border-radius:2px}
+.vtable{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:.78rem;margin:.6rem 0}
+.vtable th{background:var(--bg3);color:var(--accent);padding:5px 8px;text-align:left;border:1px solid var(--border)}
+.vtable td{padding:4px 8px;border:1px solid var(--border)}
+.pass{color:var(--accent2);font-weight:600}
+.fail{color:#c44;font-weight:600}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin:1rem 0}
+@media(max-width:700px){.two-col{grid-template-columns:1fr}}
+mjx-container{max-width:100%!important}
+mjx-container svg{max-width:100%;height:auto}
+</style>
+</head>
+<body>
+
+<!-- ===================== SIDEBAR ===================== -->
+<nav class="sidebar">
+  <h2>FLIC — Fluid-in-Cell</h2>
+  <div class="g">Теория</div>
+  <a href="#intro">§1 Введение</a>
+  <a href="#history">§2 Историческая справка</a>
+  <a href="#idea">§3 Основная идея</a>
+  <a href="#euler">§4 Уравнения Эйлера</a>
+  <div class="sep"></div>
+  <div class="g">Алгоритм</div>
+  <a href="#stage1">§5 Этап I — Лагранж</a>
+  <a href="#stage2">§6 Этап II — Эйлер</a>
+  <a href="#conservation">§7 Консервативная форма</a>
+  <a href="#2d">§8 Двумерный случай</a>
+  <a href="#full-algo">§9 Полный алгоритм</a>
+  <div class="sep"></div>
+  <div class="g">Расширения</div>
+  <a href="#modern">§10 Модификации</a>
+  <a href="#vof">§11 FLIC-VOF</a>
+  <div class="sep"></div>
+  <div class="g">Практика</div>
+  <a href="#errors">§12 Частые ошибки</a>
+  <a href="#solver">§13 Интерактивный расчет</a>
+  <a href="#verification">§14 Верификация</a>
+</nav>
+
+<!-- ===================== MAIN ===================== -->
+<div class="main">
+
+<div class="hero">
+  <div class="tag">Вычислительная гидродинамика</div>
+  <h1>Метод FLIC</h1>
+  <p class="sub">Fluid-in-Cell — численное решение уравнений газовой динамики с разрывными решениями. Двухэтапная схема, ударные волны, свободные поверхности.</p>
+</div>
+
+<!-- §1 INTRODUCTION -->
+<h2 id="intro"><span class="n">§1</span> Введение</h2>
+
+<p>Метод FLIC предназначен для численного решения <strong>уравнений Эйлера</strong> — системы гиперболических законов сохранения, описывающих движение невязкого сжимаемого газа. Ключевая особенность метода — разделение вычислений на два этапа: <em>лагранжев</em> (учет сил давления) и <em>эйлеров</em> (конвективный перенос через неподвижную сетку).</p>
+
+<div class="kp"><strong>Почему FLIC?</strong> Метод проще схемы Годунова (не требует решения задачи Римана), строго консервативен и естественно обрабатывает многозначные течения. Это делает его хорошим введением в вычислительную газодинамику.</div>
+
+<p>В этой лекции мы:</p>
+<div class="steps">
+  <div class="step">Выведем все формулы метода FLIC из уравнений Эйлера</div>
+  <div class="step">Реализуем полный алгоритм как интерактивный JS-солвер</div>
+  <div class="step">Верифицируем на задаче Сода с точным решением Римана</div>
+  <div class="step">Обсудим расширение на 2D и типичные ошибки реализации</div>
+</div>
+
+<!-- §2 HISTORY -->
+<h2 id="history"><span class="n">§2</span> Историческая справка</h2>
+
+<div class="timeline">
+  <div class="era"><strong>1957</strong>Evans &amp; Harlow<br>Particle-in-Cell (PIC)</div>
+  <div class="era"><strong>1963</strong>Harlow<br>MAC-метод</div>
+  <div class="era"><strong>1966</strong>Gentry, Martin, Daly<br><b>FLIC</b></div>
+  <div class="era"><strong>1970-е</strong>FLIC-II<br>Улучшения</div>
+  <div class="era"><strong>1980-е</strong>FLIC-PLIC<br>+ VOF</div>
+</div>
+
+<p>FLIC (Fluid-in-Cell) был предложен Gentry, Martin и Daly в 1966 году как развитие метода PIC Эванса и Харлоу (1957). В отличие от PIC, где жидкость представлена набором частиц, в FLIC все величины хранятся на эйлеровой (неподвижной) сетке. Название «Fluid-in-Cell» подчеркивает, что жидкость описывается <em>полями в ячейках</em>, а не частицами.</p>
+
+<p>Идея расщепления на лагранжев и эйлеров этапы стала основой для целого семейства методов: ALE (Arbitrary Lagrangian-Eulerian), MPM (Material Point Method), и современных VOF-методов для задач со свободной поверхностью.</p>
+
+<!-- §3 MAIN IDEA -->
+<h2 id="idea"><span class="n">§3</span> Основная идея — двухэтапность</h2>
+
+<p>Уравнения Эйлера содержат два типа физических процессов:</p>
+
+<div class="two-col">
+<div class="fb">
+<h4>Этап I — Лагранж</h4>
+<p>«Замораживаем» сетку на жидкости и движемся вместе с ней. Учитываем только <strong>силы давления</strong> — они ускоряют вещество и совершают работу. Перетекания между ячейками <em>нет</em>.</p>
+</div>
+<div class="fb g">
+<h4>Этап II — Эйлер</h4>
+<p>Возвращаемся к неподвижной сетке и считаем <strong>конвективный перенос</strong> — перетекание массы, импульса и энергии через границы ячеек.</p>
+</div>
+</div>
+
+<p>Математически это <strong>расщепление операторов</strong> (operator splitting):</p>
+
+$$\frac{\partial U}{\partial t} = \underbrace{L_{\text{pressure}}}_{\text{Лагранж}} + \underbrace{L_{\text{convection}}}_{\text{Эйлер}}$$
+
+<p>где $L_{\text{pressure}}$ содержит $-\nabla p$ (ускорение от давления), а $L_{\text{convection}}$ содержит $-\nabla \cdot (U \otimes u)$ (конвективный перенос).</p>
+
+<div class="note"><strong>Ключевой принцип:</strong> на лагранжевом этапе <em>плотность не меняется</em> (вещество не перетекает), а на эйлеровом этапе используются скорости $\tilde{u}$, полученные на лагранжевом шаге.</div>
+
+<!-- §4 EULER EQUATIONS -->
+<h2 id="euler"><span class="n">§4</span> Уравнения Эйлера</h2>
+
+<h3>Система в консервативной форме</h3>
+
+$$\frac{\partial U}{\partial t} + \nabla \cdot F(U) = 0$$
+
+<h4>Вектор консервативных переменных</h4>
+
+$$U = \begin{pmatrix} \rho \\ \rho u \\ \rho E \end{pmatrix}$$
+
+<p>где $\rho$ — плотность, $u$ — скорость, $E = e + \tfrac{1}{2}u^2$ — полная удельная энергия ($e$ — внутренняя энергия).</p>
+
+<h4>Потоковая функция</h4>
+
+$$F(U) = \begin{pmatrix} \rho u \\ \rho u^2 + p \\ u(\rho E + p) \end{pmatrix}$$
+
+<h4>Замыкающее соотношение (идеальный газ)</h4>
+
+$$p = (\gamma - 1)\rho e = (\gamma - 1)\left(\rho E - \frac{\rho u^2}{2}\right)$$
+
+<p>где $\gamma$ — показатель адиабаты ($\gamma = 1.4$ для воздуха). Скорость звука: $a = \sqrt{\gamma p / \rho}$.</p>
+
+<!-- §5 STAGE I -->
+<h2 id="stage1"><span class="n">§5</span> Этап I — Лагранжев шаг</h2>
+
+<div class="fb box"><strong>Идея:</strong> жидкость движется под действием давления, но не перетекает между ячейками. Обновляем скорость и энергию, плотность остается прежней.</div>
+
+<h4>Шаг 1. Давление на границах ячеек</h4>
+
+<p>Давление на границе между ячейками $i$ и $i+1$ — среднее арифметическое:</p>
+
+$$p_{i+1/2}^n = \frac{p_i^n + p_{i+1}^n}{2}$$
+
+<h4>Шаг 2. Обновление скорости</h4>
+
+<p>Из уравнения импульса $\rho \frac{Du}{Dt} = -\frac{\partial p}{\partial x}$ получаем:</p>
+
+$$\tilde{u}_i = u_i^n - \frac{\Delta t}{\rho_i^n} \cdot \frac{p_{i+1/2}^n - p_{i-1/2}^n}{\Delta x}$$
+
+<h4>Шаг 3. Обновление энергии</h4>
+
+<p>Из уравнения энергии $\rho \frac{DE}{Dt} = -\frac{\partial(pu)}{\partial x}$:</p>
+
+$$\tilde{E}_i = E_i^n - \frac{\Delta t}{\rho_i^n} \cdot \frac{(pu)_{i+1/2}^n - (pu)_{i-1/2}^n}{\Delta x}$$
+
+<p>где $(pu)_{i+1/2}^n = p_{i+1/2}^n \cdot u_{i+1/2}^n$ и $u_{i+1/2}^n = \frac{u_i^n + u_{i+1}^n}{2}$.</p>
+
+<div class="kp"><strong>Важно!</strong> Плотность не меняется на лагранжевом этапе: $\tilde{\rho}_i = \rho_i^n$. Вещество ускоряется и меняет энергию, но не перетекает.</div>
+
+<!-- §6 STAGE II -->
+<h2 id="stage2"><span class="n">§6</span> Этап II — Эйлеров перенос</h2>
+
+<div class="fb box"><strong>Идея:</strong> вычисляем потоки массы через неподвижные границы ячеек. Каждый поток несет с собой импульс и энергию — из ячейки-донора.</div>
+
+<h4>Масса через границу</h4>
+
+$$\Delta M_{i+1/2} = \rho_{i+1/2}^* \cdot u_{i+1/2}^* \cdot \Delta t \cdot S$$
+
+<p>где $S$ — площадь грани (в 1D $S = 1$), а $u_{i+1/2}^* = \tilde{u}_{i+1/2} = \frac{\tilde{u}_i + \tilde{u}_{i+1}}{2}$ — скорость на границе <em>из лагранжева этапа</em>.</p>
+
+<h4>Донорская ячейка (upwind)</h4>
+
+<p>Плотность на границе определяется направлением потока — берется из ячейки, <em>откуда</em> течет вещество:</p>
+
+$$\rho_{i+1/2}^* = \begin{cases} \tilde{\rho}_i & \text{если } u_{i+1/2}^* \geq 0 \quad \text{(поток вправо, донор = ячейка } i\text{)} \\ \tilde{\rho}_{i+1} & \text{если } u_{i+1/2}^* < 0 \quad \text{(поток влево, донор = ячейка } i+1\text{)} \end{cases}$$
+
+<p>Аналогично для импульса и энергии:</p>
+
+$$(\rho u)_{i+1/2}^* = \begin{cases} \rho_i^n \tilde{u}_i & \text{если } u^* \geq 0 \\ \rho_{i+1}^n \tilde{u}_{i+1} & \text{если } u^* < 0 \end{cases}$$
+
+<div class="warn"><strong>Частая ошибка:</strong> использование $u^{n+1}$ при переносе вместо $\tilde{u}$ с лагранжева шага. Для переноса нужны именно промежуточные скорости!</div>
+
+<!-- §7 CONSERVATION -->
+<h2 id="conservation"><span class="n">§7</span> Консервативные уравнения обновления</h2>
+
+<h4>Сохранение массы</h4>
+$$\rho_i^{n+1} = \rho_i^n - \frac{\Delta t}{\Delta x}\left[\rho_{i+1/2}^* u_{i+1/2}^* - \rho_{i-1/2}^* u_{i-1/2}^*\right]$$
+
+<h4>Сохранение импульса</h4>
+$$(\rho u)_i^{n+1} = (\rho u)_i^n - \frac{\Delta t}{\Delta x}\left[(\rho u)_{i+1/2}^* u_{i+1/2}^* - (\rho u)_{i-1/2}^* u_{i-1/2}^*\right]$$
+
+<h4>Сохранение энергии</h4>
+$$(\rho E)_i^{n+1} = (\rho E)_i^n - \frac{\Delta t}{\Delta x}\left[(\rho E)_{i+1/2}^* u_{i+1/2}^* - (\rho E)_{i-1/2}^* u_{i-1/2}^*\right]$$
+
+<h4>Восстановление примитивных переменных</h4>
+
+$$u_i^{n+1} = \frac{(\rho u)_i^{n+1}}{\rho_i^{n+1}}, \quad E_i^{n+1} = \frac{(\rho E)_i^{n+1}}{\rho_i^{n+1}}, \quad e_i^{n+1} = E_i^{n+1} - \frac{(u_i^{n+1})^2}{2}, \quad p_i^{n+1} = (\gamma - 1)\rho_i^{n+1} e_i^{n+1}$$
+
+<div class="kp"><strong>Консервативность:</strong> потоки через каждую границу входят в одну ячейку с тем же знаком, с каким выходят из другой. Это гарантирует точное сохранение массы, импульса и энергии в замкнутой системе.</div>
+
+<!-- §8 2D -->
+<h2 id="2d"><span class="n">§8</span> Двумерный случай</h2>
+
+<p>В 2D добавляется второе направление. Каждый этап выполняется <em>по направлениям</em>:</p>
+
+<h4>Этап X (по $x$)</h4>
+$$\tilde{u}_{i,j} = u_{i,j}^n - \frac{\Delta t}{\rho_{i,j}^n} \cdot \frac{p_{i+1/2,j}^n - p_{i-1/2,j}^n}{\Delta x}, \qquad \tilde{v}_{i,j} = v_{i,j}^n$$
+
+<h4>Этап Y (по $y$)</h4>
+$$\hat{v}_{i,j} = v_{i,j}^* - \frac{\Delta t}{\rho_{i,j}^*} \cdot \frac{p_{i,j+1/2}^* - p_{i,j-1/2}^*}{\Delta y}, \qquad \hat{u}_{i,j} = u_{i,j}^*$$
+
+<div class="note"><strong>Strang splitting:</strong> полный шаг $t^n \to t^{n+1}$ выполняется как $X(\Delta t/2) \to Y(\Delta t) \to X(\Delta t/2)$. Это сохраняет <strong>второй порядок</strong> по времени. Простое $X(\Delta t) \to Y(\Delta t)$ даёт только первый порядок.</div>
+
+<div class="warn"><strong>Ошибка №3</strong> (из лекции): использование полного $\Delta t$ для каждого направления вместо $\Delta t / 2$ (Strang) — теряется порядок точности.</div>
+
+<!-- §9 FULL ALGORITHM -->
+<h2 id="full-algo"><span class="n">§9</span> Полный алгоритм</h2>
+
+<div class="algo" data-title="Алгоритм FLIC — один шаг по времени">
+<span class="kw">0.</span> Инициализация: задать ρ, u, p для всех ячеек
+<span class="kw">1.</span> Вычислить Δt из условия CFL:
+   Δt = CFL · Δx / max(|u| + a)     <span class="cm">// a = √(γp/ρ)</span>
+<span class="kw">2.</span> <span class="vr">Лагранжев этап:</span>
+   Для каждой ячейки i:
+     p_{i±½} = (p_i + p_{i±1}) / 2
+     ũ_i = u_i − (Δt/ρ_i) · (p_{i+½} − p_{i−½}) / Δx
+     Ẽ_i = E_i − (Δt/ρ_i) · ((pu)_{i+½} − (pu)_{i−½}) / Δx
+<span class="kw">3.</span> <span class="vr">Эйлеров этап:</span>
+   Для каждой границы i+½:
+     u*_{i+½} = (ũ_i + ũ_{i+1}) / 2
+     ΔM = ρ*(upwind) · u* · Δt
+     обновить ρ, ρu, ρE через разность ΔM
+<span class="kw">4.</span> Восстановить примитивные переменные: u, E, e, p
+<span class="kw">5.</span> Применить граничные условия
+<span class="kw">6.</span> Если t < t_end → перейти к шагу 1</div>
+
+<!-- §10 MODERN -->
+<h2 id="modern"><span class="n">§10</span> Современные модификации</h2>
+
+<table>
+<thead><tr><th>Метод</th><th>Год</th><th>Улучшение</th></tr></thead>
+<tbody>
+<tr><td><strong>FLIC-II</strong></td><td>1970-е</td><td>Улучшенная аппроксимация потоков</td></tr>
+<tr><td><strong>FLIC-PLIC</strong></td><td>1980-е</td><td>Кусочно-линейная реконструкция интерфейса</td></tr>
+<tr><td><strong>ALE</strong></td><td>—</td><td>Arbitrary Lagrangian-Eulerian — обобщение на подвижные сетки</td></tr>
+<tr><td><strong>MPM</strong></td><td>—</td><td>Material Point Method — гибрид частиц и сетки</td></tr>
+</tbody>
+</table>
+
+<!-- §11 VOF -->
+<h2 id="vof"><span class="n">§11</span> Расширение — FLIC-VOF</h2>
+
+<p>Для задач со <strong>свободной поверхностью</strong> (вода–воздух, кавитация, разбрызгивание) к FLIC добавляется функция объёма жидкости $F_{i,j} \in [0, 1]$:</p>
+
+<ul style="margin:.5rem 0 .5rem 1.5rem">
+<li>$F = 1$ — полностью жидкая ячейка</li>
+<li>$F = 0$ — полностью газовая ячейка</li>
+<li>$0 < F < 1$ — смешанная (интерфейс)</li>
+</ul>
+
+<p>Алгоритм: перенос $F$ → реконструкция поверхности → расчет давления с учетом фазы.</p>
+
+<!-- §12 ERRORS -->
+<h2 id="errors"><span class="n">§12</span> Частые ошибки реализации</h2>
+
+<div class="warn"><strong>Ошибка 1: Перемешивание этапов.</strong> Лагранжев и эйлеров этапы должны выполняться <em>строго последовательно</em>. Нельзя объединять их в один проход по ячейкам.</div>
+
+<div class="warn"><strong>Ошибка 2: Использование $u^{n+1}$ при переносе.</strong> На эйлеровом этапе для переноса нужны скорости $\tilde{u}$ с лагранжева шага, а не окончательные $u^{n+1}$.</div>
+
+<div class="warn"><strong>Ошибка 3: Неправильный порядок в 2D.</strong> Каждое направление обрабатывается с $\Delta t / 2$ (Strang splitting), а не с полным $\Delta t$.</div>
+
+<div class="warn"><strong>Ошибка 4: Отсутствие проверки на отрицательное давление.</strong> Если $p < 0$ или $\rho < 0$ — необходимо уменьшить $\Delta t$.</div>
+
+<!-- §13 SOLVER -->
+<h2 id="solver"><span class="n">§13</span> Интерактивный расчет</h2>
+
+<p>Ниже — полный FLIC-солвер, реализованный на JavaScript. Решатель включает <strong>точное решение задачи Римана</strong> (метод Ньютона для давления в промежуточной области, Toro 2009) для верификации.</p>
+
+<div class="solver-wrap">
+<h3 style="margin-top:0">Параметры задачи Сода</h3>
+<div class="controls">
+  <div class="ctrl"><label>N (ячеек)</label><input type="number" id="N" value="200" min="20" max="2000"></div>
+  <div class="ctrl"><label>CFL</label><input type="number" id="CFL" value="0.9" min="0.1" max="1.0" step="0.05"></div>
+  <div class="ctrl"><label>γ</label><input type="number" id="gamma" value="1.4" step="0.1"></div>
+  <div class="ctrl"><label>t_end</label><input type="number" id="tend" value="0.2" step="0.01"></div>
+  <div class="ctrl"><label>ρ_L</label><input type="number" id="rhoL" value="1.0" step="0.1"></div>
+  <div class="ctrl"><label>P_L</label><input type="number" id="pL" value="1.0" step="0.1"></div>
+  <div class="ctrl"><label>ρ_R</label><input type="number" id="rhoR" value="0.125" step="0.01"></div>
+  <div class="ctrl"><label>P_R</label><input type="number" id="pR" value="0.1" step="0.01"></div>
+</div>
+<div style="display:flex;align-items:center;margin-top:.5rem">
+  <button class="run-btn" id="runBtn" onclick="runFLIC()">▶ Запустить FLIC</button>
+  <span class="status" id="status">Готов к расчету</span>
+</div>
+</div>
+
+<div class="legend-row">
+  <span><i style="background:var(--accent3)"></i> FLIC (расчет)</span>
+  <span><i style="background:var(--accent);height:2px;border-top:1px dashed var(--accent)"></i> Точное решение</span>
+</div>
+
+<div class="plots">
+  <div class="plot"><div class="plot-title">ρ(x) — плотность</div><canvas id="c_rho" width="480" height="340"></canvas></div>
+  <div class="plot"><div class="plot-title">P(x) — давление</div><canvas id="c_p" width="480" height="340"></canvas></div>
+  <div class="plot"><div class="plot-title">u(x) — скорость</div><canvas id="c_u" width="480" height="340"></canvas></div>
+</div>
+
+<!-- §14 VERIFICATION -->
+<h2 id="verification"><span class="n">§14</span> Верификация</h2>
+
+<div id="resultsSection" style="display:none">
+<p>Сравнение расчета FLIC с точным решением задачи Римана в контрольных точках:</p>
+<table class="vtable">
+<thead><tr><th>Величина</th><th>Область</th><th>FLIC</th><th>Точное</th><th>Ошибка</th><th>Статус</th></tr></thead>
+<tbody id="valuesBody"></tbody>
+</table>
+<div class="status" id="calcInfo"></div>
+
+<h3>Контрольные значения (тест Сода, $t = 0.2$)</h3>
+<table>
+<thead><tr><th>Область</th><th>$\rho$</th><th>$P$</th><th>$u$</th></tr></thead>
+<tbody>
+<tr><td>Между волной разрежения и КР ($x \approx 0.6$)</td><td>0.4263</td><td>0.3031</td><td>0.9274</td></tr>
+<tr><td>Между КР и ударной волной ($x \approx 0.75$)</td><td>0.2656</td><td>0.3031</td><td>0.9274</td></tr>
+</tbody>
+</table>
+
+<p>Положения волн: ВР — $x \approx 0.26\ldots0.49$; КР — $x \approx 0.685$; УВ — $x \approx 0.85$.</p>
+<p>Допуск: отклонение $\leq 5\%$ в промежуточных областях; УВ размазана на 3–5 ячеек (нормально для 1-го порядка).</p>
+</div>
+
+<div id="noResults" class="fb b">
+<p>Нажмите <strong>«Запустить FLIC»</strong> выше, чтобы увидеть результаты расчета и сравнение с точным решением.</p>
+</div>
+
+<hr style="margin:3rem 0;border:none;border-top:1px solid var(--border)">
+<p style="font-size:.82rem;color:var(--text2)"><strong>Источники:</strong> Gentry, Martin &amp; Daly (1966); Evans &amp; Harlow (1957); Toro, <em>Riemann Solvers and Numerical Methods for Fluid Dynamics</em>, 3rd ed. (2009); Sod, J. Comp. Phys. 27 (1978).</p>
+
+</div><!-- /main -->
+
+<script>
+// ============================================================
+// EXACT RIEMANN SOLVER (Toro, Ch. 4)
+// ============================================================
+function exactRiemann(rhoL,uL,pL,rhoR,uR,pR,gamma,xot){
+const g1=gamma,g2=(g1-1)/(2*g1),g3=(g1+1)/(2*g1),g4=2/(g1-1),g5=2/(g1+1),g6=(g1-1)/(g1+1),g7=(g1-1)/2;
+const aL=Math.sqrt(g1*pL/rhoL),aR=Math.sqrt(g1*pR/rhoR);
+function fK(p,pk,rhok,ak){if(p>pk){const A=g5/rhok,B=g6*pk;return(p-pk)*Math.sqrt(A/(p+B))}return g4*ak*(Math.pow(p/pk,g2)-1)}
+function dfK(p,pk,rhok,ak){if(p>pk){const A=g5/rhok,B=g6*pk,sq=Math.sqrt(A/(p+B));return sq*(1-(p-pk)/(2*(p+B)))}return 1/(rhok*ak)*Math.pow(p/pk,-g3)}
+let ps=.5*(pL+pR);for(let i=0;i<50;i++){const f=fK(ps,pL,rhoL,aL)+fK(ps,pR,rhoR,aR)+(uR-uL);const df=dfK(ps,pL,rhoL,aL)+dfK(ps,pR,rhoR,aR);const dp=-f/df;ps+=dp;if(ps<1e-10)ps=1e-10;if(Math.abs(dp)<1e-12*ps)break}
+const us=.5*(uL+uR)+.5*(fK(ps,pR,rhoR,aR)-fK(ps,pL,rhoL,aL));
+const S=xot;let rho,u,p;
+if(S<us){if(ps<=pL){const asL=aL*Math.pow(ps/pL,g2),sHL=uL-aL,sTL=us-asL;if(S<=sHL){rho=rhoL;u=uL;p=pL}else if(S>=sTL){rho=rhoL*Math.pow(ps/pL,1/g1);u=us;p=ps}else{u=g5*(aL+g7*uL+S);const a=g5*(aL+g7*(uL-S));rho=rhoL*Math.pow(a/aL,g4);p=pL*Math.pow(a/aL,2*g1/(g1-1))}}else{const sL=uL-aL*Math.sqrt(g3*ps/pL+g2);if(S<=sL){rho=rhoL;u=uL;p=pL}else{rho=rhoL*(ps/pL+g6)/(g6*ps/pL+1);u=us;p=ps}}}else{if(ps<=pR){const asR=aR*Math.pow(ps/pR,g2),sHR=uR+aR,sTR=us+asR;if(S>=sHR){rho=rhoR;u=uR;p=pR}else if(S<=sTR){rho=rhoR*Math.pow(ps/pR,1/g1);u=us;p=ps}else{u=g5*(-aR+g7*uR+S);const a=g5*(aR-g7*(uR-S));rho=rhoR*Math.pow(a/aR,g4);p=pR*Math.pow(a/aR,2*g1/(g1-1))}}else{const sR=uR+aR*Math.sqrt(g3*ps/pR+g2);if(S>=sR){rho=rhoR;u=uR;p=pR}else{rho=rhoR*(ps/pR+g6)/(g6*ps/pR+1);u=us;p=ps}}}
+return{rho,u,p}}
+
+// ============================================================
+// FLIC SOLVER
+// ============================================================
+function runFLIC(){
+const btn=document.getElementById('runBtn');btn.disabled=true;
+document.getElementById('status').textContent='Считаю...';
+requestAnimationFrame(()=>{setTimeout(()=>{
+const N=+document.getElementById('N').value,cfl=+document.getElementById('CFL').value,
+gamma=+document.getElementById('gamma').value,tend=+document.getElementById('tend').value,
+rL=+document.getElementById('rhoL').value,pLv=+document.getElementById('pL').value,
+rR=+document.getElementById('rhoR').value,pRv=+document.getElementById('pR').value;
+const dx=1/N,gm1=gamma-1;
+let rho=new Float64Array(N),u=new Float64Array(N),E=new Float64Array(N),p=new Float64Array(N);
+for(let i=0;i<N;i++){const x=(i+.5)*dx;if(x<.5){rho[i]=rL;p[i]=pLv}else{rho[i]=rR;p[i]=pRv}u[i]=0;E[i]=p[i]/(gm1*rho[i])+.5*u[i]*u[i]}
+let t=0,ns=0;const t0=performance.now();
+let ut=new Float64Array(N),Et=new Float64Array(N);
+while(t<tend){
+  let mx=0;for(let i=0;i<N;i++){const e=E[i]-.5*u[i]*u[i];p[i]=gm1*rho[i]*e;if(p[i]<1e-12)p[i]=1e-12;const a=Math.sqrt(gamma*p[i]/rho[i]),l=Math.abs(u[i])+a;if(l>mx)mx=l}
+  let dt=cfl*dx/mx;if(t+dt>tend)dt=tend-t;
+  // STAGE I: LAGRANGE
+  for(let i=0;i<N;i++){
+    const pL2=i>0?.5*(p[i-1]+p[i]):p[i],pR2=i<N-1?.5*(p[i]+p[i+1]):p[i];
+    const uL2=i>0?.5*(u[i-1]+u[i]):0,uR2=i<N-1?.5*(u[i]+u[i+1]):0;
+    ut[i]=u[i]-dt/(rho[i]*dx)*(pR2-pL2);
+    Et[i]=E[i]-dt/(rho[i]*dx)*(pR2*uR2-pL2*uL2)}
+  // STAGE II: EULER
+  let rn=new Float64Array(N),run=new Float64Array(N),ren=new Float64Array(N);
+  for(let i=0;i<N;i++){rn[i]=rho[i];run[i]=rho[i]*ut[i];ren[i]=rho[i]*Et[i]}
+  for(let i=0;i<N-1;i++){
+    const uh=.5*(ut[i]+ut[i+1]);
+    let rs,rus,res;
+    if(uh>=0){rs=rho[i];rus=rho[i]*ut[i];res=rho[i]*Et[i]}
+    else{rs=rho[i+1];rus=rho[i+1]*ut[i+1];res=rho[i+1]*Et[i+1]}
+    const dm=rs*uh*dt;rn[i]-=dm/dx;rn[i+1]+=dm/dx;
+    const dmu=rus*uh*dt;run[i]-=dmu/dx;run[i+1]+=dmu/dx;
+    const dme=res*uh*dt;ren[i]-=dme/dx;ren[i+1]+=dme/dx}
+  for(let i=0;i<N;i++){rho[i]=rn[i];u[i]=run[i]/rho[i];E[i]=ren[i]/rho[i]}
+  t+=dt;ns++;if(ns>1e5)break}
+const el=(performance.now()-t0).toFixed(1);
+for(let i=0;i<N;i++){p[i]=gm1*rho[i]*(E[i]-.5*u[i]*u[i])}
+// Exact
+const xa=[],re=[],ue=[],pe=[];
+for(let i=0;i<500;i++){const x=(i+.5)/500,xot=(x-.5)/tend,s=exactRiemann(rL,0,pLv,rR,0,pRv,gamma,xot);xa.push(x);re.push(s.rho);ue.push(s.u);pe.push(s.p)}
+const xc=[],rc=[],uc=[],pc=[];
+for(let i=0;i<N;i++){xc.push((i+.5)*dx);rc.push(rho[i]);uc.push(u[i]);pc.push(p[i])}
+plotField('c_rho',xc,rc,xa,re,'ρ',0,Math.max(rL,rR)*1.1);
+plotField('c_p',xc,pc,xa,pe,'P',0,Math.max(pLv,pRv)*1.1);
+plotField('c_u',xc,uc,xa,ue,'u',-.1,null);
+showVerification(xc,rc,uc,pc,tend,rL,pLv,rR,pRv,gamma);
+document.getElementById('status').textContent=`Готово: ${ns} шагов, ${el} мс`;
+btn.disabled=false},20)});}
+
+// ============================================================
+// PLOTTING
+// ============================================================
+function plotField(cid,xc,yc,xe,ye,yl,ymn,ymx){
+const c=document.getElementById(cid),ctx=c.getContext('2d'),W=c.width,H=c.height;
+const P={l:50,r:12,t:12,b:28},pw=W-P.l-P.r,ph=H-P.t-P.b;
+if(ymx===null){let mn=1e9,mx=-1e9;for(const v of yc){if(v<mn)mn=v;if(v>mx)mx=v}for(const v of ye){if(v<mn)mn=v;if(v>mx)mx=v}const pd2=(mx-mn)*.1||.1;ymn=mn-pd2;ymx=mx+pd2}
+ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+ctx.strokeStyle='#e8e0d4';ctx.lineWidth=.5;
+for(let i=0;i<=5;i++){const y=P.t+ph*i/5;ctx.beginPath();ctx.moveTo(P.l,y);ctx.lineTo(P.l+pw,y);ctx.stroke()}
+for(let i=0;i<=10;i++){const x=P.l+pw*i/10;ctx.beginPath();ctx.moveTo(x,P.t);ctx.lineTo(x,P.t+ph);ctx.stroke()}
+ctx.fillStyle='#8b7d6e';ctx.font='10px "JetBrains Mono"';ctx.textAlign='center';
+for(let i=0;i<=10;i+=2)ctx.fillText((i/10).toFixed(1),P.l+pw*i/10,H-6);
+ctx.textAlign='right';for(let i=0;i<=5;i++){const v=ymx-(ymx-ymn)*i/5;ctx.fillText(v.toFixed(2),P.l-3,P.t+ph*i/5+3)}
+ctx.save();ctx.translate(9,P.t+ph/2);ctx.rotate(-Math.PI/2);ctx.textAlign='center';ctx.fillText(yl,0,0);ctx.restore();
+// Exact
+ctx.strokeStyle='#b44a2d';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.beginPath();
+for(let i=0;i<xe.length;i++){const cx=P.l+xe[i]*pw,cy=P.t+(1-(ye[i]-ymn)/(ymx-ymn))*ph;i===0?ctx.moveTo(cx,cy):ctx.lineTo(cx,cy)}ctx.stroke();ctx.setLineDash([]);
+// Computed
+ctx.strokeStyle='#3a5ba0';ctx.lineWidth=1.8;ctx.beginPath();
+for(let i=0;i<xc.length;i++){const cx=P.l+xc[i]*pw,cy=P.t+(1-(yc[i]-ymn)/(ymx-ymn))*ph;i===0?ctx.moveTo(cx,cy):ctx.lineTo(cx,cy)}ctx.stroke();
+if(xc.length<=100){ctx.fillStyle='#3a5ba0';for(let i=0;i<xc.length;i++){const cx=P.l+xc[i]*pw,cy=P.t+(1-(yc[i]-ymn)/(ymx-ymn))*ph;ctx.beginPath();ctx.arc(cx,cy,2.5,0,Math.PI*2);ctx.fill()}}
+// Markers
+ctx.font='10px "Source Serif 4"';ctx.textAlign='center';
+const mk=[[.37,'ВР','#8b7d6e'],[.685,'КР','#b44a2d'],[.85,'УВ','#c44']];
+for(const[mx2,lb,cl] of mk){const x2=P.l+mx2*pw;ctx.strokeStyle=cl+'50';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(x2,P.t);ctx.lineTo(x2,P.t+ph);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=cl;ctx.fillText(lb,x2,P.t+11)}}
+
+// ============================================================
+// VERIFICATION
+// ============================================================
+function showVerification(xc,rc,uc,pc,tend,rL,pLv,rR,pRv,gamma){
+document.getElementById('resultsSection').style.display='';
+document.getElementById('noResults').style.display='none';
+function sE(x){return exactRiemann(rL,0,pLv,rR,0,pRv,gamma,(x-.5)/tend)}
+function sC(x,arr){let b=0,bd=1e9;for(let i=0;i<xc.length;i++){const d=Math.abs(xc[i]-x);if(d<bd){bd=d;b=i}}return arr[b]}
+const checks=[
+{n:'ρ',x:.6,r:'ВР↔КР',f:'rho',a:rc},{n:'P',x:.6,r:'ВР↔КР',f:'p',a:pc},{n:'u',x:.6,r:'ВР↔КР',f:'u',a:uc},
+{n:'ρ',x:.75,r:'КР↔УВ',f:'rho',a:rc},{n:'P',x:.75,r:'КР↔УВ',f:'p',a:pc},{n:'u',x:.75,r:'КР↔УВ',f:'u',a:uc}];
+let html='',ok=true;
+for(const c of checks){const ev=sE(c.x)[c.f],cv=sC(c.x,c.a),err=Math.abs(cv-ev)/(Math.abs(ev)+1e-15)*100,pass=err<5;if(!pass)ok=false;
+html+=`<tr><td>${c.n}</td><td>x=${c.x} (${c.r})</td><td>${cv.toFixed(5)}</td><td>${ev.toFixed(5)}</td><td>${err.toFixed(2)}%</td><td class="${pass?'pass':'fail'}">${pass?'✓ OK':'✗ >5%'}</td></tr>`}
+document.getElementById('valuesBody').innerHTML=html;
+document.getElementById('calcInfo').textContent=ok?'✓ Все значения в пределах 5% от точного решения':'⚠ Отклонение >5% — проверьте параметры'}
+
+// Empty plots on load
+window.addEventListener('load',()=>{for(const id of['c_rho','c_p','c_u']){const c=document.getElementById(id),x=c.getContext('2d');x.fillStyle='#fdf9f3';x.fillRect(0,0,c.width,c.height);x.fillStyle='#c4b8a8';x.font='15px "Source Serif 4"';x.textAlign='center';x.fillText('Нажмите «Запустить FLIC»',c.width/2,c.height/2)}});
+</script>
+</body>
+</html>

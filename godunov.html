@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Годунов + HLLC + MUSCL — Полная лекция с интерактивным расчетом</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$'],['\\[','\\]']]},svg:{fontCache:'global'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8;--sidebar-bg:#2b2520;--sidebar-text:#d9cfc0;--highlight:#fff3cd;--shadow:rgba(44,36,25,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:250px;background:var(--sidebar-bg);color:var(--sidebar-text);padding:1.5rem 1rem;overflow-y:auto;z-index:100;border-right:3px solid var(--accent);font-size:.8rem}
+.sidebar h2{font-family:'Playfair Display',serif;font-size:.85rem;font-weight:700;color:#fff;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.03em}
+.sidebar .g{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--accent);margin:.7rem 0 .15rem;text-transform:uppercase;letter-spacing:.08em}
+.sidebar a{display:block;color:var(--sidebar-text);text-decoration:none;font-size:.76rem;line-height:1.35;padding:.15rem 0 .15rem .5rem;border-left:2px solid transparent;transition:all .15s}
+.sidebar a:hover{color:#fff;border-left-color:var(--accent);background:rgba(180,74,45,.08)}
+.sidebar .sep{height:1px;background:rgba(255,255,255,.07);margin:.4rem 0}
+.main{margin-left:250px;max-width:860px;padding:2.5rem 3rem 5rem}
+.hero{margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:2px solid var(--border)}
+.hero .tag{font-family:'JetBrains Mono',monospace;font-size:.68rem;text-transform:uppercase;letter-spacing:.14em;color:var(--accent);margin-bottom:.4rem}
+.hero h1{font-family:'Playfair Display',serif;font-size:2.3rem;font-weight:900;line-height:1.12;margin-bottom:.5rem}
+.hero .sub{font-size:1rem;color:var(--text2);font-style:italic;max-width:600px}
+h2{font-family:'Playfair Display',serif;font-size:1.65rem;font-weight:900;margin:2.5rem 0 .8rem;padding-top:.6rem}
+h2 .n{color:var(--accent);font-weight:400;margin-right:.15em}
+h3{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;color:var(--accent);margin:1.5rem 0 .5rem}
+h4{font-size:.92rem;font-weight:600;color:var(--accent2);margin:1.2rem 0 .35rem}
+p{margin-bottom:.8rem}
+.fb{background:var(--bg2);border-left:4px solid var(--accent);padding:.85rem 1.1rem;margin:1rem 0;border-radius:0 6px 6px 0}
+.fb.g{border-left-color:var(--accent2)}.fb.b{border-left-color:var(--accent3)}
+.fb.box{background:#fdf6ee;border:2px solid var(--accent);border-left:6px solid var(--accent);padding:1rem 1.2rem}
+.note{background:var(--highlight);border:1px solid #e6d9a8;border-radius:6px;padding:.75rem 1rem;margin:1rem 0;font-size:.9rem}
+.note strong{color:var(--accent)}
+.kp{background:#e8f4f0;border:1px solid #b8d9cf;border-radius:6px;padding:.75rem 1rem;margin:1rem 0}
+.kp strong{color:var(--accent2)}
+.warn{background:#fde8e8;border:1px solid #e8b8b8;border-radius:6px;padding:.75rem 1rem;margin:1rem 0}
+.warn strong{color:#c44}
+.algo{background:var(--code-bg);color:var(--code-text);font-family:'JetBrains Mono',monospace;font-size:.74rem;line-height:1.55;padding:1.3rem 1.4rem;border-radius:8px;margin:1.2rem 0;overflow-x:auto;position:relative;box-shadow:0 4px 16px var(--shadow);white-space:pre}
+.algo::before{content:attr(data-title);position:absolute;top:0;left:1rem;transform:translateY(-50%);background:var(--accent);color:#fff;font-size:.6rem;font-weight:500;padding:.1rem .5rem;border-radius:4px;text-transform:uppercase;letter-spacing:.08em}
+.kw{color:#e6a07c}.cm{color:#7a8a6e;font-style:italic}.vr{color:#8bc6d4}
+code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:.1em .3em;border-radius:3px;color:var(--accent)}
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.88rem}
+thead th{background:var(--bg2);font-weight:700;text-align:left;padding:8px 12px;border:1px solid var(--border)}
+td{padding:6px 12px;border:1px solid var(--border)}
+.steps{counter-reset:step}
+.step{counter-increment:step;display:flex;gap:.8rem;margin:.6rem 0;align-items:flex-start}
+.step::before{content:counter(step);background:var(--accent);color:#fff;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.72rem;min-width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.fig{margin:1.5rem 0;text-align:center}
+.fig img,.fig canvas{max-width:100%;border-radius:6px;box-shadow:0 2px 12px var(--shadow)}
+.cap{font-size:.82rem;color:var(--text2);font-style:italic;margin-top:.4rem}
+.timeline{display:flex;gap:0;margin:1.5rem 0;align-items:stretch}
+.timeline .era{flex:1;padding:.6rem .8rem;text-align:center;font-size:.82rem;border-top:3px solid var(--accent)}
+.timeline .era:nth-child(even){border-top-color:var(--accent2)}
+.timeline .era strong{display:block;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--accent);margin-bottom:.2rem}
+
+.solver-wrap{background:var(--bg2);border:2px solid var(--border);border-radius:10px;padding:1.5rem;margin:1.5rem 0}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.6rem;margin:.8rem 0}
+.ctrl{display:flex;flex-direction:column;gap:.15rem}
+.ctrl label{font-size:.72rem;color:var(--text2);font-family:'JetBrains Mono',monospace}
+.ctrl input,.ctrl select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)}
+.ctrl input:focus{outline:none;border-color:var(--accent)}
+.run-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 24px;font-family:'Source Serif 4',serif;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .15s}
+.run-btn:hover{background:#9a3d24}
+.run-btn:disabled{opacity:.4;cursor:not-allowed}
+.status{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-left:.8rem}
+.plots{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;margin:1rem 0}
+@media(max-width:1000px){.plots{grid-template-columns:1fr}.sidebar{display:none}.main{margin-left:0;padding:1.5rem}}
+.plot{background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border);box-shadow:0 1px 4px var(--shadow)}
+.plot-title{text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace}
+canvas{width:100%;height:auto;display:block}
+.legend-row{display:flex;gap:1.2rem;justify-content:center;margin:.5rem 0;font-size:.78rem;color:var(--text2)}
+.legend-row span{display:flex;align-items:center;gap:.3rem}
+.legend-row i{display:inline-block;width:16px;height:3px;border-radius:2px}
+.vtable{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:.78rem;margin:.6rem 0}
+.vtable th{background:var(--bg3);color:var(--accent);padding:5px 8px;text-align:left;border:1px solid var(--border)}
+.vtable td{padding:4px 8px;border:1px solid var(--border)}
+.pass{color:var(--accent2);font-weight:600}
+.fail{color:#c44;font-weight:600}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin:1rem 0}
+@media(max-width:700px){.two-col{grid-template-columns:1fr}}
+mjx-container{max-width:100%!important}
+mjx-container svg{max-width:100%;height:auto}
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <h2>Годунов + HLLC</h2>
+  <div class="g">Теория</div>
+  <a href="#intro">§1 Введение</a>
+  <a href="#fvm">§2 Конечно-объёмная формулировка</a>
+  <a href="#riemann">§3 Задача Римана</a>
+  <a href="#hll">§4 Солвер HLL</a>
+  <a href="#hllc">§5 Солвер HLLC</a>
+  <a href="#muscl">§6 Реконструкция MUSCL</a>
+  <a href="#weno">§7 WENO5</a>
+  <a href="#time">§8 Интегрирование по времени</a>
+  <div class="sep"></div>
+  <div class="g">1D → 2D</div>
+  <a href="#2d">§9 Переход к 2D</a>
+  <a href="#cfl2d">§10 CFL в 2D</a>
+  <a href="#strang">§11 Strang splitting</a>
+  <div class="sep"></div>
+  <div class="g">Практика</div>
+  <a href="#tests">§12 Тесты корректности</a>
+  <a href="#errors">§13 Типовые ошибки</a>
+  <a href="#solver">§14 Интерактивный расчёт</a>
+  <a href="#verification">§15 Верификация</a>
+</nav>
+
+<div class="main">
+
+<div class="hero">
+  <div class="tag">Вычислительная гидродинамика · Лекция</div>
+  <h1>Методы типа Годунова</h1>
+  <p class="sub">HLLC-солвер, реконструкция MUSCL и WENO, переход от 1D к 2D коду для уравнений Эйлера.</p>
+</div>
+
+<!-- §1 -->
+<h2 id="intro"><span class="n">§1</span> Введение и цель лекции</h2>
+
+<p>В предыдущей лекции (FLIC) мы решали уравнения Эйлера методом расщепления: лагранжев этап + эйлеров перенос. Давление на границе ячеек аппроксимировалось средним арифметическим, а перенос — донорской схемой. Это давало <strong>первый порядок</strong> точности и значительную числовую диффузию.</p>
+
+<p>Метод Годунова (1959) предлагает принципиально другой подход: на каждой грани ячеек решается <strong>задача Римана</strong> — задача о распаде произвольного разрыва. Решение этой задачи даёт <em>точные</em> значения потоков через грань. Это даёт более точное воспроизведение разрывов, хотя сам метод Годунова всё ещё первого порядка.</p>
+
+<div class="kp"><strong>Путь развития:</strong> Годунов (1-й порядок, точный Риман) → MUSCL (2-й порядок, линейная реконструкция + limiter) → PPM/WENO (3-5-й порядок, многоточечные стенсилы). При этом римановский солвер можно заменить <em>приближённым</em> — HLL, HLLC, Roe — для ускорения без потери качества.</div>
+
+<h3>Архитектура кода</h3>
+<p>Ключевое преимущество годуновских методов — модульность. Код разбивается на независимые блоки:</p>
+
+<div class="algo" data-title="Архитектура кода Годунова">
+<span class="kw">1.</span> Граничные условия        <span class="cm">// ghost cells</span>
+<span class="kw">2.</span> Реконструкция             <span class="cm">// MUSCL / WENO → UL, UR на гранях</span>
+<span class="kw">3.</span> Римановский солвер        <span class="cm">// HLLC(UL, UR) → F̂ на грани</span>
+<span class="kw">4.</span> Обновление                <span class="cm">// U^{n+1} = U^n - Δt/Δx (F̂_{i+1/2} - F̂_{i-1/2})</span>
+<span class="kw">5.</span> CFL → шаг по времени     <span class="cm">// Δt = CFL · Δx / max(|u|+a)</span></div>
+
+<p>Каждый блок можно менять независимо: заменить MUSCL на WENO, HLLC на Roe, добавить направление $y$ — остальные блоки не меняются. Это фундаментальное отличие от FLIC, где лагранжев и эйлеров этапы тесно связаны.</p>
+
+<!-- §2 -->
+<h2 id="fvm"><span class="n">§2</span> Конечно-объёмная формулировка</h2>
+
+<p>Исходная точка — <strong>интегральная форма</strong> закона сохранения:</p>
+
+$$\frac{d}{dt}\int_\Omega U\,d\Omega + \oint_{\partial\Omega} F \cdot n\,dS = 0$$
+
+<p>Физический смысл: скорость изменения интеграла от $U$ по объёму $\Omega$ равна (с минусом) полному потоку $F$ через границу $\partial\Omega$. Это справедливо для <em>любого</em> объёма, включая ячейку разностной сетки.</p>
+
+<h3>Дискретизация на декартовой сетке</h3>
+
+<p>Считаем $U_{i}$ средним значением по ячейке $i$. Потоки через левую и правую грани: $\hat{F}_{i-1/2}$ и $\hat{F}_{i+1/2}$. Тогда:</p>
+
+$$U_i^{n+1} = U_i^n - \frac{\Delta t}{\Delta x}\left(\hat{F}_{i+1/2} - \hat{F}_{i-1/2}\right)$$
+
+<p>Ключевой вопрос: <strong>как вычислить $\hat{F}_{i+1/2}$?</strong> На грани встречаются два значения — $U_i$ слева и $U_{i+1}$ справа. В общем случае они различны, и на грани формируется <em>разрыв</em>. Метод Годунова решает задачу Римана для этого разрыва.</p>
+
+<div class="note"><strong>Замечание.</strong> Формулировка не зависит от типа сетки — она работает на структурированных, неструктурированных, и даже адаптивных сетках. Меняется только способ вычисления геометрии ячеек и граней.</div>
+
+<!-- §3 -->
+<h2 id="riemann"><span class="n">§3</span> Задача Римана</h2>
+
+<p>Задача Римана — это начально-краевая задача с кусочно-постоянными начальными данными:</p>
+
+$$U(x, 0) = \begin{cases} U_L & x < 0 \\ U_R & x > 0 \end{cases}$$
+
+<p>Решение содержит <strong>три волны</strong>, разделяющие четыре области постоянного состояния:</p>
+
+<table>
+<thead><tr><th>Волна</th><th>Скорость</th><th>Тип</th><th>Что разрешено разрывать</th></tr></thead>
+<tbody>
+<tr><td>1-волна (левая)</td><td>$S_L \approx u_L - a_L$</td><td>Ударная или разрежение</td><td>Все: $\rho$, $p$, $u$</td></tr>
+<tr><td>2-волна (контакт)</td><td>$S_* \approx u_*$</td><td>Контактный разрыв</td><td>Только $\rho$; $p$ и $u$ непрерывны</td></tr>
+<tr><td>3-волна (правая)</td><td>$S_R \approx u_R + a_R$</td><td>Ударная или разрежение</td><td>Все: $\rho$, $p$, $u$</td></tr>
+</tbody>
+</table>
+
+<p>Точное решение (метод Ньютона для $p^*$) мы уже реализовали в лекции по FLIC. Но оно дорогое — итеративный процесс на каждой грани, на каждом шаге. Для практики используют <strong>приближённые солверы</strong>.</p>
+
+<!-- §4 -->
+<h2 id="hll"><span class="n">§4</span> Солвер HLL (Harten, Lax, van Leer)</h2>
+
+<p>Простейший приближённый солвер. Модель: всего <strong>две волны</strong> ($S_L$ и $S_R$), между ними — одно усреднённое состояние $U^*$. Контактный разрыв <em>не разрешается</em>.</p>
+
+$$\hat{F}^{HLL} = \begin{cases} F_L & \text{если } S_L \geq 0 \\ \frac{S_R F_L - S_L F_R + S_L S_R (U_R - U_L)}{S_R - S_L} & \text{если } S_L < 0 < S_R \\ F_R & \text{если } S_R \leq 0 \end{cases}$$
+
+<h4>Оценки скоростей волн</h4>
+$$S_L = \min(u_L - a_L, \; u_R - a_R), \qquad S_R = \max(u_L + a_L, \; u_R + a_R)$$
+
+<div class="warn"><strong>Недостаток HLL:</strong> контактный разрыв размазывается сильно, потому что модель его не содержит. Для задач с контактными поверхностями (многофазные потоки, интерфейсы) HLL неприемлем.</div>
+
+<!-- §5 -->
+<h2 id="hllc"><span class="n">§5</span> Солвер HLLC (HLL-Contact)</h2>
+
+<p>Улучшение HLL: добавлена <strong>третья волна</strong> — контактный разрыв со скоростью $S_*$. Модель: три волны ($S_L$, $S_*$, $S_R$), четыре состояния.</p>
+
+<h3>5.1 Скорость контактного разрыва</h3>
+
+$$S_* = \frac{p_R - p_L + \rho_L u_L(S_L - u_L) - \rho_R u_R(S_R - u_R)}{\rho_L(S_L - u_L) - \rho_R(S_R - u_R)}$$
+
+<h3>5.2 Промежуточные состояния</h3>
+
+<p>Между $S_L$ и $S_*$ (слева от контакта):</p>
+
+$$U_L^* = \rho_L \frac{S_L - u_L}{S_L - S_*} \begin{pmatrix} 1 \\ S_* \\ E_L/\rho_L + (S_* - u_L)\left[S_* + \frac{p_L}{\rho_L(S_L - u_L)}\right] \end{pmatrix}$$
+
+<p>Аналогично $U_R^*$ (между $S_*$ и $S_R$) — та же формула с заменой $L \to R$.</p>
+
+<h3>5.3 Потоковая функция HLLC</h3>
+
+$$\hat{F}^{HLLC} = \begin{cases} F_L & \text{если } S_L \geq 0 \\ F_L + S_L(U_L^* - U_L) & \text{если } S_L < 0 \leq S_* \\ F_R + S_R(U_R^* - U_R) & \text{если } S_* < 0 < S_R \\ F_R & \text{если } S_R \leq 0 \end{cases}$$
+
+<div class="kp"><strong>Почему HLLC, а не точный Риман?</strong> HLLC даёт результат за $O(1)$ операций (без итераций), сохраняет контактный разрыв, и на практике неотличим от точного решения. Разница видна только на экзотических тестах (задача Леблана, сильные разрежения). Для курсовых задач HLLC — оптимальный выбор.</div>
+
+<!-- §6 -->
+<h2 id="muscl"><span class="n">§6</span> Реконструкция MUSCL</h2>
+
+<p>Метод Годунова с постоянной реконструкцией (значение в ячейке = const) даёт 1-й порядок. Для 2-го порядка нужна <strong>линейная реконструкция</strong>: вместо ступенчатого профиля используем наклонный, с ограничителем для подавления осцилляций вблизи разрывов.</p>
+
+<h3>6.1 Наклоны и ограничители</h3>
+
+<p>Для каждой переменной $q$ в ячейке $i$ вычисляем наклон:</p>
+
+$$\sigma_i = \text{limiter}(\Delta_{i-1/2}, \; \Delta_{i+1/2}), \qquad \Delta_{i-1/2} = q_i - q_{i-1}, \quad \Delta_{i+1/2} = q_{i+1} - q_i$$
+
+<h4>Ограничитель minmod (наиболее диффузионный, но устойчивый)</h4>
+$$\text{minmod}(a, b) = \begin{cases} \text{sign}(a) \min(|a|, |b|) & \text{если } ab > 0 \\ 0 & \text{если } ab \leq 0 \end{cases}$$
+
+<h4>Ограничитель van Leer (менее диффузионный)</h4>
+$$\text{vanLeer}(a, b) = \begin{cases} \frac{2ab}{a + b} & \text{если } ab > 0 \\ 0 & \text{если } ab \leq 0 \end{cases}$$
+
+<h3>6.2 Реконструированные состояния на гранях</h3>
+
+$$q_{i+1/2}^L = q_i + \frac{\sigma_i}{2}\Delta x, \qquad q_{i+1/2}^R = q_{i+1} - \frac{\sigma_{i+1}}{2}\Delta x$$
+
+<p>Эти значения $q^L$, $q^R$ подаются на вход HLLC-солвера вместо постоянных $q_i$, $q_{i+1}$.</p>
+
+<div class="note"><strong>Замечание.</strong> Реконструкция выполняется для <em>примитивных</em> переменных ($\rho$, $u$, $p$), а не для консервативных ($\rho$, $\rho u$, $\rho E$). Реконструкция по консервативным переменным может давать нефизические состояния ($p < 0$) вблизи разрывов.</div>
+
+<!-- §7 -->
+<h2 id="weno"><span class="n">§7</span> WENO5 (Weighted Essentially Non-Oscillatory)</h2>
+
+<p>Для 5-го порядка используются 3 подстенсила по 3 точки каждый. Нелинейные веса подавляют вклад стенсилов, содержащих разрыв:</p>
+
+$$q_{i+1/2}^- = \sum_{k=0}^{2} \omega_k \hat{q}_k, \qquad \omega_k = \frac{\alpha_k}{\sum \alpha_j}, \quad \alpha_k = \frac{d_k}{(\varepsilon + \beta_k)^2}$$
+
+<p>где $d_k$ — идеальные веса, $\beta_k$ — индикаторы гладкости, $\varepsilon = 10^{-6}$.</p>
+
+<div class="note"><strong>Сравнение:</strong> MUSCL — 2 точки, 2-й порядок, простая реализация. WENO5 — 5 точек, 5-й порядок, сложная реализация. На практике MUSCL достаточен для большинства инженерных задач; WENO5 нужен для высокоточных расчётов (турбулентность, акустика).</div>
+
+<!-- §8 -->
+<h2 id="time"><span class="n">§8</span> Интегрирование по времени</h2>
+
+<h3>8.1 Эйлер (1-й порядок)</h3>
+$$U^{n+1} = U^n + \Delta t \cdot L(U^n)$$
+
+<h3>8.2 SSP-RK2 (2-й порядок, TVD)</h3>
+$$U^{(1)} = U^n + \Delta t \cdot L(U^n)$$
+$$U^{n+1} = \frac{1}{2}U^n + \frac{1}{2}\left[U^{(1)} + \Delta t \cdot L(U^{(1)})\right]$$
+
+<p>SSP-RK2 сохраняет TVD-свойство ограничителей (монотонность) и даёт 2-й порядок по времени — необходим при использовании MUSCL (иначе пространственный 2-й порядок «убивается» временным 1-м).</p>
+
+<!-- §9 -->
+<h2 id="2d"><span class="n">§9</span> Переход от 1D к 2D</h2>
+
+<p>В 2D вектор консервативных переменных содержит 4 компоненты:</p>
+
+$$U = (\rho, \; \rho u, \; \rho v, \; \rho E)^T$$
+
+<p>и появляется второй потоковый оператор $G$ (по $y$):</p>
+
+$$U_{i,j}^{n+1} = U_{i,j}^n - \frac{\Delta t}{\Delta x}\left(\hat{F}_{i+1/2,j} - \hat{F}_{i-1/2,j}\right) - \frac{\Delta t}{\Delta y}\left(\hat{G}_{i,j+1/2} - \hat{G}_{i,j-1/2}\right)$$
+
+<h4>Что меняется</h4>
+<table>
+<thead><tr><th>Компонент</th><th>1D</th><th>2D</th></tr></thead>
+<tbody>
+<tr><td>Переменные</td><td>3 ($\rho, \rho u, E$)</td><td>4 ($\rho, \rho u, \rho v, E$)</td></tr>
+<tr><td>Потоки</td><td>1 ($F$)</td><td>2 ($F, G$)</td></tr>
+<tr><td>Реконструкция</td><td>1 направление</td><td>2 направления</td></tr>
+<tr><td>Решатель Римана</td><td>1 вызов/грань</td><td>1 вызов/грань (всё ещё 1D!)</td></tr>
+</tbody>
+</table>
+
+<div class="kp"><strong>Ключевое наблюдение:</strong> решатель Римана в 2D — это <em>всё ещё 1D задача</em>, решаемая вдоль нормали к грани. На $x$-грани используем $(u, v)$, на $y$-грани — $(v, u)$ (скорости «поворачиваются»). Код HLLC не меняется!</div>
+
+<!-- §10 -->
+<h2 id="cfl2d"><span class="n">§10</span> CFL в 2D</h2>
+
+$$\boxed{\Delta t = \text{CFL} \cdot \frac{1}{\frac{\lambda_x}{\Delta x} + \frac{\lambda_y}{\Delta y}}}, \qquad \lambda_x = \max_{i,j}(|u_{i,j}| + a_{i,j}), \quad \lambda_y = \max_{i,j}(|v_{i,j}| + a_{i,j})$$
+
+<div class="warn"><strong>Типовая ошибка:</strong> использование 1D формулы $\Delta t = \text{CFL} \cdot \Delta x / \lambda_x$ в 2D коде → нарушение CFL по $y$ → blow-up.</div>
+
+<!-- §11 -->
+<h2 id="strang"><span class="n">§11</span> Strang splitting для split-методов</h2>
+
+<p>Если код построен как split (раздельные $x$- и $y$-обновления):</p>
+
+$$U^{n+1} = L_x(\tfrac{\Delta t}{2}) \circ L_y(\Delta t) \circ L_x(\tfrac{\Delta t}{2}) \; U^n$$
+
+<p>Это даёт 2-й порядок по времени. Unsplit-метод (формула из §9) не требует расщепления, но сложнее в реализации.</p>
+
+<!-- §12 -->
+<h2 id="tests"><span class="n">§12</span> Тесты корректности</h2>
+
+<div class="steps">
+<div class="step"><strong>Экструдированный 1D.</strong> Задача Сода, протянутая вдоль $y$ (начальные данные не зависят от $y$). 2D решение должно совпасть с 1D. Проверяет: правильность $y$-потоков и граничных условий.</div>
+<div class="step"><strong>Консервативность.</strong> Замкнутая область (все стенки — зеркальные). Суммарные масса, импульс и энергия должны сохраняться до $\varepsilon \sim 10^{-14}$.</div>
+<div class="step"><strong>Порядок сходимости (isentropic vortex).</strong> Гладкое точное решение. Запускаем на сетках $50^2$, $100^2$, $200^2$, $400^2$. Ошибка $L_1(\rho)$ vs $\Delta x$ в log-log: наклон $\approx 2$ для MUSCL.</div>
+<div class="step"><strong>Диагональный перенос.</strong> Проверяет корректность работы обоих направлений одновременно.</div>
+<div class="step"><strong>Double Mach Reflection.</strong> Сложная ударная задача (Woodward &amp; Colella). Проверяет устойчивость на сильных разрывах.</div>
+</div>
+
+<!-- §13 -->
+<h2 id="errors"><span class="n">§13</span> Типовые ошибки</h2>
+
+<div class="warn"><strong>1. Неверный знак $y$-потока.</strong> Ошибка в определении направления потока $G$. Симптом: экструдированный 1D не совпадает; решение «зеркалит» по $y$.</div>
+<div class="warn"><strong>2. Ошибки индексации граней.</strong> Путаница между $i+1/2$ и $i-1/2$. Проверяйте знак: $U^{n+1} = U^n - \frac{\Delta t}{\Delta x}(\hat{F}_{i+1/2} - \hat{F}_{i-1/2})$ — именно <em>разность</em>, не сумма.</div>
+<div class="warn"><strong>3. 1D CFL в 2D.</strong> Самая частая ошибка → blow-up. Формула 2D: $\Delta t = \text{CFL}/(\lambda_x/\Delta x + \lambda_y/\Delta y)$.</div>
+<div class="warn"><strong>4. Угловые ghost-ячейки.</strong> В 2D нужно заполнять <em>и угловые</em> ghost-ячейки, не только боковые.</div>
+
+<!-- §14 -->
+<h2 id="solver"><span class="n">§14</span> Интерактивный расчёт (1D, HLLC + MUSCL)</h2>
+
+<p>Ниже — полный 1D-солвер Годунова с HLLC и опциональной MUSCL-реконструкцией. Сравнение с точным решением задачи Римана.</p>
+
+<div class="solver-wrap">
+<h3 style="margin-top:0">Параметры</h3>
+<div class="controls">
+  <div class="ctrl"><label>N (ячеек)</label><input type="number" id="N" value="200" min="20" max="2000"></div>
+  <div class="ctrl"><label>CFL</label><input type="number" id="CFL" value="0.8" min="0.1" max="1.0" step="0.05"></div>
+  <div class="ctrl"><label>γ</label><input type="number" id="gamma" value="1.4" step="0.1"></div>
+  <div class="ctrl"><label>t_end</label><input type="number" id="tend" value="0.2" step="0.01"></div>
+  <div class="ctrl"><label>Реконструкция</label>
+    <select id="recon"><option value="const">Постоянная (1-й порядок)</option><option value="muscl" selected>MUSCL minmod (2-й порядок)</option><option value="vanleer">MUSCL van Leer</option></select></div>
+  <div class="ctrl"><label>Интегрирование</label>
+    <select id="timeint"><option value="euler">Эйлер (1-й порядок)</option><option value="rk2" selected>SSP-RK2 (2-й порядок)</option></select></div>
+</div>
+<div style="display:flex;align-items:center;margin-top:.5rem">
+  <button class="run-btn" id="runBtn" onclick="runGodunov()">▶ Запустить Годунов+HLLC</button>
+  <span class="status" id="status">Готов к расчету</span>
+</div>
+</div>
+
+<div class="legend-row">
+  <span><i style="background:var(--accent3)"></i> Годунов+HLLC</span>
+  <span><i style="background:var(--accent);height:2px;border-top:1px dashed var(--accent)"></i> Точное решение</span>
+</div>
+
+<div class="plots">
+  <div class="plot"><div class="plot-title">ρ(x) — плотность</div><canvas id="c_rho" width="480" height="340"></canvas></div>
+  <div class="plot"><div class="plot-title">P(x) — давление</div><canvas id="c_p" width="480" height="340"></canvas></div>
+  <div class="plot"><div class="plot-title">u(x) — скорость</div><canvas id="c_u" width="480" height="340"></canvas></div>
+</div>
+
+<div class="kp"><strong>Попробуйте:</strong> переключите реконструкцию между «Постоянная» и «MUSCL minmod» — вы увидите, как разрывы становятся значительно резче при 2-м порядке. Также сравните Эйлер vs SSP-RK2 — при MUSCL нужен RK2 для сохранения порядка.</div>
+
+<!-- §15 -->
+<h2 id="verification"><span class="n">§15</span> Верификация</h2>
+
+<div id="resultsSection" style="display:none">
+<table class="vtable">
+<thead><tr><th>Величина</th><th>Область</th><th>Расчёт</th><th>Точное</th><th>Ошибка</th><th>Статус</th></tr></thead>
+<tbody id="valuesBody"></tbody>
+</table>
+<div class="status" id="calcInfo"></div>
+</div>
+<div id="noResults" class="fb b">
+<p>Нажмите <strong>«Запустить Годунов+HLLC»</strong> в §14 для расчёта.</p>
+</div>
+
+<hr style="margin:3rem 0;border:none;border-top:1px solid var(--border)">
+<p style="font-size:.82rem;color:var(--text2)"><strong>Источники:</strong> Godunov, «A difference method for the numerical calculation of discontinuous solutions» (1959); Toro, <em>Riemann Solvers</em>, 3rd ed. (2009); van Leer, «Towards the ultimate conservative difference scheme V» (1979); Jiang &amp; Shu, «Efficient implementation of WENO schemes» (1996).</p>
+
+</div>
+
+<script>
+// ===== EXACT RIEMANN (same as FLIC) =====
+function exactRiemann(rhoL,uL,pL,rhoR,uR,pR,gamma,xot){
+const g1=gamma,g2=(g1-1)/(2*g1),g3=(g1+1)/(2*g1),g4=2/(g1-1),g5=2/(g1+1),g6=(g1-1)/(g1+1),g7=(g1-1)/2;
+const aL=Math.sqrt(g1*pL/rhoL),aR=Math.sqrt(g1*pR/rhoR);
+function fK(p,pk,rhok,ak){if(p>pk){const A=g5/rhok,B=g6*pk;return(p-pk)*Math.sqrt(A/(p+B))}return g4*ak*(Math.pow(p/pk,g2)-1)}
+function dfK(p,pk,rhok,ak){if(p>pk){const A=g5/rhok,B=g6*pk,sq=Math.sqrt(A/(p+B));return sq*(1-(p-pk)/(2*(p+B)))}return 1/(rhok*ak)*Math.pow(p/pk,-g3)}
+let ps=.5*(pL+pR);for(let i=0;i<50;i++){const f=fK(ps,pL,rhoL,aL)+fK(ps,pR,rhoR,aR)+(uR-uL);const df=dfK(ps,pL,rhoL,aL)+dfK(ps,pR,rhoR,aR);const dp=-f/df;ps+=dp;if(ps<1e-10)ps=1e-10;if(Math.abs(dp)<1e-12*ps)break}
+const us=.5*(uL+uR)+.5*(fK(ps,pR,rhoR,aR)-fK(ps,pL,rhoL,aL));
+const S=xot;let rho,u,p;
+if(S<us){if(ps<=pL){const asL=aL*Math.pow(ps/pL,g2),sHL=uL-aL,sTL=us-asL;if(S<=sHL){rho=rhoL;u=uL;p=pL}else if(S>=sTL){rho=rhoL*Math.pow(ps/pL,1/g1);u=us;p=ps}else{u=g5*(aL+g7*uL+S);const a=g5*(aL+g7*(uL-S));rho=rhoL*Math.pow(a/aL,g4);p=pL*Math.pow(a/aL,2*g1/(g1-1))}}else{const sL=uL-aL*Math.sqrt(g3*ps/pL+g2);if(S<=sL){rho=rhoL;u=uL;p=pL}else{rho=rhoL*(ps/pL+g6)/(g6*ps/pL+1);u=us;p=ps}}}else{if(ps<=pR){const asR=aR*Math.pow(ps/pR,g2),sHR=uR+aR,sTR=us+asR;if(S>=sHR){rho=rhoR;u=uR;p=pR}else if(S<=sTR){rho=rhoR*Math.pow(ps/pR,1/g1);u=us;p=ps}else{u=g5*(-aR+g7*uR+S);const a=g5*(aR-g7*(uR-S));rho=rhoR*Math.pow(a/aR,g4);p=pR*Math.pow(a/aR,2*g1/(g1-1))}}else{const sR=uR+aR*Math.sqrt(g3*ps/pR+g2);if(S>=sR){rho=rhoR;u=uR;p=pR}else{rho=rhoR*(ps/pR+g6)/(g6*ps/pR+1);u=us;p=ps}}}
+return{rho,u,p}}
+
+// ===== HLLC SOLVER =====
+function hllcFlux(rL,uL,pL,rR,uR,pR,gamma){
+  const gm1=gamma-1;
+  const EL=pL/(gm1*rL)+.5*uL*uL, ER=pR/(gm1*rR)+.5*uR*uR;
+  const aL=Math.sqrt(gamma*pL/rL), aR=Math.sqrt(gamma*pR/rR);
+  // Wave speed estimates
+  const SL=Math.min(uL-aL, uR-aR), SR=Math.max(uL+aL, uR+aR);
+  // Contact wave speed
+  const SS=(pR-pL+rL*uL*(SL-uL)-rR*uR*(SR-uR))/(rL*(SL-uL)-rR*(SR-uR));
+  // Fluxes
+  const FL=[rL*uL, rL*uL*uL+pL, uL*(rL*EL+pL)];
+  const FR=[rR*uR, rR*uR*uR+pR, uR*(rR*ER+pR)];
+  const UL=[rL, rL*uL, rL*EL], UR=[rR, rR*uR, rR*ER];
+  if(SL>=0) return FL;
+  if(SR<=0) return FR;
+  // Star states
+  function starState(rho,u,E,p,S){
+    const coeff=rho*(S-u)/(S-SS);
+    return [coeff, coeff*SS, coeff*(E+(SS-u)*(SS+p/(rho*(S-u))))];
+  }
+  if(SS>=0){
+    const USL=starState(rL,uL,EL,pL,SL);
+    return FL.map((f,k)=>f+SL*(USL[k]-UL[k]));
+  } else {
+    const USR=starState(rR,uR,ER,pR,SR);
+    return FR.map((f,k)=>f+SR*(USR[k]-UR[k]));
+  }
+}
+
+// ===== LIMITERS =====
+function minmod(a,b){return a*b<=0?0:Math.abs(a)<Math.abs(b)?a:b}
+function vanLeer(a,b){return a*b<=0?0:2*a*b/(a+b)}
+
+// ===== GODUNOV SOLVER =====
+function runGodunov(){
+const btn=document.getElementById('runBtn');btn.disabled=true;
+document.getElementById('status').textContent='Считаю...';
+requestAnimationFrame(()=>{setTimeout(()=>{
+const N=+document.getElementById('N').value,cfl=+document.getElementById('CFL').value,
+gamma=+document.getElementById('gamma').value,tend=+document.getElementById('tend').value;
+const recon=document.getElementById('recon').value;
+const timeint=document.getElementById('timeint').value;
+const dx=1/N,gm1=gamma-1;
+const Ng=3; // ghost cells
+const Nt=N+2*Ng;
+let U=Array.from({length:3},()=>new Float64Array(Nt));
+// Init Sod
+for(let i=0;i<Nt;i++){const x=(i-Ng+.5)*dx;
+let r=x<.5?1:.125,p2=x<.5?1:.1,u2=0;
+U[0][i]=r;U[1][i]=r*u2;U[2][i]=r*(p2/(gm1*r)+.5*u2*u2)}
+
+function applyBC(V){
+  for(let g=0;g<Ng;g++){for(let k=0;k<3;k++){
+    V[k][g]=V[k][2*Ng-1-g]; // reflect left
+    V[k][N+2*Ng-1-g]=V[k][N+g]; // reflect right
+  }}
+  // Reflect velocity
+  for(let g=0;g<Ng;g++){V[1][g]=-V[1][g];V[1][N+2*Ng-1-g]=-V[1][N+2*Ng-1-g]}
+}
+
+function prim(V,i){
+  const r=V[0][i],u2=V[1][i]/r,E=V[2][i]/r,e=E-.5*u2*u2,p2=gm1*r*e;
+  return{r,u:u2,p:Math.max(p2,1e-12),e,E,a:Math.sqrt(gamma*Math.max(p2,1e-12)/r)}}
+
+function computeRHS(V){
+  applyBC(V);
+  const RHS=Array.from({length:3},()=>new Float64Array(Nt));
+  // Reconstruct + flux
+  for(let i=Ng-1;i<N+Ng;i++){
+    // Face i+1/2: between cells i and i+1
+    let pL2=prim(V,i), pR2=prim(V,i+1);
+    let rL2=pL2.r,uL2=pL2.u,ppL=pL2.p;
+    let rR2=pR2.r,uR2=pR2.u,ppR=pR2.p;
+    if(recon!=='const'){
+      const lim=recon==='vanleer'?vanLeer:minmod;
+      // MUSCL reconstruction for rho, u, p
+      const pIM=prim(V,i-1),pIP=prim(V,i+2);
+      const sr=lim(pL2.r-pIM.r, pR2.r-pL2.r), su=lim(pL2.u-pIM.u, pR2.u-pL2.u), sp=lim(pL2.p-pIM.p, pR2.p-pL2.p);
+      const sr2=lim(pR2.r-pL2.r, pIP.r-pR2.r), su2=lim(pR2.u-pL2.u, pIP.u-pR2.u), sp2=lim(pR2.p-pL2.p, pIP.p-pR2.p);
+      rL2=pL2.r+.5*sr; uL2=pL2.u+.5*su; ppL=pL2.p+.5*sp;
+      rR2=pR2.r-.5*sr2; uR2=pR2.u-.5*su2; ppR=pR2.p-.5*sp2;
+      if(rL2<1e-10)rL2=1e-10;if(rR2<1e-10)rR2=1e-10;if(ppL<1e-10)ppL=1e-10;if(ppR<1e-10)ppR=1e-10;
+    }
+    const F=hllcFlux(rL2,uL2,ppL,rR2,uR2,ppR,gamma);
+    for(let k=0;k<3;k++){RHS[k][i]-=F[k]/dx;RHS[k][i+1]+=F[k]/dx}
+  }
+  return RHS;
+}
+
+let t=0,ns=0;const t0=performance.now();
+while(t<tend){
+  applyBC(U);
+  let mx=0;for(let i=Ng;i<N+Ng;i++){const p2=prim(U,i);const l=Math.abs(p2.u)+p2.a;if(l>mx)mx=l}
+  let dt=cfl*dx/mx;if(t+dt>tend)dt=tend-t;
+
+  if(timeint==='rk2'){
+    // SSP-RK2
+    const RHS1=computeRHS(U);
+    const U1=Array.from({length:3},()=>new Float64Array(Nt));
+    for(let k=0;k<3;k++)for(let i=0;i<Nt;i++)U1[k][i]=U[k][i]+dt*RHS1[k][i];
+    const RHS2=computeRHS(U1);
+    for(let k=0;k<3;k++)for(let i=0;i<Nt;i++)U[k][i]=.5*U[k][i]+.5*(U1[k][i]+dt*RHS2[k][i]);
+  } else {
+    const RHS=computeRHS(U);
+    for(let k=0;k<3;k++)for(let i=0;i<Nt;i++)U[k][i]+=dt*RHS[k][i];
+  }
+  t+=dt;ns++;if(ns>1e5)break}
+
+const el=(performance.now()-t0).toFixed(1);
+// Extract results
+const xc=[],rc=[],uc=[],pc=[];
+for(let i=Ng;i<N+Ng;i++){
+  const p2=prim(U,i);
+  xc.push((i-Ng+.5)*dx);rc.push(p2.r);uc.push(p2.u);pc.push(p2.p)}
+// Exact
+const xa=[],re=[],ue=[],pe=[];
+for(let i=0;i<500;i++){const x=(i+.5)/500,s=exactRiemann(1,0,1,.125,0,.1,gamma,(x-.5)/tend);xa.push(x);re.push(s.rho);ue.push(s.u);pe.push(s.p)}
+plotField('c_rho',xc,rc,xa,re,'ρ',0,1.1);plotField('c_p',xc,pc,xa,pe,'P',0,1.1);plotField('c_u',xc,uc,xa,ue,'u',-.1,null);
+showVerification(xc,rc,uc,pc,tend,gamma);
+document.getElementById('status').textContent=`Готово: ${ns} шагов, ${el} мс, ${recon}+${timeint}`;
+btn.disabled=false},20)});}
+
+// ===== PLOTTING (same as FLIC) =====
+function plotField(cid,xc,yc,xe,ye,yl,ymn,ymx){
+const c=document.getElementById(cid),ctx=c.getContext('2d'),W=c.width,H=c.height;
+const P={l:50,r:12,t:12,b:28},pw=W-P.l-P.r,ph=H-P.t-P.b;
+if(ymx===null){let mn=1e9,mx=-1e9;for(const v of yc){if(v<mn)mn=v;if(v>mx)mx=v}for(const v of ye){if(v<mn)mn=v;if(v>mx)mx=v}const pd2=(mx-mn)*.1||.1;ymn=mn-pd2;ymx=mx+pd2}
+ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+ctx.strokeStyle='#e8e0d4';ctx.lineWidth=.5;
+for(let i=0;i<=5;i++){const y=P.t+ph*i/5;ctx.beginPath();ctx.moveTo(P.l,y);ctx.lineTo(P.l+pw,y);ctx.stroke()}
+for(let i=0;i<=10;i++){const x=P.l+pw*i/10;ctx.beginPath();ctx.moveTo(x,P.t);ctx.lineTo(x,P.t+ph);ctx.stroke()}
+ctx.fillStyle='#8b7d6e';ctx.font='10px "JetBrains Mono"';ctx.textAlign='center';
+for(let i=0;i<=10;i+=2)ctx.fillText((i/10).toFixed(1),P.l+pw*i/10,H-6);
+ctx.textAlign='right';for(let i=0;i<=5;i++){const v=ymx-(ymx-ymn)*i/5;ctx.fillText(v.toFixed(2),P.l-3,P.t+ph*i/5+3)}
+ctx.save();ctx.translate(9,P.t+ph/2);ctx.rotate(-Math.PI/2);ctx.textAlign='center';ctx.fillText(yl,0,0);ctx.restore();
+ctx.strokeStyle='#b44a2d';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.beginPath();
+for(let i=0;i<xe.length;i++){const cx=P.l+xe[i]*pw,cy=P.t+(1-(ye[i]-ymn)/(ymx-ymn))*ph;i===0?ctx.moveTo(cx,cy):ctx.lineTo(cx,cy)}ctx.stroke();ctx.setLineDash([]);
+ctx.strokeStyle='#3a5ba0';ctx.lineWidth=1.8;ctx.beginPath();
+for(let i=0;i<xc.length;i++){const cx=P.l+xc[i]*pw,cy=P.t+(1-(yc[i]-ymn)/(ymx-ymn))*ph;i===0?ctx.moveTo(cx,cy):ctx.lineTo(cx,cy)}ctx.stroke();
+if(xc.length<=100){ctx.fillStyle='#3a5ba0';for(let i=0;i<xc.length;i++){const cx=P.l+xc[i]*pw,cy=P.t+(1-(yc[i]-ymn)/(ymx-ymn))*ph;ctx.beginPath();ctx.arc(cx,cy,2.5,0,Math.PI*2);ctx.fill()}}
+ctx.font='10px "Source Serif 4"';ctx.textAlign='center';
+const mk=[[.37,'ВР','#8b7d6e'],[.685,'КР','#b44a2d'],[.85,'УВ','#c44']];
+for(const[mx2,lb,cl] of mk){const x2=P.l+mx2*pw;ctx.strokeStyle=cl+'50';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(x2,P.t);ctx.lineTo(x2,P.t+ph);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=cl;ctx.fillText(lb,x2,P.t+11)}}
+
+function showVerification(xc,rc,uc,pc,tend,gamma){
+document.getElementById('resultsSection').style.display='';
+document.getElementById('noResults').style.display='none';
+function sE(x){return exactRiemann(1,0,1,.125,0,.1,gamma,(x-.5)/tend)}
+function sC(x,arr){let b=0,bd=1e9;for(let i=0;i<xc.length;i++){const d=Math.abs(xc[i]-x);if(d<bd){bd=d;b=i}}return arr[b]}
+const checks=[{n:'ρ',x:.6,r:'ВР↔КР',f:'rho',a:rc},{n:'P',x:.6,r:'ВР↔КР',f:'p',a:pc},{n:'u',x:.6,r:'ВР↔КР',f:'u',a:uc},
+{n:'ρ',x:.75,r:'КР↔УВ',f:'rho',a:rc},{n:'P',x:.75,r:'КР↔УВ',f:'p',a:pc},{n:'u',x:.75,r:'КР↔УВ',f:'u',a:uc}];
+let html='',ok=true;
+for(const c of checks){const ev=sE(c.x)[c.f],cv=sC(c.x,c.a),err=Math.abs(cv-ev)/(Math.abs(ev)+1e-15)*100,pass=err<5;if(!pass)ok=false;
+html+=`<tr><td>${c.n}</td><td>x=${c.x} (${c.r})</td><td>${cv.toFixed(5)}</td><td>${ev.toFixed(5)}</td><td>${err.toFixed(2)}%</td><td class="${pass?'pass':'fail'}">${pass?'✓ OK':'✗ >5%'}</td></tr>`}
+document.getElementById('valuesBody').innerHTML=html;
+document.getElementById('calcInfo').textContent=ok?'✓ Все значения в пределах 5%':'⚠ Отклонение >5%'}
+
+window.addEventListener('load',()=>{for(const id of['c_rho','c_p','c_u']){const c=document.getElementById(id),x=c.getContext('2d');x.fillStyle='#fdf9f3';x.fillRect(0,0,c.width,c.height);x.fillStyle='#c4b8a8';x.font='15px "Source Serif 4"';x.textAlign='center';x.fillText('Нажмите «Запустить»',c.width/2,c.height/2)}});
+</script>
+</body>
+</html>

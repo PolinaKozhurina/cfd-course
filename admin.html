@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Админ-панель — CFD Course</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--shadow:rgba(44,36,25,.06)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:16px;line-height:1.6;color:var(--text);background:var(--bg)}
+.nav-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:.6rem 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.nav-bar .brand{font-family:'Playfair Display',serif;font-weight:700;font-size:1rem;color:var(--accent);text-decoration:none}
+.nav-links{display:flex;gap:.3rem;flex-wrap:wrap}
+.nav-links a{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text2);text-decoration:none;padding:.3rem .55rem;border-radius:4px;transition:all .15s}
+.nav-links a:hover{background:var(--bg3);color:var(--text)}
+.nav-links a.active{background:var(--accent);color:#fff}
+.wrap{max-width:1000px;margin:0 auto;padding:1.5rem}
+h1{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:900;margin-bottom:.3rem}
+.sub{color:var(--text2);font-size:.9rem;margin-bottom:1.5rem}
+.tabs{display:flex;gap:.3rem;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:.3rem}
+.tab{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.4rem .8rem;border-radius:4px 4px 0 0;cursor:pointer;color:var(--text2);background:none;border:none;transition:all .15s}
+.tab:hover{color:var(--text);background:var(--bg2)}
+.tab.active{color:#fff;background:var(--accent)}
+.panel{display:none}
+.panel.active{display:block}
+.card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;margin-bottom:1rem}
+.card h3{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;margin-bottom:.5rem}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+thead th{background:var(--bg2);text-align:left;padding:6px 10px;border:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--accent)}
+td{padding:5px 10px;border:1px solid var(--border)}
+.badge{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:2px 6px;border-radius:3px;white-space:nowrap}
+.b-admin{background:#fde8e8;color:#c44}
+.b-student{background:#e6f1fb;color:var(--accent3)}
+.b-pass{background:#e8f4f0;color:var(--accent2)}
+.b-fail{background:#fde8e8;color:#c44}
+.b-pending{background:var(--bg3);color:var(--text3)}
+.b-group{background:#faeeda;color:#854f0b}
+select,input[type="text"],input[type="number"]{font-family:'JetBrains Mono',monospace;font-size:.8rem;padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text)}
+select:focus,input:focus{outline:none;border-color:var(--accent)}
+.btn{font-family:'JetBrains Mono',monospace;font-size:.75rem;padding:4px 12px;border-radius:4px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text);transition:all .15s}
+.btn:hover{background:var(--bg2)}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:#9a3d24}
+.btn-sm{padding:2px 8px;font-size:.7rem}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1.5rem}
+@media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--bg2);border-radius:6px;padding:.8rem 1rem;text-align:center}
+.stat .num{font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--accent)}
+.stat .label{font-size:.75rem;color:var(--text2);margin-top:.15rem}
+.access-denied{text-align:center;padding:4rem 2rem;color:var(--text2)}
+.access-denied h2{font-family:'Playfair Display',serif;color:var(--accent);margin-bottom:.5rem}
+.grade-input{width:50px;text-align:center}
+.comment-input{width:100%;font-size:.8rem;padding:4px 8px;border:1px solid var(--border);border-radius:4px;margin-top:4px;font-family:'Source Serif 4',serif}
+.export-bar{display:flex;gap:.5rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap}
+.search{width:200px}
+</style>
+</head>
+<body>
+
+<nav class="nav-bar">
+  <a href="index.html" class="brand">CFD Course</a>
+  <div class="nav-links">
+    <a href="index.html">Главная</a>
+    <a href="admin.html" class="active">Админ</a>
+    <a href="profile.html">Профиль</a>
+    <a href="checklist.html">Зачёт</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<div id="loading" style="text-align:center;padding:3rem;color:var(--text3)">Загрузка...</div>
+
+<div id="denied" class="access-denied" style="display:none">
+  <h2>Доступ запрещён</h2>
+  <p>Эта страница доступна только администратору курса.</p>
+  <p style="margin-top:1rem"><a href="index.html" style="color:var(--accent)">Вернуться на главную</a></p>
+</div>
+
+<div id="adminContent" style="display:none">
+
+<h1>Админ-панель</h1>
+<p class="sub">Управление студентами, группами и результатами</p>
+
+<div class="stats">
+  <div class="stat"><div class="num" id="statStudents">—</div><div class="label">Студентов</div></div>
+  <div class="stat"><div class="num" id="statGroups">—</div><div class="label">Групп</div></div>
+  <div class="stat"><div class="num" id="statSubmissions">—</div><div class="label">Сдач</div></div>
+  <div class="stat"><div class="num" id="statPassed">—</div><div class="label">Зачётов</div></div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('students')">Студенты</button>
+  <button class="tab" onclick="showTab('groups')">Результаты тестов</button>
+  <button class="tab" onclick="showTab('checklist')">Чек-лист (самооценка)</button>
+  <button class="tab" onclick="showTab('grades')">Оценки</button>
+</div>
+
+<!-- TAB 1: Students -->
+<div id="tab-students" class="panel active">
+  <div class="export-bar">
+    <input type="text" class="search" id="searchStudents" placeholder="Поиск по email..." oninput="renderStudents()">
+    <button class="btn" onclick="exportCSV()">Экспорт CSV</button>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Email</th><th>Группа</th><th>Роль</th><th>Назначить группу</th></tr></thead>
+      <tbody id="studentsBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- TAB 2: Groups & Results -->
+<div id="tab-groups" class="panel">
+  <div class="export-bar">
+    <select id="groupFilter" onchange="renderGroupResults()">
+      <option value="all">Все группы</option>
+    </select>
+  </div>
+  <div id="groupResults"></div>
+</div>
+
+<!-- TAB: Checklist self-assessment -->
+<div id="tab-checklist" class="panel">
+  <div class="card">
+    <h3>Самооценка студентов (галочки в чек-листе)</h3>
+    <p style="font-size:.85rem;color:var(--text2);margin-bottom:.8rem">Студенты сами отмечают что считают готовым. Здесь видно прогресс каждой группы.</p>
+    <table>
+      <thead><tr><th>Группа</th><th>Участники</th><th>Отмечено</th><th>Прогресс</th><th>Последнее обновление</th></tr></thead>
+      <tbody id="checklistBody"></tbody>
+    </table>
+  </div>
+  <div id="checklistDetail"></div>
+</div>
+
+<!-- TAB 3: Grades -->
+<div id="tab-grades" class="panel">
+  <div class="card">
+    <h3>Итоговые оценки</h3>
+    <p style="font-size:.85rem;color:var(--text2);margin-bottom:.8rem">Выставьте оценку и комментарий для каждой группы. Студенты увидят их в личном кабинете.</p>
+    <table>
+      <thead><tr><th>Группа</th><th>Участники</th><th>Сдано тестов</th><th>Оценка</th><th>Комментарий</th><th></th></tr></thead>
+      <tbody id="gradesBody"></tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script>
+// ============================================================
+// ADMIN PANEL LOGIC
+// ============================================================
+
+// Initialize Firebase
+if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// Admin email from config
+const ADMIN_EMAIL = typeof ADMIN_EMAILS !== 'undefined' ? ADMIN_EMAILS : [firebaseConfig.adminEmail || ''];
+
+let allUsers = [];
+let allGroups = {};
+let allResults = {};
+
+const TEST_IDS = [
+  {id:'sod_flic', name:'Сод (FLIC)'},
+  {id:'sod_godunov', name:'Сод (Годунов)'},
+  {id:'sod_mader', name:'Сод (Мейдер)'},
+  {id:'det_mader', name:'Детонация CJ'},
+  {id:'cavity_simple', name:'Каверна SIMPLE'},
+  {id:'cavity_piso', name:'Каверна PISO'},
+  {id:'taylor_green', name:'Тейлор-Грин'},
+  {id:'step_re100', name:'Ступенька Re=100'},
+  {id:'step_re200', name:'Ступенька Re=200'},
+  {id:'step_re400', name:'Ступенька Re=400'},
+];
+
+// ===== Auth check =====
+auth.onAuthStateChanged(async user => {
+  document.getElementById('loading').style.display = 'none';
+  if (!user || !isAdmin(user.email)) {
+    document.getElementById('denied').style.display = '';
+    return;
+  }
+  document.getElementById('adminContent').style.display = '';
+  await loadAllData();
+});
+
+function isAdmin(email) {
+  if (Array.isArray(ADMIN_EMAIL)) return ADMIN_EMAIL.includes(email);
+  return email === ADMIN_EMAIL;
+}
+
+// ===== Load all data =====
+async function loadAllData() {
+  // Load users
+  const usersSnap = await db.collection('users').get();
+  allUsers = [];
+  usersSnap.forEach(doc => {
+    allUsers.push({ uid: doc.id, ...doc.data() });
+  });
+
+  // Load groups and results
+  allGroups = {};
+  allResults = {};
+  for (let g = 1; g <= 20; g++) {
+    const gid = 'group_' + String(g).padStart(2, '0');
+    const members = allUsers.filter(u => u.group === gid);
+    if (members.length === 0) continue;
+    allGroups[gid] = { members };
+    // Load repo URL
+    try { const gDoc = await db.collection('groups').doc(gid).get();
+      if (gDoc.exists && gDoc.data().repoUrl) allGroups[gid].repoUrl = gDoc.data().repoUrl;
+    } catch(e) {}
+    // Load results
+    const resultsSnap = await db.collection('groups').doc(gid).collection('results').get();
+    allResults[gid] = {};
+    resultsSnap.forEach(doc => {
+      allResults[gid][doc.id] = doc.data();
+    });
+  }
+
+  // Load grades
+  const gradesSnap = await db.collection('grades').get();
+  gradesSnap.forEach(doc => {
+    const gid = doc.id;
+    if (allGroups[gid]) allGroups[gid].grade = doc.data();
+  });
+
+  updateStats();
+  renderStudents();
+  renderGroupFilter();
+  renderGroupResults();
+  renderGrades();
+  await loadChecklistProgress();
+}
+
+// ===== Stats =====
+function updateStats() {
+  document.getElementById('statStudents').textContent = allUsers.length;
+  document.getElementById('statGroups').textContent = Object.keys(allGroups).length;
+  let submissions = 0, passed = 0;
+  for (const [gid, results] of Object.entries(allResults)) {
+    for (const [tid, data] of Object.entries(results)) {
+      submissions++;
+      if (data.values && data.values.allPass) passed++;
+    }
+  }
+  document.getElementById('statSubmissions').textContent = submissions;
+  document.getElementById('statPassed').textContent = passed;
+}
+
+// ===== Tab switching =====
+function showTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ===== Students table =====
+function renderStudents() {
+  const search = (document.getElementById('searchStudents').value || '').toLowerCase();
+  const filtered = search ? allUsers.filter(u => u.email && u.email.toLowerCase().includes(search)) : allUsers;
+  const tbody = document.getElementById('studentsBody');
+  tbody.innerHTML = filtered.map(u => {
+    const isAdm = isAdmin(u.email);
+    const groupOptions = Array.from({length: 20}, (_, i) => {
+      const gid = 'group_' + String(i + 1).padStart(2, '0');
+      return `<option value="${gid}" ${u.group === gid ? 'selected' : ''}>Гр. ${String(i + 1).padStart(2, '0')}</option>`;
+    }).join('');
+    return `<tr>
+      <td>${u.email || '—'}</td>
+      <td>${u.group ? '<span class="badge b-group">' + u.group.replace('group_', 'Гр.') + '</span>' : '<span class="badge b-pending">не назначена</span>'}</td>
+      <td>${isAdm ? '<span class="badge b-admin">admin</span>' : '<span class="badge b-student">student</span>'}</td>
+      <td><select onchange="assignGroup('${u.uid}', this.value)">
+        <option value="">—</option>${groupOptions}
+      </select></td>
+    </tr>`;
+  }).join('');
+}
+
+async function assignGroup(uid, group) {
+  if (!group) return;
+  await db.collection('users').doc(uid).set({ group }, { merge: true });
+  const user = allUsers.find(u => u.uid === uid);
+  if (user) user.group = group;
+  renderStudents();
+  // Rebuild groups
+  await loadAllData();
+}
+
+// ===== Group results =====
+function renderGroupFilter() {
+  const sel = document.getElementById('groupFilter');
+  sel.innerHTML = '<option value="all">Все группы</option>';
+  for (const gid of Object.keys(allGroups).sort()) {
+    sel.innerHTML += `<option value="${gid}">${gid.replace('group_', 'Группа ')}</option>`;
+  }
+}
+
+function renderGroupResults() {
+  const filter = document.getElementById('groupFilter').value;
+  const container = document.getElementById('groupResults');
+  let html = '';
+  const groups = filter === 'all' ? Object.keys(allGroups).sort() : [filter];
+  for (const gid of groups) {
+    if (!allGroups[gid]) continue;
+    const members = allGroups[gid].members.map(m => m.email).join(', ');
+    const results = allResults[gid] || {};
+    const repoLink = allGroups[gid].repoUrl ? '<a href="' + allGroups[gid].repoUrl + '" target="_blank" style="color:var(--accent3);font-family:\'JetBrains Mono\',monospace;font-size:.75rem;text-decoration:none;border-bottom:1px dashed var(--accent3)">' + allGroups[gid].repoUrl.replace('https://github.com/','') + '</a>' : '<span style="color:var(--text3);font-size:.78rem">не указан</span>';
+    html += `<div class="card"><h3>${gid.replace('group_', 'Группа ')}</h3>
+      <p style="font-size:.82rem;color:var(--text2);margin-bottom:.3rem">${members}</p>
+      <p style="font-size:.82rem;margin-bottom:.5rem">GitHub: ${repoLink}</p>
+      <table><thead><tr><th>Тест</th><th>Статус</th><th>Кто сдал</th><th>Когда</th></tr></thead><tbody>`;
+    for (const t of TEST_IDS) {
+      const r = results[t.id];
+      if (r) {
+        const status = r.values && r.values.allPass
+          ? '<span class="badge b-pass">сдано</span>'
+          : '<span class="badge b-fail">ошибка</span>';
+        const who = r.submittedBy || '—';
+        const when = r.submittedAt ? new Date(r.submittedAt.seconds * 1000).toLocaleDateString('ru') : (r.values && r.values.timestamp ? r.values.timestamp.slice(0, 10) : '—');
+        html += `<tr><td>${t.name}</td><td>${status}</td><td style="font-size:.78rem">${who}</td><td style="font-size:.78rem">${when}</td></tr>`;
+      } else {
+        html += `<tr><td>${t.name}</td><td><span class="badge b-pending">не сдано</span></td><td>—</td><td>—</td></tr>`;
+      }
+    }
+    html += '</tbody></table></div>';
+  }
+  if (!html) html = '<p style="color:var(--text3);text-align:center;padding:2rem">Нет групп с участниками</p>';
+  container.innerHTML = html;
+}
+
+// ===== Grades =====
+function renderGrades() {
+  const tbody = document.getElementById('gradesBody');
+  let html = '';
+  for (const gid of Object.keys(allGroups).sort()) {
+    const g = allGroups[gid];
+    const members = g.members.map(m => m.email).join(', ');
+    const results = allResults[gid] || {};
+    const passed = TEST_IDS.filter(t => results[t.id] && results[t.id].values && results[t.id].values.allPass).length;
+    const grade = g.grade ? g.grade.grade : '';
+    const comment = g.grade ? g.grade.comment : '';
+    html += `<tr>
+      <td><span class="badge b-group">${gid.replace('group_', 'Гр.')}</span></td>
+      <td style="font-size:.78rem;max-width:200px">${members}</td>
+      <td>${passed} / ${TEST_IDS.length}</td>
+      <td><input type="number" class="grade-input" id="grade_${gid}" value="${grade}" min="0" max="10" step="1" placeholder="—"></td>
+      <td><input type="text" class="comment-input" id="comment_${gid}" value="${comment}" placeholder="Комментарий..."></td>
+      <td><button class="btn btn-sm btn-primary" onclick="saveGrade('${gid}')">Сохр.</button></td>
+    </tr>`;
+  }
+  tbody.innerHTML = html || '<tr><td colspan="6" style="text-align:center;color:var(--text3)">Нет групп</td></tr>';
+}
+
+async function saveGrade(gid) {
+  const grade = document.getElementById('grade_' + gid).value;
+  const comment = document.getElementById('comment_' + gid).value;
+  await db.collection('grades').doc(gid).set({
+    grade: grade,
+    comment: comment,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  if (allGroups[gid]) allGroups[gid].grade = { grade, comment };
+  alert('Оценка сохранена для ' + gid.replace('group_', 'Группа '));
+}
+
+// ===== Checklist progress =====
+async function loadChecklistProgress() {
+  const tbody = document.getElementById('checklistBody');
+  let html = '';
+  for (const gid of Object.keys(allGroups).sort()) {
+    const g = allGroups[gid];
+    const members = g.members.map(m => m.email).join(', ');
+    // Load checklist items
+    let checked = 0, total = 72, lastUpdate = '—', items = {};
+    try {
+      const snap = await db.collection('groups').doc(gid).collection('checklist').get();
+      snap.forEach(doc => {
+        items[doc.id] = doc.data();
+        if (doc.data().checked) checked++;
+        if (doc.data().timestamp && doc.data().timestamp.seconds) {
+          const d = new Date(doc.data().timestamp.seconds * 1000).toLocaleDateString('ru');
+          lastUpdate = d;
+        }
+      });
+    } catch(e) {}
+    const pct = Math.round(checked / total * 100);
+    const barColor = pct >= 80 ? 'var(--accent2)' : pct >= 40 ? '#854f0b' : '#c44';
+    html += `<tr>
+      <td><span class="badge b-group">${gid.replace('group_','Гр.')}</span></td>
+      <td style="font-size:.78rem;max-width:200px">${members}</td>
+      <td>${checked} / ${total}</td>
+      <td><div style="background:var(--bg3);height:8px;border-radius:4px;overflow:hidden;width:120px;display:inline-block;vertical-align:middle"><div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px"></div></div> ${pct}%</td>
+      <td style="font-size:.78rem">${lastUpdate}</td>
+    </tr>`;
+    // Store for detail view
+    allGroups[gid].checklistItems = items;
+    allGroups[gid].checklistChecked = checked;
+  }
+  tbody.innerHTML = html || '<tr><td colspan="5" style="text-align:center;color:var(--text3)">Нет данных</td></tr>';
+}
+
+// ===== Export CSV =====
+function exportCSV() {
+  let csv = 'Группа,Email,Роль,GitHub';
+  TEST_IDS.forEach(t => csv += ',' + t.name);
+  csv += ',Оценка,Комментарий\n';
+  for (const u of allUsers) {
+    const gid = u.group || '';
+    const isAdm = isAdmin(u.email);
+    const repo = allGroups[gid] && allGroups[gid].repoUrl ? allGroups[gid].repoUrl : '';
+    let row = `${gid},${u.email},${isAdm ? 'admin' : 'student'},${repo}`;
+    const results = allResults[gid] || {};
+    for (const t of TEST_IDS) {
+      const r = results[t.id];
+      row += ',' + (r ? (r.values && r.values.allPass ? 'pass' : 'fail') : '');
+    }
+    const gr = allGroups[gid] && allGroups[gid].grade;
+    row += ',' + (gr ? gr.grade : '') + ',' + (gr ? '"' + (gr.comment || '') + '"' : '');
+    csv += row + '\n';
+  }
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'cfd_course_results.csv';
+  a.click();
+}
+</script>
+</body>
+</html>

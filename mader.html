@@ -545,16 +545,17 @@ $$\rho_\text{det} = \rho_0 \frac{\gamma+1}{\gamma} = 2.453 \text{ г/см³}, \q
   async function loadComments() {
     const list = document.getElementById('comments-list');
     try {
-      const snap = await db.collection('comments').where('page','==',PAGE_ID).orderBy('createdAt','desc').get();
-      if (snap.empty) {
+      const snap = await db.collection('comments').where('page','==',PAGE_ID).get();
+      var docs = []; snap.forEach(function(d){ docs.push(d); }); docs.sort(function(a,b){ var ta = a.data().createdAt ? a.data().createdAt.seconds : 0; var tb = b.data().createdAt ? b.data().createdAt.seconds : 0; return tb - ta; });
+      if (docs.length === 0) {
         list.innerHTML = '<p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p>';
         return;
       }
       const user = auth.currentUser;
       const adminUser = user && isAdmin(user.email);
       let html = '';
-      snap.forEach(doc => {
-        const c = doc.data();
+      docs.forEach(function(doc) {
+        var c = doc.data();
         const date = c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
         const delBtn = adminUser ? ' <button onclick="deleteComment(\''+doc.id+'\')" style="font-size:.7rem;color:#c44;background:none;border:none;cursor:pointer;font-family:JetBrains Mono,monospace">удалить</button>' : '';
         html += '<div style="padding:.6rem 0;border-bottom:1px solid #ede6da">';

@@ -554,7 +554,7 @@ async function loadChecklistProgress() {
   let html = '';
   for (const gid of Object.keys(allGroups).sort()) {
     const g = allGroups[gid];
-    const members = g.members.map(m => m.email).join(', ');
+    const members = g.members.map(m => m.fio || m.email).join(', ');
     // Load checklist items
     let checked = 0, total = 72, lastUpdate = '—', items = {};
     try {
@@ -563,14 +563,14 @@ async function loadChecklistProgress() {
         items[doc.id] = doc.data();
         if (doc.data().checked) checked++;
         if (doc.data().timestamp && doc.data().timestamp.seconds) {
-          const d = new Date(doc.data().timestamp.seconds * 1000).toLocaleDateString('ru');
+          const d = new Date(doc.data().timestamp.seconds * 1000).toLocaleString('ru', {timeZone:'Europe/Moscow', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
           lastUpdate = d;
         }
       });
     } catch(e) {}
     const pct = Math.round(checked / total * 100);
     const barColor = pct >= 80 ? 'var(--accent2)' : pct >= 40 ? '#854f0b' : '#c44';
-    html += `<tr>
+    html += `<tr style="cursor:pointer" onclick="showGroupChecklist('${gid}')" title="Нажмите чтобы развернуть">
       <td><span class="badge b-group">${gid.replace('group_','Гр.')}</span></td>
       <td style="font-size:.78rem;max-width:200px">${members}</td>
       <td>${checked} / ${total}</td>
@@ -583,6 +583,98 @@ async function loadChecklistProgress() {
   }
   tbody.innerHTML = html || '<tr><td colspan="5" style="text-align:center;color:var(--text3)">Нет данных</td></tr>';
 }
+
+
+// Checklist item labels (block:item -> name)
+const CHECKLIST_LABELS = {
+  // Block 1: FLIC
+  'b1_1':'Лагранжев этап','b1_2':'Эйлеров этап','b1_3':'Консервативность','b1_4':'CFL','b1_5':'Графики ρ,P,u','b1_6':'Контрольные числа',
+  // Block 2: Годунов 1D
+  'b2_1':'HLLC солвер','b2_2':'Реконструкция','b2_3':'Графики + точное',
+  // Block 3: Годунов 2D
+  'b3_1':'U вектор','b3_2':'CFL 2D','b3_3':'Экстр. 1D','b3_4':'Консерват.','b3_5':'Порядок сходимости',
+  // Block 4: Мейдер код
+  'b4_1':'EOS','b4_2':'Вязкость','b4_3':'Скорости','b4_4':'ZIP','b4_5':'Donor-Acceptor','b4_6':'Распред.','b4_7':'Кинетика',
+  // Block 4a: Сод
+  'b4a_1':'Параметры','b4a_2':'Графики','b4a_3':'Контрольные','b4a_4':'УВ ширина',
+  // Block 4b: Детонация
+  'b4b_1':'Параметры','b4b_2':'Кинетика','b4b_3':'D фронта','b4b_4':'Профили','b4b_5':'P макс','b4b_6':'Без осц.',
+  // Block 4c: Corner
+  'b4c_1':'Геометрия','b4c_2':'D в канале','b4c_3':'Карта P','b4c_4':'Карта W','b4c_5':'t arrival','b4c_6':'Устойчивость','b4c_7':'Шаргатов',
+  // Block 5: Каверна
+  'b5_1':'Компиляция','b5_2':'Staggered','b5_3':'Предиктор u','b5_4':'Предиктор v','b5_5':'Пуассон','b5_6':'Коррекция','b5_7':'SIMPLE','b5_8':'PISO','b5_9':'PIMPLE','b5_10':'u(y)+Ghia','b5_11':'v(x)+Ghia','b5_12':'Линии тока','b5_13':'Таблица',
+  // Block 6: TG
+  'b6_1':'Нач. усл.','b6_2':'ГУ','b6_3':'Ошибка vs Δt','b6_4':'Затухание',
+  // Block 7: Step
+  'b7_1':'Блокировка','b7_2':'Пуазейль','b7_3':'Рециркуляция','b7_4':'xr/h',
+  // Block 8: Неструкт.
+  'b8_1':'Стр. данных','b8_2':'build_faces','b8_3':'HLLC+Колган','b8_4':'ГУ','b8_5':'VTK','b8_6':'Вудворд','b8_7':'NACA','b8_8':'Цилиндр',
+  // Block 9: MPI
+  'b9_1':'Декомпозиция','b9_2':'Halo','b9_3':'par=seq','b9_4':'Ускорение'
+};
+
+async function showGroupChecklist(gid) {
+  const detail = document.getElementById('checklistDetail');
+  const items = allGroups[gid].checklistItems || {};
+  const members = allGroups[gid].members.map(m => m.fio || m.email).join(', ');
+
+  // Load admin approvals
+  let adminApprovals = {};
+  try {
+    const snap = await db.collection('groups').doc(gid).collection('admin_checklist').get();
+    snap.forEach(doc => { adminApprovals[doc.id] = doc.data(); });
+  } catch(e) {}
+
+  let html = '<div class="card" style="margin-top:1rem">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">';
+  html += '<h3>' + gid.replace('group_','Группа ') + ' — ' + members + '</h3>';
+  html += '<button class="btn btn-sm" onclick="document.getElementById(\'checklistDetail\').innerHTML=\'\'">Свернуть ✕</button>';
+  html += '</div>';
+  html += '<table><thead><tr><th style="width:40%">Пункт</th><th style="text-align:center;width:15%">Студент</th><th style="text-align:center;width:15%">Преподаватель</th><th style="width:30%">Комментарий</th></tr></thead><tbody>';
+
+  // Generate all checklist items
+  var allKeys = Object.keys(CHECKLIST_LABELS);
+  // Also include any keys from student data not in our labels
+  Object.keys(items).forEach(function(k) { if (allKeys.indexOf(k) < 0) allKeys.push(k); });
+
+  allKeys.forEach(function(key) {
+    var label = CHECKLIST_LABELS[key] || key;
+    var studentChecked = items[key] && items[key].checked;
+    var adminChecked = adminApprovals[key] && adminApprovals[key].checked;
+    var adminComment = (adminApprovals[key] && adminApprovals[key].comment) || '';
+    var studentIcon = studentChecked ? '<span style="color:var(--accent2);font-size:1.1rem">✓</span>' : '<span style="color:var(--text3)">—</span>';
+    var adminCheckbox = '<input type="checkbox" ' + (adminChecked ? 'checked' : '') + ' onchange="toggleAdminCheck(\'' + gid + '\',\'' + key + '\',this.checked)" style="width:18px;height:18px;cursor:pointer">';
+
+    html += '<tr>';
+    html += '<td style="font-size:.82rem">' + label + '</td>';
+    html += '<td style="text-align:center">' + studentIcon + '</td>';
+    html += '<td style="text-align:center">' + adminCheckbox + '</td>';
+    html += '<td><input type="text" value="' + adminComment.replace(/"/g,'&quot;') + '" placeholder="—" onchange="saveAdminCheckComment(\'' + gid + '\',\'' + key + '\',this.value)" style="font-size:.78rem;width:100%;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:JetBrains Mono,monospace"></td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  detail.innerHTML = html;
+}
+
+async function toggleAdminCheck(gid, itemId, checked) {
+  try {
+    await db.collection('groups').doc(gid).collection('admin_checklist').doc(itemId).set(
+      { checked: checked, checkedBy: auth.currentUser.email, timestamp: firebase.firestore.FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+  } catch(e) { alert('Ошибка: ' + e.message); }
+}
+
+async function saveAdminCheckComment(gid, itemId, comment) {
+  try {
+    await db.collection('groups').doc(gid).collection('admin_checklist').doc(itemId).set(
+      { comment: comment },
+      { merge: true }
+    );
+  } catch(e) { alert('Ошибка: ' + e.message); }
+}
+
 
 // ===== Export CSV =====
 function exportCSV() {

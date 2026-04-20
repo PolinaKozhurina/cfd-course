@@ -81,6 +81,22 @@ td{padding:5px 10px;border:1px solid var(--border)}
     </div>
   </div>
 
+  <div class="card" id="fioCard">
+    <h3 style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--accent);margin-bottom:.6rem">Личные данные</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:.6rem">
+      <div>
+        <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2);display:block;margin-bottom:.2rem">ФИО</label>
+        <input type="text" id="fioInput" placeholder="Иванов Иван Иванович" style="width:100%;font-family:'Source Serif 4',serif;font-size:.9rem;padding:6px 10px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text)">
+      </div>
+      <div>
+        <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2);display:block;margin-bottom:.2rem">Учебная группа (МИФИ)</label>
+        <input type="text" id="studyGroupInput" placeholder="Б22-505" style="width:100%;font-family:'JetBrains Mono',monospace;font-size:.9rem;padding:6px 10px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text)">
+      </div>
+    </div>
+    <button onclick="saveFio()" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:6px 14px;border-radius:4px;background:var(--accent);color:#fff;border:none;cursor:pointer">Сохранить</button>
+    <span id="fioStatus" style="font-size:.78rem;margin-left:.5rem;color:var(--accent2)"></span>
+  </div>
+
   <div class="card" style="margin-bottom:1rem">
     <h3 style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--accent);margin-bottom:.5rem">Репозиторий группы</h3>
     <p style="font-size:.85rem;color:var(--text2);margin-bottom:.5rem">Укажите ссылку на GitHub-репозиторий вашей группы с кодом и результатами.</p>
@@ -157,6 +173,33 @@ td{padding:5px 10px;border:1px solid var(--border)}
 <script src="js/firebase-config.js"></script>
 <script src="js/auth.js"></script>
 <script>
+
+// Save FIO and study group
+window.saveFio = async function() {
+  const fio = document.getElementById('fioInput').value.trim();
+  const studyGroup = document.getElementById('studyGroupInput').value.trim();
+  const user = firebase.auth().currentUser;
+  if (!user) return;
+  try {
+    await db2.collection('users').doc(user.uid).set(
+      { fio: fio, studyGroup: studyGroup },
+      { merge: true }
+    );
+    document.getElementById('fioStatus').textContent = 'Сохранено ✓';
+    // Update avatar
+    if (fio) {
+      const parts = fio.split(' ');
+      document.getElementById('avatarInitials').textContent =
+        parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : fio.slice(0,2).toUpperCase();
+      document.getElementById('profileEmail').textContent = fio;
+    }
+    setTimeout(() => { document.getElementById('fioStatus').textContent = ''; }, 2000);
+  } catch(e) {
+    document.getElementById('fioStatus').textContent = 'Ошибка: ' + e.message;
+    document.getElementById('fioStatus').style.color = '#c44';
+  }
+};
+
 // ============================================================
 // PROFILE PAGE LOGIC
 // ============================================================
@@ -196,10 +239,20 @@ firebase.auth().onAuthStateChanged(async user => {
   let userGroup = null;
   try {
     const userDoc = await db2.collection('users').doc(user.uid).get();
-    if (userDoc.exists && userDoc.data().group) {
-      userGroup = userDoc.data().group;
+    if (userDoc.exists) {
+      if (userDoc.data().group) userGroup = userDoc.data().group;
+      if (userDoc.data().fio) {
+        document.getElementById('fioInput').value = userDoc.data().fio;
+        const parts = userDoc.data().fio.split(' ');
+        document.getElementById('avatarInitials').textContent =
+          parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : userDoc.data().fio.slice(0,2).toUpperCase();
+        document.getElementById('profileEmail').textContent = userDoc.data().fio;
+      }
+      if (userDoc.data().studyGroup) document.getElementById('studyGroupInput').value = userDoc.data().studyGroup;
+    }
+    if (userGroup) {
       document.getElementById('profileGroup').innerHTML =
-        '<span class="badge b-group">' + userGroup.replace('group_', 'Группа ') + '</span>';
+        'Рабочая группа: <span class="badge b-group">' + userGroup.replace('group_', '№') + '</span> <span style="font-size:.78rem;color:var(--text3)">(назначает преподаватель)</span>';
     } else {
       document.getElementById('profileGroup').textContent =
         'Группа ещё не назначена администратором';

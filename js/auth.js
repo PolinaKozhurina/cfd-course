@@ -85,7 +85,7 @@
 
   // Populate group options (01..20)
   const groupSelect = document.getElementById("auth-group");
-  for (let i = 1; i <= 20; i++) {
+  for (let i = 1; i <= 5; i++) {
     const opt = document.createElement("option");
     opt.value = "group_" + String(i).padStart(2, "0");
     opt.textContent = "Группа " + String(i).padStart(2, "0");

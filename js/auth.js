@@ -263,6 +263,14 @@
           }
           window._userApproved = !!doc.data().approved;
           window._userIsAdmin = !!doc.data().isAdmin;
+          window._userFio = doc.data().fio || '';
+          window._userStudyGroup = doc.data().studyGroup || '';
+          window._userRole = doc.data().isAdmin ? 'admin' : 'student';
+          // Check superadmin
+          if (typeof ADMIN_EMAILS !== 'undefined' && ADMIN_EMAILS.includes(user.email)) {
+            window._userRole = 'superadmin';
+            window._userIsAdmin = true;
+          }
         } else {
           // First login — create user document so admin can see them
           await db.collection("users").doc(user.uid).set({
@@ -271,6 +279,9 @@
             registeredAt: firebase.firestore.FieldValue.serverTimestamp()
           });
           window._userApproved = false;
+          window._userIsAdmin = false;
+          window._userFio = '';
+          window._userRole = 'student';
         }
       } catch (e) {
         console.warn("Could not load/create user:", e);
@@ -310,9 +321,13 @@
 
     if (currentUser) {
       // Show user info bar
+      var roleBadge = '';
+      if (window._userRole === 'superadmin') roleBadge = '<span style="font-family:JetBrains Mono,monospace;font-size:.62rem;background:#faeeda;color:#854f0b;padding:1px 5px;border-radius:3px;font-weight:700">главный</span>';
+      else if (window._userRole === 'admin') roleBadge = '<span style="font-family:JetBrains Mono,monospace;font-size:.62rem;background:#fde8e8;color:#c44;padding:1px 5px;border-radius:3px">admin</span>';
       container.innerHTML = `
         <div class="auth-user-bar">
-          <span class="email">${currentUser.email}</span>
+          <span class="email">${window._userRole === "superadmin" ? "Admin" : (window._userFio || currentUser.email)}</span>
+          ${roleBadge}
           ${userGroup ? '<span class="group-badge">' + userGroup.replace("group_", "Гр.") + "</span>" : ""}
           <button class="auth-btn" onclick="CFDAuth.openModal()" style="font-size:.68rem;padding:.25rem .5rem">Профиль</button>
         </div>

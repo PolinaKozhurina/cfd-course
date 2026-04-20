@@ -616,7 +616,10 @@ window.addEventListener('load',()=>{for(const id of['c_rho','c_p','c_u']){const 
         const delBtn = adminUser ? ' <button onclick="deleteComment(\''+doc.id+'\')" style="font-size:.7rem;color:#c44;background:none;border:none;cursor:pointer;font-family:JetBrains Mono,monospace">удалить</button>' : '';
         html += '<div style="padding:.6rem 0;border-bottom:1px solid #ede6da">';
         html += '<div style="display:flex;justify-content:space-between;align-items:baseline">';
-        html += '<strong style="font-size:.88rem;color:#2c2419">'+(c.authorFio || c.authorEmail)+'</strong>';
+        var badge = '';
+        if (c.authorRole === 'superadmin') badge = ' <span style="font-family:JetBrains Mono,monospace;font-size:.6rem;background:#faeeda;color:#854f0b;padding:1px 4px;border-radius:3px;font-weight:700;vertical-align:middle">преподаватель</span>';
+        else if (c.authorRole === 'admin') badge = ' <span style="font-family:JetBrains Mono,monospace;font-size:.6rem;background:#fde8e8;color:#c44;padding:1px 4px;border-radius:3px;vertical-align:middle">admin</span>';
+        html += '<strong style="font-size:.88rem;color:#2c2419">'+(c.authorFio || c.authorEmail)+badge+'</strong>';
         html += '<span style="font-size:.72rem;color:#9a8d7e;font-family:JetBrains Mono,monospace">'+date+delBtn+'</span>';
         html += '</div>';
         html += '<p style="font-size:.88rem;margin-top:.2rem;margin-bottom:0;color:#2c2419">'+escapeHtml(c.text)+'</p>';
@@ -649,6 +652,7 @@ window.addEventListener('load',()=>{for(const id of['c_rho','c_p','c_u']){const 
         authorEmail: user.email,
         authorFio: fio,
         authorUid: user.uid,
+        authorRole: window._userRole || 'student',
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       document.getElementById('comment-text').value = '';

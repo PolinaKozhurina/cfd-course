@@ -56,6 +56,15 @@ select:focus,input:focus{outline:none;border-color:var(--accent)}
 .export-bar{display:flex;gap:.5rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap}
 .search{width:200px}
 </style>
+
+<script>
+// Restore GitHub token from localStorage
+document.addEventListener('DOMContentLoaded', function() {
+  var t = localStorage.getItem('gh_token');
+  var el = document.getElementById('ghToken');
+  if (t && el) el.value = t;
+});
+</script>
 </head>
 <body>
 
@@ -169,7 +178,12 @@ select:focus,input:focus{outline:none;border-color:var(--accent)}
     <h3>Проверка репозиториев</h3>
     <p style="font-size:.85rem;color:var(--text2);margin-bottom:.8rem">Автоматическая проверка структуры папок, маркеров <code>CHECK:</code> в коде, наличия графиков и values.txt. Также — сравнение кода между группами на совпадения.</p>
     <div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
-      <button class="action-btn" onclick="runGithubCheck()" id="btnGhCheck" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 20px;font-family:'Source Serif 4',serif;font-weight:600;cursor:pointer">▶ Проверить все группы</button>
+      <div style="margin-bottom:.5rem;display:flex;gap:.5rem;align-items:center">
+      <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">GitHub Token:</label>
+      <input type="password" id="ghToken" placeholder="ghp_..." style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:4px 8px;border:1px solid var(--border);border-radius:4px;width:300px" oninput="localStorage.setItem('gh_token',this.value)">
+      <span style="font-size:.7rem;color:var(--text2)">(5000 req/hr вместо 60)</span>
+    </div>
+    <button class="action-btn" onclick="runGithubCheck()" id="btnGhCheck" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 20px;font-family:'Source Serif 4',serif;font-weight:600;cursor:pointer">▶ Проверить все группы</button>
       <button class="action-btn" onclick="runPlagiarismCheck()" id="btnPlagCheck" style="background:var(--accent3);color:#fff;border:none;border-radius:6px;padding:8px 20px;font-family:'Source Serif 4',serif;font-weight:600;cursor:pointer">🔍 Анти-плагиат</button>
       <span id="ghStatus" style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text2);align-self:center"></span>
     </div>
@@ -858,8 +872,11 @@ const TXT_CHECKS = [
 ];
 
 async function ghApiFetch(url) {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+  const headers = {};
+  const token = document.getElementById('ghToken') && document.getElementById('ghToken').value;
+  if (token) headers['Authorization'] = 'token ' + token;
+  const r = await fetch(url, {headers});
+  if (!r.ok) throw new Error(r.status + ' ' + r.statusText + ' (лимит? вставьте GitHub token)');
   return r.json();
 }
 

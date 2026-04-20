@@ -51,6 +51,15 @@ th{text-align:left}
 </style>
 <script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},svg:{fontCache:'global'}};</script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+
+<script>
+// Restore GitHub token from localStorage
+document.addEventListener('DOMContentLoaded', function() {
+  var t = localStorage.getItem('gh_token');
+  var el = document.getElementById('ghToken');
+  if (t && el) el.value = t;
+});
+</script>
 </head>
 <body>
 <!-- Global nav -->
@@ -94,6 +103,7 @@ th{text-align:left}
     </div>
   </div>
   <div style="margin-top:.6rem;display:flex;gap:.5rem;align-items:center">
+    <input type="password" id="ghToken" placeholder="GitHub token (ghp_...)" style="font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:4px 8px;border:1px solid var(--border);border-radius:4px;width:220px" oninput="localStorage.setItem('gh_token',this.value)">
     <button onclick="runReviewGhCheck()" id="btnReviewGh" style="background:var(--accent3,#3a5ba0);color:#fff;border:none;border-radius:5px;padding:6px 16px;font-family:'JetBrains Mono',monospace;font-size:.78rem;cursor:pointer;font-weight:600" disabled>▶ Проверить GitHub</button>
     <span id="review-gh-status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:#6b5d4f"></span>
   </div>
@@ -1617,8 +1627,11 @@ M∞ = 0.3–0.5,  α = 0°,  γ = 1.4
   }
 
   async function ghApi(url) {
-    var r = await fetch(url);
-    if (!r.ok) throw new Error(r.status+' '+r.statusText);
+    var headers = {};
+    var token = document.getElementById('ghToken') && document.getElementById('ghToken').value;
+    if (token) headers['Authorization'] = 'token ' + token;
+    var r = await fetch(url, {headers: headers});
+    if (!r.ok) throw new Error(r.status+' '+r.statusText+' (лимит? вставьте GitHub token)');
     return r.json();
   }
 

@@ -218,15 +218,24 @@
   auth.onAuthStateChanged(async function (user) {
     currentUser = user;
     if (user) {
-      // Load user's group
+      // Ensure user document exists in Firestore (create on first login)
       try {
         const doc = await db.collection("users").doc(user.uid).get();
-        if (doc.exists && doc.data().group) {
-          userGroup = doc.data().group;
-          document.getElementById("auth-group").value = userGroup;
+        if (doc.exists) {
+          // Load existing data
+          if (doc.data().group) {
+            userGroup = doc.data().group;
+            document.getElementById("auth-group").value = userGroup;
+          }
+        } else {
+          // First login — create user document so admin can see them
+          await db.collection("users").doc(user.uid).set({
+            email: user.email,
+            registeredAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
         }
       } catch (e) {
-        console.warn("Could not load user group:", e);
+        console.warn("Could not load/create user:", e);
       }
     } else {
       userGroup = null;
@@ -236,43 +245,52 @@
 
   // --- UI Updates ---
   function updateUI() {
-    const btn = document.getElementById("authBtn");
-    if (!btn) return;
+    // Find or create the auth container in nav
+    let container = document.getElementById("auth-container");
+    if (!container) {
+      // First run: wrap existing authBtn or create container
+      const existingBtn = document.getElementById("authBtn");
+      if (existingBtn) {
+        container = document.createElement("div");
+        container.id = "auth-container";
+        container.style.display = "inline-flex";
+        container.style.alignItems = "center";
+        existingBtn.parentNode.insertBefore(container, existingBtn);
+        container.appendChild(existingBtn);
+      } else {
+        // Create container in nav-bar or global-nav
+        const navBar = document.querySelector(".nav-bar") || document.getElementById("global-nav");
+        if (navBar) {
+          container = document.createElement("div");
+          container.id = "auth-container";
+          container.style.display = "inline-flex";
+          container.style.alignItems = "center";
+          navBar.appendChild(container);
+        } else return;
+      }
+    }
 
     if (currentUser) {
-      // Replace button with user info bar
-      const bar = document.createElement("div");
-      bar.className = "auth-user-bar";
-      bar.innerHTML = `
-        <span class="email">${currentUser.email}</span>
-        ${userGroup ? '<span class="group-badge">' + userGroup.replace("group_", "Гр.") + "</span>" : ""}
-        <button class="auth-btn" onclick="CFDAuth.openModal()" style="font-size:.68rem;padding:.25rem .5rem">Профиль</button>
+      // Show user info bar
+      container.innerHTML = `
+        <div class="auth-user-bar">
+          <span class="email">${currentUser.email}</span>
+          ${userGroup ? '<span class="group-badge">' + userGroup.replace("group_", "Гр.") + "</span>" : ""}
+          <button class="auth-btn" onclick="CFDAuth.openModal()" style="font-size:.68rem;padding:.25rem .5rem">Профиль</button>
+        </div>
       `;
-      btn.replaceWith(bar);
-
       // Show profile view in modal
       document.getElementById("auth-login-view").style.display = "none";
       document.getElementById("auth-profile-view").style.display = "";
-      document.getElementById("auth-profile-email").textContent =
-        currentUser.email;
+      document.getElementById("auth-profile-email").textContent = currentUser.email;
     } else {
       // Show login button
-      if (!document.getElementById("authBtn")) {
-        const navBar = document.querySelector(".nav-bar");
-        if (navBar) {
-          const newBtn = document.createElement("button");
-          newBtn.className = "auth-btn";
-          newBtn.id = "authBtn";
-          newBtn.textContent = "Войти";
-          newBtn.onclick = function () {
-            CFDAuth.openModal();
-          };
-          navBar.appendChild(newBtn);
-        }
-      }
-      // Show login view in modal
+      container.innerHTML = '<button class="auth-btn" onclick="CFDAuth.openModal()">Войти</button>';
+      // Show login view in modal, clear fields
       document.getElementById("auth-login-view").style.display = "";
       document.getElementById("auth-profile-view").style.display = "none";
+      document.getElementById("auth-email").value = "";
+      document.getElementById("auth-pass").value = "";
     }
   }
 
@@ -300,13 +318,7 @@
     return map[code] || "Ошибка: " + code;
   }
 
-  // --- Connect auth button ---
-  const existingBtn = document.getElementById("authBtn");
-  if (existingBtn) {
-    existingBtn.onclick = function () {
-      CFDAuth.openModal();
-    };
-  }
+  // Auth button is managed by updateUI()
 
   // Close modal on overlay click
   overlay.addEventListener("click", function (e) {

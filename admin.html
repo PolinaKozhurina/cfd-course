@@ -100,12 +100,12 @@ select:focus,input:focus{outline:none;border-color:var(--accent)}
 <!-- TAB 1: Students -->
 <div id="tab-students" class="panel active">
   <div class="export-bar">
-    <input type="text" class="search" id="searchStudents" placeholder="Поиск по email..." oninput="renderStudents()">
+    <input type="text" class="search" id="searchStudents" placeholder="Поиск по ФИО, email, группе..." oninput="renderStudents()">
     <button class="btn" onclick="exportCSV()">Экспорт CSV</button>
   </div>
   <div class="card">
     <table>
-      <thead><tr><th>Email</th><th>Группа</th><th>Роль</th><th>Назначить группу</th></tr></thead>
+      <thead><tr><th>ФИО</th><th>Email</th><th>Уч. группа</th><th>Раб. группа</th><th>Роль</th><th>Назначить</th></tr></thead>
       <tbody id="studentsBody"></tbody>
     </table>
   </div>
@@ -211,7 +211,7 @@ async function loadAllData() {
   // Load groups and results
   allGroups = {};
   allResults = {};
-  for (let g = 1; g <= 20; g++) {
+  for (let g = 1; g <= 5; g++) {
     const gid = 'group_' + String(g).padStart(2, '0');
     const members = allUsers.filter(u => u.group === gid);
     if (members.length === 0) continue;
@@ -269,19 +269,24 @@ function showTab(name) {
 // ===== Students table =====
 function renderStudents() {
   const search = (document.getElementById('searchStudents').value || '').toLowerCase();
-  const filtered = search ? allUsers.filter(u => u.email && u.email.toLowerCase().includes(search)) : allUsers;
+  const filtered = search ? allUsers.filter(u => {
+    const s = (u.email||'') + ' ' + (u.fio||'') + ' ' + (u.studyGroup||'');
+    return s.toLowerCase().includes(search);
+  }) : allUsers;
   const tbody = document.getElementById('studentsBody');
   tbody.innerHTML = filtered.map(u => {
     const isAdm = isAdmin(u.email);
-    const groupOptions = Array.from({length: 20}, (_, i) => {
+    const groupOptions = Array.from({length: 5}, (_, i) => {
       const gid = 'group_' + String(i + 1).padStart(2, '0');
-      return `<option value="${gid}" ${u.group === gid ? 'selected' : ''}>Гр. ${String(i + 1).padStart(2, '0')}</option>`;
+      return `<option value="${gid}" ${u.group === gid ? 'selected' : ''}>№${i + 1}</option>`;
     }).join('');
     return `<tr>
-      <td>${u.email || '—'}</td>
-      <td>${u.group ? '<span class="badge b-group">' + u.group.replace('group_', 'Гр.') + '</span>' : '<span class="badge b-pending">не назначена</span>'}</td>
+      <td style="font-weight:600">${u.fio || '<span style="color:var(--text3)">не указано</span>'}</td>
+      <td style="font-size:.82rem">${u.email || '—'}</td>
+      <td style="font-size:.82rem">${u.studyGroup || '<span style="color:var(--text3)">—</span>'}</td>
+      <td>${u.group ? '<span class="badge b-group">' + u.group.replace('group_', '№') + '</span>' : '<span class="badge b-pending">—</span>'}</td>
       <td>${isAdm ? '<span class="badge b-admin">admin</span>' : '<span class="badge b-student">student</span>'}</td>
-      <td><select onchange="assignGroup('${u.uid}', this.value)">
+      <td><select onchange="assignGroup('${u.uid}', this.value)" style="font-size:.75rem">
         <option value="">—</option>${groupOptions}
       </select></td>
     </tr>`;

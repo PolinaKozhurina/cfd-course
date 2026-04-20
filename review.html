@@ -1649,13 +1649,13 @@ M∞ = 0.3–0.5,  α = 0°,  γ = 1.4
       // Markers
       statusEl.textContent = 'Проверка маркеров ('+codeFiles.length+' файлов)...';
       var foundMarkers = {};
-      var toRead = codeFiles.slice(0,30);
+      var toRead = codeFiles.slice(0,80);
       for (var ci=0; ci<toRead.length; ci++) {
         try {
           var data = await ghApi('https://api.github.com/repos/'+gh.owner+'/'+gh.repo+'/contents/'+toRead[ci]);
           var content = data.encoding==='base64' && data.content ? atob(data.content.replace(/\n/g,'')) : '';
-          var ms = content.match(/CHECK:\s*([A-Z_0-9]+)/g) || [];
-          ms.forEach(function(m){foundMarkers[m.replace('CHECK:','').trim()]=toRead[ci];});
+          var ms = content.match(/CHECK\s*:?\s*([A-Z_0-9]+)/g) || [];
+          ms.forEach(function(m){foundMarkers[m.replace(/CHECK\s*:?\s*/,'').trim()]=toRead[ci];});
         } catch(e){}
       }
       var missingMarkers = REQUIRED_MARKERS.filter(function(m){return !foundMarkers[m];});

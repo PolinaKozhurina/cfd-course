@@ -945,13 +945,13 @@ async function checkOneRepo(gid, repoUrl) {
     result.codeFiles = codeFiles;
     
     const allFoundMarkers = new Set();
-    const toRead = codeFiles.slice(0, 30);
+    const toRead = codeFiles.slice(0, 80);
     for (const cf of toRead) {
       try {
         const content = await getFileContent(gh.owner, gh.repo, cf);
         result.codeContents[cf] = content;
-        const found = content.match(/CHECK:\s*([A-Z_0-9]+)/g) || [];
-        found.forEach(m => allFoundMarkers.add(m.replace('CHECK:','').trim()));
+        const found = content.match(/CHECK\s*:?\s*([A-Z_0-9]+)/g) || [];
+        found.forEach(m => allFoundMarkers.add(m.replace(/CHECK\s*:?\s*/,'').trim()));
       } catch(e) {}
     }
     

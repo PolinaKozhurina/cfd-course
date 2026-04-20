@@ -1390,14 +1390,17 @@ M∞ = 0.3–0.5,  α = 0°,  γ = 1.4
       });
     } catch(e) { info.textContent = 'Ошибка: ' + e.message; return; }
 
-    // Load admin approvals
+    // Load admin approvals  
     var adminCount = 0;
+    var adminCbs = document.querySelectorAll('.admin-cb');
     try {
       var asnap = await db.collection('groups').doc(gid).collection('admin_checklist').get();
-      asnap.forEach(function(doc) {
-        var num = doc.id.replace('item_','').replace('adm_','');
-        var cb = document.getElementById('adm_' + num);
-        if (cb && doc.data().checked) { cb.checked = true; adminCount++; }
+      var adminCheckedKeys = {};
+      asnap.forEach(function(doc) { if (doc.data().checked) adminCheckedKeys[doc.id] = true; });
+      
+      adminCbs.forEach(function(cb, index) {
+        var key = cbKeyMap[index];
+        if (adminCheckedKeys[key]) { cb.checked = true; adminCount++; }
       });
     } catch(e) {}
 
@@ -1411,15 +1414,16 @@ M∞ = 0.3–0.5,  α = 0°,  γ = 1.4
         memberNames.push((u.fio || u.email) + (u.studyGroup ? ' (' + u.studyGroup + ')' : '')); 
       });
     } catch(e) {}
-    info.innerHTML = '<strong>' + memberNames.join(', ') + '</strong><br>Студент: ' + studentCount + ' / ' + total + ' · Преподаватель: ' + adminCount + ' / ' + total;
+    var total = allStudentCbs.length;
+    info.innerHTML = '<strong>' + memberNames.join(', ') + '</strong><br>Студент: ' + studentChecked + ' / ' + total + ' · Преподаватель: ' + adminCount + ' / ' + total;
     status.textContent = '';
   };
 
   window.saveAdminCb = async function(admId, checked) {
     var gid = window._reviewGid;
     if (!gid) return;
-    var num = admId.replace('adm_','');
-    var itemId = 'item_' + num;
+    var num = parseInt(admId.replace('adm_','')) - 1; // adm_1 -> index 0
+    var itemId = window._cbKeyMap && window._cbKeyMap[num] ? window._cbKeyMap[num] : 'cb_' + num;
     var status = document.getElementById('review-status');
     try {
       await db.collection('groups').doc(gid).collection('admin_checklist').doc(itemId).set({

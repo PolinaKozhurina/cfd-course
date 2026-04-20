@@ -152,13 +152,25 @@ dt = cfl / (lam_x/dx + lam_y/dy);
 
 <table>
 <tr><th>#</th><th>Пункт</th><th>Результат</th><th>Маркер в коде</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
-<tr><td>1</td><td>Лагранжев этап</td><td>p_{i+½}, ũ, Ẽ</td><td><span class="tag">CHECK: FLIC_LAGRANGE</span></td><td><span class="how">Маркер стоит перед функцией лагранжева шага.</span> Проверяющий ищет Ctrl+F → видит вычисление давления на границах и обновление ũ, Ẽ</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>2</td><td>Эйлеров этап</td><td>Upwind ΔM</td><td><span class="tag">CHECK: FLIC_EULER</span></td><td><span class="how">Маркер перед блоком переноса.</span> Видно: if u>0 → ρ слева (донор), потоки ΔM через границы</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>3</td><td>Консервативность</td><td>ρⁿ⁺¹=ρⁿ−ΔM/Δx</td><td><span class="tag">CHECK: FLIC_CONSERV</span></td><td><span class="how">Маркер перед обновлением</span> ρ, ρu, ρE через разность потоков</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>4</td><td>CFL</td><td>Δt адаптивный</td><td><span class="tag">CHECK: FLIC_CFL</span></td><td><span class="how">Маркер перед строкой CFL.</span> В <span class="file">values.txt</span> указать типичный Δt</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>1</td><td>Лагранжев этап</td><td>p_{i+½}, ũ, Ẽ</td><td><span class="tag">CHECK: FLIC_LAGRANGE</span></td><td><span class="how">Поставить маркер перед функцией лагранжева шага.</span> Проверяющий находит по Ctrl+F и видит: вычисление давления на границах $p_{i\pm1/2}$, обновление скорости $\tilde{u}$ и энергии $\tilde{E}$</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>2</td><td>Эйлеров этап</td><td>Upwind ΔM</td><td><span class="tag">CHECK: FLIC_EULER</span></td><td><span class="how">Поставить маркер перед блоком эйлерова переноса.</span> В коде должно быть видно: выбор донорской ячейки (if $u>0$ → берём $\rho$ слева), вычисление потоков $\Delta M$ через границы</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>3</td><td>Консервативность</td><td>ρⁿ⁺¹=ρⁿ−ΔM/Δx</td><td><span class="tag">CHECK: FLIC_CONSERV</span></td><td><span class="how">Поставить маркер перед обновлением консервативных переменных:</span> $\rho^{n+1} = \rho^n - \Delta M/\Delta x$ (аналогично для $\rho u$ и $\rho E$)</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>4</td><td>CFL</td><td>Δt адаптивный</td><td><span class="tag">CHECK: FLIC_CFL</span></td><td><span class="how">Поставить маркер перед вычислением шага по времени.</span> В файле <span class="file">values.txt</span> указать типичное значение $\Delta t$ и CFL-число</td><td class="check-cell"><input type="checkbox"></td></tr>
 <tr><td>5</td><td><b>Графики</b> ρ, P, u</td><td>3 волны</td><td>—</td><td><span class="file">results/01_sod_flic/sod_rho.png</span>, <span class="file">sod_p.png</span>, <span class="file">sod_u.png</span><br><span class="how">На графике:</span> подписи осей, отметки ВР/КР/УВ</td><td class="check-cell"><input type="checkbox"></td></tr>
 <tr><td>6</td><td>Контрольные числа</td><td>≤5% от эталона</td><td>—</td><td><span class="file">results/01_sod_flic/values.txt</span>:<br><code style="font-size:.72rem">x=0.60: rho=0.4263 p=0.3031 u=0.9274</code><br><code style="font-size:.72rem">x=0.75: rho=0.2656 p=0.3031 u=0.9274</code></td><td class="check-cell"><input type="checkbox"></td></tr>
 </table>
+
+<h4>Задание: Ударная труба Сода методом FLIC</h4>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Постановка задачи.</strong> Труба $x \in [0, 1]$ с мембраной при $x = 0.5$. Слева — газ с высокой плотностью и давлением, справа — с низкой. В момент $t = 0$ мембрана разрывается. Задача Римана: найти поля $\rho(x)$, $P(x)$, $u(x)$ при $t = 0.2$.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Начальные данные (тест Сода):</strong> $\rho_L = 1$, $P_L = 1$, $u_L = 0$ (слева); $\rho_R = 0.125$, $P_R = 0.1$, $u_R = 0$ (справа). Газ идеальный, $\gamma = 1.4$.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Параметры расчёта:</strong> $N = 200$ ячеек, CFL = 0.9, граничные условия — отражающие (зеркальные).</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Какие графики построить:</strong> три отдельных графика — $\rho(x)$, $P(x)$, $u(x)$. На каждом подписать оси. Вертикальными пунктирами отметить положения трёх волн: ВР (волна разрежения), КР (контактный разрыв), УВ (ударная волна).</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Определения величин.</strong> $\rho$ — плотность (кг/м³); $P$ — давление (Па); $u$ — скорость (м/с); ВР — веер волн разрежения (плавный переход, 1-волна); КР — контактный разрыв (скачок $\rho$, но $P$ и $u$ непрерывны, 2-волна); УВ — ударная волна (скачок всех величин, 3-волна).</p>
 
 <h4>Ожидаемые поля — тест Сода, t = 0.2</h4>
 <div class="plot-container">
@@ -295,8 +307,8 @@ dt = cfl / (lam_x/dx + lam_y/dy);
 <div class="block-header"><div class="block-num">2</div><h3 style="margin:0">Годунов 1D (MUSCL/WENO + HLLC)</h3></div>
 <table>
 <tr><th>#</th><th>Пункт</th><th>Результат</th><th>Маркер</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
-<tr><td>1</td><td>HLLC солвер</td><td>Потоки F̂</td><td><span class="tag">CHECK: HLLC_SOLVER</span></td><td><span class="how">Маркер перед HLLC.</span> Видно: S_L, S_R, S*, выбор потока F*</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>2</td><td>Реконструкция</td><td>≥2-й порядок</td><td><span class="tag">CHECK: RECONSTRUCTION</span></td><td><span class="how">Маркер перед вычислением наклонов.</span> Видно: limiter (minmod/van Leer), q⁻/q⁺ на гранях</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>1</td><td>HLLC солвер</td><td>Потоки F̂</td><td><span class="tag">CHECK: HLLC_SOLVER</span></td><td><span class="how">Поставить маркер перед функцией HLLC-солвера.</span> В коде должны быть видны: оценки скоростей волн $S_L$, $S_R$, $S^*$ и выбор потока $F^*$ по области</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>2</td><td>Реконструкция</td><td>≥2-й порядок</td><td><span class="tag">CHECK: RECONSTRUCTION</span></td><td><span class="how">Поставить маркер перед реконструкцией.</span> В коде должны быть: лимитер наклона (minmod или van Leer), вычисление левого и правого значений $q^-$, $q^+$ на гранях ячеек</td><td class="check-cell"><input type="checkbox"></td></tr>
 <tr><td>3</td><td><b>Графики</b> + точное</td><td>Наложение</td><td>—</td><td><span class="file">results/02_sod_godunov/sod_rho_exact.png</span> и т.д.<br><span class="how">На графике:</span> синяя=расчёт, красный пунктир=точное. Легенда</td><td class="check-cell"><input type="checkbox"></td></tr>
 </table>
 <p style="color:var(--text2);font-size:.85rem;margin-top:.5rem">Ожидаемые поля — те же, что в задании 1 (тест Сода). Графики должны дополнительно содержать наложение точного решения.</p>
@@ -308,13 +320,21 @@ dt = cfl / (lam_x/dx + lam_y/dy);
 <div class="block-header"><div class="block-num">3</div><h3 style="margin:0">Годунов 2D (unsplit или Strang)</h3></div>
 <table>
 <tr><th>#</th><th>Пункт</th><th>Результат</th><th>Маркер</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
-<tr><td>1</td><td>U=(ρ,ρu,ρv,E)ᵀ</td><td>4 компоненты</td><td><span class="tag">CHECK: STATE_VECTOR_2D</span></td><td><span class="how">Маркер у объявления U[4][Nx][Ny]</span> и потоков F[4], G[4]</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>2</td><td><b>CFL 2D</b></td><td>Δt=CFL/(λx/Δx+λy/Δy)</td><td><span class="tag">CHECK: CFL_2D</span></td><td><span class="how">Маркер у строки CFL.</span> Если 1D формула → <b style="color:var(--red)">не зачёт</b></td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>3</td><td><b>Экструдированный 1D</b></td><td>2D = 1D</td><td>—</td><td><span class="file">results/03_godunov_2d/extruded_1d.png</span>:<br><span class="how">Наложить</span> ρ(x) из 2D (срез y=const) и 1D. Кривые должны совпасть</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>1</td><td>U=(ρ,ρu,ρv,E)ᵀ</td><td>4 компоненты</td><td><span class="tag">CHECK: STATE_VECTOR_2D</span></td><td><span class="how">Поставить маркер у объявления вектора состояния $U[4][N_x][N_y]$</span> и потоковых функций $F[4]$, $G[4]$ для двумерной задачи</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>2</td><td><b>CFL 2D</b></td><td>Δt=CFL/(λx/Δx+λy/Δy)</td><td><span class="tag">CHECK: CFL_2D</span></td><td><span class="how">Поставить маркер у вычисления CFL.</span> Формула должна быть двумерной: $\Delta t = \text{CFL} / (\lambda_x/\Delta x + \lambda_y/\Delta y)$. Если использована одномерная формула — <b style="color:var(--red)">не зачёт</b></td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>3</td><td><b>Экструдированный 1D</b></td><td>2D = 1D</td><td>—</td><td><span class="file">results/03_godunov_2d/extruded_1d.png</span>:<br><span class="how">Наложить профиль $\rho(x)$ из 2D-расчёта (срез при $y = \text{const}$) и из 1D-расчёта на одном графике.</span> Кривые должны совпасть с точностью до машинной погрешности</td><td class="check-cell"><input type="checkbox"></td></tr>
 <tr><td>4</td><td><b>Консервативность</b></td><td>ε &lt; 10⁻¹⁰</td><td>—</td><td><span class="file">results/03_godunov_2d/conservation.txt</span>:<br><code style="font-size:.72rem">t=0.0: mass=1.000000000000 E=2.500000000000</code><br><code style="font-size:.72rem">t=end: mass=1.000000000001 diff=1.2e-14</code></td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>5</td><td><b>Порядок сходимости</b></td><td>≈2 (MUSCL)</td><td>—</td><td><span class="file">results/03_godunov_2d/convergence.png</span>: log-log L1 vs Δx, ≥3 сеток.<br><span class="how">Подписать наклон на графике</span></td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>5</td><td><b>Порядок сходимости</b></td><td>≈2 (MUSCL)</td><td>—</td><td><span class="file">results/03_godunov_2d/convergence.png</span>: log-log L1 vs Δx, ≥3 сеток.<br><span class="how">На графике сходимости указать наклон прямой (ожидается $\approx 2$ для MUSCL).</span> Минимум 3 сетки в расчёте</td><td class="check-cell"><input type="checkbox"></td></tr>
 </table>
 <div class="warning"><b>Типичная ошибка:</b> 1D CFL в 2D → blow-up. Проверяющий ищет <span class="tag">CHECK: CFL_2D</span> и смотрит формулу.</div>
+
+<h4>Задание: порядок пространственной сходимости</h4>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Что такое порядок сходимости.</strong> Если при уменьшении шага сетки $\Delta x$ в 2 раза ошибка $L_1$ уменьшается в $2^p$ раз, то схема имеет порядок $p$. Для MUSCL-реконструкции ожидается $p \approx 2$.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Как измерить.</strong> Запустить тест с изотропным вихрем (isentropic vortex) на сетках $50^2$, $100^2$, $200^2$ (и желательно $400^2$). Для каждой сетки вычислить $L_1 = \frac{1}{N} \sum_i |\rho_i^{num} - \rho_i^{exact}|$. Построить $\log(L_1)$ vs $\log(\Delta x)$ — наклон прямой = порядок.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Какой график построить:</strong> точки ($\Delta x$, $L_1$) в логарифмических осях, соединённые линией. Рядом — пунктирная прямая с наклоном 2 для сравнения. Подписать измеренный наклон числом.</p>
 
 <h4>Ожидаемый график порядка сходимости</h4>
 <div class="plot-container">
@@ -366,13 +386,13 @@ Isentropic vortex (порядок сходимости):
 <div class="block-header"><div class="block-num">4</div><h3 style="margin:0">2DE Мейдера — Код (5 фаз)</h3></div>
 <table>
 <tr><th>#</th><th>Пункт</th><th>Результат</th><th>Маркер</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
-<tr><td>1</td><td>Фаза I: EOS</td><td>P=(γ−1)ρI</td><td><span class="tag">CHECK: MADER_EOS</span></td><td><span class="how">Маркер у EOS.</span> Видно: P, c, защита P≥P_min</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>2</td><td>Фаза II: вязкость</td><td>Q=0 расширение</td><td><span class="tag">CHECK: MADER_VISC</span></td><td><span class="how">Маркер у Q1–Q4.</span> Видно: if сжатие → Q=VISC·ρ·ΔV, else 0</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>3</td><td>Фаза II: скорости</td><td>Ũ, Ṽ</td><td><span class="tag">CHECK: MADER_VELOCITY</span></td><td><span class="how">Маркер у обновления скоростей.</span> Формулы для SLAB</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>4</td><td>Фаза III: ZIP Energy</td><td>Ĩ≥0</td><td><span class="tag">CHECK: MADER_ZIP</span></td><td><span class="how">Маркер у ZIP формулы</span> (6 членов для SLAB). Рядом: промежуточная ρ̃</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>5</td><td>Фаза IV: Donor-Acceptor</td><td>Масса сохр.</td><td><span class="tag">CHECK: MADER_DONOR</span></td><td><span class="how">Маркер у переноса.</span> Видно: α, DMASS, DM±=DMASS, DE±=...</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>6</td><td>Фаза V: перераспределение</td><td>ρⁿ⁺¹=ρ+DM</td><td><span class="tag">CHECK: MADER_REPARTITION</span></td><td><span class="how">Маркер у обновления.</span> Видно: ρ,U,V,I из инкрементов</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>7</td><td>Хим. кинетика (Аррениус)</td><td>dW/dt</td><td><span class="tag">CHECK: MADER_ARRHENIUS</span></td><td><span class="how">Маркер у</span> W -= Δt·Z·W·exp(−E*/RT). Видно: пороги MINWT, GASW, VCNT</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>1</td><td>Фаза I: EOS</td><td>P=(γ−1)ρI</td><td><span class="tag">CHECK: MADER_EOS</span></td><td><span class="how">Поставить маркер у уравнения состояния.</span> В коде: вычисление давления $P = (\gamma-1)\rho I$, скорости звука $c$, и защита от отрицательного давления $P \geq P_{min}$</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>2</td><td>Фаза II: вязкость</td><td>Q=0 расширение</td><td><span class="tag">CHECK: MADER_VISC</span></td><td><span class="how">Поставить маркер у искусственной вязкости.</span> В коде: проверка на сжатие, вычисление $Q = \text{VISC} \cdot \rho \cdot \Delta V$ (при сжатии) или $Q = 0$ (при расширении)</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>3</td><td>Фаза II: скорости</td><td>Ũ, Ṽ</td><td><span class="tag">CHECK: MADER_VELOCITY</span></td><td><span class="how">Поставить маркер у обновления скоростей $\tilde{U}$, $\tilde{V}$.</span> Формулы для геометрии SLAB (плоская симметрия)</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>4</td><td>Фаза III: ZIP Energy</td><td>Ĩ≥0</td><td><span class="tag">CHECK: MADER_ZIP</span></td><td><span class="how">Поставить маркер у ZIP Energy Equation.</span> Должны быть 6 членов для SLAB-геометрии и вычисление промежуточной плотности $\tilde{\rho}$. Проверить: $\tilde{I} \geq 0$</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>5</td><td>Фаза IV: Donor-Acceptor</td><td>Масса сохр.</td><td><span class="tag">CHECK: MADER_DONOR</span></td><td><span class="how">Поставить маркер у Donor-Acceptor переноса.</span> В коде: вычисление коэффициента $\alpha$, массы переноса DMASS, инкрементов массы и энергии DM±, DE±</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>6</td><td>Фаза V: перераспределение</td><td>ρⁿ⁺¹=ρ+DM</td><td><span class="tag">CHECK: MADER_REPARTITION</span></td><td><span class="how">Поставить маркер у перераспределения (фаза V).</span> Обновление всех полей из инкрементов: $\rho^{n+1} = \rho + DM$, аналогично $U$, $V$, $I$</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>7</td><td>Хим. кинетика (Аррениус)</td><td>dW/dt</td><td><span class="tag">CHECK: MADER_ARRHENIUS</span></td><td><span class="how">Поставить маркер у кинетики Аррениуса.</span> Формула выгорания: $W \mathrel{-}= \Delta t \cdot Z \cdot W \cdot \exp(-E^*/RT)$. Должны быть пороги MINWT, GASW, VCNT</td><td class="check-cell"><input type="checkbox"></td></tr>
 </table>
 </div>
 
@@ -381,10 +401,10 @@ Isentropic vortex (порядок сходимости):
 <div class="block-header"><div class="block-num">4a</div><h3 style="margin:0">2DE Мейдера — Тест 1: Ударная труба Сода</h3></div>
 <table>
 <tr><th>#</th><th>Пункт</th><th>Результат</th><th>Параметры</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
-<tr><td>1</td><td>Параметры расчёта</td><td>Квази-1D</td><td>NI=100, NJ=3, SLAB<br>γ=1.4, VISC=0.5, CFL=0.5<br>зеркальные ГУ, t=0.2</td><td><span class="how">Проверить параметры в конфиге / main()</span></td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>2</td><td><b>Графики</b> ρ(x), P(x), u(x)</td><td>3 волны</td><td>—</td><td><span class="file">results/04_mader_sod/sod_rho.png</span>, <span class="file">sod_p.png</span>, <span class="file">sod_u.png</span><br><span class="how">Строить по центральному ряду j=2. Подписи ВР/КР/УВ на графиках</span></td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>1</td><td>Параметры расчёта</td><td>Квази-1D</td><td>NI=100, NJ=3, SLAB<br>γ=1.4, VISC=0.5, CFL=0.5<br>зеркальные ГУ, t=0.2</td><td><span class="how">Проверить параметры расчёта в конфиге или main():</span> NI=100, NJ=3, SLAB, $\gamma=1.4$, VISC=0.5, CFL=0.5</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>2</td><td><b>Графики</b> ρ(x), P(x), u(x)</td><td>3 волны</td><td>—</td><td><span class="file">results/04_mader_sod/sod_rho.png</span>, <span class="file">sod_p.png</span>, <span class="file">sod_u.png</span><br><span class="how">Графики строятся по центральному ряду $j=2$.</span> На каждом графике подписать положения волн: ВР (волна разрежения), КР (контактный разрыв), УВ (ударная волна)</td><td class="check-cell"><input type="checkbox"></td></tr>
 <tr><td>3</td><td>Контрольные значения</td><td>≤5% от эталона</td><td>—</td><td><span class="file">results/04_mader_sod/values.txt</span>:<br><code style="font-size:.72rem">x=0.60: rho=0.4263 p=0.3031 u=0.9274</code><br><code style="font-size:.72rem">x=0.75: rho=0.2656 p=0.3031 u=0.9274</code></td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>4</td><td>УВ размазана</td><td>3–5 ячеек</td><td>—</td><td><span class="how">КР размазан на 5–8 ячеек — нормально для VISC=0.5</span></td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>4</td><td>УВ размазана</td><td>3–5 ячеек</td><td>—</td><td><span class="how">Контактный разрыв размазан на 5–8 ячеек — это нормальное поведение для VISC=0.5.</span> Ударная волна должна быть резче (3–5 ячеек)</td><td class="check-cell"><input type="checkbox"></td></tr>
 </table>
 <p style="color:var(--text2);font-size:.85rem;margin-top:.5rem">Ожидаемые графики — те же, что в задании 1 (FLIC). Контрольные значения идентичны.</p>
 </div>
@@ -394,13 +414,21 @@ Isentropic vortex (порядок сходимости):
 <div class="block-header"><div class="block-num">4b</div><h3 style="margin:0">2DE Мейдера — Тест 2: Одномерная детонация CJ</h3></div>
 <table>
 <tr><th>#</th><th>Пункт</th><th>Результат</th><th>Параметры</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
-<tr><td>1</td><td>Параметры расчёта</td><td>Квази-1D</td><td>NI=200, NJ=3, SLAB<br>ρ₀=1.84, γ=3<br>D_CJ=0.88 см/мкс<br>VISC=0.5, CFL=0.5</td><td><span class="how">Проверить параметры.</span> Детонатор: 3–5 левых ячеек с P=P_CJ, W=0</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>2</td><td>Кинетика Аррениуса</td><td>W: 1→0</td><td>Z=5·10⁹ мкс⁻¹<br>E*=2·10⁴ K<br>MINWT=1000K, GASW=0.02</td><td><span class="how">Проверить</span> параметры кинетики и пороги срабатывания</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>3</td><td><b>Скорость фронта</b></td><td>D = D_CJ ± 2%</td><td>D_CJ = 0.88 см/мкс</td><td><span class="file">results/04_mader_det/front_xt.png</span>: <span class="how">график x_front(t).</span> Должен быть линейным. Наклон = D_CJ. <span class="how">Подписать наклон на графике</span></td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>4</td><td><b>Профили P(x), ρ(x), W(x)</b></td><td>Структура волны</td><td>—</td><td><span class="file">results/04_mader_det/profiles_P_rho_W.png</span>:<br><span class="how">3 графика в фиксированный момент.</span> P: пик на фронте → плато P_CJ. W: от 1 до 0 в зоне реакции (5–10 ячеек)</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>1</td><td>Параметры расчёта</td><td>Квази-1D</td><td>NI=200, NJ=3, SLAB<br>ρ₀=1.84, γ=3<br>D_CJ=0.88 см/мкс<br>VISC=0.5, CFL=0.5</td><td><span class="how">Проверить параметры кинетики и детонатор:</span> 3–5 левых ячеек инициализированы с $P = P_{CJ}$, $W = 0$ (полностью прореагировавшие)</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>2</td><td>Кинетика Аррениуса</td><td>W: 1→0</td><td>Z=5·10⁹ мкс⁻¹<br>E*=2·10⁴ K<br>MINWT=1000K, GASW=0.02</td><td><span class="how">Проверить параметры кинетики Аррениуса:</span> предэкспонента $Z$, энергия активации $E^*$, пороги MINWT и GASW</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>3</td><td><b>Скорость фронта</b></td><td>D = D_CJ ± 2%</td><td>D_CJ = 0.88 см/мкс</td><td><span class="file">results/04_mader_det/front_xt.png</span>: <span class="how">график x_front(t).</span> Должен быть линейным. Наклон = D_CJ. <span class="how">На графике сходимости указать наклон прямой (ожидается $\approx 2$ для MUSCL).</span> Минимум 3 сетки в расчёте</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>4</td><td><b>Профили P(x), ρ(x), W(x)</b></td><td>Структура волны</td><td>—</td><td><span class="file">results/04_mader_det/profiles_P_rho_W.png</span>:<br><span class="how">Три графика ($P$, $\rho$, $W$) в один момент времени.</span> Давление: пик на фронте, затем плато $P_{CJ}$. Массовая доля $W$: переход от 1 (ВВ) к 0 (продукты) в зоне реакции шириной 5–10 ячеек</td><td class="check-cell"><input type="checkbox"></td></tr>
 <tr><td>5</td><td>Давление на фронте</td><td>P_max ≈ P_CJ</td><td>P_CJ = 0.356 Мбар</td><td><span class="file">results/04_mader_det/values.txt</span>:<br><code style="font-size:.72rem">D_computed = 0.878 cm/us (D_CJ=0.880, err=0.23%)</code><br><code style="font-size:.72rem">P_max = 0.361 Mbar (P_CJ=0.356)</code></td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>6</td><td>Нет осцилляций за фронтом</td><td>P гладкое</td><td>—</td><td><span class="how">Визуально:</span> за фронтом P выходит на плато, нет «звона»</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>6</td><td>Нет осцилляций за фронтом</td><td>P гладкое</td><td>—</td><td><span class="how">Визуальная проверка:</span> за фронтом давление выходит на плато $P_{CJ}$ без осцилляций («звона»)</td><td class="check-cell"><input type="checkbox"></td></tr>
 </table>
+
+<h4>Задание: одномерная детонация Чепмена–Жуге</h4>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Что такое детонация CJ.</strong> Самоподдерживающаяся волна, состоящая из ударного фронта и зоны химической реакции. Скорость фронта $D_{CJ}$ определяется термодинамикой ВВ. За фронтом: давление выходит на плато $P_{CJ}$, массовая доля ВВ $W$ падает от 1 (непрореагировавшее) до 0 (продукты).</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Определения.</strong> $D_{CJ}$ — скорость детонации Чепмена–Жуге (см/мкс); $P_{CJ} = D^2 \rho_0 / (\gamma + 1)$ — давление CJ (Мбар); $W$ — массовая доля непрореагировавшего ВВ ($W = 1$ → ВВ, $W = 0$ → продукты); зона реакции — область, где $W$ меняется от 1 до 0.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Какие графики построить.</strong> (1) $x_{front}(t)$ — положение фронта во времени: линейная зависимость, наклон = $D_{CJ}$. Подписать наклон. (2) Профили $P(x)$, $\rho(x)$, $W(x)$ в фиксированный момент времени: пик давления на фронте, плато $P_{CJ}$ позади, $W$-профиль через зону реакции.</p>
 
 <h4>Ожидаемые поля — детонация CJ</h4>
 <div class="plot-container">
@@ -474,14 +502,22 @@ E_det = P_CJ / (ρ₀(γ−1)) = 0.097 Мбар·см³/г
 <div class="block-header"><div class="block-num">4c</div><h3 style="margin:0">2DE Мейдера — Тест 3: Corner Turning 2D</h3></div>
 <table>
 <tr><th>#</th><th>Пункт</th><th>Результат</th><th>Параметры</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
-<tr><td>1</td><td>Геометрия</td><td>L-образная</td><td>Канал: 2×1 см<br>Область: 7×4 см<br>NI=140, NJ=80<br>ΔR=ΔZ=0.05 см, SLAB</td><td><span class="how">Проверить</span> размеры и сетку. Детонатор: 1 столбец i=1, P=P_CJ, W=0</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>2</td><td>В канале D = D_CJ</td><td>±2%</td><td>—</td><td><span class="how">До выхода из канала фронт плоский, скорость = D_CJ</span></td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>3</td><td><b>Карта давления</b></td><td>Дифракция</td><td>—</td><td><span class="file">results/04_mader_corner/pressure_t1.png</span>, <span class="file">pressure_t2.png</span>, <span class="file">pressure_t3.png</span>:<br><span class="how">3 момента:</span> до выхода, в момент выхода, после дифракции</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>4</td><td><b>Карта W(i,j)</b></td><td>Мёртвая зона</td><td>—</td><td><span class="file">results/04_mader_corner/W_map.png</span>:<br><span class="how">Область с W>0 за стенкой</span> — мёртвая зона, куда детонация приходит с задержкой</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>5</td><td>Время прихода фронта</td><td>Изолинии</td><td>—</td><td><span class="file">results/04_mader_corner/arrival_time.png</span>: <span class="how">изолинии t_arrival(i,j)=const</span> показывают форму фронта</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>6</td><td>Устойчивость</td><td>ρ>0, P>0</td><td>—</td><td><span class="how">Нет отрицательных плотностей, код не «взрывается»</span></td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>7</td><td>Поправка Шаргатова</td><td>Устойч. контакта</td><td><span class="tag">CHECK: SHARGATOV</span></td><td><span class="how">Маркер у поправки.</span> Если реализована — нет нефизических осцилляций состава на контактной границе</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>1</td><td>Геометрия</td><td>L-образная</td><td>Канал: 2×1 см<br>Область: 7×4 см<br>NI=140, NJ=80<br>ΔR=ΔZ=0.05 см, SLAB</td><td><span class="how">Проверить геометрию и сетку.</span> Канал 2×1 см, область 7×4 см, NI=140, NJ=80. Детонатор: 1 столбец $i=1$ с $P=P_{CJ}$, $W=0$</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>2</td><td>В канале D = D_CJ</td><td>±2%</td><td>—</td><td><span class="how">До выхода из канала фронт детонации должен быть плоским, а его скорость — равна $D_{CJ} \pm 2\%$</span></td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>3</td><td><b>Карта давления</b></td><td>Дифракция</td><td>—</td><td><span class="file">results/04_mader_corner/pressure_t1.png</span>, <span class="file">pressure_t2.png</span>, <span class="file">pressure_t3.png</span>:<br><span class="how">Три карты давления в разные моменты:</span> (1) фронт внутри канала; (2) момент выхода из канала; (3) после дифракции — криволинейный фронт</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>4</td><td><b>Карта W(i,j)</b></td><td>Мёртвая зона</td><td>—</td><td><span class="file">results/04_mader_corner/W_map.png</span>:<br><span class="how">Карта массовой доли $W(i,j)$: область с $W > 0$ за внутренним углом</span> — это мёртвая зона, куда детонация приходит с задержкой или не приходит вовсе</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>5</td><td>Время прихода фронта</td><td>Изолинии</td><td>—</td><td><span class="file">results/04_mader_corner/arrival_time.png</span>: <span class="how">Изолинии времени прихода $t_{arrival}(i,j) = \text{const}$</span> — показывают форму фронта детонации в каждый момент. За углом изолинии должны искривляться</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>6</td><td>Устойчивость</td><td>ρ>0, P>0</td><td>—</td><td><span class="how">Проверка устойчивости:</span> в расчёте не должно быть отрицательных плотностей или давлений, код не «взрывается»</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>7</td><td>Поправка Шаргатова</td><td>Устойч. контакта</td><td><span class="tag">CHECK: SHARGATOV</span></td><td><span class="how">Поставить маркер у поправки Шаргатова (если реализована).</span> С поправкой: нет нефизических осцилляций массовой доли $W$ на контактной границе ВВ–продукты</td><td class="check-cell"><input type="checkbox"></td></tr>
 </table>
+
+<h4>Задание: дифракция детонационной волны за углом (Corner Turning)</h4>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Постановка.</strong> Детонационная волна распространяется по узкому каналу (2×1 см) и выходит в открытую область (7×4 см). За внутренним углом формируется <em>мёртвая зона</em> — область, куда детонация не доходит (или доходит с задержкой), потому что боковые разгрузки ослабляют фронт.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Определения.</strong> Мёртвая зона — область с $W > 0$ (непрореагировавшее ВВ) после прохождения основного фронта; $t_{arrival}(i,j)$ — момент, когда фронт детонации (определяемый по скачку $P$) достигает ячейки $(i,j)$.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Какие графики построить.</strong> (1) Три карты давления $P(i,j)$ в моменты: до выхода из канала, в момент выхода, после дифракции. (2) Карта $W(i,j)$ после прохождения фронта — мёртвая зона видна как область с $W > 0$. (3) Изолинии $t_{arrival} = \text{const}$ — показывают искривление фронта за углом.</p>
 
 <h4>Ожидаемые поля — Corner Turning</h4>
 <div class="plot-container">
@@ -564,20 +600,28 @@ E_det = P_CJ / (ρ₀(γ−1)) = 0.097 Мбар·см³/г
 <div class="block-header"><div class="block-num">5</div><h3 style="margin:0">Каверна (lid-driven cavity), Re=100, 41×41</h3></div>
 <table>
 <tr><th>#</th><th>Пункт</th><th>Результат</th><th>Маркер</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
-<tr><td>1</td><td>Код компилируется</td><td>make OK</td><td>—</td><td><span class="how">Демо:</span> <code>cd src/simple_piso_pimple && make</code><br>Или скриншот <span class="file">results/05_cavity/build.png</span></td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>2</td><td>Staggered сетка</td><td>u,v,p разнесены</td><td><span class="tag">CHECK: STAGGERED_GRID</span></td><td><span class="how">Маркер у объявления массивов.</span> Видно: u[NX+1][NY], v[NX][NY+1], p[NX][NY]</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>3</td><td>Предиктор u*</td><td>§4 лекции</td><td><span class="tag">CHECK: PREDICTOR_U</span></td><td><span class="how">Маркер перед predict_u().</span> Видно: интерполяция, конвекция, диффузия, ∇p, под-релаксация</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>4</td><td>Предиктор v*</td><td>Аналогично</td><td><span class="tag">CHECK: PREDICTOR_V</span></td><td><span class="how">Маркер перед predict_v()</span></td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>5</td><td>Пуассон p'</td><td>div(u*)→0</td><td><span class="tag">CHECK: POISSON</span></td><td><span class="how">Маркер перед solve_pressure().</span> Видно: a_E,W,N,S, b'=−div(u*), SOR, p'(0,0)=0</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>6</td><td>Коррекция</td><td>p+=α_p·p'</td><td><span class="tag">CHECK: CORRECTION</span></td><td><span class="how">Маркер перед correct().</span> Обновление p, u, v</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>7</td><td><b>SIMPLE</b></td><td>&lt;5000 итер.</td><td><span class="tag">CHECK: SIMPLE_LOOP</span></td><td><span class="how">Маркер у главного цикла SIMPLE.</span> αu=0.7, αp=0.3<br><span class="file">results/05_cavity/residuals.png</span>: max|Δu| падает до 10⁻⁶</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>8</td><td><b>PISO</b></td><td>Ghia OK</td><td><span class="tag">CHECK: PISO_LOOP</span></td><td><span class="how">Маркер у цикла PISO.</span> Δt=0.01, T=15, 2 коррекции</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>9</td><td><b>PIMPLE</b></td><td>Ghia OK</td><td><span class="tag">CHECK: PIMPLE_LOOP</span></td><td><span class="how">Маркер у цикла PIMPLE.</span> Δt=0.05, 3 внешн., 1 корр.</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>10</td><td><b>u(y) + Ghia</b></td><td>≤5%</td><td>—</td><td><span class="file">results/05_cavity/u_y_ghia.png</span>:<br><span class="how">синяя линия=расчёт, красные кружки=Ghia.</span> Оси: X=u, Y=y</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>1</td><td>Код компилируется</td><td>make OK</td><td>—</td><td><span class="how">Продемонстрировать компиляцию:</span> <code>cd src/simple_piso_pimple && make</code> — должно скомпилироваться без ошибок</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>2</td><td>Staggered сетка</td><td>u,v,p разнесены</td><td><span class="tag">CHECK: STAGGERED_GRID</span></td><td><span class="how">Поставить маркер у объявления массивов разнесённой сетки:</span> <code>u[NX+1][NY]</code>, <code>v[NX][NY+1]</code>, <code>p[NX][NY]</code> — скорости на гранях, давление в центрах</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>3</td><td>Предиктор u*</td><td>§4 лекции</td><td><span class="tag">CHECK: PREDICTOR_U</span></td><td><span class="how">Поставить маркер перед предиктором $u^*$.</span> В коде: интерполяция скоростей на грани, конвективный и диффузионный члены, градиент давления, под-релаксация</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>4</td><td>Предиктор v*</td><td>Аналогично</td><td><span class="tag">CHECK: PREDICTOR_V</span></td><td><span class="how">Поставить маркер перед предиктором $v^*$ — аналогично $u^*$</span></td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>5</td><td>Пуассон p'</td><td>div(u*)→0</td><td><span class="tag">CHECK: POISSON</span></td><td><span class="how">Поставить маркер перед решением уравнения Пуассона для $p'$.</span> В коде: коэффициенты $a_E, a_W, a_N, a_S$, правая часть $b' = -\text{div}(u^*)$, итерации SOR, фиксация $p'(0,0) = 0$</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>6</td><td>Коррекция</td><td>p+=α_p·p'</td><td><span class="tag">CHECK: CORRECTION</span></td><td><span class="how">Поставить маркер перед коррекцией.</span> Обновление: $p \mathrel{+}= \alpha_p \cdot p'$, корректировка $u$ и $v$ по градиенту $p'$</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>7</td><td><b>SIMPLE</b></td><td>&lt;5000 итер.</td><td><span class="tag">CHECK: SIMPLE_LOOP</span></td><td><span class="how">Поставить маркер у главного цикла SIMPLE.</span> Параметры: $\alpha_u = 0.7$, $\alpha_p = 0.3$, сходимость за $< 5000$ итераций<br><span class="file">results/05_cavity/residuals.png</span>: max|Δu| падает до 10⁻⁶</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>8</td><td><b>PISO</b></td><td>Ghia OK</td><td><span class="tag">CHECK: PISO_LOOP</span></td><td><span class="how">Поставить маркер у цикла PISO.</span> Параметры: $\Delta t = 0.01$, расчёт до $T = 15$, 2 коррекции давления на каждом шаге</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>9</td><td><b>PIMPLE</b></td><td>Ghia OK</td><td><span class="tag">CHECK: PIMPLE_LOOP</span></td><td><span class="how">Поставить маркер у цикла PIMPLE.</span> Параметры: $\Delta t = 0.05$, 3 внешних итерации, 1 коррекция давления</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>10</td><td><b>u(y) + Ghia</b></td><td>≤5%</td><td>—</td><td><span class="file">results/05_cavity/u_y_ghia.png</span>:<br><span class="how">График $u(y)$ при $x = 0.5$:</span> синяя линия — расчёт, красные кружки — данные Ghia. Оси: горизонтальная — $u$, вертикальная — $y$</td><td class="check-cell"><input type="checkbox"></td></tr>
 <tr><td>11</td><td><b>v(x) + Ghia</b></td><td>≤5%</td><td>—</td><td><span class="file">results/05_cavity/v_x_ghia.png</span>: аналогично</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>12</td><td><b>Линии тока</b></td><td>1 осн.+2 вторичн.</td><td>—</td><td><span class="file">results/05_cavity/streamlines.png</span>: контурная карта ψ или streamplot<br><span class="how">Маленькие вихри в нижних углах должны быть видны</span></td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>12</td><td><b>Линии тока</b></td><td>1 осн.+2 вторичн.</td><td>—</td><td><span class="file">results/05_cavity/streamlines.png</span>: контурная карта ψ или streamplot<br><span class="how">Контурная карта функции тока $\psi$ или streamplot.</span> Должны быть видны: основной вихрь в центре и два маленьких вторичных вихря в нижних углах</td><td class="check-cell"><input type="checkbox"></td></tr>
 <tr><td>13</td><td>Таблица Ghia</td><td>Числа</td><td>—</td><td><span class="file">results/05_cavity/ghia_table.txt</span>:<br><code style="font-size:.72rem">y=0.9766 u_calc=0.8395 u_ghia=0.8412 err=0.20%</code></td><td class="check-cell"><input type="checkbox"></td></tr>
 </table>
+
+<h4>Задание: течение в каверне с движущейся крышкой (lid-driven cavity)</h4>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Постановка.</strong> Квадратная полость $[0,1]^2$. Верхняя стенка движется вправо со скоростью $u = 1$, остальные стенки неподвижные (no-slip). Течение вязкое, несжимаемое, стационарное при $Re = 100$.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Определения.</strong> $Re = UL/\nu$ — число Рейнольдса ($U = 1$ — скорость крышки, $L = 1$ — сторона каверны, $\nu$ — кинематическая вязкость); стационарное решение — когда невязка $\max|\Delta u|$ между итерациями падает ниже $10^{-6}$.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Какие графики построить.</strong> (1) Профиль $u(y)$ при $x = 0.5$ — горизонтальная компонента скорости вдоль вертикальной линии через центр. Наложить данные Ghia et al. (1982) красными точками. (2) Аналогично $v(x)$ при $y = 0.5$. (3) Карта линий тока (streamlines) — должны быть видны: один основной вихрь в центре и два маленьких вторичных вихря в нижних углах.</p>
 
 <h4>Ожидаемые поля — каверна Re=100</h4>
 <div class="plot-container">
@@ -681,11 +725,19 @@ x=0.453→v=0.172   x=0.281→v=0.175   x=0.172→v=0.162   x=0.000→v=0.000
 <div class="block-header"><div class="block-num">6</div><h3 style="margin:0">Тейлор–Грин (временная точность)</h3></div>
 <table>
 <tr><th>#</th><th>Пункт</th><th>Результат</th><th>Маркер</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
-<tr><td>1</td><td>Нач. условия</td><td>4 вихря</td><td><span class="tag">CHECK: TG_INIT</span></td><td><span class="how">Маркер у инициализации</span> u=−cos(πx)sin(πy), v=sin(πx)cos(πy)</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>2</td><td>ГУ Дирихле (точное)</td><td>Аналитика на ∂Ω</td><td><span class="tag">CHECK: TG_BC</span></td><td><span class="how">Маркер у ГУ.</span> Точное решение ×e^(−2π²νt)</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>3</td><td><b>Ошибка vs Δt</b></td><td>Наклон≈1</td><td>—</td><td><span class="file">results/06_taylor_green/error_vs_dt.png</span>: <span class="how">log-log,</span> ≥4 точки Δt. Линия наклона 1 для сравнения. <span class="how">Подписать наклон</span></td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>4</td><td>Затухание</td><td>=e^(−2π²νt)</td><td>—</td><td><span class="file">results/06_taylor_green/decay.png</span>: max|u|(t) vs аналитика. <span class="how">Две кривые совпадают</span></td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>1</td><td>Нач. условия</td><td>4 вихря</td><td><span class="tag">CHECK: TG_INIT</span></td><td><span class="how">Поставить маркер у начальных условий:</span> $u = -\cos(\pi x)\sin(\pi y)$, $v = \sin(\pi x)\cos(\pi y)$</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>2</td><td>ГУ Дирихле (точное)</td><td>Аналитика на ∂Ω</td><td><span class="tag">CHECK: TG_BC</span></td><td><span class="how">Поставить маркер у граничных условий Дирихле:</span> значения на границе берутся из точного решения $\times e^{-2\pi^2 \nu t}$</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>3</td><td><b>Ошибка vs Δt</b></td><td>Наклон≈1</td><td>—</td><td><span class="file">results/06_taylor_green/error_vs_dt.png</span>: <span class="how">График в логарифмических осях: ошибка $L_2$ vs $\Delta t$.</span> Минимум 4 значения $\Delta t$. Нанести прямую с наклоном 1 для сравнения. Подписать измеренный наклон</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>4</td><td>Затухание</td><td>=e^(−2π²νt)</td><td>—</td><td><span class="file">results/06_taylor_green/decay.png</span>: max|u|(t) vs аналитика. <span class="how">График затухания $\max|u|(t) / \max|u_0|$:</span> расчётная кривая и аналитическая $e^{-2\pi^2 \nu t}$ должны совпасть</td><td class="check-cell"><input type="checkbox"></td></tr>
 </table>
+
+<h4>Задание: вихрь Тейлора–Грина (проверка временной точности)</h4>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Постановка.</strong> Четыре контр-вращающихся вихря в области $[0,1]^2$ с начальными условиями $u = -\cos(\pi x)\sin(\pi y)$, $v = \sin(\pi x)\cos(\pi y)$. Точное решение: вихри экспоненциально затухают, $u(t) = u(0) \cdot e^{-2\pi^2 \nu t}$. Граничные условия Дирихле из точного решения.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Зачем этот тест.</strong> Если пространственная ошибка мала (точные ГУ), то ошибка определяется временной дискретизацией. Уменьшая $\Delta t$ и измеряя $L_2$-ошибку, определяем порядок по времени: наклон $\log(L_2)$ vs $\log(\Delta t)$ ≈ 1 для Эйлера, ≈ 2 для Кранка–Николсона.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Какие графики построить.</strong> (1) Поле $|u|$ при $t = 0$ — цветная карта с 4 вихрями и стрелками скоростей. (2) Затухание $\max|u|/\max|u_0|$ vs $t$ — наложить расчётную кривую и аналитическую $e^{-2\pi^2 \nu t}$. Кривые должны совпасть. (3) Ошибка $L_2$ vs $\Delta t$ в лог-лог осях (минимум 4 точки), с прямой наклона 1.</p>
 
 <h4>Ожидаемые поля — Тейлор–Грин</h4>
 <div class="plot-container">
@@ -780,11 +832,19 @@ x=0.453→v=0.172   x=0.281→v=0.175   x=0.172→v=0.162   x=0.000→v=0.000
 <div class="block-header"><div class="block-num">7</div><h3 style="margin:0">Обратная ступенька (backward-facing step)</h3></div>
 <table>
 <tr><th>#</th><th>Пункт</th><th>Результат</th><th>Маркер</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
-<tr><td>1</td><td>Блокированные ячейки</td><td>Ступенька</td><td><span class="tag">CHECK: STEP_BLOCK</span></td><td><span class="how">Маркер у условия:</span> if x&lt;ls && y&lt;h → u=v=0</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>2</td><td>Вход Пуазейль</td><td>Парабола</td><td><span class="tag">CHECK: STEP_INLET</span></td><td><span class="how">Маркер у</span> u_in(y) = 6Uavg(y−h)(H−y)/(H−h)²</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>3</td><td><b>Рециркуляция</b></td><td>u&lt;0 за ступ.</td><td>—</td><td><span class="file">results/07_step/streamlines.png</span>: <span class="how">зона обратного тока видна</span></td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>1</td><td>Блокированные ячейки</td><td>Ступенька</td><td><span class="tag">CHECK: STEP_BLOCK</span></td><td><span class="how">Поставить маркер у блокировки ячеек ступеньки:</span> <code>if (x < ls && y < h) → u = v = 0</code></td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>2</td><td>Вход Пуазейль</td><td>Парабола</td><td><span class="tag">CHECK: STEP_INLET</span></td><td><span class="how">Поставить маркер у профиля Пуазейля на входе:</span> $u_{in}(y) = 6 U_{avg} (y-h)(H-y) / (H-h)^2$</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>3</td><td><b>Рециркуляция</b></td><td>u&lt;0 за ступ.</td><td>—</td><td><span class="file">results/07_step/streamlines.png</span>: <span class="how">На карте линий тока должна быть видна зона рециркуляции</span> (обратный ток $u < 0$) сразу за ступенькой</td><td class="check-cell"><input type="checkbox"></td></tr>
 <tr><td>4</td><td><b>xr/h</b></td><td>Re100→3.0</td><td>—</td><td><span class="file">results/07_step/xr.txt</span>:<br><code style="font-size:.72rem">Re=100 xr=1.50 xr/h=3.00 (Armaly: 3.0)</code><br><code style="font-size:.72rem">Re=200 xr=2.50 xr/h=5.00 (Armaly: 5.0)</code></td><td class="check-cell"><input type="checkbox"></td></tr>
 </table>
+
+<h4>Задание: обратная ступенька (backward-facing step)</h4>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Постановка.</strong> Канал с резким расширением (ступенькой). Жидкость входит слева с параболическим профилем Пуазейля и отрывается от нижней стенки за ступенькой, образуя зону рециркуляции (обратного тока). Длина рециркуляции $x_r$ зависит от числа Рейнольдса.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Определения.</strong> $h$ — высота ступеньки; $x_r$ — расстояние от ступеньки до точки, где $u$ на нижней стенке меняет знак с отрицательного на положительный; $x_r/h$ — безразмерная длина рециркуляции; степень расширения $ER = H/(H-h) = 2$ (для данной задачи).</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Какие графики построить.</strong> (1) Карта линий тока — должна быть видна зона обратного тока (рециркуляция) сразу за ступенькой. (2) График $x_r/h$ vs $Re$ — эталонные значения Armaly et al. (1983): $Re=100 \to x_r/h \approx 3.0$; $Re=200 \to 5.0$; $Re=400 \to 8.2$; $Re=800 \to 14.0$.</p>
 
 <h4>Ожидаемые поля — ступенька</h4>
 <div class="plot-container">
@@ -875,15 +935,21 @@ x=0.453→v=0.172   x=0.281→v=0.175   x=0.172→v=0.162   x=0.000→v=0.000
 <div class="block-header"><div class="block-num">8</div><h3 style="margin:0">КОМ на неструктурированных сетках</h3></div>
 <table>
 <tr><th>#</th><th>Пункт</th><th>Результат</th><th>Маркер</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
-<tr><td>1</td><td>Структуры данных</td><td>Node,Face,Cell</td><td><span class="tag">CHECK: MESH_STRUCTS</span></td><td><span class="how">Маркер у struct Node/Face/Cell</span> в mesh.hpp</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>2</td><td>build_faces+geometry</td><td>Площади</td><td><span class="tag">CHECK: BUILD_FACES</span></td><td><span class="how">Маркер у</span> build_faces() и cell_geometry()</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>3</td><td>HLLC+Годунов+Колган</td><td>1-й и 2-й пор.</td><td><span class="tag">CHECK: UNSTRUCT_SCHEMES</span></td><td><span class="how">Маркер у невязок</span> 1-го (постоянная) и 2-го (линейная+minmod) порядка</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>4</td><td>ГУ: Wall, Farfield</td><td>ghost_state()</td><td><span class="tag">CHECK: GHOST_STATE</span></td><td><span class="how">Маркер у</span> ghost_state(): Wall=зеркало, Farfield=Риман</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>5</td><td>VTK-вывод</td><td>ParaView</td><td>—</td><td><span class="file">results/08_woodward/mesh.png</span>: <span class="how">скриншот сетки из ParaView</span></td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>6</td><td><b>Вудворд</b> (M=3)</td><td>Тройная точка</td><td>—</td><td><span class="file">results/08_woodward/density.png</span>: ≥30 контуров ρ<br><span class="how">Видны:</span> падающая УВ, отражённая, маховский стержень</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>1</td><td>Структуры данных</td><td>Node,Face,Cell</td><td><span class="tag">CHECK: MESH_STRUCTS</span></td><td><span class="how">Поставить маркер у определения структур данных</span> <code>struct Node</code>, <code>struct Face</code>, <code>struct Cell</code> в файле mesh.hpp</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>2</td><td>build_faces+geometry</td><td>Площади</td><td><span class="tag">CHECK: BUILD_FACES</span></td><td><span class="how">Поставить маркер у функций</span> <code>build_faces()</code> (построение граней из узлов) и <code>cell_geometry()</code> (площади, центроиды)</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>3</td><td>HLLC+Годунов+Колган</td><td>1-й и 2-й пор.</td><td><span class="tag">CHECK: UNSTRUCT_SCHEMES</span></td><td><span class="how">Поставить маркер у вычисления невязок:</span> 1-й порядок (Годунов — постоянная реконструкция) и 2-й порядок (Колган — линейная + лимитер minmod)</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>4</td><td>ГУ: Wall, Farfield</td><td>ghost_state()</td><td><span class="tag">CHECK: GHOST_STATE</span></td><td><span class="how">Поставить маркер у функции <code>ghost_state()</code>:</span> стенка Wall — зеркальное отражение скорости; дальнее поле Farfield — характеристический солвер Римана</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>5</td><td>VTK-вывод</td><td>ParaView</td><td>—</td><td><span class="file">results/08_woodward/mesh.png</span>: <span class="how">Скриншот неструктурированной сетки из ParaView</span> — должна быть видна структура ячеек, сгущение к телу</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>6</td><td><b>Вудворд</b> (M=3)</td><td>Тройная точка</td><td>—</td><td><span class="file">results/08_woodward/density.png</span>: ≥30 контуров ρ<br><span class="how">На карте плотности (≥30 контуров) должны быть видны:</span> падающая ударная волна, отражённая волна, маховский стержень у нижней стенки, тройная точка Маха</td><td class="check-cell"><input type="checkbox"></td></tr>
 <tr><td>7</td><td><b>NACA 0012</b></td><td>Cp, Cd, Cl</td><td>—</td><td><span class="file">results/09_naca/mach_field.png</span> + <span class="file">cp.png</span> + <span class="file">aero.txt</span>:<br><code style="font-size:.72rem">M=0.8 alpha=1.25 Cd=0.023 Cl=0.35</code></td><td class="check-cell"><input type="checkbox"></td></tr>
 <tr><td>8</td><td><b>Цилиндр</b></td><td>Cp(θ), Cd</td><td>—</td><td><span class="file">results/10_cylinder/cp_theta.png</span> + <span class="file">cd.txt</span></td><td class="check-cell"><input type="checkbox"></td></tr>
 </table>
+
+<h4>Задание: ступенька Вудворда–Колеллы (M=3)</h4>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Постановка.</strong> Сверхзвуковой поток ($M = 3$) набегает на ступеньку высотой 0.2 в канале $[0,3] \times [0,1]$. Образуются сложные структуры: падающая ударная волна, отражённая волна, маховский стержень (нормальный скачок у нижней стенки), тройная точка Маха и контактный разрыв.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Какой график построить.</strong> Контурная карта плотности $\rho$ с ≥ 30 изолиниями. На ней должны быть видны все перечисленные элементы. Дополнительно: скриншот сетки из ParaView.</p>
 
 <h4>Ожидаемое поле — Вудворд M=3</h4>
 <div class="plot-container">
@@ -928,6 +994,14 @@ x=0.453→v=0.172   x=0.281→v=0.175   x=0.172→v=0.162   x=0.000→v=0.000
 ГУ: Inflow (слева), Outflow (справа), Wall (верх, низ, ступенька)
 Сетка: ≥ 2000 ячеек (Делоне или декартова)
 <b>Что должно быть видно:</b> падающая УВ от ступеньки, отражённая УВ, маховский стержень (вертикальная УВ у нижней стенки), контактный разрыв, тройная точка Маха</div>
+
+<h4>Задания: обтекание NACA 0012 и цилиндра</h4>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>NACA 0012</strong> — симметричный профиль крыла толщиной 12%. При $M = 0.8$, $\alpha = 1.25°$ на верхней поверхности возникает скачок уплотнения (transonic shock). <strong>Что построить:</strong> (1) карта числа Маха вокруг профиля; (2) распределение $C_p(x/c)$ — верхняя (со скачком) и нижняя поверхности; (3) значения $C_d$ (сопротивление) и $C_l$ (подъёмная сила).</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Цилиндр.</strong> Обтекание при $M = 0.3$–$0.5$. <strong>Что построить:</strong> распределение $C_p(\theta)$ по поверхности ($\theta = 0°$ — лоб, $\theta = 90°$ — бок). Сравнить с потенциальным обтеканием: $C_p = 1 - 4\sin^2\theta$.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Определения.</strong> $C_p = (P - P_\infty) / (\frac{1}{2} \rho_\infty U_\infty^2)$ — коэффициент давления; $C_d$ — коэффициент сопротивления (drag); $C_l$ — коэффициент подъёмной силы (lift); $x/c$ — безразмерная координата вдоль хорды профиля.</p>
 
 <h4>Ожидаемые графики — NACA и цилиндр</h4>
 <div class="plot-container">
@@ -1040,8 +1114,8 @@ M∞ = 0.3–0.5,  α = 0°,  γ = 1.4
 <div class="block-header"><div class="block-num">9</div><h3 style="margin:0">MPI-параллелизация</h3></div>
 <table>
 <tr><th>#</th><th>Пункт</th><th>Результат</th><th>Маркер</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
-<tr><td>1</td><td>Декомпозиция</td><td>RCB/BFS/METIS</td><td><span class="tag">CHECK: DECOMPOSITION</span></td><td><span class="how">Маркер у алгоритма разбиения.</span><br><span class="file">results/11_mpi/decomposition.png</span>: цветная карта part[i]</td><td class="check-cell"><input type="checkbox"></td></tr>
-<tr><td>2</td><td>Halo exchange</td><td>Isend/Irecv</td><td><span class="tag">CHECK: HALO_EXCHANGE</span></td><td><span class="how">Маркер у сборки буферов и MPI-вызовов.</span> Объяснить какие данные</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>1</td><td>Декомпозиция</td><td>RCB/BFS/METIS</td><td><span class="tag">CHECK: DECOMPOSITION</span></td><td><span class="how">Поставить маркер у алгоритма декомпозиции области (RCB, BFS или METIS).</span><br><span class="file">results/11_mpi/decomposition.png</span>: цветная карта part[i]</td><td class="check-cell"><input type="checkbox"></td></tr>
+<tr><td>2</td><td>Halo exchange</td><td>Isend/Irecv</td><td><span class="tag">CHECK: HALO_EXCHANGE</span></td><td><span class="how">Поставить маркер у halo-обмена:</span> сборка буферов отправки, вызовы <code>MPI_Isend</code> / <code>MPI_Irecv</code>, распаковка. Студент должен объяснить, какие именно данные обмениваются</td><td class="check-cell"><input type="checkbox"></td></tr>
 <tr><td>3</td><td>par = seq</td><td>Совпадение</td><td>—</td><td><span class="file">results/11_mpi/verification.txt</span>:<br><code style="font-size:.72rem">max|rho_par-rho_seq| = 2.3e-15</code><br><code style="font-size:.72rem">max|u_par-u_seq|     = 1.1e-14</code></td><td class="check-cell"><input type="checkbox"></td></tr>
 <tr><td>4</td><td>Ускорение</td><td>График</td><td>—</td><td><span class="file">results/11_mpi/speedup.png</span>: T₁/T_N vs N + линия идеала<br><span class="file">speedup.txt</span>: <code style="font-size:.72rem">N=1 T=10.2s  N=4 T=3.1s</code></td><td class="check-cell"><input type="checkbox"></td></tr>
 </table>
@@ -1149,13 +1223,13 @@ M∞ = 0.3–0.5,  α = 0°,  γ = 1.4
   <div>
     <h4>FLIC</h4>
     <ul style="padding-left:1.2rem;font-size:.85rem;color:var(--text2)">
-      <li>Этапы не разделены → <span class="how">Ctrl+F: два маркера LAGRANGE и EULER в разных местах?</span></li>
+      <li>Этапы не разделены → <span class="how">Проверить через Ctrl+F: маркеры LAGRANGE и EULER стоят в разных функциях (этапы разделены)?</span></li>
       <li>uⁿ⁺¹ вместо ũ при переносе</li>
       <li>2D: Δt вместо Δt/2 (Strang)</li>
     </ul>
     <h4>Годунов 2D</h4>
     <ul style="padding-left:1.2rem;font-size:.85rem;color:var(--text2)">
-      <li>1D CFL → <span class="how">Ctrl+F «CFL_2D» → смотреть формулу</span></li>
+      <li>1D CFL → <span class="how">Найти через Ctrl+F маркер «CFL_2D» и убедиться, что формула двумерная</span></li>
       <li>Неверный знак G → экструдированный 1D не совпадает</li>
     </ul>
   </div>
@@ -1167,7 +1241,7 @@ M∞ = 0.3–0.5,  α = 0°,  γ = 1.4
     </ul>
     <h4>SIMPLE/PISO/PIMPLE</h4>
     <ul style="padding-left:1.2rem;font-size:.85rem;color:var(--text2)">
-      <li>Знак b' в Пуассоне → <span class="how">после 1-й итерации max|u*|≈10¹⁰</span></li>
+      <li>Знак b' в Пуассоне → <span class="how">Типичный симптом: после 1-й итерации $\max|u^*| \approx 10^{10}$ — значит знак $b'$ в Пуассоне неверный</span></li>
       <li>Забыта p'(0,0)=0 → давление дрейфует</li>
       <li>PISO без временного члена = SIMPLE</li>
     </ul>

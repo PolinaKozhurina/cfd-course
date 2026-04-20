@@ -132,6 +132,20 @@
     } catch (e) {
       console.warn('Could not load checkbox states:', e);
     }
+    // Also load admin approvals (show as green indicator)
+    if (userGroup) {
+      try {
+        var adminSnap = await db.collection('groups').doc(userGroup).collection('admin_checklist').get();
+        adminSnap.forEach(function(doc) {
+          var num = doc.id.replace('item_','');
+          var cb = document.getElementById('chk_' + num);
+          if (cb && doc.data().checked) {
+            cb.parentElement.style.background = '#e8f4f0';
+            cb.parentElement.title = 'Подтверждено преподавателем ✓';
+          }
+        });
+      } catch(e) {}
+    }
   }
 
   // ===== Auth listener =====

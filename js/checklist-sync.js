@@ -136,12 +136,14 @@
     if (userGroup) {
       try {
         var adminSnap = await db.collection('groups').doc(userGroup).collection('admin_checklist').get();
-        adminSnap.forEach(function(doc) {
-          var num = doc.id.replace('item_','');
-          var cb = document.getElementById('chk_' + num);
-          if (cb && doc.data().checked) {
-            cb.parentElement.style.background = '#e8f4f0';
-            cb.parentElement.title = 'Подтверждено преподавателем ✓';
+        var adminKeys = {};
+        adminSnap.forEach(function(doc) { if (doc.data().checked) adminKeys[doc.id] = true; });
+        
+        // Match admin keys to checkboxes using same logic as student keys
+        checkboxes.forEach(function(cbObj) {
+          if (adminKeys[cbObj.id]) {
+            cbObj.el.parentElement.style.background = '#e8f4f0';
+            cbObj.el.parentElement.title = 'Подтверждено преподавателем ✓';
           }
         });
       } catch(e) {}

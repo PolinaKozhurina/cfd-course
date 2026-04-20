@@ -213,9 +213,16 @@ auth.onAuthStateChanged(async user => {
   await loadAllData();
 });
 
-function isAdmin(email) {
+// ADMIN_EMAIL from firebase-config.js = superadmin (cannot be removed)
+function isSuperAdmin(email) {
   if (Array.isArray(ADMIN_EMAIL)) return ADMIN_EMAIL.includes(email);
   return email === ADMIN_EMAIL;
+}
+
+function isAdmin(email) {
+  if (isSuperAdmin(email)) return true;
+  const u = allUsers.find(x => x.email === email);
+  return u && u.isAdmin;
 }
 
 // ===== Load all data =====
@@ -320,6 +327,7 @@ function showTab(name) {
 // ===== Students table =====
 function renderStudents() {
   const search = (document.getElementById('searchStudents').value || '').toLowerCase();
+  const viewerIsSuperAdmin = auth.currentUser && isSuperAdmin(auth.currentUser.email);
   const filtered = search ? allUsers.filter(u => {
     const s = (u.email||'') + ' ' + (u.fio||'') + ' ' + (u.studyGroup||'');
     return s.toLowerCase().includes(search);
@@ -350,6 +358,30 @@ function renderStudents() {
 
 
 
+
+async function toggleAdmin(uid, email, makeAdmin) {
+  const me = auth.currentUser;
+  if (!me || !isSuperAdmin(me.email)) {
+    alert('Только главный администратор может назначать роли');
+    return;
+  }
+  if (isSuperAdmin(email)) {
+    alert('Нельзя изменить роль главного администратора');
+    return;
+  }
+  if (makeAdmin) {
+    if (!confirm('Дать права администратора: ' + (allUsers.find(x=>x.uid===uid)||{}).fio || email + '?\nАдминистратор может ставить оценки и подтверждать профили, но НЕ может назначать других админов.')) return;
+    await db.collection('users').doc(uid).set({ isAdmin: true }, { merge: true });
+    const u = allUsers.find(x => x.uid === uid);
+    if (u) u.isAdmin = true;
+  } else {
+    if (!confirm('Снять права администратора у ' + (allUsers.find(x=>x.uid===uid)||{}).fio || email + '?')) return;
+    await db.collection('users').doc(uid).set({ isAdmin: false }, { merge: true });
+    const u = allUsers.find(x => x.uid === uid);
+    if (u) u.isAdmin = false;
+  }
+  renderStudents();
+}
 async function saveUserField(uid, field, value) {
   try {
     await db.collection('users').doc(uid).set({ [field]: value }, { merge: true });
@@ -389,7 +421,7 @@ function renderGroupResults() {
   const groups = filter === 'all' ? Object.keys(allGroups).sort() : [filter];
   for (const gid of groups) {
     if (!allGroups[gid]) continue;
-    const members = allGroups[gid].members.map(m => m.email).join(', ');
+    const members = allGroups[gid].members.map(m => m.fio || m.email).join(', ');
     const results = allResults[gid] || {};
     const repoLink = allGroups[gid].repoUrl ? '<a href="' + allGroups[gid].repoUrl + '" target="_blank" style="color:var(--accent3);font-family:\'JetBrains Mono\',monospace;font-size:.75rem;text-decoration:none;border-bottom:1px dashed var(--accent3)">' + allGroups[gid].repoUrl.replace('https://github.com/','') + '</a>' : '<span style="color:var(--text3);font-size:.78rem">не указан</span>';
     html += `<div class="card"><h3>${gid.replace('group_', 'Группа ')}</h3>
@@ -402,7 +434,7 @@ function renderGroupResults() {
         const status = r.values && r.values.allPass
           ? '<span class="badge b-pass">сдано</span>'
           : '<span class="badge b-fail">ошибка</span>';
-        const who = r.submittedBy || '—';
+        const who = r.submittedByFio || r.submittedBy || '—';
         const when = r.submittedAt ? new Date(r.submittedAt.seconds * 1000).toLocaleDateString('ru') : (r.values && r.values.timestamp ? r.values.timestamp.slice(0, 10) : '—');
         html += `<tr><td>${t.name}</td><td>${status}</td><td style="font-size:.78rem">${who}</td><td style="font-size:.78rem">${when}</td></tr>`;
       } else {

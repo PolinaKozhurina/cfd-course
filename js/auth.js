@@ -262,6 +262,7 @@
             document.getElementById("auth-group").value = userGroup;
           }
           window._userApproved = !!doc.data().approved;
+          window._userIsAdmin = !!doc.data().isAdmin;
         } else {
           // First login — create user document so admin can see them
           await db.collection("users").doc(user.uid).set({

@@ -303,7 +303,7 @@ firebase.auth().onAuthStateChanged(async user => {
   try {
     const usersSnap = await db2.collection('users').where('group', '==', userGroup).get();
     const members = [];
-    usersSnap.forEach(doc => members.push(doc.data().email));
+    usersSnap.forEach(doc => members.push(doc.data().fio || doc.data().email));
     loadRepoUrl(userGroup);
     document.getElementById('groupMembers').textContent =
       'Участники группы: ' + members.join(', ');
@@ -329,7 +329,7 @@ firebase.auth().onAuthStateChanged(async user => {
       const status = ok
         ? '<span class="badge b-pass">сдано</span>'
         : '<span class="badge b-fail">ошибка</span>';
-      const who = r.submittedBy || '—';
+      const who = r.submittedByFio || r.submittedBy || '—';
       const when = r.submittedAt
         ? new Date(r.submittedAt.seconds * 1000).toLocaleDateString('ru')
         : (r.values && r.values.timestamp ? r.values.timestamp.slice(0, 10) : '—');

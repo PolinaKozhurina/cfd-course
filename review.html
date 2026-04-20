@@ -1454,21 +1454,23 @@ M∞ = 0.3–0.5,  α = 0°,  γ = 1.4
 
   window.saveAdminCb = async function(admId, checked) {
     var gid = window._reviewGid;
-    if (!gid) return;
+    if (!gid) { alert('Сначала выберите группу'); return; }
+    var user = auth.currentUser;
+    if (!user) { alert('Вы не авторизованы'); return; }
     var el = document.getElementById(admId);
     var itemId = el && el.dataset.fsKey ? el.dataset.fsKey : admId.replace('adm_','cb_');
     var status = document.getElementById('review-status');
     try {
       await db.collection('groups').doc(gid).collection('admin_checklist').doc(itemId).set({
         checked: checked,
-        checkedBy: auth.currentUser.email,
+        checkedBy: user.email,
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
       status.textContent = 'Сохранено ✓';
       setTimeout(function() { status.textContent = ''; }, 1500);
     } catch(e) {
-      status.textContent = 'Ошибка!';
-      alert('Ошибка: ' + e.message);
+      status.textContent = 'Ошибка: ' + e.message;
+      console.error('saveAdminCb error:', e, 'gid:', gid, 'itemId:', itemId);
     }
   };
 })();

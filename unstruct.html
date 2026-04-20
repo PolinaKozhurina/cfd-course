@@ -3376,7 +3376,9 @@ $$C_d = \frac{F_x}{q_\infty D_{ref}}, \quad C_l = \frac{F_y}{q_\infty D_{ref}}, 
     } catch(e) { alert('Ошибка: '+e.message); }
   };
 
-  auth.onAuthStateChanged(async user => {
+  // Listen for auth ready event from auth.js
+  function updateCommentUI() {
+    const user = auth.currentUser;
     if (user && window._userApproved) {
       document.getElementById('comment-form').style.display = '';
       document.getElementById('comment-login').style.display = 'none';
@@ -3385,16 +3387,10 @@ $$C_d = \frac{F_x}{q_\infty D_{ref}}, \quad C_l = \frac{F_y}{q_\infty D_{ref}}, 
       document.getElementById('comment-login').style.display = '';
     }
     loadComments();
-  });
-
-  // Also re-check after a delay (approval may load async)
-  setTimeout(function(){
-    const user = auth.currentUser;
-    if (user && window._userApproved) {
-      document.getElementById('comment-form').style.display = '';
-      document.getElementById('comment-login').style.display = 'none';
-    }
-  }, 2000);
+  }
+  window.addEventListener('authReady', updateCommentUI);
+  // Also check immediately in case auth.js already fired
+  if (typeof window._userApproved !== 'undefined') updateCommentUI();
 })();
 </script>
 </main>

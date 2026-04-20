@@ -252,7 +252,7 @@ $$\text{vanLeer}(a, b) = \begin{cases} \frac{2ab}{a + b} & \text{если } ab >
 
 <h3>6.2 Реконструированные состояния на гранях</h3>
 
-$$q_{i+1/2}^L = q_i + \frac{\sigma_i}{2}\Delta x, \qquad q_{i+1/2}^R = q_{i+1} - \frac{\sigma_{i+1}}{2}\Delta x$$
+$$q_{i+1/2}^L = q_i + \frac{\sigma_i}{2}, \qquad q_{i+1/2}^R = q_{i+1} - \frac{\sigma_{i+1}}{2}$$
 
 <p>Эти значения $q^L$, $q^R$ подаются на вход HLLC-солвера вместо постоянных $q_i$, $q_{i+1}$.</p>
 
@@ -303,7 +303,7 @@ $$U_{i,j}^{n+1} = U_{i,j}^n - \frac{\Delta t}{\Delta x}\left(\hat{F}_{i+1/2,j} -
 </tbody>
 </table>
 
-<div class="kp"><strong>Ключевое наблюдение:</strong> решатель Римана в 2D — это <em>всё ещё 1D задача</em>, решаемая вдоль нормали к грани. На $x$-грани используем $(u, v)$, на $y$-грани — $(v, u)$ (скорости «поворачиваются»). Код HLLC не меняется!</div>
+<div class="kp"><strong>Ключевое наблюдение:</strong> решатель Римана в 2D — это <em>всё ещё 1D задача</em>, решаемая вдоль нормали к грани. На $x$-грани нормальная скорость $u$, тангенциальная $v$; на $y$-грани нормальная $v$, тангенциальная $u$. Код HLLC не меняется — достаточно подать правильную нормальную скорость.</div>
 
 <!-- §10 -->
 <h2 id="cfl2d"><span class="n">§10</span> CFL в 2D</h2>
@@ -492,7 +492,9 @@ $$U^{n+1} = L_x(\tfrac{\Delta t}{2}) \circ L_y(\Delta t) \circ L_x(\tfrac{\Delta
     } catch(e) { alert('Ошибка: '+e.message); }
   };
 
-  auth.onAuthStateChanged(async user => {
+  // Listen for auth ready event from auth.js
+  function updateCommentUI() {
+    const user = auth.currentUser;
     if (user && window._userApproved) {
       document.getElementById('comment-form').style.display = '';
       document.getElementById('comment-login').style.display = 'none';
@@ -501,16 +503,10 @@ $$U^{n+1} = L_x(\tfrac{\Delta t}{2}) \circ L_y(\Delta t) \circ L_x(\tfrac{\Delta
       document.getElementById('comment-login').style.display = '';
     }
     loadComments();
-  });
-
-  // Also re-check after a delay (approval may load async)
-  setTimeout(function(){
-    const user = auth.currentUser;
-    if (user && window._userApproved) {
-      document.getElementById('comment-form').style.display = '';
-      document.getElementById('comment-login').style.display = 'none';
-    }
-  }, 2000);
+  }
+  window.addEventListener('authReady', updateCommentUI);
+  // Also check immediately in case auth.js already fired
+  if (typeof window._userApproved !== 'undefined') updateCommentUI();
 })();
 </script>
 </div>

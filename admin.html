@@ -437,21 +437,50 @@ function renderGroupResults() {
       <table><thead><tr><th>Тест</th><th>Статус</th><th>Кто сдал</th><th>Когда</th></tr></thead><tbody>`;
     for (const t of TEST_IDS) {
       const r = results[t.id];
-      if (r) {
-        const status = r.values && r.values.allPass
-          ? '<span class="badge b-pass">сдано</span>'
-          : '<span class="badge b-fail">ошибка</span>';
-        const who = r.submittedByFio || r.submittedBy || '—';
-        const when = r.submittedAt ? new Date(r.submittedAt.seconds * 1000).toLocaleDateString('ru') : (r.values && r.values.timestamp ? r.values.timestamp.slice(0, 10) : '—');
-        html += `<tr><td>${t.name}</td><td>${status}</td><td style="font-size:.78rem">${who}</td><td style="font-size:.78rem">${when}</td></tr>`;
-      } else {
-        html += `<tr><td>${t.name}</td><td><span class="badge b-pending">не сдано</span></td><td>—</td><td>—</td></tr>`;
-      }
+      const manualPass = r && r.manualPass;
+      const autoPass = r && r.values && r.values.allPass;
+      const passed = manualPass || autoPass;
+      const statusBadge = passed
+        ? `<span class="badge b-pass" style="cursor:pointer" onclick="toggleTestStatus('${gid}','${t.id}',false)" title="Клик = отменить">сдано ✓</span>`
+        : `<span class="badge b-pending" style="cursor:pointer" onclick="toggleTestStatus('${gid}','${t.id}',true)" title="Клик = отметить сдано">не сдано</span>`;
+      const who = r ? (r.checkedByFio || r.submittedByFio || r.submittedBy || '—') : '—';
+      const when = r && r.checkedAt ? new Date(r.checkedAt.seconds * 1000).toLocaleDateString('ru')
+        : (r && r.submittedAt ? new Date(r.submittedAt.seconds * 1000).toLocaleDateString('ru')
+        : (r && r.values && r.values.timestamp ? r.values.timestamp.slice(0, 10) : '—'));
+      html += `<tr><td>${t.name}</td><td>${statusBadge}</td><td style="font-size:.78rem">${who}</td><td style="font-size:.78rem">${when}</td></tr>`;
     }
     html += '</tbody></table></div>';
   }
   if (!html) html = '<p style="color:var(--text3);text-align:center;padding:2rem">Нет групп с участниками</p>';
   container.innerHTML = html;
+}
+
+async function toggleTestStatus(gid, testId, newStatus) {
+  const user = auth.currentUser;
+  if (!user) return;
+  let fio = user.email;
+  try {
+    const ud = await db.collection('users').doc(user.uid).get();
+    if (ud.exists && ud.data().fio) fio = ud.data().fio;
+  } catch(e) {}
+  try {
+    await db.collection('groups').doc(gid).collection('results').doc(testId).set({
+      manualPass: newStatus,
+      checkedBy: user.email,
+      checkedByFio: fio,
+      checkedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    // Update local cache
+    if (!allResults[gid]) allResults[gid] = {};
+    if (!allResults[gid][testId]) allResults[gid][testId] = {};
+    allResults[gid][testId].manualPass = newStatus;
+    allResults[gid][testId].checkedBy = user.email;
+    allResults[gid][testId].checkedByFio = fio;
+    allResults[gid][testId].checkedAt = { seconds: Math.floor(Date.now()/1000) };
+    renderGroupResults();
+  } catch(e) {
+    alert('Ошибка: ' + e.message);
+  }
 }
 
 // ===== Grades =====

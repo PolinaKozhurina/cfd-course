@@ -289,6 +289,8 @@
     } else {
       userGroup = null;
     }
+    // Dispatch event so comment scripts can react
+    window.dispatchEvent(new CustomEvent('authReady', { detail: { user: user, approved: !!window._userApproved } }));
     updateUI();
   });
 

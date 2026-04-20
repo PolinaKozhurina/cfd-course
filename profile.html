@@ -154,14 +154,18 @@ td{padding:5px 10px;border:1px solid var(--border)}
 </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js">
-  // Save repo URL
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  // Save repo URL (must be after firebase-config.js which defines db2)
   window.saveRepoUrl = async function() {
     const url = document.getElementById('repoUrl').value.trim();
     const user = firebase.auth().currentUser;
     if (!user) return;
     try {
-      // Load user group first
       const userDoc = await db2.collection('users').doc(user.uid).get();
       const group = userDoc.exists ? userDoc.data().group : null;
       if (!group) { document.getElementById('repoStatus').textContent = 'Сначала вас должны назначить в группу'; return; }
@@ -170,7 +174,6 @@ td{padding:5px 10px;border:1px solid var(--border)}
     } catch(e) { document.getElementById('repoStatus').textContent = 'Ошибка: ' + e.message; }
   };
 
-  // Load repo URL after group is known
   async function loadRepoUrl(groupId) {
     try {
       const doc = await db2.collection('groups').doc(groupId).get();
@@ -179,12 +182,6 @@ td{padding:5px 10px;border:1px solid var(--border)}
       }
     } catch(e) {}
   }
-</script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="js/firebase-config.js"></script>
-<script src="js/auth.js"></script>
-<script>
 
 // Save FIO and study group
 window.saveFio = async function() {

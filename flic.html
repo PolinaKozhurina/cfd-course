@@ -246,7 +246,7 @@ $$\frac{\partial U}{\partial t} + \frac{\partial F}{\partial x} = 0$$
 
 $$\frac{\partial U}{\partial t} = \underbrace{L_{\text{pressure}}(U)}_{\text{I — Лагранж}} + \underbrace{L_{\text{advection}}(U)}_{\text{II — Эйлер}}$$
 
-<p>и применяем их последовательно. Для первого порядка точности: $U^{n+1} = L_2(\Delta t) \circ L_1(\Delta t)(U^n)$. Ошибка расщепления $\sim O(\Delta t)$ — такая же, как у самой разностной схемы.</p>
+<p>и применяем их последовательно. Для первого порядка точности: $U^{n+1} = L_2(\Delta t) \circ L_1(\Delta t)(U^n)$. Ошибка расщепления — $O(\Delta t)$ на каждом шаге, что соответствует первому порядку точности по времени (тому же, что и сама разностная схема).</p>
 
 <div class="note"><strong>Физическая интерпретация:</strong>
 <br>• <strong>Этап I</strong> — представьте, что стенки ячеек <em>подвижны</em> и двигаются вместе с газом. Давление на стенках создаёт силу, ускоряющую газ. Вещество остаётся в «своей» ячейке.
@@ -338,7 +338,7 @@ $$\boxed{\tilde{u}_i = u_i^n - \frac{\Delta t}{\rho_i^n} \cdot \frac{p_{i+1/2}^n
 
 $$p_{i+1/2}^n = \frac{p_i^n + p_{i+1}^n}{2}$$
 
-<div class="note"><strong>Почему среднее арифметическое?</strong> Это простейшая аппроксимация 2-го порядка. В более продвинутых методах (Годунов) здесь решается задача Римана, что даёт точное значение на границе. В FLIC мы жертвуем точностью ради простоты — и компенсируем это искусственной вязкостью (§5.4).</div>
+<div class="note"><strong>Почему среднее арифметическое?</strong> Это простейшая аппроксимация 2-го порядка для значения в полуцелой точке. В более продвинутых методах (Годунов) здесь решается задача Римана, что даёт точное значение давления на границе. В FLIC мы жертвуем точностью ради простоты; плата — числовая диффузия донорской схемы на эйлеровом этапе (§6).</div>
 
 <h3>5.2 Вывод формулы для энергии</h3>
 
@@ -425,16 +425,16 @@ $$(\rho u)_{i+1/2}^* = \begin{cases} \rho_i \tilde{u}_i & \text{если } u^* \
 <!-- ================================================================ -->
 <h2 id="conservation"><span class="n">§7</span> Консервативные уравнения обновления</h2>
 
-<p>После вычисления потоков на всех границах обновляем консервативные переменные. Ключевой принцип — <strong>телескопичность</strong>: что вышло из ячейки $i$ через правую грань, то вошло в ячейку $i+1$ через левую. Это гарантирует точное сохранение.</p>
+<p>После вычисления потоков на всех границах обновляем консервативные переменные. На входе используются значения после лагранжева этапа: $\tilde{\rho}_i = \rho_i^n$, $\widetilde{(\rho u)}_i = \rho_i^n \tilde{u}_i$, $\widetilde{(\rho E)}_i = \rho_i^n \tilde{E}_i$. Ключевой принцип — <strong>телескопичность</strong>: что вышло из ячейки $i$ через правую грань, то вошло в ячейку $i+1$ через левую. Это гарантирует точное сохранение.</p>
 
 <h4>Обновление массы</h4>
-$$\boxed{\rho_i^{n+1} = \rho_i^n - \frac{\Delta t}{\Delta x}\left[\rho_{i+1/2}^* u_{i+1/2}^* - \rho_{i-1/2}^* u_{i-1/2}^*\right]}$$
+$$\boxed{\rho_i^{n+1} = \tilde{\rho}_i - \frac{\Delta t}{\Delta x}\left[\rho_{i+1/2}^* u_{i+1/2}^* - \rho_{i-1/2}^* u_{i-1/2}^*\right]}$$
 
 <h4>Обновление импульса</h4>
-$$\boxed{(\rho u)_i^{n+1} = (\rho u)_i^n - \frac{\Delta t}{\Delta x}\left[(\rho u)_{i+1/2}^* u_{i+1/2}^* - (\rho u)_{i-1/2}^* u_{i-1/2}^*\right]}$$
+$$\boxed{(\rho u)_i^{n+1} = \widetilde{(\rho u)}_i - \frac{\Delta t}{\Delta x}\left[(\rho u)_{i+1/2}^* u_{i+1/2}^* - (\rho u)_{i-1/2}^* u_{i-1/2}^*\right]}$$
 
 <h4>Обновление полной энергии</h4>
-$$\boxed{(\rho E)_i^{n+1} = (\rho E)_i^n - \frac{\Delta t}{\Delta x}\left[(\rho E)_{i+1/2}^* u_{i+1/2}^* - (\rho E)_{i-1/2}^* u_{i-1/2}^*\right]}$$
+$$\boxed{(\rho E)_i^{n+1} = \widetilde{(\rho E)}_i - \frac{\Delta t}{\Delta x}\left[(\rho E)_{i+1/2}^* u_{i+1/2}^* - (\rho E)_{i-1/2}^* u_{i-1/2}^*\right]}$$
 
 <h4>Восстановление примитивных переменных</h4>
 <p>Из консервативных переменных восстанавливаем физические величины:</p>
@@ -588,7 +588,7 @@ $$F_i^{n+1} = F_i^n - \frac{\Delta t}{\Delta x}(F^* u^*_{i+1/2} - F^* u^*_{i-1/2
 Strang splitting: каждое направление обрабатывается с $\Delta t / 2$, а не с полным $\Delta t$. Формула: $L_x(\Delta t/2) \to L_y(\Delta t) \to L_x(\Delta t/2)$. Без этого — потеря порядка точности, а при сильных градиентах — нестабильность.</div>
 
 <div class="warn"><strong>Ошибка 4: Нет проверки $p > 0$ и $\rho > 0$.</strong><br>
-Если внутренняя энергия $e = E - \frac{u^2}{2}$ стала отрицательной — давление $p = (\gamma-1)\rho e < 0$, что нефизично и приведёт к мнимой скорости звука $a = \sqrt{\gamma p / \rho}$. Нужна защита: <code>if (p < p_floor) p = p_floor;</code></div>
+Если внутренняя энергия $e = E - \frac{u^2}{2}$ стала отрицательной — давление $p = (\gamma-1)\rho e < 0$, что нефизично и приведёт к мнимой скорости звука $a = \sqrt{\gamma p / \rho}$. Нужна защита: <code>if (p &lt; p_floor) p = p_floor;</code></div>
 
 <!-- ================================================================ -->
 <!-- §13 СОЛВЕР -->
@@ -1172,7 +1172,9 @@ $$\hat{v}_{i,j} = v_{i,j}^* - \frac{\Delta t}{\rho_{i,j}^*} \cdot \frac{p_{i,j+1
     } catch(e) { alert('Ошибка: '+e.message); }
   };
 
-  auth.onAuthStateChanged(async user => {
+  // Listen for auth ready event from auth.js
+  function updateCommentUI() {
+    const user = auth.currentUser;
     if (user && window._userApproved) {
       document.getElementById('comment-form').style.display = '';
       document.getElementById('comment-login').style.display = 'none';
@@ -1181,16 +1183,10 @@ $$\hat{v}_{i,j} = v_{i,j}^* - \frac{\Delta t}{\rho_{i,j}^*} \cdot \frac{p_{i,j+1
       document.getElementById('comment-login').style.display = '';
     }
     loadComments();
-  });
-
-  // Also re-check after a delay (approval may load async)
-  setTimeout(function(){
-    const user = auth.currentUser;
-    if (user && window._userApproved) {
-      document.getElementById('comment-form').style.display = '';
-      document.getElementById('comment-login').style.display = 'none';
-    }
-  }, 2000);
+  }
+  window.addEventListener('authReady', updateCommentUI);
+  // Also check immediately in case auth.js already fired
+  if (typeof window._userApproved !== 'undefined') updateCommentUI();
 })();
 </script>
 </div><!-- /main -->

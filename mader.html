@@ -339,7 +339,9 @@ $$W^{n+1} = \frac{\rho^n W^n + DW}{\rho^{n+1}}$$
 <!-- §9 -->
 <h2 id="cfl"><span class="n">§9</span> Обновление шага по времени (CFL)</h2>
 
-$$\Delta t = \text{CFL} \cdot \frac{\min(\Delta R, \Delta Z)}{\max_{i,j}\left(|U| + |V| + a\right)}$$
+$$\Delta t = \text{CFL} \cdot \frac{1}{\max_{i,j}\left(\frac{|U_{i,j}| + a_{i,j}}{\Delta R} + \frac{|V_{i,j}| + a_{i,j}}{\Delta Z}\right)}$$
+
+<p>При квадратных ячейках ($\Delta R = \Delta Z = h$) это упрощается до $\Delta t = \text{CFL} \cdot h / \max(|U|+|V|+2a)$.</p>
 
 <p>Стандартные значения: CFL = 0.5, VISC = 0.5.</p>
 
@@ -358,7 +360,7 @@ $$\Delta t = \text{CFL} \cdot \frac{\min(\Delta R, \Delta Z)}{\max_{i,j}\left(|U
 <!-- §11 -->
 <h2 id="errors"><span class="n">§11</span> Частые ошибки реализации</h2>
 
-<div class="warn"><strong>1. ZIP → $I < 0$.</strong> Расчёт «взрывается» на первых шагах. Причина: ошибка в формуле ZIP (неверный знак, перепутаны старые/новые скорости). Добавьте защиту: <code>if (I_tilde < I_floor) I_tilde = I_floor;</code></div>
+<div class="warn"><strong>1. ZIP → $I < 0$.</strong> Расчёт «взрывается» на первых шагах. Причина: ошибка в формуле ZIP (неверный знак, перепутаны старые/новые скорости). Добавьте защиту: <code>if (I_tilde &lt; I_floor) I_tilde = I_floor;</code></div>
 
 <div class="warn"><strong>2. Перепутаны $i$ и $j$.</strong> Решение «повёрнуто» на 90°. Симптом: ударная волна идёт вверх вместо вправо в тесте Сода.</div>
 
@@ -612,7 +614,9 @@ $$\rho_\text{det} = \rho_0 \frac{\gamma+1}{\gamma} = 2.453 \text{ г/см³}, \q
     } catch(e) { alert('Ошибка: '+e.message); }
   };
 
-  auth.onAuthStateChanged(async user => {
+  // Listen for auth ready event from auth.js
+  function updateCommentUI() {
+    const user = auth.currentUser;
     if (user && window._userApproved) {
       document.getElementById('comment-form').style.display = '';
       document.getElementById('comment-login').style.display = 'none';
@@ -621,16 +625,10 @@ $$\rho_\text{det} = \rho_0 \frac{\gamma+1}{\gamma} = 2.453 \text{ г/см³}, \q
       document.getElementById('comment-login').style.display = '';
     }
     loadComments();
-  });
-
-  // Also re-check after a delay (approval may load async)
-  setTimeout(function(){
-    const user = auth.currentUser;
-    if (user && window._userApproved) {
-      document.getElementById('comment-form').style.display = '';
-      document.getElementById('comment-login').style.display = 'none';
-    }
-  }, 2000);
+  }
+  window.addEventListener('authReady', updateCommentUI);
+  // Also check immediately in case auth.js already fired
+  if (typeof window._userApproved !== 'undefined') updateCommentUI();
 })();
 </script>
 </div>

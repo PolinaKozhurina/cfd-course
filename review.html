@@ -1452,6 +1452,76 @@ M∞ = 0.3–0.5,  α = 0°,  γ = 1.4
     status.textContent = '';
   };
 
+  // Mapping: block number -> test ID (matching admin.html TEST_IDS)
+  var BLOCK_TO_TEST = {
+    '1': 't1_flic_sod',
+    '2': 't2_godunov_1d',
+    '3': 't3_godunov_2d',
+    '4': 't4_mader_code',
+    '4a': 't4a_mader_sod',
+    '4b': 't4b_mader_det',
+    '4c': 't4c_mader_corner',
+    '5': 't5_cavity',
+    '6': 't6_taylor_green',
+    '7': 't7_step',
+    '8': 't8_unstruct',
+    '9': 't9_mpi'
+  };
+
+  // Check if all admin checkboxes in a block are checked, then auto-set test status
+  async function checkBlockCompletion(admEl) {
+    var gid = window._reviewGid;
+    if (!gid) return;
+    var user = auth.currentUser;
+    if (!user) return;
+
+    // Find which block this checkbox belongs to
+    var block = admEl.closest('.block');
+    if (!block) return;
+    var blockNumEl = block.querySelector('.block-num');
+    if (!blockNumEl) return;
+    var blockNum = blockNumEl.textContent.trim();
+    var testId = BLOCK_TO_TEST[blockNum];
+    if (!testId) return;
+
+    // Check if all admin checkboxes in this block are checked
+    var allAdminInBlock = block.querySelectorAll('.admin-cb');
+    var allChecked = true;
+    allAdminInBlock.forEach(function(cb) {
+      if (!cb.checked) allChecked = false;
+    });
+
+    // Get checker info
+    var fio = user.email;
+    try {
+      var ud = await db.collection('users').doc(user.uid).get();
+      if (ud.exists && ud.data().fio) fio = ud.data().fio;
+    } catch(e) {}
+
+    var newStatus = allChecked ? 'pass' : 'pending';
+    var data = { manualStatus: newStatus };
+    if (allChecked) {
+      data.checkedBy = user.email;
+      data.checkedByFio = fio;
+      data.checkedAt = firebase.firestore.FieldValue.serverTimestamp();
+    } else {
+      data.checkedBy = firebase.firestore.FieldValue.delete();
+      data.checkedByFio = firebase.firestore.FieldValue.delete();
+      data.checkedAt = firebase.firestore.FieldValue.delete();
+    }
+
+    try {
+      await db.collection('groups').doc(gid).collection('results').doc(testId).set(data, { merge: true });
+      var statusEl = document.getElementById('review-status');
+      if (allChecked) {
+        statusEl.textContent = '✅ Тест «' + blockNum + '» → сдано';
+      }
+      setTimeout(function() { statusEl.textContent = ''; }, 2500);
+    } catch(e) {
+      console.error('auto-pass error:', e);
+    }
+  }
+
   window.saveAdminCb = async function(admId, checked) {
     var gid = window._reviewGid;
     if (!gid) { alert('Сначала выберите группу'); return; }
@@ -1468,6 +1538,9 @@ M∞ = 0.3–0.5,  α = 0°,  γ = 1.4
       }, { merge: true });
       status.textContent = 'Сохранено ✓';
       setTimeout(function() { status.textContent = ''; }, 1500);
+
+      // Check if entire block is now complete
+      checkBlockCompletion(el);
     } catch(e) {
       status.textContent = 'Ошибка: ' + e.message;
       console.error('saveAdminCb error:', e, 'gid:', gid, 'itemId:', itemId);

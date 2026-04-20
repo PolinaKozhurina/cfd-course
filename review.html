@@ -1376,52 +1376,82 @@ M∞ = 0.3–0.5,  α = 0°,  γ = 1.4
     document.querySelectorAll('input[id^="chk_"]').forEach(function(cb) { cb.checked = false; });
     document.querySelectorAll('.admin-cb').forEach(function(cb) { cb.checked = false; cb.disabled = false; });
 
-    // Build key map: same logic as checklist-sync.js
+    // Load student + admin checklist from Firestore
     var allCbs = document.querySelectorAll('input[id^="chk_"]');
-    var keyMap = [];
-    allCbs.forEach(function(cb, index) {
-      var row = cb.closest('tr');
-      var section = cb.closest('.block, table');
-      var itemId = 'cb_' + index;
-      if (row) {
-        var tag = row.querySelector('.tag');
-        if (tag) {
-          var tagText = tag.textContent.replace('CHECK: ', '').trim();
-          if (tagText && tagText !== 'CHECK: TAG') itemId = tagText;
-        } else {
-          var bn = '0';
-          try { bn = section.querySelector('.block-num').textContent.trim(); } catch(e) {}
-          var cells = row.querySelectorAll('td');
-          var rowDesc = cells.length > 1 ? cells[1].textContent.trim().slice(0, 30) : '';
-          itemId = 'b' + bn + '_r' + index + '_' + rowDesc.replace(/[^a-zA-Z0-9_]/g, '');
-        }
-      }
-      keyMap.push(itemId);
-    });
-    window._keyMap = keyMap;
+    var adminCbs = document.querySelectorAll('.admin-cb');
+    var studentChecked = 0, adminCount = 0;
 
-    // Load student checklist from Firestore
-    var studentChecked = 0;
+    // Load all student docs
+    var studentDocs = [];
     try {
       var snap = await db.collection('groups').doc(gid).collection('checklist').get();
-      var checked = {};
-      snap.forEach(function(doc) { if (doc.data().checked) checked[doc.id] = true; });
-      allCbs.forEach(function(cb, i) {
-        if (checked[keyMap[i]]) { cb.checked = true; studentChecked++; }
-      });
-    } catch(e) { console.error('Student load error:', e); }
+      snap.forEach(function(doc) { studentDocs.push({id: doc.id, checked: doc.data().checked}); });
+    } catch(e) {}
 
-    // Load admin approvals
-    var adminCount = 0;
-    var adminCbs = document.querySelectorAll('.admin-cb');
+    // Load all admin docs  
+    var adminDocs = [];
     try {
       var asnap = await db.collection('groups').doc(gid).collection('admin_checklist').get();
-      var adminChecked = {};
-      asnap.forEach(function(doc) { if (doc.data().checked) adminChecked[doc.id] = true; });
-      adminCbs.forEach(function(cb, i) {
-        if (adminChecked[keyMap[i]]) { cb.checked = true; adminCount++; }
-      });
-    } catch(e) { console.error('Admin load error:', e); }
+      asnap.forEach(function(doc) { adminDocs.push({id: doc.id, checked: doc.data().checked}); });
+    } catch(e) {}
+
+    // Strategy: the student saved N docs. We have N checkboxes (71).
+    // The docs have unique IDs generated from the DOM.
+    // Instead of regenerating those IDs, just store the ordered list of 
+    // Firestore doc IDs and map them by position.
+    // 
+    // Actually this won't work if docs aren't ordered.
+    // 
+    // BETTER: for each checkbox row, look for its CHECK tag in the 
+    // Firestore doc IDs. If found, use it. If not, skip.
+
+    var checkedStudentIds = {};
+    studentDocs.forEach(function(d) { if (d.checked) checkedStudentIds[d.id] = true; });
+    var checkedAdminIds = {};
+    adminDocs.forEach(function(d) { if (d.checked) checkedAdminIds[d.id] = true; });
+
+    // For each checkbox, try to find its Firestore key
+    allCbs.forEach(function(cb, i) {
+      var row = cb.closest('tr');
+      if (!row) return;
+
+      // Method 1: look for CHECK tag in this row
+      var tag = row.querySelector('.tag');
+      if (tag) {
+        var key = tag.textContent.replace('CHECK: ', '').trim();
+        if (checkedStudentIds[key]) { cb.checked = true; studentChecked++; }
+        if (i < adminCbs.length && checkedAdminIds[key]) { adminCbs[i].checked = true; adminCount++; }
+        // Store key for saving admin checks later
+        if (i < adminCbs.length) adminCbs[i].dataset.fsKey = key;
+        return;
+      }
+
+      // Method 2: try cb_N format
+      var key2 = 'cb_' + i;
+      if (checkedStudentIds[key2]) { cb.checked = true; studentChecked++; }
+      if (i < adminCbs.length && checkedAdminIds[key2]) { adminCbs[i].checked = true; adminCount++; }
+      if (i < adminCbs.length) adminCbs[i].dataset.fsKey = key2;
+
+      // Method 3: try all Firestore keys that contain row description text
+      if (!cb.checked) {
+        var cells = row.querySelectorAll('td');
+        var desc = cells.length > 1 ? cells[1].textContent.trim().slice(0, 15) : '';
+        if (desc) {
+          Object.keys(checkedStudentIds).forEach(function(fkey) {
+            if (fkey.indexOf(desc.replace(/[^a-zA-Z]/g,'').slice(0,10)) >= 0) {
+              cb.checked = true; studentChecked++;
+              if (i < adminCbs.length) adminCbs[i].dataset.fsKey = fkey;
+            }
+          });
+        }
+      }
+    });
+
+    // Enable admin checkboxes and set keys for those without
+    adminCbs.forEach(function(cb, i) { 
+      cb.disabled = false;
+      if (!cb.dataset.fsKey) cb.dataset.fsKey = 'cb_' + i;
+    });
 
     // Show members
     var total = allCbs.length;
@@ -1440,8 +1470,8 @@ M∞ = 0.3–0.5,  α = 0°,  γ = 1.4
   window.saveAdminCb = async function(admId, checked) {
     var gid = window._reviewGid;
     if (!gid) return;
-    var num = parseInt(admId.replace('adm_','')) - 1;
-    var itemId = window._keyMap && window._keyMap[num] ? window._keyMap[num] : 'cb_' + num;
+    var el = document.getElementById(admId);
+    var itemId = el && el.dataset.fsKey ? el.dataset.fsKey : admId.replace('adm_','cb_');
     var status = document.getElementById('review-status');
     try {
       await db.collection('groups').doc(gid).collection('admin_checklist').doc(itemId).set({

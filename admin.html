@@ -434,19 +434,24 @@ function renderGroupResults() {
     html += `<div class="card"><h3>${gid.replace('group_', 'Группа ')}</h3>
       <p style="font-size:.82rem;color:var(--text2);margin-bottom:.3rem">${members}</p>
       <p style="font-size:.82rem;margin-bottom:.5rem">GitHub: ${repoLink}</p>
-      <table><thead><tr><th>Тест</th><th>Статус</th><th>Кто сдал</th><th>Когда</th></tr></thead><tbody>`;
+      <table><thead><tr><th>Тест</th><th>Статус</th><th>Кто принял</th><th>Когда</th></tr></thead><tbody>`;
     for (const t of TEST_IDS) {
       const r = results[t.id];
-      const manualPass = r && r.manualPass;
-      const autoPass = r && r.values && r.values.allPass;
-      const passed = manualPass || autoPass;
-      const statusBadge = passed
-        ? `<span class="badge b-pass" style="cursor:pointer" onclick="toggleTestStatus('${gid}','${t.id}',false)" title="Клик = отменить">сдано ✓</span>`
-        : `<span class="badge b-pending" style="cursor:pointer" onclick="toggleTestStatus('${gid}','${t.id}',true)" title="Клик = отметить сдано">не сдано</span>`;
-      const who = r ? (r.checkedByFio || r.submittedByFio || r.submittedBy || '—') : '—';
-      const when = r && r.checkedAt ? new Date(r.checkedAt.seconds * 1000).toLocaleDateString('ru')
-        : (r && r.submittedAt ? new Date(r.submittedAt.seconds * 1000).toLocaleDateString('ru')
-        : (r && r.values && r.values.timestamp ? r.values.timestamp.slice(0, 10) : '—'));
+      const manualStatus = r ? r.manualStatus : null; // 'pass', 'fail', or null/undefined = pending
+      let statusBadge, who, when;
+      if (manualStatus === 'pass') {
+        statusBadge = `<span class="badge b-pass" style="cursor:pointer" onclick="cycleTestStatus('${gid}','${t.id}')" title="Клик = изменить">сдано</span>`;
+        who = r.checkedByFio || r.checkedBy || '';
+        when = r.checkedAt ? new Date(r.checkedAt.seconds * 1000).toLocaleDateString('ru') : '';
+      } else if (manualStatus === 'fail') {
+        statusBadge = `<span class="badge b-fail" style="cursor:pointer" onclick="cycleTestStatus('${gid}','${t.id}')" title="Клик = изменить">ошибка</span>`;
+        who = r.checkedByFio || r.checkedBy || '';
+        when = r.checkedAt ? new Date(r.checkedAt.seconds * 1000).toLocaleDateString('ru') : '';
+      } else {
+        statusBadge = `<span class="badge b-pending" style="cursor:pointer" onclick="cycleTestStatus('${gid}','${t.id}')" title="Клик = изменить">не сдано</span>`;
+        who = '—';
+        when = '—';
+      }
       html += `<tr><td>${t.name}</td><td>${statusBadge}</td><td style="font-size:.78rem">${who}</td><td style="font-size:.78rem">${when}</td></tr>`;
     }
     html += '</tbody></table></div>';
@@ -455,28 +460,48 @@ function renderGroupResults() {
   container.innerHTML = html;
 }
 
-async function toggleTestStatus(gid, testId, newStatus) {
+async function cycleTestStatus(gid, testId) {
   const user = auth.currentUser;
   if (!user) return;
+  // Determine current status and cycle: pending -> pass -> fail -> pending
+  const r = allResults[gid] && allResults[gid][testId];
+  const current = r ? r.manualStatus : null;
+  let next;
+  if (!current || current === 'pending') next = 'pass';
+  else if (current === 'pass') next = 'fail';
+  else next = 'pending';
+
   let fio = user.email;
   try {
     const ud = await db.collection('users').doc(user.uid).get();
     if (ud.exists && ud.data().fio) fio = ud.data().fio;
   } catch(e) {}
   try {
-    await db.collection('groups').doc(gid).collection('results').doc(testId).set({
-      manualPass: newStatus,
-      checkedBy: user.email,
-      checkedByFio: fio,
-      checkedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
+    const data = { manualStatus: next };
+    if (next !== 'pending') {
+      data.checkedBy = user.email;
+      data.checkedByFio = fio;
+      data.checkedAt = firebase.firestore.FieldValue.serverTimestamp();
+    } else {
+      // Clear checker info when resetting to pending
+      data.checkedBy = firebase.firestore.FieldValue.delete();
+      data.checkedByFio = firebase.firestore.FieldValue.delete();
+      data.checkedAt = firebase.firestore.FieldValue.delete();
+    }
+    await db.collection('groups').doc(gid).collection('results').doc(testId).set(data, { merge: true });
     // Update local cache
     if (!allResults[gid]) allResults[gid] = {};
     if (!allResults[gid][testId]) allResults[gid][testId] = {};
-    allResults[gid][testId].manualPass = newStatus;
-    allResults[gid][testId].checkedBy = user.email;
-    allResults[gid][testId].checkedByFio = fio;
-    allResults[gid][testId].checkedAt = { seconds: Math.floor(Date.now()/1000) };
+    allResults[gid][testId].manualStatus = next;
+    if (next !== 'pending') {
+      allResults[gid][testId].checkedBy = user.email;
+      allResults[gid][testId].checkedByFio = fio;
+      allResults[gid][testId].checkedAt = { seconds: Math.floor(Date.now()/1000) };
+    } else {
+      delete allResults[gid][testId].checkedBy;
+      delete allResults[gid][testId].checkedByFio;
+      delete allResults[gid][testId].checkedAt;
+    }
     renderGroupResults();
   } catch(e) {
     alert('Ошибка: ' + e.message);

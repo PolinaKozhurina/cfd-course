@@ -1372,58 +1372,76 @@ M∞ = 0.3–0.5,  α = 0°,  γ = 1.4
     var status = document.getElementById('review-status');
     info.textContent = 'Загрузка...';
 
-    // Reset
+    // Reset all checkboxes
     document.querySelectorAll('input[id^="chk_"]').forEach(function(cb) { cb.checked = false; });
     document.querySelectorAll('.admin-cb').forEach(function(cb) { cb.checked = false; cb.disabled = false; });
 
-    // Load student checklist
-    var studentCount = 0;
+    // Build key map: same logic as checklist-sync.js
+    var allCbs = document.querySelectorAll('input[id^="chk_"]');
+    var keyMap = [];
+    allCbs.forEach(function(cb, index) {
+      var row = cb.closest('tr');
+      var section = cb.closest('.block, table');
+      var itemId = 'cb_' + index;
+      if (row) {
+        var tag = row.querySelector('.tag');
+        if (tag) {
+          var tagText = tag.textContent.replace('CHECK: ', '').trim();
+          if (tagText && tagText !== 'CHECK: TAG') itemId = tagText;
+        } else {
+          var bn = '0';
+          try { bn = section.querySelector('.block-num').textContent.trim(); } catch(e) {}
+          var cells = row.querySelectorAll('td');
+          var rowDesc = cells.length > 1 ? cells[1].textContent.trim().slice(0, 30) : '';
+          itemId = 'b' + bn + '_r' + index + '_' + rowDesc.replace(/[^a-zA-Z0-9_]/g, '');
+        }
+      }
+      keyMap.push(itemId);
+    });
+    window._keyMap = keyMap;
+
+    // Load student checklist from Firestore
+    var studentChecked = 0;
     try {
       var snap = await db.collection('groups').doc(gid).collection('checklist').get();
-      snap.forEach(function(doc) {
-        // checklist-sync saves with item IDs like "item_1", "item_2" etc
-        // or numbered keys. Map to chk_N
-        var id = doc.id;
-        var num = id.replace('item_','').replace('chk_','');
-        var cb = document.getElementById('chk_' + num);
-        if (cb && doc.data().checked) { cb.checked = true; studentCount++; }
+      var checked = {};
+      snap.forEach(function(doc) { if (doc.data().checked) checked[doc.id] = true; });
+      allCbs.forEach(function(cb, i) {
+        if (checked[keyMap[i]]) { cb.checked = true; studentChecked++; }
       });
-    } catch(e) { info.textContent = 'Ошибка: ' + e.message; return; }
+    } catch(e) { console.error('Student load error:', e); }
 
-    // Load admin approvals  
+    // Load admin approvals
     var adminCount = 0;
     var adminCbs = document.querySelectorAll('.admin-cb');
     try {
       var asnap = await db.collection('groups').doc(gid).collection('admin_checklist').get();
-      var adminCheckedKeys = {};
-      asnap.forEach(function(doc) { if (doc.data().checked) adminCheckedKeys[doc.id] = true; });
-      
-      adminCbs.forEach(function(cb, index) {
-        var key = cbKeyMap[index];
-        if (adminCheckedKeys[key]) { cb.checked = true; adminCount++; }
+      var adminChecked = {};
+      asnap.forEach(function(doc) { if (doc.data().checked) adminChecked[doc.id] = true; });
+      adminCbs.forEach(function(cb, i) {
+        if (adminChecked[keyMap[i]]) { cb.checked = true; adminCount++; }
       });
-    } catch(e) {}
+    } catch(e) { console.error('Admin load error:', e); }
 
-    var total = document.querySelectorAll('.admin-cb').length;
     // Show members
+    var total = allCbs.length;
     var memberNames = [];
     try {
       var msnap = await db.collection('users').where('group','==',gid).get();
-      msnap.forEach(function(d) { 
+      msnap.forEach(function(d) {
         var u = d.data();
-        memberNames.push((u.fio || u.email) + (u.studyGroup ? ' (' + u.studyGroup + ')' : '')); 
+        memberNames.push((u.fio || u.email) + (u.studyGroup ? ' (' + u.studyGroup + ')' : ''));
       });
     } catch(e) {}
-    var total = allStudentCbs.length;
-    info.innerHTML = '<strong>' + memberNames.join(', ') + '</strong><br>Студент: ' + studentChecked + ' / ' + total + ' · Преподаватель: ' + adminCount + ' / ' + total;
+    info.innerHTML = '<strong>' + memberNames.join(', ') + '</strong><br>Студент: ' + studentChecked + ' / ' + total + ' \u00b7 Преподаватель: ' + adminCount + ' / ' + total;
     status.textContent = '';
   };
 
   window.saveAdminCb = async function(admId, checked) {
     var gid = window._reviewGid;
     if (!gid) return;
-    var num = parseInt(admId.replace('adm_','')) - 1; // adm_1 -> index 0
-    var itemId = window._cbKeyMap && window._cbKeyMap[num] ? window._cbKeyMap[num] : 'cb_' + num;
+    var num = parseInt(admId.replace('adm_','')) - 1;
+    var itemId = window._keyMap && window._keyMap[num] ? window._keyMap[num] : 'cb_' + num;
     var status = document.getElementById('review-status');
     try {
       await db.collection('groups').doc(gid).collection('admin_checklist').doc(itemId).set({

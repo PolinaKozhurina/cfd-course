@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<link rel="icon" href="favicon.ico" type="image/x-icon">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Админ-панель — CFD Course</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -94,6 +95,7 @@ select:focus,input:focus{outline:none;border-color:var(--accent)}
   <button class="tab active" onclick="showTab('students')">Студенты</button>
   <button class="tab" onclick="showTab('groups')">Результаты тестов</button>
   <button class="tab" onclick="showTab('checklist')">Чек-лист (самооценка)</button>
+  <button class="tab" onclick="showTab('tasks')">Задания</button>
   <button class="tab" onclick="showTab('grades')">Оценки</button>
 </div>
 
@@ -105,7 +107,7 @@ select:focus,input:focus{outline:none;border-color:var(--accent)}
   </div>
   <div class="card">
     <table>
-      <thead><tr><th>ФИО</th><th>Email</th><th>Уч. группа</th><th>Раб. группа</th><th>Роль</th><th>Назначить</th></tr></thead>
+      <thead><tr><th>ФИО</th><th>Email</th><th>Уч. группа</th><th>Раб. группа</th><th>Подтв.</th><th>Роль</th><th>Назначить</th></tr></thead>
       <tbody id="studentsBody"></tbody>
     </table>
   </div>
@@ -134,13 +136,26 @@ select:focus,input:focus{outline:none;border-color:var(--accent)}
   <div id="checklistDetail"></div>
 </div>
 
+
+<!-- TAB: Individual Tasks -->
+<div id="tab-tasks" class="panel">
+  <div class="card">
+    <h3>Занятые индивидуальные задания</h3>
+    <p style="font-size:.85rem;color:var(--text2);margin-bottom:.8rem">Какой студент какое задание взял (страница «Задания»). Данные из Firestore коллекции <code>task_claims</code>.</p>
+    <table>
+      <thead><tr><th>№</th><th>Задание</th><th>Студент</th><th>Email</th><th>Дата</th></tr></thead>
+      <tbody id="tasksBody"></tbody>
+    </table>
+  </div>
+</div>
+
 <!-- TAB 3: Grades -->
 <div id="tab-grades" class="panel">
   <div class="card">
-    <h3>Итоговые оценки</h3>
-    <p style="font-size:.85rem;color:var(--text2);margin-bottom:.8rem">Выставьте оценку и комментарий для каждой группы. Студенты увидят их в личном кабинете.</p>
+    <h3>Индивидуальные оценки</h3>
+    <p style="font-size:.85rem;color:var(--text2);margin-bottom:.8rem"><strong>Зачёт</strong> (работа за семестр, групповая) — до 50 баллов. <strong>Экзамен</strong> (индивидуальное задание) — до 50 баллов. Итого 100.</p>
     <table>
-      <thead><tr><th>Группа</th><th>Участники</th><th>Сдано тестов</th><th>Оценка</th><th>Комментарий</th><th></th></tr></thead>
+      <thead><tr><th>ФИО</th><th>Уч. группа</th><th>Раб. группа</th><th>Задание</th><th>Зачёт (50)</th><th>Экзамен (50)</th><th>Итого</th><th>Комментарий</th><th></th></tr></thead>
       <tbody id="gradesBody"></tbody>
     </table>
   </div>
@@ -169,6 +184,8 @@ const ADMIN_EMAIL = typeof ADMIN_EMAILS !== 'undefined' ? ADMIN_EMAILS : [fireba
 let allUsers = [];
 let allGroups = {};
 let allResults = {};
+let allTaskClaims = {};
+let allIndividualGrades = {};
 
 const TEST_IDS = [
   {id:'sod_flic', name:'Сод (FLIC)'},
@@ -188,8 +205,10 @@ auth.onAuthStateChanged(async user => {
   document.getElementById('loading').style.display = 'none';
   if (!user || !isAdmin(user.email)) {
     document.getElementById('denied').style.display = '';
+    document.getElementById('adminContent').style.display = 'none';
     return;
   }
+  document.getElementById('denied').style.display = 'none';
   document.getElementById('adminContent').style.display = '';
   await loadAllData();
 });
@@ -235,11 +254,43 @@ async function loadAllData() {
     if (allGroups[gid]) allGroups[gid].grade = doc.data();
   });
 
+  // Load individual task claims
+  allTaskClaims = {}; // uid -> task name
+  try {
+    const claimsSnap = await db.collection('task_claims').get();
+    const TASK_NAMES = {
+      t1:'1. Скругление угла', t2:'2. Переход RR→MR', t3:'3. Хаас–Штуртевант',
+      t4:'4. Рихтмайер–Мешков', t5:'5. Инициирование', t6:'6. Каверна Re→10k',
+      t7:'7. Ступенька ER', t8:'8. NACA', t9:'9. Седов',
+      t10:'10. Поляра', t11:'11. Гудерли', t12:'12. Двойная крышка',
+      t13:'13. Цилиндр', t14:'14. MPI', t15:'15. Столкновение'
+    };
+    claimsSnap.forEach(doc => {
+      const d = doc.data();
+      if (d.claimedByUid) {
+        allTaskClaims[d.claimedByUid] = TASK_NAMES[doc.id] || doc.id;
+      }
+      // Also store by task id for the tasks panel
+      if (!window._taskClaimsRaw) window._taskClaimsRaw = {};
+      window._taskClaimsRaw[doc.id] = d;
+    });
+  } catch(e) { console.warn('Could not load task claims:', e); }
+
+  // Load individual grades
+  allIndividualGrades = {};
+  try {
+    const gradesSnap = await db.collection('individual_grades').get();
+    gradesSnap.forEach(doc => {
+      allIndividualGrades[doc.id] = doc.data();
+    });
+  } catch(e) { console.warn('Could not load individual grades:', e); }
+
   updateStats();
   renderStudents();
   renderGroupFilter();
   renderGroupResults();
   renderGrades();
+  renderTasks();
   await loadChecklistProgress();
 }
 
@@ -281,10 +332,11 @@ function renderStudents() {
       return `<option value="${gid}" ${u.group === gid ? 'selected' : ''}>№${i + 1}</option>`;
     }).join('');
     return `<tr>
-      <td style="font-weight:600">${u.fio || '<span style="color:var(--text3)">не указано</span>'}</td>
+      <td><input type="text" value="${u.fio || ''}" placeholder="ФИО" id="fio-${u.uid}" onchange="saveUserField('${u.uid}','fio',this.value)" style="font-weight:600;font-size:.82rem;width:100%;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'Source Serif 4',serif;background:#fff;color:var(--text)"></td>
       <td style="font-size:.82rem">${u.email || '—'}</td>
-      <td style="font-size:.82rem">${u.studyGroup || '<span style="color:var(--text3)">—</span>'}</td>
+      <td><input type="text" value="${u.studyGroup || ''}" placeholder="Б22-505" id="sg-${u.uid}" onchange="saveUserField('${u.uid}','studyGroup',this.value)" style="font-size:.82rem;width:80px;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'JetBrains Mono',monospace;background:#fff;color:var(--text)"></td>
       <td>${u.group ? '<span class="badge b-group">' + u.group.replace('group_', '№') + '</span>' : '<span class="badge b-pending">—</span>'}</td>
+      <td style="text-align:center">${u.approved ? '<span class="badge b-pass" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', false)">✓</span>' : '<span class="badge b-fail" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', true)">✗</span>'}</td>
       <td>${isAdm ? '<span class="badge b-admin">admin</span>' : '<span class="badge b-student">student</span>'}</td>
       <td><select onchange="assignGroup('${u.uid}', this.value)" style="font-size:.75rem">
         <option value="">—</option>${groupOptions}
@@ -292,10 +344,25 @@ function renderStudents() {
     </tr>`;
   }).join('');
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text2)">Нет зарегистрированных студентов.<br><span style="font-size:.82rem">Студенты появятся здесь после того, как войдут на сайт (кнопка «Войти» на любой странице).</span></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text2)">Нет зарегистрированных студентов.<br><span style="font-size:.82rem">Студенты появятся здесь после того, как войдут на сайт (кнопка «Войти» на любой странице).</span></td></tr>';
   }
 }
 
+
+
+async function saveUserField(uid, field, value) {
+  try {
+    await db.collection('users').doc(uid).set({ [field]: value }, { merge: true });
+    const user = allUsers.find(u => u.uid === uid);
+    if (user) user[field] = value;
+  } catch(e) { alert('Ошибка: ' + e.message); }
+}
+async function toggleApprove(uid, approve) {
+  await db.collection('users').doc(uid).set({ approved: approve }, { merge: true });
+  const user = allUsers.find(u => u.uid === uid);
+  if (user) user.approved = approve;
+  renderStudents();
+}
 async function assignGroup(uid, group) {
   if (!group) return;
   await db.collection('users').doc(uid).set({ group }, { merge: true });
@@ -349,27 +416,87 @@ function renderGroupResults() {
 }
 
 // ===== Grades =====
+
+function renderTasks() {
+  const tbody = document.getElementById('tasksBody');
+  if (!tbody) return;
+  const TASK_NAMES = {
+    t1:'Скругление угла', t2:'Переход RR→MR', t3:'Хаас–Штуртевант',
+    t4:'Рихтмайер–Мешков', t5:'Инициирование детонации', t6:'Бифуркация каверны',
+    t7:'Ступенька vs ER', t8:'NACA drag divergence', t9:'Седов: анизотропия',
+    t10:'Поляра косого скачка', t11:'Имплозия Гудерли', t12:'Двойная крышка',
+    t13:'Цилиндр M=0.3…3', t14:'Масштабируемость MPI', t15:'Столкновение детонаций'
+  };
+  const raw = window._taskClaimsRaw || {};
+  let html = '';
+  for (let i = 1; i <= 15; i++) {
+    const tid = 't' + i;
+    const c = raw[tid];
+    const name = TASK_NAMES[tid];
+    if (c && c.claimedBy) {
+      const date = c.claimedAt ? new Date(c.claimedAt.seconds * 1000).toLocaleDateString('ru') : '—';
+      html += '<tr><td>' + i + '</td><td>' + name + '</td>';
+      html += '<td style="font-weight:600">' + (c.claimedByFio || '—') + '</td>';
+      html += '<td style="font-size:.82rem">' + c.claimedBy + '</td>';
+      html += '<td style="font-size:.82rem">' + date + '</td></tr>';
+    } else {
+      html += '<tr><td>' + i + '</td><td>' + name + '</td>';
+      html += '<td colspan="3" style="color:var(--text3)">свободно</td></tr>';
+    }
+  }
+  tbody.innerHTML = html;
+}
+
 function renderGrades() {
   const tbody = document.getElementById('gradesBody');
+  // Individual grades for each student
   let html = '';
-  for (const gid of Object.keys(allGroups).sort()) {
-    const g = allGroups[gid];
-    const members = g.members.map(m => m.email).join(', ');
-    const results = allResults[gid] || {};
-    const passed = TEST_IDS.filter(t => results[t.id] && results[t.id].values && results[t.id].values.allPass).length;
-    const grade = g.grade ? g.grade.grade : '';
-    const comment = g.grade ? g.grade.comment : '';
+  for (const u of allUsers) {
+    if (isAdmin(u.email)) continue; // skip admin
+    const fio = u.fio || u.email;
+    const sg = u.studyGroup || '—';
+    const rg = u.group ? u.group.replace('group_', '№') : '—';
+    // Find their task
+    const task = allTaskClaims[u.uid] || '—';
+    // Load existing grade
+    const g = allIndividualGrades[u.uid] || {};
+    const zachet = g.zachet || '';
+    const exam = g.exam || '';
+    const total = (parseInt(zachet)||0) + (parseInt(exam)||0);
+    const comment = g.comment || '';
     html += `<tr>
-      <td><span class="badge b-group">${gid.replace('group_', 'Гр.')}</span></td>
-      <td style="font-size:.78rem;max-width:200px">${members}</td>
-      <td>${passed} / ${TEST_IDS.length}</td>
-      <td><input type="number" class="grade-input" id="grade_${gid}" value="${grade}" min="0" max="10" step="1" placeholder="—"></td>
-      <td><input type="text" class="comment-input" id="comment_${gid}" value="${comment}" placeholder="Комментарий..."></td>
-      <td><button class="btn btn-sm btn-primary" onclick="saveGrade('${gid}')">Сохр.</button></td>
+      <td style="font-weight:600">${fio}</td>
+      <td style="font-size:.82rem">${sg}</td>
+      <td><span class="badge b-group">${rg}</span></td>
+      <td style="font-size:.82rem">${task}</td>
+      <td><input type="number" min="0" max="50" value="${zachet}" class="grade-input" id="zachet-${u.uid}"></td>
+      <td><input type="number" min="0" max="50" value="${exam}" class="grade-input" id="exam-${u.uid}"></td>
+      <td style="font-weight:700;text-align:center">${total || ''}</td>
+      <td><input type="text" value="${comment}" class="comment-input" id="comment-${u.uid}" placeholder="Комментарий"></td>
+      <td><button class="btn btn-primary btn-sm" onclick="saveIndividualGrade('${u.uid}')">💾</button></td>
     </tr>`;
   }
-  tbody.innerHTML = html || '<tr><td colspan="6" style="text-align:center;color:var(--text3)">Нет групп</td></tr>';
+  if (!html) html = '<tr><td colspan="9" style="text-align:center;color:var(--text3)">Нет студентов</td></tr>';
+  tbody.innerHTML = html;
 }
+
+async function saveIndividualGrade(uid) {
+  const zachet = document.getElementById('zachet-' + uid).value;
+  const exam = document.getElementById('exam-' + uid).value;
+  const comment = document.getElementById('comment-' + uid).value;
+  try {
+    await db.collection('individual_grades').doc(uid).set({
+      zachet: parseInt(zachet) || 0,
+      exam: parseInt(exam) || 0,
+      comment: comment,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    allIndividualGrades[uid] = { zachet, exam, comment };
+    renderGrades(); // re-render to update total
+    alert('Сохранено ✓');
+  } catch(e) { alert('Ошибка: ' + e.message); }
+}
+
 
 async function saveGrade(gid) {
   const grade = document.getElementById('grade_' + gid).value;

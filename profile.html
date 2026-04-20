@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<link rel="icon" href="favicon.ico" type="image/x-icon">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Личный кабинет — CFD Course</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -78,6 +79,7 @@ td{padding:5px 10px;border:1px solid var(--border)}
     <div class="info">
       <h1 id="profileEmail">—</h1>
       <p id="profileGroup">Группа не назначена</p>
+      <p id="approvalStatus" style="margin-top:.3rem"></p>
     </div>
   </div>
 
@@ -114,12 +116,22 @@ td{padding:5px 10px;border:1px solid var(--border)}
   </div>
 
   <div id="gradeSection" style="display:none">
-    <h2>Итоговая оценка</h2>
-    <div class="grade-box">
-      <div class="grade-num" id="gradeValue">—</div>
-      <div class="grade-label">из 10</div>
-      <div class="grade-comment" id="gradeComment"></div>
+    <h2>Оценки</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.8rem;margin-bottom:.8rem">
+      <div class="grade-box">
+        <div class="grade-num" id="gradeZachet">—</div>
+        <div class="grade-label">из 50 · Зачёт</div>
+      </div>
+      <div class="grade-box">
+        <div class="grade-num" id="gradeExam">—</div>
+        <div class="grade-label">из 50 · Экзамен</div>
+      </div>
+      <div class="grade-box" style="border-color:var(--accent2)">
+        <div class="grade-num" id="gradeTotal" style="color:var(--accent2)">—</div>
+        <div class="grade-label">из 100 · Итого</div>
+      </div>
     </div>
+    <div class="grade-comment" id="gradeComment" style="font-size:.9rem;color:var(--text);font-style:italic;text-align:center"></div>
   </div>
 
   <h2>Результаты по тестам</h2>
@@ -224,10 +236,12 @@ firebase.auth().onAuthStateChanged(async user => {
 
   if (!user) {
     document.getElementById('loginPrompt').style.display = '';
+    document.getElementById('profileContent').style.display = 'none';
     document.getElementById('loginBtn').onclick = () => CFDAuth.openModal();
     return;
   }
 
+  document.getElementById('loginPrompt').style.display = 'none';
   document.getElementById('profileContent').style.display = '';
 
   // Profile info
@@ -253,9 +267,27 @@ firebase.auth().onAuthStateChanged(async user => {
     if (userGroup) {
       document.getElementById('profileGroup').innerHTML =
         'Рабочая группа: <span class="badge b-group">' + userGroup.replace('group_', '№') + '</span> <span style="font-size:.78rem;color:var(--text3)">(назначает преподаватель)</span>';
+      // Show approval status
+      const approvalEl2 = document.getElementById('approvalStatus');
+      if (approvalEl2) {
+        if (userDoc.exists && userDoc.data().approved) {
+          approvalEl2.innerHTML = '<span class="badge b-pass">Профиль подтверждён ✓</span>';
+        } else {
+          approvalEl2.innerHTML = '<span class="badge b-pending">Ожидает подтверждения преподавателем</span>';
+        }
+      }
     } else {
       document.getElementById('profileGroup').textContent =
         'Группа ещё не назначена администратором';
+      // Show approval status
+      const approvalEl = document.getElementById('approvalStatus');
+      if (approvalEl) {
+        if (userDoc.exists && userDoc.data().approved) {
+          approvalEl.innerHTML = '<span class="badge b-pass">Профиль подтверждён</span>';
+        } else {
+          approvalEl.innerHTML = '<span class="badge b-pending">Ожидает подтверждения преподавателем</span>';
+        }
+      }
     }
   } catch (e) {
     console.warn('Could not load user data:', e);
@@ -321,18 +353,20 @@ firebase.auth().onAuthStateChanged(async user => {
   document.getElementById('statFailed').textContent = failed;
   document.getElementById('statPending').textContent = pending;
 
-  // Load grade
+  // Load individual grades
   try {
-    const gradeDoc = await db2.collection('grades').doc(userGroup).get();
+    const gradeDoc = await db2.collection('individual_grades').doc(user.uid).get();
     if (gradeDoc.exists) {
       const g = gradeDoc.data();
-      if (g.grade) {
-        document.getElementById('gradeSection').style.display = '';
-        document.getElementById('gradeValue').textContent = g.grade;
-        document.getElementById('gradeComment').textContent = g.comment || '';
-      }
+      const z = g.zachet || 0;
+      const e = g.exam || 0;
+      document.getElementById('gradeSection').style.display = '';
+      document.getElementById('gradeZachet').textContent = z;
+      document.getElementById('gradeExam').textContent = e;
+      document.getElementById('gradeTotal').textContent = z + e;
+      document.getElementById('gradeComment').textContent = g.comment || '';
     }
-  } catch (e) {}
+  } catch (e2) {}
 });
 </script>
 </body>

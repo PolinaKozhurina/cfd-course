@@ -58,16 +58,22 @@
     <div class="auth-modal">
       <button class="close" onclick="CFDAuth.closeModal()">&times;</button>
       <div id="auth-login-view">
-        <h3>Вход</h3>
-        <p class="sub">Войдите, чтобы отправлять результаты расчётов</p>
+        <h3 id="auth-title">Вход</h3>
+        <p class="sub" id="auth-subtitle">Войдите, чтобы отправлять результаты расчётов</p>
         <div class="error" id="auth-error"></div>
+        <div id="auth-fio-fields" style="display:none">
+          <label>ФИО</label>
+          <input type="text" id="auth-fio" placeholder="Иванов Иван Иванович">
+          <label>Учебная группа (МИФИ)</label>
+          <input type="text" id="auth-study-group" placeholder="Б22-505">
+        </div>
         <label>Email</label>
         <input type="email" id="auth-email" placeholder="ivanov@university.ru">
         <label>Пароль</label>
         <input type="password" id="auth-pass" placeholder="Минимум 6 символов">
-        <button class="btn btn-primary" onclick="CFDAuth.login()">Войти</button>
-        <button class="btn btn-secondary" onclick="CFDAuth.register()">Зарегистрироваться</button>
-        <p class="switch">Забыли пароль? <a onclick="CFDAuth.resetPassword()">Сбросить</a></p>
+        <button class="btn btn-primary" id="auth-main-btn" onclick="CFDAuth.login()">Войти</button>
+        <button class="btn btn-secondary" id="auth-alt-btn" onclick="CFDAuth.showRegister()">У меня нет аккаунта</button>
+        <p class="switch" id="auth-switch">Забыли пароль? <a onclick="CFDAuth.resetPassword()">Сбросить</a></p>
       </div>
       <div id="auth-profile-view" style="display:none">
         <h3>Профиль</h3>
@@ -115,16 +121,44 @@
         showError(translateError(e.code));
       }
     },
+    showRegister: function() {
+      document.getElementById("auth-title").textContent = "Регистрация";
+      document.getElementById("auth-subtitle").textContent = "Заполните данные для создания аккаунта";
+      document.getElementById("auth-fio-fields").style.display = "";
+      document.getElementById("auth-main-btn").textContent = "Зарегистрироваться";
+      document.getElementById("auth-main-btn").onclick = function() { CFDAuth.register(); };
+      document.getElementById("auth-alt-btn").textContent = "Уже есть аккаунт";
+      document.getElementById("auth-alt-btn").onclick = function() { CFDAuth.showLogin(); };
+      document.getElementById("auth-switch").style.display = "none";
+    },
+    showLogin: function() {
+      document.getElementById("auth-title").textContent = "Вход";
+      document.getElementById("auth-subtitle").textContent = "Войдите, чтобы отправлять результаты расчётов";
+      document.getElementById("auth-fio-fields").style.display = "none";
+      document.getElementById("auth-main-btn").textContent = "Войти";
+      document.getElementById("auth-main-btn").onclick = function() { CFDAuth.login(); };
+      document.getElementById("auth-alt-btn").textContent = "У меня нет аккаунта";
+      document.getElementById("auth-alt-btn").onclick = function() { CFDAuth.showRegister(); };
+      document.getElementById("auth-switch").style.display = "";
+    },
     register: async function () {
       const email = document.getElementById("auth-email").value.trim();
       const pass = document.getElementById("auth-pass").value;
+      const fio = (document.getElementById("auth-fio").value || "").trim();
+      const studyGroup = (document.getElementById("auth-study-group").value || "").trim();
       hideError();
-      if (pass.length < 6) {
-        showError("Пароль должен быть не менее 6 символов");
-        return;
-      }
+      if (!fio) { showError("Введите ФИО"); return; }
+      if (!studyGroup) { showError("Введите учебную группу"); return; }
+      if (pass.length < 6) { showError("Пароль должен быть не менее 6 символов"); return; }
       try {
-        await auth.createUserWithEmailAndPassword(email, pass);
+        const cred = await auth.createUserWithEmailAndPassword(email, pass);
+        // Save FIO and study group immediately
+        await db.collection("users").doc(cred.user.uid).set({
+          email: email,
+          fio: fio,
+          studyGroup: studyGroup,
+          registeredAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
         this.closeModal();
       } catch (e) {
         showError(translateError(e.code));
@@ -227,12 +261,15 @@
             userGroup = doc.data().group;
             document.getElementById("auth-group").value = userGroup;
           }
+          window._userApproved = !!doc.data().approved;
         } else {
           // First login — create user document so admin can see them
           await db.collection("users").doc(user.uid).set({
             email: user.email,
+            approved: false,
             registeredAt: firebase.firestore.FieldValue.serverTimestamp()
           });
+          window._userApproved = false;
         }
       } catch (e) {
         console.warn("Could not load/create user:", e);

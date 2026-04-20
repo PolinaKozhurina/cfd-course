@@ -266,3 +266,47 @@ grades/                             ← оценки (ставит админ)
 - Firebase Auth Spark: бесплатно (3000 DAU)
 - Firestore Spark: бесплатно (1 GB хранения, 50K чтений/день)
 - Для 50 студентов — запас в 100x
+
+## Рекомендуемые Firestore Rules
+
+Firebase Console → Firestore Database → Rules → заменить на:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users — каждый может читать всех (для админки), писать только свой документ
+    match /users/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+    // Task claims — все авторизованные читают, писать может любой
+    match /task_claims/{doc} {
+      allow read, write: if request.auth != null;
+    }
+    // Grades — все читают свои, писать может только админ
+    match /individual_grades/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.token.email == "polinakozhurina2020@gmail.com";
+    }
+    // Groups, results, checklist — все авторизованные
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+```
+
+→ Нажать **Publish**
+
+**Пока для простоты** можно использовать упрощённые правила:
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+```

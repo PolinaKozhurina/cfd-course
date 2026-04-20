@@ -76,13 +76,27 @@ th{text-align:left}
 <h1>ЗАЧЁТ — Разностные схемы и параллельная реализация</h1>
 <p class="subtitle">Полный чек-лист проверки · 21 апреля 2026 · Работа в группах</p>
 
-<div class="block">
-  <h3>Информация о группе</h3>
-  <div class="group-input">
-    <div><label>Номер группы</label><input type="text" placeholder="Группа №"></div>
-    <div><label>Участники</label><input type="text" placeholder="ФИО 1, ФИО 2, ..."></div>
-    <div><label>Проверяющий / Дата</label><input type="text" placeholder=""></div>
+<div id="review-bar" class="block" style="border:2px solid #b44a2d;background:#fdf9f3">
+  <h3 style="color:#b44a2d;margin-bottom:.5rem">Проверка зачёта</h3>
+  <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+    <div>
+      <label style="font-size:.78rem;font-weight:700">Группа</label>
+      <select id="review-group" onchange="loadReviewGroup(this.value)" style="font-family:'JetBrains Mono',monospace;font-size:.9rem;padding:6px 12px;border:2px solid #b44a2d;border-radius:6px;background:#fff;min-width:200px;cursor:pointer">
+        <option value="">— Выберите группу —</option>
+      </select>
+    </div>
+    <div style="flex:1">
+      <label style="font-size:.78rem;font-weight:700">Участники</label>
+      <div id="review-info" style="font-size:.88rem;color:#2c2419;min-height:1.5em">Выберите группу для начала проверки</div>
+    </div>
+    <div>
+      <span id="review-status" style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:#1a6b5a"></span>
+    </div>
   </div>
+</div>
+<div id="review-denied" style="display:none;text-align:center;padding:3rem;color:#6b5d4f">
+  <h2 style="color:#b44a2d">Доступ запрещён</h2>
+  <p>Страница проверки доступна только преподавателям.</p>
 </div>
 
 <!-- ===================== LEGEND ===================== -->
@@ -1388,7 +1402,16 @@ M∞ = 0.3–0.5,  α = 0°,  γ = 1.4
     } catch(e) {}
 
     var total = document.querySelectorAll('.admin-cb').length;
-    info.textContent = 'Студент: ' + studentCount + ' / ' + total + ' · Преподаватель: ' + adminCount + ' / ' + total;
+    // Show members
+    var memberNames = [];
+    try {
+      var msnap = await db.collection('users').where('group','==',gid).get();
+      msnap.forEach(function(d) { 
+        var u = d.data();
+        memberNames.push((u.fio || u.email) + (u.studyGroup ? ' (' + u.studyGroup + ')' : '')); 
+      });
+    } catch(e) {}
+    info.innerHTML = '<strong>' + memberNames.join(', ') + '</strong><br>Студент: ' + studentCount + ' / ' + total + ' · Преподаватель: ' + adminCount + ' / ' + total;
     status.textContent = '';
   };
 

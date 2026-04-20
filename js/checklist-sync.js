@@ -168,8 +168,25 @@
         }
       } catch (e) {}
 
+      // Show FIO and group members
+      var fio = user.email;
+      try {
+        var userDoc2 = await db.collection('users').doc(user.uid).get();
+        if (userDoc2.exists && userDoc2.data().fio) fio = userDoc2.data().fio;
+      } catch(e2) {}
+      
+      var membersText = '';
+      if (userGroup) {
+        try {
+          var membersSnap = await db.collection('users').where('group', '==', userGroup).get();
+          var names = [];
+          membersSnap.forEach(function(d) { names.push(d.data().fio || d.data().email); });
+          membersText = ' · Участники: ' + names.join(', ');
+        } catch(e3) {}
+      }
+      
       if (userEl) {
-        userEl.textContent = user.email + (userGroup ? ' · ' + userGroup.replace('group_', 'Гр.') : '');
+        userEl.textContent = fio + (userGroup ? ' · ' + userGroup.replace('group_', 'Группа ') : '') + membersText;
         userEl.style.color = 'var(--green,#22c55e)';
       }
       if (saveBtn) saveBtn.style.display = '';

@@ -93,6 +93,11 @@ th{text-align:left}
       <span id="review-status" style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:#1a6b5a"></span>
     </div>
   </div>
+  <div style="margin-top:.6rem;display:flex;gap:.5rem;align-items:center">
+    <button onclick="runReviewGhCheck()" id="btnReviewGh" style="background:var(--accent3,#3a5ba0);color:#fff;border:none;border-radius:5px;padding:6px 16px;font-family:'JetBrains Mono',monospace;font-size:.78rem;cursor:pointer;font-weight:600" disabled>▶ Проверить GitHub</button>
+    <span id="review-gh-status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:#6b5d4f"></span>
+  </div>
+  <div id="review-gh-results" style="margin-top:.6rem"></div>
 </div>
 <div id="review-denied" style="display:none;text-align:center;padding:3rem;color:#6b5d4f">
   <h2 style="color:#b44a2d">Доступ запрещён</h2>
@@ -1450,6 +1455,16 @@ M∞ = 0.3–0.5,  α = 0°,  γ = 1.4
     } catch(e) {}
     info.innerHTML = '<strong>' + memberNames.join(', ') + '</strong><br>Студент: ' + studentChecked + ' / ' + total + ' \u00b7 Преподаватель: ' + adminCount + ' / ' + total;
     status.textContent = '';
+
+    // Enable GitHub check button and store repo URL
+    try {
+      var gDoc = await db.collection('groups').doc(gid).get();
+      window._reviewRepoUrl = (gDoc.exists && gDoc.data().repoUrl) ? gDoc.data().repoUrl : '';
+    } catch(e) { window._reviewRepoUrl = ''; }
+    var ghBtn = document.getElementById('btnReviewGh');
+    ghBtn.disabled = !window._reviewRepoUrl;
+    document.getElementById('review-gh-results').innerHTML = '';
+    document.getElementById('review-gh-status').textContent = window._reviewRepoUrl ? '' : 'GitHub не указан';
   };
 
   // Mapping: block number -> test ID (matching admin.html TEST_IDS)
@@ -1545,6 +1560,210 @@ M∞ = 0.3–0.5,  α = 0°,  γ = 1.4
       status.textContent = 'Ошибка: ' + e.message;
       console.error('saveAdminCb error:', e, 'gid:', gid, 'itemId:', itemId);
     }
+  };
+
+  // ===== GitHub Check for current group =====
+
+  var REQUIRED_MARKERS = [
+    'FLIC_LAGRANGE','FLIC_EULER','FLIC_CONSERV','FLIC_CFL',
+    'HLLC_SOLVER','RECONSTRUCTION','STATE_VECTOR_2D','CFL_2D',
+    'MADER_EOS','MADER_VISC','MADER_VELOCITY','MADER_ZIP','MADER_DONOR','MADER_REPARTITION','MADER_ARRHENIUS',
+    'STAGGERED_GRID','PREDICTOR_U','PREDICTOR_V','POISSON','CORRECTION',
+    'SIMPLE_LOOP','PISO_LOOP','PIMPLE_LOOP',
+    'TG_INIT','TG_BC','STEP_BLOCK','STEP_INLET',
+    'MESH_STRUCTS','BUILD_FACES','UNSTRUCT_SCHEMES','GHOST_STATE',
+    'DECOMPOSITION','HALO_EXCHANGE','SHARGATOV'
+  ];
+
+  var REQUIRED_RESULTS = [
+    {path:'results/01_sod_flic', files:['values.txt']},
+    {path:'results/03_godunov_2d', files:['conservation.txt']},
+    {path:'results/04_mader_sod', files:['values.txt']},
+    {path:'results/04_mader_det', files:['values.txt']},
+    {path:'results/05_cavity', files:['ghia_table.txt']},
+    {path:'results/07_step', files:['xr.txt']},
+    {path:'results/11_mpi', files:['verification.txt']},
+  ];
+
+  var TXT_CHECKS = [
+    {path:'results/01_sod_flic/values.txt', checks:[
+      {name:'rho(x≈0.6)', key:/rho\s*[=:]\s*([\d.]+)/i, expected:0.4263, tol:0.05},
+      {name:'p(x≈0.6)', key:/p\s*[=:]\s*([\d.]+)/i, expected:0.3031, tol:0.05},
+      {name:'u(x≈0.6)', key:/u\s*[=:]\s*([\d.]+)/i, expected:0.9274, tol:0.05},
+    ]},
+    {path:'results/04_mader_det/values.txt', checks:[
+      {name:'D_CJ', key:/D[_\s]*(?:computed|cj|det)\s*[=:]\s*([\d.]+)/i, expected:0.880, tol:0.05},
+      {name:'P_CJ', key:/P[_\s]*(?:max|cj)\s*[=:]\s*([\d.]+)/i, expected:0.356, tol:0.10},
+    ]},
+    {path:'results/03_godunov_2d/conservation.txt', checks:[
+      {name:'mass diff', key:/diff\s*[=:]\s*([\d.eE\-\+]+)/i, expected:0, tol:1e-10, abs:true},
+    ]},
+    {path:'results/05_cavity/ghia_table.txt', checks:[
+      {name:'u at y=0.9766', key:/0\.9766.*?u[_\s]*calc\s*[=:]\s*([\d.]+)/i, expected:0.8412, tol:0.05},
+    ]},
+    {path:'results/07_step/xr.txt', checks:[
+      {name:'xr Re=100', key:/Re\s*[=:]\s*100.*?xr\s*[=:]\s*([\d.]+)/i, expected:3.0, tol:0.15},
+    ]},
+    {path:'results/11_mpi/verification.txt', checks:[
+      {name:'rho par-seq', key:/rho.*?[=:]\s*([\d.eE\-\+]+)/i, expected:0, tol:1e-10, abs:true},
+    ]},
+  ];
+
+  var CODE_EXTS = ['.cpp','.c','.h','.hpp','.cc','.cxx','.py','.f90','.f'];
+
+  function parseGhUrl(url) {
+    var m = url.match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
+    return m ? {owner:m[1], repo:m[2].replace('.git','')} : null;
+  }
+
+  async function ghApi(url) {
+    var r = await fetch(url);
+    if (!r.ok) throw new Error(r.status+' '+r.statusText);
+    return r.json();
+  }
+
+  window.runReviewGhCheck = async function() {
+    var repoUrl = window._reviewRepoUrl;
+    if (!repoUrl) return;
+    var gh = parseGhUrl(repoUrl);
+    if (!gh) { document.getElementById('review-gh-status').textContent = 'Неверная ссылка'; return; }
+
+    var btn = document.getElementById('btnReviewGh');
+    var statusEl = document.getElementById('review-gh-status');
+    var container = document.getElementById('review-gh-results');
+    btn.disabled = true;
+    statusEl.textContent = 'Загрузка дерева файлов...';
+
+    try {
+      var info = await ghApi('https://api.github.com/repos/'+gh.owner+'/'+gh.repo);
+      var branch = info.default_branch || 'main';
+      var tree = await ghApi('https://api.github.com/repos/'+gh.owner+'/'+gh.repo+'/git/trees/'+branch+'?recursive=1');
+      var files = tree.tree.map(function(t){return t.path;});
+
+      // README
+      var hasReadme = files.some(function(f){return f.toLowerCase()==='readme.md';});
+
+      // Code files
+      var codeFiles = files.filter(function(f){return CODE_EXTS.some(function(e){return f.toLowerCase().endsWith(e);});});
+
+      // Markers
+      statusEl.textContent = 'Проверка маркеров ('+codeFiles.length+' файлов)...';
+      var foundMarkers = {};
+      var toRead = codeFiles.slice(0,30);
+      for (var ci=0; ci<toRead.length; ci++) {
+        try {
+          var data = await ghApi('https://api.github.com/repos/'+gh.owner+'/'+gh.repo+'/contents/'+toRead[ci]);
+          var content = data.encoding==='base64' && data.content ? atob(data.content.replace(/\n/g,'')) : '';
+          var ms = content.match(/CHECK:\s*([A-Z_0-9]+)/g) || [];
+          ms.forEach(function(m){foundMarkers[m.replace('CHECK:','').trim()]=toRead[ci];});
+        } catch(e){}
+      }
+      var missingMarkers = REQUIRED_MARKERS.filter(function(m){return !foundMarkers[m];});
+
+      // Results folders
+      var resultsFound = [];
+      var resultsMissing = [];
+      REQUIRED_RESULTS.forEach(function(req) {
+        var found = req.files.filter(function(rf) {
+          return files.some(function(f){return f.toLowerCase().includes(req.path.toLowerCase()+'/'+rf.toLowerCase());});
+        });
+        var miss = req.files.filter(function(rf){return !found.includes(rf);});
+        if (found.length>0) resultsFound.push({path:req.path,found:found,missing:miss});
+        if (miss.length>0) resultsMissing.push({path:req.path,files:miss});
+      });
+
+      // TXT value checks
+      statusEl.textContent = 'Проверка значений в txt...';
+      var txtResults = [];
+      for (var ti=0; ti<TXT_CHECKS.length; ti++) {
+        var tc = TXT_CHECKS[ti];
+        var txtFile = files.find(function(f){return f.toLowerCase().includes(tc.path.toLowerCase());});
+        if (!txtFile) { txtResults.push({file:tc.path,status:'missing'}); continue; }
+        try {
+          var tdata = await ghApi('https://api.github.com/repos/'+gh.owner+'/'+gh.repo+'/contents/'+txtFile);
+          var tcontent = tdata.encoding==='base64' && tdata.content ? atob(tdata.content.replace(/\n/g,'')) : '';
+          var checks = [];
+          tc.checks.forEach(function(ch) {
+            var cm = tcontent.match(ch.key);
+            if (!cm) { checks.push({name:ch.name,status:'not_found',expected:ch.expected}); }
+            else {
+              var val = parseFloat(cm[1]);
+              var err = ch.abs ? Math.abs(val) : Math.abs((val-ch.expected)/ch.expected);
+              checks.push({name:ch.name,status:err<=ch.tol?'pass':'fail',value:val,expected:ch.expected,
+                err:ch.abs?val.toExponential(1):(err*100).toFixed(1)+'%'});
+            }
+          });
+          txtResults.push({file:tc.path,status:'checked',checks:checks});
+        } catch(e) { txtResults.push({file:tc.path,status:'error'}); }
+      }
+
+      // Render
+      var html = '<div style="background:#f5f0e8;border:1px solid #d9cfc0;border-radius:8px;padding:1rem;font-size:.82rem">';
+      html += '<div style="display:flex;gap:1.2rem;flex-wrap:wrap;margin-bottom:.5rem">';
+      html += '<span>📄 Код: <strong>'+codeFiles.length+'</strong></span>';
+      var mOk = Object.keys(foundMarkers).length;
+      var mColor = missingMarkers.length===0?'#1a6b5a':(mOk>REQUIRED_MARKERS.length/2?'#854f0b':'#c44');
+      html += '<span style="color:'+mColor+'">🏷️ Маркеры: <strong>'+mOk+'/'+REQUIRED_MARKERS.length+'</strong></span>';
+      html += '<span>'+(hasReadme?'✅':'❌')+' README</span>';
+      html += '<span>📊 txt-файлы: <strong>'+resultsFound.length+'/'+REQUIRED_RESULTS.length+'</strong></span>';
+      html += '</div>';
+
+      if (missingMarkers.length>0) {
+        html += '<div style="color:#c44;margin-bottom:.3rem"><strong>Нет маркеров:</strong> '+missingMarkers.join(', ')+'</div>';
+      }
+      if (resultsMissing.length>0) {
+        html += '<div style="color:#c44;margin-bottom:.3rem"><strong>Нет файлов:</strong> '+resultsMissing.map(function(m){return m.path+'/'+m.files.join(',');}).join('; ')+'</div>';
+      }
+
+      // TXT results
+      var txtIssues = [], txtOk = [];
+      txtResults.forEach(function(tr) {
+        if (tr.status==='missing') txtIssues.push('<span style="color:#c44">'+tr.file+': отсутствует</span>');
+        else if (tr.checks) tr.checks.forEach(function(ch) {
+          if (ch.status==='not_found') txtIssues.push('<span style="color:#854f0b">'+ch.name+': не найдено в файле</span>');
+          else if (ch.status==='fail') txtIssues.push('<span style="color:#c44">'+ch.name+': '+ch.value+' (ожид. '+ch.expected+', откл. '+ch.err+')</span>');
+          else txtOk.push(ch.name+': '+ch.value+' ✓');
+        });
+      });
+      if (txtIssues.length>0) html += '<div style="margin-top:.3rem"><strong>📋 Значения:</strong><br>'+txtIssues.join('<br>')+'</div>';
+      if (txtOk.length>0) html += '<div style="color:#1a6b5a;margin-top:.2rem">'+txtOk.join(' · ')+'</div>';
+
+      html += '</div>';
+      container.innerHTML = html;
+
+      // Auto-check: for each found marker, find the matching admin checkbox and check it
+      // NEVER uncheck - only add checkmarks
+      statusEl.textContent = 'Проставляю галочки...';
+      var autoChecked = 0;
+      var allAdminCbs = document.querySelectorAll('.admin-cb');
+      for (var ai = 0; ai < allAdminCbs.length; ai++) {
+        var acb = allAdminCbs[ai];
+        if (acb.checked) continue; // Already checked by teacher — don't touch
+        // Find what marker this checkbox corresponds to
+        var fsKey = acb.dataset.fsKey || '';
+        if (fsKey && foundMarkers[fsKey]) {
+          // Marker found in code — auto-check and save
+          acb.checked = true;
+          autoChecked++;
+          try {
+            await db.collection('groups').doc(window._reviewGid).collection('admin_checklist').doc(fsKey).set({
+              checked: true,
+              checkedBy: 'auto-github',
+              timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+          } catch(e) { console.warn('auto-save failed for', fsKey, e); }
+          // Trigger block completion check
+          checkBlockCompletion(acb);
+        }
+      }
+      statusEl.textContent = autoChecked > 0
+        ? 'Готово — автоматически отмечено: ' + autoChecked + ' пунктов'
+        : 'Готово — новых автоматических отметок нет';
+    } catch(e) {
+      statusEl.textContent = 'Ошибка: '+e.message;
+      container.innerHTML = '';
+    }
+    btn.disabled = false;
   };
 })();
 </script>

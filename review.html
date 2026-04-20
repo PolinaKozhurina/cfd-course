@@ -1410,48 +1410,45 @@ M∞ = 0.3–0.5,  α = 0°,  γ = 1.4
     var checkedAdminIds = {};
     adminDocs.forEach(function(d) { if (d.checked) checkedAdminIds[d.id] = true; });
 
-    // For each checkbox, try to find its Firestore key
+    // For each checkbox, find its Firestore key by CHECK tag
     allCbs.forEach(function(cb, i) {
       var row = cb.closest('tr');
       if (!row) return;
+      var key = 'cb_' + i;
 
-      // Method 1: look for CHECK tag in this row
+      // Use CHECK tag if present
       var tag = row.querySelector('.tag');
       if (tag) {
-        var key = tag.textContent.replace('CHECK: ', '').trim();
-        if (checkedStudentIds[key]) { cb.checked = true; studentChecked++; }
-        if (i < adminCbs.length && checkedAdminIds[key]) { adminCbs[i].checked = true; adminCount++; }
-        // Store key for saving admin checks later
-        if (i < adminCbs.length) adminCbs[i].dataset.fsKey = key;
-        return;
+        var tagText = tag.textContent.replace('CHECK: ', '').trim();
+        if (tagText && tagText !== 'CHECK: TAG') key = tagText;
+      } else {
+        // Generate same key as checklist-sync.js: b{blockNum}_r{index}_{desc}
+        var bn = '0';
+        var block = row.closest('.block');
+        if (block) {
+          var bnEl = block.querySelector('.block-num');
+          if (bnEl) bn = bnEl.textContent.trim();
+        }
+        var cells = row.querySelectorAll('td');
+        var rowDesc = cells.length > 1 ? cells[1].textContent.trim().slice(0, 30) : '';
+        key = 'b' + bn + '_r' + i + '_' + rowDesc.replace(/\s+/g, '_').replace(/[^a-zA-Zа-яА-Я0-9_]/g, '');
       }
 
-      // Method 2: try cb_N format
-      var key2 = 'cb_' + i;
-      if (checkedStudentIds[key2]) { cb.checked = true; studentChecked++; }
-      if (i < adminCbs.length && checkedAdminIds[key2]) { adminCbs[i].checked = true; adminCount++; }
-      if (i < adminCbs.length) adminCbs[i].dataset.fsKey = key2;
+      if (checkedStudentIds[key]) { cb.checked = true; studentChecked++; }
 
-      // Method 3: try all Firestore keys that contain row description text
-      if (!cb.checked) {
-        var cells = row.querySelectorAll('td');
-        var desc = cells.length > 1 ? cells[1].textContent.trim().slice(0, 15) : '';
-        if (desc) {
-          Object.keys(checkedStudentIds).forEach(function(fkey) {
-            if (fkey.indexOf(desc.replace(/[^a-zA-Z]/g,'').slice(0,10)) >= 0) {
-              cb.checked = true; studentChecked++;
-              if (i < adminCbs.length) adminCbs[i].dataset.fsKey = fkey;
-            }
-          });
-        }
+      if (i < adminCbs.length) {
+        adminCbs[i].dataset.fsKey = key;
+        if (checkedAdminIds[key]) { adminCbs[i].checked = true; adminCount++; }
       }
     });
 
-    // Enable admin checkboxes and set keys for those without
+    // Enable admin checkboxes
     adminCbs.forEach(function(cb, i) { 
       cb.disabled = false;
       if (!cb.dataset.fsKey) cb.dataset.fsKey = 'cb_' + i;
     });
+
+
 
     // Show members
     var total = allCbs.length;

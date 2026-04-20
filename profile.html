@@ -110,7 +110,7 @@ td{padding:5px 10px;border:1px solid var(--border)}
   </div>
 
   <div class="stats">
-    <div class="stat"><div class="num" id="statPassed">0</div><div class="label">Тестов сдано</div></div>
+    <div class="stat"><div class="num" id="statPassed">0</div><div class="label">Принято</div></div>
     <div class="stat"><div class="num" id="statFailed">0</div><div class="label">С ошибками</div></div>
     <div class="stat"><div class="num" id="statPending">0</div><div class="label">Не сдано</div></div>
   </div>
@@ -138,7 +138,7 @@ td{padding:5px 10px;border:1px solid var(--border)}
   <div class="card">
     <div class="members" id="groupMembers"></div>
     <table>
-      <thead><tr><th>Тест</th><th>Статус</th><th>Кто сдал</th><th>Дата</th></tr></thead>
+      <thead><tr><th>Тест</th><th>Статус</th><th>Кто принял</th><th>Дата</th></tr></thead>
       <tbody id="resultsBody"></tbody>
     </table>
   </div>
@@ -320,19 +320,24 @@ firebase.auth().onAuthStateChanged(async user => {
   let html = '';
   for (const t of TEST_IDS) {
     const r = results[t.id];
-    if (r) {
-      const ok = r.values && r.values.allPass;
-      if (ok) passed++; else failed++;
-      const status = ok
-        ? '<span class="badge b-pass">сдано</span>'
-        : '<span class="badge b-fail">ошибка</span>';
-      const who = r.submittedByFio || r.submittedBy || '—';
-      const when = r.submittedAt
-        ? new Date(r.submittedAt.seconds * 1000).toLocaleDateString('ru')
-        : (r.values && r.values.timestamp ? r.values.timestamp.slice(0, 10) : '—');
+    const status = r ? r.manualStatus : null;
+    if (status === 'pass') {
+      passed++;
+      const who = r.checkedByFio || r.checkedBy || '—';
+      const when = r.checkedAt ? new Date(r.checkedAt.seconds * 1000).toLocaleDateString('ru') : '—';
       html += `<tr>
         <td><a href="${t.link}" class="test-link">${t.name}</a></td>
-        <td>${status}</td>
+        <td><span class="badge b-pass">сдано</span></td>
+        <td style="font-size:.78rem">${who}</td>
+        <td style="font-size:.78rem">${when}</td>
+      </tr>`;
+    } else if (status === 'fail') {
+      failed++;
+      const who = r.checkedByFio || r.checkedBy || '—';
+      const when = r.checkedAt ? new Date(r.checkedAt.seconds * 1000).toLocaleDateString('ru') : '—';
+      html += `<tr>
+        <td><a href="${t.link}" class="test-link">${t.name}</a></td>
+        <td><span class="badge b-fail">ошибка</span></td>
         <td style="font-size:.78rem">${who}</td>
         <td style="font-size:.78rem">${when}</td>
       </tr>`;

@@ -345,7 +345,13 @@ function renderStudents() {
       <td><input type="text" value="${u.studyGroup || ''}" placeholder="Б22-505" id="sg-${u.uid}" onchange="saveUserField('${u.uid}','studyGroup',this.value)" style="font-size:.82rem;width:80px;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'JetBrains Mono',monospace;background:#fff;color:var(--text)"></td>
       <td>${u.group ? '<span class="badge b-group">' + u.group.replace('group_', '№') + '</span>' : '<span class="badge b-pending">—</span>'}</td>
       <td style="text-align:center">${u.approved ? '<span class="badge b-pass" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', false)">✓</span>' : '<span class="badge b-fail" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', true)">✗</span>'}</td>
-      <td>${isAdm ? '<span class="badge b-admin">admin</span>' : '<span class="badge b-student">student</span>'}</td>
+      <td style="text-align:center">${(() => {
+        if (isSuperAdmin(u.email)) return '<span class="badge" style="background:#faeeda;color:#854f0b;font-weight:700">главный</span>';
+        if (viewerIsSuperAdmin && isAdm) return '<span class="badge b-admin" style="cursor:pointer" title="Снять права" onclick="toggleAdmin(\'' + u.uid + '\',\'' + u.email + '\',false)">admin ✕</span>';
+        if (viewerIsSuperAdmin && !isAdm) return '<span class="badge b-student" style="cursor:pointer" title="Назначить админом" onclick="toggleAdmin(\'' + u.uid + '\',\'' + u.email + '\',true)">student →</span>';
+        if (isAdm) return '<span class="badge b-admin">admin</span>';
+        return '<span class="badge b-student">student</span>';
+      })()}</td>
       <td><select onchange="assignGroup('${u.uid}', this.value)" style="font-size:.75rem">
         <option value="">—</option>${groupOptions}
       </select></td>

@@ -22,6 +22,7 @@
   let userGroup = null;
   let checkboxes = [];
   let isAdmin = false;
+  var _isDirty = false;
 
   // ===== Assign IDs to all checkboxes =====
   function initCheckboxes() {
@@ -170,6 +171,15 @@
     }
   });
 
+  // ===== Unsaved changes warning =====
+  window.addEventListener('beforeunload', function(e) {
+    if (_isDirty) {
+      e.preventDefault();
+      e.returnValue = 'У вас есть несохранённые изменения в чек-листе. Покинуть страницу?';
+      return e.returnValue;
+    }
+  });
+
   // ===== Public API =====
   window.CFDChecklist = {
     saveAll: async function() {
@@ -177,12 +187,26 @@
         alert('Войдите и убедитесь что вы в группе');
         return;
       }
-      let saved = 0;
-      for (const cb of checkboxes) {
-        await saveCheckboxState(cb.id, cb.el.checked);
-        saved++;
+      var btn = document.getElementById('cp-save-btn');
+      var oldText = btn ? btn.textContent : '';
+      if (btn) { btn.textContent = 'Сохранение...'; btn.disabled = true; btn.style.opacity = '0.6'; }
+      try {
+        var saved = 0;
+        for (var i = 0; i < checkboxes.length; i++) {
+          await saveCheckboxState(checkboxes[i].id, checkboxes[i].el.checked);
+          saved++;
+          if (btn) btn.textContent = 'Сохранение... ' + saved + '/' + checkboxes.length;
+        }
+        if (btn) { btn.textContent = 'Сохранено ✓'; btn.style.background = '#22c55e'; }
+        _isDirty = false;
+        setTimeout(function() {
+          if (btn) { btn.textContent = oldText; btn.style.background = ''; btn.disabled = false; btn.style.opacity = ''; }
+        }, 2000);
+      } catch(e) {
+        if (btn) { btn.textContent = 'Ошибка!'; btn.style.background = '#ef4444'; btn.disabled = false; btn.style.opacity = ''; }
+        alert('Ошибка сохранения: ' + e.message);
+        setTimeout(function() { if (btn) { btn.textContent = oldText; btn.style.background = ''; } }, 3000);
       }
-      alert('Сохранено: ' + saved + ' пунктов для ' + userGroup.replace('group_', 'Группы '));
     },
 
     // For admin: get checklist progress for a group

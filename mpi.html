@@ -1197,6 +1197,125 @@ MPI использует «extent» типа — расстояние между
 <tr><td><strong>Цикл</strong></td><td>halo → dt → Allreduce(MIN) → rk2_step</td></tr>
 </table></div>
 
+
+<!-- COMMENTS SECTION -->
+<div id="comments-section" style="margin-top:3rem;padding-top:2rem;border-top:2px solid #d9cfc0">
+<h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
+<div id="comments-list" style="margin-bottom:1rem">
+<p style="color:#9a8d7e;font-size:.85rem">Загрузка комментариев...</p>
+</div>
+<div id="comment-form" style="display:none">
+<textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
+<div style="display:flex;justify-content:flex-end;margin-top:.4rem">
+<button onclick="postComment()" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:6px 16px;border-radius:5px;background:#b44a2d;color:#fff;border:none;cursor:pointer;font-weight:600">Отправить</button>
+</div>
+</div>
+<div id="comment-login" style="display:none">
+<p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p>
+</div>
+</div>
+
+<script>
+(function(){
+  const PAGE_ID = location.pathname.split('/').pop().replace('.html','');
+  const db = firebase.firestore();
+  const auth = firebase.auth();
+  const ADMIN_EMAILS = window.ADMIN_EMAILS || (typeof ADMIN_EMAILS !== 'undefined' ? ADMIN_EMAILS : []);
+
+  function isAdmin(email) {
+    return Array.isArray(ADMIN_EMAILS) ? ADMIN_EMAILS.includes(email) : email === ADMIN_EMAILS;
+  }
+
+  async function loadComments() {
+    const list = document.getElementById('comments-list');
+    try {
+      const snap = await db.collection('comments').where('page','==',PAGE_ID).orderBy('createdAt','desc').get();
+      if (snap.empty) {
+        list.innerHTML = '<p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p>';
+        return;
+      }
+      const user = auth.currentUser;
+      const adminUser = user && isAdmin(user.email);
+      let html = '';
+      snap.forEach(doc => {
+        const c = doc.data();
+        const date = c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+        const delBtn = adminUser ? ' <button onclick="deleteComment(\''+doc.id+'\')" style="font-size:.7rem;color:#c44;background:none;border:none;cursor:pointer;font-family:JetBrains Mono,monospace">удалить</button>' : '';
+        html += '<div style="padding:.6rem 0;border-bottom:1px solid #ede6da">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:baseline">';
+        var badge = '';
+        if (c.authorRole === 'superadmin') badge = ' <span style="font-family:JetBrains Mono,monospace;font-size:.6rem;background:#faeeda;color:#854f0b;padding:1px 4px;border-radius:3px;font-weight:700;vertical-align:middle">преподаватель</span>';
+        else if (c.authorRole === 'admin') badge = ' <span style="font-family:JetBrains Mono,monospace;font-size:.6rem;background:#fde8e8;color:#c44;padding:1px 4px;border-radius:3px;vertical-align:middle">admin</span>';
+        html += '<strong style="font-size:.88rem;color:#2c2419">'+(c.authorFio || c.authorEmail)+badge+'</strong>';
+        html += '<span style="font-size:.72rem;color:#9a8d7e;font-family:JetBrains Mono,monospace">'+date+delBtn+'</span>';
+        html += '</div>';
+        html += '<p style="font-size:.88rem;margin-top:.2rem;margin-bottom:0;color:#2c2419">'+escapeHtml(c.text)+'</p>';
+        html += '</div>';
+      });
+      list.innerHTML = html;
+    } catch(e) {
+      list.innerHTML = '<p style="color:#c44;font-size:.85rem">Ошибка загрузки: '+e.message+'</p>';
+    }
+  }
+
+  function escapeHtml(t) {
+    return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  window.postComment = async function() {
+    const text = document.getElementById('comment-text').value.trim();
+    if (!text) return;
+    const user = auth.currentUser;
+    if (!user) return;
+    let fio = user.email;
+    try {
+      const ud = await db.collection('users').doc(user.uid).get();
+      if (ud.exists && ud.data().fio) fio = ud.data().fio;
+    } catch(e){}
+    try {
+      await db.collection('comments').add({
+        page: PAGE_ID,
+        text: text,
+        authorEmail: user.email,
+        authorFio: fio,
+        authorUid: user.uid,
+        authorRole: window._userRole || 'student',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      document.getElementById('comment-text').value = '';
+      loadComments();
+    } catch(e) { alert('Ошибка: '+e.message); }
+  };
+
+  window.deleteComment = async function(docId) {
+    if (!confirm('Удалить комментарий?')) return;
+    try {
+      await db.collection('comments').doc(docId).delete();
+      loadComments();
+    } catch(e) { alert('Ошибка: '+e.message); }
+  };
+
+  auth.onAuthStateChanged(async user => {
+    if (user && window._userApproved) {
+      document.getElementById('comment-form').style.display = '';
+      document.getElementById('comment-login').style.display = 'none';
+    } else {
+      document.getElementById('comment-form').style.display = 'none';
+      document.getElementById('comment-login').style.display = '';
+    }
+    loadComments();
+  });
+
+  // Also re-check after a delay (approval may load async)
+  setTimeout(function(){
+    const user = auth.currentUser;
+    if (user && window._userApproved) {
+      document.getElementById('comment-form').style.display = '';
+      document.getElementById('comment-login').style.display = 'none';
+    }
+  }, 2000);
+})();
+</script>
 </main>
 
 <script>
@@ -1400,123 +1519,7 @@ window.addEventListener('DOMContentLoaded',()=>new PD());
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="js/firebase-config.js"></script>
 <script src="js/auth.js"></script>
-<!-- COMMENTS SECTION -->
-<div id="comments-section" style="margin-top:3rem;padding-top:2rem;border-top:2px solid #d9cfc0">
-<h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
-<div id="comments-list" style="margin-bottom:1rem">
-<p style="color:#9a8d7e;font-size:.85rem">Загрузка комментариев...</p>
-</div>
-<div id="comment-form" style="display:none">
-<textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
-<div style="display:flex;justify-content:flex-end;margin-top:.4rem">
-<button onclick="postComment()" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:6px 16px;border-radius:5px;background:#b44a2d;color:#fff;border:none;cursor:pointer;font-weight:600">Отправить</button>
-</div>
-</div>
-<div id="comment-login" style="display:none">
-<p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p>
-</div>
-</div>
-<script>
-(function(){
-  const PAGE_ID = location.pathname.split('/').pop().replace('.html','');
-  const db = firebase.firestore();
-  const auth = firebase.auth();
-  const ADMIN_EMAILS = window.ADMIN_EMAILS || (typeof ADMIN_EMAILS !== 'undefined' ? ADMIN_EMAILS : []);
 
-  function isAdmin(email) {
-    return Array.isArray(ADMIN_EMAILS) ? ADMIN_EMAILS.includes(email) : email === ADMIN_EMAILS;
-  }
-
-  async function loadComments() {
-    const list = document.getElementById('comments-list');
-    try {
-      const snap = await db.collection('comments').where('page','==',PAGE_ID).orderBy('createdAt','desc').get();
-      if (snap.empty) {
-        list.innerHTML = '<p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p>';
-        return;
-      }
-      const user = auth.currentUser;
-      const adminUser = user && isAdmin(user.email);
-      let html = '';
-      snap.forEach(doc => {
-        const c = doc.data();
-        const date = c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-        const delBtn = adminUser ? ' <button onclick="deleteComment(\''+doc.id+'\')" style="font-size:.7rem;color:#c44;background:none;border:none;cursor:pointer;font-family:JetBrains Mono,monospace">удалить</button>' : '';
-        html += '<div style="padding:.6rem 0;border-bottom:1px solid #ede6da">';
-        html += '<div style="display:flex;justify-content:space-between;align-items:baseline">';
-        var badge = '';
-        if (c.authorRole === 'superadmin') badge = ' <span style="font-family:JetBrains Mono,monospace;font-size:.6rem;background:#faeeda;color:#854f0b;padding:1px 4px;border-radius:3px;font-weight:700;vertical-align:middle">преподаватель</span>';
-        else if (c.authorRole === 'admin') badge = ' <span style="font-family:JetBrains Mono,monospace;font-size:.6rem;background:#fde8e8;color:#c44;padding:1px 4px;border-radius:3px;vertical-align:middle">admin</span>';
-        html += '<strong style="font-size:.88rem;color:#2c2419">'+(c.authorFio || c.authorEmail)+badge+'</strong>';
-        html += '<span style="font-size:.72rem;color:#9a8d7e;font-family:JetBrains Mono,monospace">'+date+delBtn+'</span>';
-        html += '</div>';
-        html += '<p style="font-size:.88rem;margin-top:.2rem;margin-bottom:0;color:#2c2419">'+escapeHtml(c.text)+'</p>';
-        html += '</div>';
-      });
-      list.innerHTML = html;
-    } catch(e) {
-      list.innerHTML = '<p style="color:#c44;font-size:.85rem">Ошибка загрузки: '+e.message+'</p>';
-    }
-  }
-
-  function escapeHtml(t) {
-    return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  window.postComment = async function() {
-    const text = document.getElementById('comment-text').value.trim();
-    if (!text) return;
-    const user = auth.currentUser;
-    if (!user) return;
-    let fio = user.email;
-    try {
-      const ud = await db.collection('users').doc(user.uid).get();
-      if (ud.exists && ud.data().fio) fio = ud.data().fio;
-    } catch(e){}
-    try {
-      await db.collection('comments').add({
-        page: PAGE_ID,
-        text: text,
-        authorEmail: user.email,
-        authorFio: fio,
-        authorUid: user.uid,
-        authorRole: window._userRole || 'student',
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      document.getElementById('comment-text').value = '';
-      loadComments();
-    } catch(e) { alert('Ошибка: '+e.message); }
-  };
-
-  window.deleteComment = async function(docId) {
-    if (!confirm('Удалить комментарий?')) return;
-    try {
-      await db.collection('comments').doc(docId).delete();
-      loadComments();
-    } catch(e) { alert('Ошибка: '+e.message); }
-  };
-
-  auth.onAuthStateChanged(async user => {
-    if (user && window._userApproved) {
-      document.getElementById('comment-form').style.display = '';
-      document.getElementById('comment-login').style.display = 'none';
-    } else {
-      document.getElementById('comment-form').style.display = 'none';
-      document.getElementById('comment-login').style.display = '';
-    }
-    loadComments();
-  });
-
-  // Also re-check after a delay (approval may load async)
-  setTimeout(function(){
-    const user = auth.currentUser;
-    if (user && window._userApproved) {
-      document.getElementById('comment-form').style.display = '';
-      document.getElementById('comment-login').style.display = 'none';
-    }
-  }, 2000);
-})();
-</script>
 
 </body>
 </html>

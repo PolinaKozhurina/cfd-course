@@ -49,13 +49,73 @@
         ]
       }
       // === Добавляйте новые курсы здесь ===
-      // {
-      //   id: "first-semester",
-      //   label: "Основы ЧМ",
-      //   semester: "Осень 2025",
-      //   sections: [ ... ],
-      //   extras: [ ... ]
-      // }
+      ,{
+        id: "sem1",
+        label: "Теория разн. схем",
+        semester: "Осень 2025",
+        sections: [
+          {
+            title: "Основы",
+            items: [
+              { href: "s1-01.html", label: "§1 Основные понятия" },
+              { href: "s1-02.html", label: "§2 Аппроксимация" },
+              { href: "s1-03.html", label: "§3 Теорема Лакса" },
+              { href: "s1-04.html", label: "§4 Дифф. приближение" },
+              { href: "s1-05.html", label: "§5 Устойчивость" },
+              { href: "s1-06.html", label: "§6 Дисперсия" }
+            ]
+          },
+          {
+            title: "Свойства схем",
+            items: [
+              { href: "s1-07.html", label: "§7 Неопр. коэффициенты" },
+              { href: "s1-08.html", label: "§8 Монотонность" },
+              { href: "s1-09.html", label: "§9 Теорема Годунова" },
+              { href: "s1-10.html", label: "§10 TVD" },
+              { href: "s1-11.html", label: "§11 Полож. коэфф." }
+            ]
+          },
+          {
+            title: "Газодинамика",
+            items: [
+              { href: "s1-12.html", label: "§12 Лагранж" },
+              { href: "s1-13.html", label: "§13 Схема «крест»" },
+              { href: "s1-14.html", label: "§14 Устойчивость «крест»" },
+              { href: "s1-15.html", label: "§15 Метод Годунова" }
+            ]
+          },
+          {
+            title: "Задача Римана",
+            items: [
+              { href: "s1-16.html", label: "§16 Точная задача" },
+              { href: "s1-17.html", label: "§17 Точный решатель" },
+              { href: "s1-18.html", label: "§18 Классификация" },
+              { href: "s1-19.html", label: "§19 Метод Рое" },
+              { href: "s1-20.html", label: "§20 Метод Ошера" },
+              { href: "s1-21.html", label: "§21 HLL" },
+              { href: "s1-22.html", label: "§22 HLLC" }
+            ]
+          },
+          {
+            title: "Высокий порядок",
+            items: [
+              { href: "s1-23.html", label: "§23 Колган" },
+              { href: "s1-24.html", label: "§24 Колган–Родионов" },
+              { href: "s1-25.html", label: "§25 ENO" },
+              { href: "s1-26.html", label: "§26 WENO" },
+              { href: "s1-27.html", label: "§27 МакКормак" }
+            ]
+          },
+          {
+            title: "Стабилизация",
+            items: [
+              { href: "s1-28.html", label: "§28 Диффузия" },
+              { href: "s1-29.html", label: "§29 Иск. вязкость" },
+              { href: "s1-30.html", label: "§30 Иск. вязкость II" }
+            ]
+          }
+        ]
+      }
     ],
     utils: [
       { href: "profile.html", label: "Профиль" }

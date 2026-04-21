@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>§22. Метод HLLC</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
+.wrap{max-width:760px;margin:0 auto;padding:2rem 1.5rem 4rem}
+.lecture-tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;padding:.2rem .5rem;border-radius:3px;display:inline-block;margin-bottom:.5rem;background:#e8f4f0;color:#1a6b5a}
+.lecture-num{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);margin-bottom:.3rem}
+h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;line-height:1.15;margin-bottom:1.5rem;color:var(--text)}
+h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--accent);margin:2rem 0 .8rem;padding-top:.5rem;border-top:1px solid var(--border)}
+h3{font-family:'Source Serif 4',serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:1.5rem 0 .5rem}
+p{margin-bottom:1rem;text-align:justify;hyphens:auto}
+.equation{margin:1.5rem 0;text-align:center;overflow-x:auto}
+.definition{background:var(--bg2);border-left:3px solid var(--accent2);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
+.theorem{background:#fdf6ee;border-left:3px solid var(--accent);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
+.theorem .th-title{font-family:'Playfair Display',serif;font-weight:700;color:var(--accent);margin-bottom:.3rem}
+.remark{background:#f0f7f4;border-left:3px solid var(--accent2);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:.92rem}
+code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:.1rem .3rem;border-radius:3px}
+.lecture-nav{display:flex;justify-content:space-between;gap:1rem;margin-top:3rem;padding-top:1.5rem;border-top:2px solid var(--border);flex-wrap:wrap}
+.lecture-nav a{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);text-decoration:none;padding:.5rem .8rem;border:1px solid var(--border);border-radius:6px;transition:all .15s;max-width:48%}
+.lecture-nav a:hover{border-color:var(--accent);background:rgba(180,74,45,.05)}
+.nav-prev{text-align:left}
+.nav-next{text-align:right;margin-left:auto}
+</style>
+</head>
+<body>
+<script src="js/nav.js"></script>
+
+<div class="wrap">
+<span class="lecture-tag">Задача Римана</span>
+<div class="lecture-num">§22 · Семестр 1</div>
+<h1>Метод HLLC</h1>
+
+<p>Метод HLLC</p>
+
+<p>Мотивация метода HLLC. Метод HLL, несмотря на свою устойчивость
+и простоту, обладает существенным недостатком: он не разрешает контактный разрыв, поскольку аппроксимирует решение задачи Римана единственным промежуточным состоянием. В задачах газовой динамики это приводит
+к чрезмерному сглаживанию плотностных неоднородностей и контактных поверхностей.
+Метод HLLC (Harten–Lax–van Leer–Contact) представляет собой модификацию метода HLL, в которой дополнительно учитывается контактный разрыв. Тем самым метод HLLC сохраняет устойчивость и простоту HLL, но
+существенно улучшает разрешающую способность схемы.</p>
+
+<p>Волновая модель метода HLLC. В методе HLLC решение задачи Римана аппроксимируется тремя волнами:</p>
+
+<p> левой акустической волной со скоростью SL ,
+ контактным разрывом со скоростью S* ,
+ правой акустической волной со скоростью S𝑅 .
+Соответственно, внутри области взаимодействия волн вводятся два промежуточных состояния u*L и u*𝑅 , разделённые контактным разрывом.
+Таким образом, метод HLLC восстанавливает основную волновую структуру точного решения задачи Римана для уравнений Эйлера: две акустические волны и контактный разрыв.</p>
+
+<p>Оценки скоростей волн. Скорости крайних волн SL и S𝑅 в методе
+HLLC, как правило, задаются так же, как и в методе HLL:</p>
+
+<p>(︀
+)︀
+SL = min vL − aL , v𝑅 − a𝑅 ,</p>
+
+<p>(︀
+)︀
+S𝑅 = max vL + aL , v𝑅 + a𝑅 ,</p>
+
+<p>Скорость контактного разрыва S* определяется из условий баланса массы
+и импульса и имеет вид</p>
+
+<p>S* =</p>
+
+<p>p𝑅 − pL + \rhoL vL (SL − vL ) − \rho𝑅 v𝑅 (S𝑅 − v𝑅 )
+.
+\rhoL (SL − vL ) − \rho𝑅 (S𝑅 − v𝑅 )</p>
+
+<p>Промежуточные состояния HLLC. Промежуточные состояния по обе
+стороны контактного разрыва имеют одинаковые скорость и давление, что
+отражает физическую природу контакта:</p>
+
+<p>v*L = v*𝑅 = S* ,</p>
+
+<p>p*L = p*𝑅 = p* .</p>
+
+<p>Плотности в промежуточных состояниях определяются из соотношений сохранения массы:</p>
+
+<p>\rho*𝐾 = \rho𝐾</p>
+
+<p>S𝐾 − v𝐾
+,
+S𝐾 − S*</p>
+
+<p>𝐾 = L, 𝑅.</p>
+
+<p>Полная энергия в промежуточных состояниях определяется формулой</p>
+
+<p>𝐸*𝐾 =</p>
+
+<p>(S𝐾 − v𝐾 )𝐸𝐾 − p𝐾 v𝐾 + p* S*
+,
+S𝐾 − S *</p>
+
+<p>𝐾 = L, 𝑅.</p>
+
+<p>Численный поток метода HLLC. Численный поток в методе HLLC
+определяется в зависимости от взаимного расположения нуля относительно
+скоростей волн и имеет следующий вид:</p>
+
+<p>FHLLC =</p>
+
+<p>⎧
+⎪
+⎪
+f (uL ),
+⎪
+⎪
+⎪
+⎪
+⎪
+⎪
+(︀
+)︀
+⎪
+⎪
+⎨ f (uL ) + SL u*L − uL ,</p>
+
+<div class="equation">\[SL \ge 0, SL < 0 < S* , \tag{22.4}\]</div>
+
+<p>(︀
+)︀
+⎪
+⎪
+⎪
+f
+(u
+)
++
+S
+u
+−
+u
+⎪
+𝑅
+𝑅
+*𝑅
+𝑅 , S* &lt; 0 &lt; S𝑅 ,
+⎪
+⎪
+⎪
+⎪
+⎪
+⎪
+⎩ f (u𝑅 ),
+S𝑅 \le 0.
+Эта формула полностью определяет численный поток метода HLLC и сводится к потоку HLL при отсутствии контактного разрыва.</p>
+
+<p>Свойства метода HLLC. Метод HLLC является консервативным и устойчивым при выполнении условия Куранта. По сравнению с методом HLL он</p>
+
+<p>существенно лучше разрешает контактные разрывы и плотностные неоднородности, что особенно важно в задачах газовой динамики.
+Метод HLLC не требует полного спектрального разложения матрицы Якоби и потому остаётся вычислительно эффективным. В то же время он не всегда обеспечивает строгую энтропийную корректность, что в ряде приложений
+может требовать дополнительных ограничений.</p>
+
+<div class="lecture-nav"><a href="s1-21.html" class="nav-prev">← §21. Метод HLL</a><a href="s1-23.html" class="nav-next">§23. Метод Годунова–Колгана →</a></div>
+</div>
+
+<!-- Comments -->
+<div style="max-width:760px;margin:0 auto;padding:0 1.5rem 2rem">
+<div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">
+<h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
+<div id="comments-list"><p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p></div>
+<div id="comment-form" style="display:none;margin-top:.8rem">
+<textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
+<button onclick="window._postComment()" style="margin-top:.4rem;background:#b44a2d;color:#fff;border:none;padding:6px 18px;border-radius:5px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer">Отправить</button>
+</div>
+<div id="comment-login">
+<p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p>
+</div>
+</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+// === Comments System ===
+(function(){
+  if (typeof firebase === 'undefined') { console.warn('Comments: firebase not loaded'); return; }
+  var db, auth;
+  try { db = firebase.firestore(); auth = firebase.auth(); }
+  catch(e) { console.warn('Comments: firebase not initialized', e); return; }
+
+  var PAGE_ID = location.pathname.split('/').pop().replace('.html','') || 'index';
+  var ADMINS = (typeof ADMIN_EMAILS !== 'undefined') ? ADMIN_EMAILS : [];
+
+  function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function loadComments() {
+    var list = document.getElementById('comments-list');
+    if (!list) return;
+    db.collection('comments').where('page','==',PAGE_ID).get().then(function(snap) {
+      var docs = [];
+      snap.forEach(function(d) { docs.push(d); });
+      docs.sort(function(a,b) {
+        var ta = a.data().createdAt ? a.data().createdAt.seconds : 0;
+        var tb = b.data().createdAt ? b.data().createdAt.seconds : 0;
+        return tb - ta;
+      });
+      if (docs.length === 0) {
+        list.innerHTML = '<p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p>';
+        return;
+      }
+      var user = auth.currentUser;
+      var isAdm = user && ADMINS.indexOf(user.email) >= 0;
+      var html = '';
+      docs.forEach(function(doc) {
+        var c = doc.data();
+        var date = c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+        var del = isAdm ? ' <button onclick="window._deleteComment(\''+doc.id+'\')" style="font-size:.7rem;color:#c44;background:none;border:none;cursor:pointer">удалить</button>' : '';
+        var badge = '';
+        if (c.authorRole === 'superadmin') badge = ' <span style="font-size:.6rem;background:#faeeda;color:#854f0b;padding:1px 4px;border-radius:3px;font-weight:700">преподаватель</span>';
+        html += '<div style="padding:.6rem 0;border-bottom:1px solid #ede6da">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:baseline">';
+        html += '<strong style="font-size:.88rem">'+(c.authorFio||c.authorEmail)+badge+'</strong>';
+        html += '<span style="font-size:.72rem;color:#9a8d7e">'+date+del+'</span></div>';
+        html += '<p style="font-size:.88rem;margin-top:.2rem;margin-bottom:0">'+esc(c.text)+'</p></div>';
+      });
+      list.innerHTML = html;
+    }).catch(function(e) {
+      list.innerHTML = '<p style="color:#c44;font-size:.85rem">Ошибка: '+e.message+'</p>';
+    });
+  }
+
+  window._postComment = function() {
+    var text = document.getElementById('comment-text').value.trim();
+    if (!text) return;
+    var user = auth.currentUser;
+    if (!user) return;
+    var fio = user.email;
+    var role = (ADMINS.indexOf(user.email) >= 0) ? 'superadmin' : 'student';
+    db.collection('users').doc(user.uid).get().then(function(ud) {
+      if (ud.exists && ud.data().fio) fio = ud.data().fio;
+    }).catch(function(){}).finally(function() {
+      db.collection('comments').add({
+        page: PAGE_ID, text: text,
+        authorEmail: user.email, authorFio: fio, authorUid: user.uid, authorRole: role,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function() {
+        document.getElementById('comment-text').value = '';
+        loadComments();
+      }).catch(function(e) { alert('Ошибка: '+e.message); });
+    });
+  };
+
+  window._deleteComment = function(id) {
+    if (!confirm('Удалить?')) return;
+    db.collection('comments').doc(id).delete().then(loadComments).catch(function(e){alert(e.message);});
+  };
+
+  var _checkAuthRetries = 0;
+  function checkAuth() {
+    var user = auth.currentUser;
+    var form = document.getElementById('comment-form');
+    var login = document.getElementById('comment-login');
+    if (!form || !login) return;
+    if (user && window._userApproved) {
+      form.style.display = '';
+      login.style.display = 'none';
+      _checkAuthRetries = 0;
+    } else if (user && typeof window._userApproved === 'undefined' && _checkAuthRetries < 15) {
+      _checkAuthRetries++;
+      setTimeout(checkAuth, 400);
+    } else if (user) {
+      form.style.display = 'none';
+      login.style.display = '';
+      login.querySelector('p').textContent = 'Ваш профиль ещё не подтверждён.';
+      _checkAuthRetries = 0;
+    } else {
+      form.style.display = 'none';
+      login.style.display = '';
+      _checkAuthRetries = 0;
+    }
+  }
+
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', loadComments); }
+  else { loadComments(); }
+
+  function safeCheckAuth() {
+    if (document.getElementById('comment-form')) checkAuth();
+    else setTimeout(safeCheckAuth, 200);
+  }
+  auth.onAuthStateChanged(function() { setTimeout(safeCheckAuth, 500); });
+  window.addEventListener('authReady', safeCheckAuth);
+})();
+</script>
+</body>
+</html>

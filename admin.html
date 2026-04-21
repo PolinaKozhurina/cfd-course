@@ -1367,7 +1367,7 @@ function renderGroupMsgs(snap,gid) {
     var m=doc.data();
     var date=m.createdAt?new Date(m.createdAt.seconds*1000).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
     var isA=m.role==='admin',align=isA?'flex-end':'flex-start',bg=isA?'#e6f1fb':'#f5f0e8',border=isA?'#3a5ba0':'#d9cfc0';
-    var name=m.authorFio||m.authorEmail||'';
+    var name=m.authorFio||'';if(m.role==='admin'&&(!name||name.includes('@')))name='Admin';if(!name)name=m.authorEmail||'';
     var roleTag=isA?'<span style="font-size:.6rem;background:#fde8e8;color:#c44;padding:1px 4px;border-radius:3px;font-weight:700;margin-left:4px">Admin</span>':'';
     var delBtn=isA?' <button onclick="delGrpMsg(\''+gid+'\',\''+doc.id+'\')" style="font-size:.62rem;color:#c44;background:none;border:none;cursor:pointer;opacity:.6">✕</button>':'';
     var readHtml='';
@@ -1378,7 +1378,14 @@ function renderGroupMsgs(snap,gid) {
     }
     html+='<div style="display:flex;justify-content:'+align+';margin-bottom:5px"><div style="max-width:75%;background:'+bg+';border:1px solid '+border+';border-radius:8px;padding:5px 9px;font-size:.84rem">';
     html+='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:1px"><strong style="font-size:.75rem">'+name+roleTag+'</strong><span style="font-size:.62rem;color:var(--text3);white-space:nowrap">'+date+delBtn+'</span></div>';
-    html+='<div>'+m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div>'+readHtml+'</div></div>';
+    html+='<div>'+m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div>';
+    // Reactions
+    var rks=Object.keys(m.reactions||{}),reactH='';
+    if(rks.length>0||true){reactH='<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px">';
+      rks.forEach(function(ej){var rv=m.reactions[ej]||{},rc=Object.keys(rv).length;if(rc===0)return;var myR=me&&rv[me.uid],rTt=Object.values(rv).join(', ');
+        reactH+='<span onclick="adminToggleReaction(\'group\',\''+gid+'\',\''+doc.id+'\',\''+ej+'\',\'messages\')" title="'+rTt+'" style="cursor:pointer;padding:1px 5px;border-radius:10px;font-size:.75rem;background:'+(myR?'#e8f4f0':'#f5f0e8')+';border:1px solid '+(myR?'#1a6b5a':'#d9cfc0')+';user-select:none">'+ej+' <span style="font-size:.6rem;font-family:JetBrains Mono,monospace">'+rc+'</span></span>';});
+      reactH+='<span style="cursor:pointer;padding:1px 5px;border-radius:10px;font-size:.72rem;background:var(--bg2);border:1px solid var(--border);opacity:.4;user-select:none" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.4" onclick="adminShowReactPicker(this,\'group\',\''+gid+'\',\''+doc.id+'\',\'messages\')">+</span></div>';}
+    html+=reactH+readHtml+'</div></div>';
   });
   if(!html) html='<p style="text-align:center;color:var(--text3);padding:2rem;font-size:.85rem">Нет сообщений</p>';
   body.innerHTML=html; body.scrollTop=body.scrollHeight;
@@ -1388,14 +1395,14 @@ async function sendAdminChat(){
   var gid=_currentChatId,input=document.getElementById('adminChatInput'),text=input.value.trim();
   if(!gid||!text||_currentChatMode!=='group') return;
   var user=auth.currentUser;if(!user) return;
-  var fio=user.email;try{var ud=await db.collection('users').doc(user.uid).get();if(ud.exists&&ud.data().fio)fio=ud.data().fio;}catch(e){}
+  var fio=user.email;try{var ud=await db.collection('users').doc(user.uid).get();if(ud.exists&&ud.data().fio)fio=ud.data().fio;else if(isAdmin(user.email))fio='Admin';}catch(e){}
   try{await db.collection('groups').doc(gid).collection('messages').add({text,role:'admin',authorEmail:user.email,authorFio:fio,authorUid:user.uid,readBy:{},createdAt:firebase.firestore.FieldValue.serverTimestamp()});input.value='';}catch(e){alert('Ошибка: '+e.message);}
 }
 
 async function sendToAllGroups(){
   var text=prompt('Сообщение для ВСЕХ групп:');if(!text||!text.trim()) return;
   var user=auth.currentUser;if(!user) return;
-  var fio=user.email;try{var ud=await db.collection('users').doc(user.uid).get();if(ud.exists&&ud.data().fio)fio=ud.data().fio;}catch(e){}
+  var fio=user.email;try{var ud=await db.collection('users').doc(user.uid).get();if(ud.exists&&ud.data().fio)fio=ud.data().fio;else if(isAdmin(user.email))fio='Admin';}catch(e){}
   try{for(var gid of Object.keys(allGroups)){await db.collection('groups').doc(gid).collection('messages').add({text:text.trim(),role:'admin',authorEmail:user.email,authorFio:fio,authorUid:user.uid,readBy:{},createdAt:firebase.firestore.FieldValue.serverTimestamp()});}alert('Отправлено '+Object.keys(allGroups).length+' группам ✓');}catch(e){alert('Ошибка: '+e.message);}
 }
 
@@ -1418,7 +1425,7 @@ function renderDmMsgs(snap,dmId){
   snap.forEach(function(doc){
     var m=doc.data(),date=m.createdAt?new Date(m.createdAt.seconds*1000).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
     var isMine=me&&m.authorUid===me.uid,align=isMine?'flex-end':'flex-start',bg=isMine?'#e6f1fb':'#f5f0e8',border=isMine?'#3a5ba0':'#d9cfc0';
-    var name=m.authorFio||m.authorEmail||'';
+    var name=m.authorFio||'';if(m.role==='admin'&&(!name||name.includes('@')))name='Admin';if(!name)name=m.authorEmail||'';
     var delBtn=isMine?' <button onclick="delDmMsg(\''+dmId+'\',\''+doc.id+'\')" style="font-size:.62rem;color:#c44;background:none;border:none;cursor:pointer;opacity:.6">✕</button>':'';
     var readHtml='';
     if(isMine){readHtml=m.readAt?'<div style="text-align:right;font-size:.58rem;color:#1a6b5a;margin-top:2px">✓✓ прочитано '+new Date(m.readAt).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</div>':'<div style="text-align:right;font-size:.58rem;color:#9a8d7e;margin-top:2px">✓ отправлено</div>';}
@@ -1426,7 +1433,13 @@ function renderDmMsgs(snap,dmId){
     if(!isMine && !m.readAt) unreadIds.push(doc.id);
     html+='<div style="display:flex;justify-content:'+align+';margin-bottom:5px"><div style="max-width:75%;background:'+bg+';border:1px solid '+border+';border-radius:8px;padding:5px 9px;font-size:.84rem">';
     html+='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:1px"><strong style="font-size:.75rem">'+name+'</strong><span style="font-size:.62rem;color:var(--text3);white-space:nowrap">'+date+delBtn+'</span></div>';
-    html+='<div>'+m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div>'+readHtml+'</div></div>';
+    html+='<div>'+m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div>';
+    var rks2=Object.keys(m.reactions||{}),reactH2='';
+    if(rks2.length>0||true){reactH2='<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px">';
+      rks2.forEach(function(ej){var rv=m.reactions[ej]||{},rc=Object.keys(rv).length;if(rc===0)return;var myR=me&&rv[me.uid],rTt=Object.values(rv).join(', ');
+        reactH2+='<span onclick="adminToggleReaction(\'dm\',\''+dmId+'\',\''+doc.id+'\',\''+ej+'\',\'messages\')" title="'+rTt+'" style="cursor:pointer;padding:1px 5px;border-radius:10px;font-size:.75rem;background:'+(myR?'#e8f4f0':'#f5f0e8')+';border:1px solid '+(myR?'#1a6b5a':'#d9cfc0')+';user-select:none">'+ej+' <span style="font-size:.6rem;font-family:JetBrains Mono,monospace">'+rc+'</span></span>';});
+      reactH2+='<span style="cursor:pointer;padding:1px 5px;border-radius:10px;font-size:.72rem;background:var(--bg2);border:1px solid var(--border);opacity:.4;user-select:none" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.4" onclick="adminShowReactPicker(this,\'dm\',\''+dmId+'\',\''+doc.id+'\',\'messages\')">+</span></div>';}
+    html+=reactH2+readHtml+'</div></div>';
   });
   if(!html)html='<p style="text-align:center;color:var(--text3);padding:2rem;font-size:.85rem">Нет сообщений</p>';
   body.innerHTML=html;body.scrollTop=body.scrollHeight;
@@ -1444,7 +1457,7 @@ async function sendAdminDm(){
   var uid=_currentChatId,input=document.getElementById('adminChatInput'),text=input.value.trim();
   if(!uid||!text||_currentChatMode!=='dm')return;
   var user=auth.currentUser;if(!user)return;
-  var fio=user.email;try{var ud=await db.collection('users').doc(user.uid).get();if(ud.exists&&ud.data().fio)fio=ud.data().fio;}catch(e){}
+  var fio=user.email;try{var ud=await db.collection('users').doc(user.uid).get();if(ud.exists&&ud.data().fio)fio=ud.data().fio;else if(isAdmin(user.email))fio='Admin';}catch(e){}
   var dmId=getDmId(user.uid,uid);
   try{await db.collection('dm').doc(dmId).set({participants:[user.uid,uid],updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
     await db.collection('dm').doc(dmId).collection('messages').add({text,authorEmail:user.email,authorFio:fio,authorUid:user.uid,readAt:null,createdAt:firebase.firestore.FieldValue.serverTimestamp()});input.value='';_buildingChatList=false;buildChatList();}catch(e){alert('Ошибка: '+e.message);}
@@ -1509,6 +1522,59 @@ function adminFilterNewChat() {
   var q = (document.getElementById('adminNewChatSearch').value||'').toLowerCase();
   var items = document.querySelectorAll('#adminNewChatList > div');
   items.forEach(function(el){ el.style.display = (!q || el.dataset.search.includes(q)) ? '' : 'none'; });
+}
+
+// ===== Reactions =====
+var QUICK_REACTS = ['👍','❤️','😂','🔥','😱','✅'];
+
+function adminShowReactPicker(btn, chatType, refId, msgId, col) {
+  var old = document.getElementById('reactPicker');
+  if (old) old.remove();
+  var picker = document.createElement('div');
+  picker.id = 'reactPicker';
+  picker.style.cssText = 'position:absolute;z-index:999;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);padding:4px;display:flex;gap:2px';
+  QUICK_REACTS.forEach(function(e) {
+    var sp = document.createElement('span');
+    sp.textContent = e;
+    sp.style.cssText = 'cursor:pointer;padding:3px 5px;border-radius:5px;font-size:1.1rem;transition:background .1s';
+    sp.onmouseover = function(){ this.style.background='var(--bg2)'; };
+    sp.onmouseout = function(){ this.style.background=''; };
+    sp.onclick = function(ev) { ev.stopPropagation(); picker.remove(); adminToggleReaction(chatType, refId, msgId, e, col); };
+    picker.appendChild(sp);
+  });
+  btn.style.position = 'relative';
+  btn.appendChild(picker);
+  picker.style.bottom = '100%';
+  picker.style.left = '0';
+  setTimeout(function() {
+    document.addEventListener('click', function handler(ev) {
+      if (!picker.contains(ev.target)) { picker.remove(); document.removeEventListener('click', handler); }
+    });
+  }, 10);
+}
+
+function adminToggleReaction(chatType, refId, msgId, emoji, col) {
+  var me = auth.currentUser;
+  if (!me) return;
+  var fio = 'Admin';
+  var docRef;
+  if (chatType === 'group') {
+    docRef = db.collection('groups').doc(refId).collection(col||'messages').doc(msgId);
+  } else {
+    docRef = db.collection('dm').doc(refId).collection('messages').doc(msgId);
+  }
+  docRef.get().then(function(snap) {
+    if (!snap.exists) return;
+    var reactions = snap.data().reactions || {};
+    if (!reactions[emoji]) reactions[emoji] = {};
+    if (reactions[emoji][me.uid]) {
+      delete reactions[emoji][me.uid];
+      if (Object.keys(reactions[emoji]).length === 0) delete reactions[emoji];
+    } else {
+      reactions[emoji][me.uid] = fio;
+    }
+    return docRef.update({ reactions: reactions });
+  }).catch(function(e) { console.warn('Reaction error:', e); });
 }
 </script>
 </body>

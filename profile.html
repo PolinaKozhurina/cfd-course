@@ -614,7 +614,9 @@ function profRenderMsgs(snap, type, refId) {
     var align = isSelf ? 'flex-end' : 'flex-start';
     var bg = isSelf ? '#e8f4f0' : (isTeacher ? '#e6f1fb' : '#f5f0e8');
     var border = isSelf ? '#1a6b5a' : (isTeacher ? '#3a5ba0' : '#d9cfc0');
-    var name = m.authorFio || m.authorEmail || '';
+    var name = m.authorFio || '';
+    if (isTeacher && (!name || name.includes('@'))) name = 'Admin';
+    if (!name) name = m.authorEmail || '';
     var roleTag = isTeacher && !isSelf ? ' <span style="font-size:.55rem;background:#fde8e8;color:#c44;padding:1px 4px;border-radius:3px;font-weight:700">Admin</span>' : '';
 
     // Track unread
@@ -658,6 +660,30 @@ function profRenderMsgs(snap, type, refId) {
     html += '<strong style="font-size:.7rem">'+name+roleTag+'</strong>';
     html += '<span style="font-size:.58rem;color:#9a8d7e;white-space:nowrap">'+date+'</span></div>';
     html += '<div style="font-size:.83rem">'+(m.text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div>';
+
+    // Reactions
+    var reactions = m.reactions || {};
+    var reactHtml = '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px">';
+    var hasReactions = false;
+    var reactKeys = Object.keys(reactions);
+    for (var ri = 0; ri < reactKeys.length; ri++) {
+      var emoji = reactKeys[ri];
+      var reactors = reactions[emoji] || {};
+      var rNames = Object.values(reactors);
+      var rCount = rNames.length;
+      if (rCount === 0) continue;
+      hasReactions = true;
+      var myReact = me && reactors[me.uid];
+      var rTitle = rNames.join(', ');
+      var rBg = myReact ? '#e8f4f0' : '#f5f0e8';
+      var rBorder = myReact ? '#1a6b5a' : '#d9cfc0';
+      reactHtml += '<span onclick="profToggleReaction(\''+type+'\',\''+refId+'\',\''+doc.id+'\',\''+emoji+'\')" title="'+rTitle+'" style="cursor:pointer;padding:1px 5px;border-radius:10px;font-size:.75rem;background:'+rBg+';border:1px solid '+rBorder+';user-select:none">'+emoji+' <span style="font-size:.6rem;font-family:JetBrains Mono,monospace">'+rCount+'</span></span>';
+    }
+    // Add reaction button
+    reactHtml += '<span class="prof-react-btn" style="cursor:pointer;padding:1px 5px;border-radius:10px;font-size:.72rem;background:var(--bg2,#f5f0e8);border:1px solid var(--border,#d9cfc0);opacity:.4;transition:opacity .15s;user-select:none" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.4" onclick="profShowReactPicker(this,\''+type+'\',\''+refId+'\',\''+doc.id+'\')">+</span>';
+    reactHtml += '</div>';
+
+    html += reactHtml;
     html += readHtml + '</div></div>';
   });
   if (!html) html = '<p style="text-align:center;color:#9a8d7e;padding:1.5rem;font-size:.8rem">Нет сообщений. Напишите первое!</p>';
@@ -753,6 +779,64 @@ function profFilterNewChat() {
   var q = (document.getElementById('newChatSearch').value||'').toLowerCase();
   var items = document.querySelectorAll('#newChatList > div');
   items.forEach(function(el){ el.style.display = (!q || el.dataset.search.includes(q)) ? '' : 'none'; });
+}
+
+// ===== Reactions =====
+var QUICK_REACTS = ['👍','❤️','😂','🔥','😱','✅'];
+
+function profShowReactPicker(btn, type, refId, msgId) {
+  // Remove any existing picker
+  var old = document.getElementById('reactPicker');
+  if (old) old.remove();
+  var picker = document.createElement('div');
+  picker.id = 'reactPicker';
+  picker.style.cssText = 'position:absolute;z-index:999;background:#fff;border:1px solid var(--border,#d9cfc0);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);padding:4px;display:flex;gap:2px';
+  QUICK_REACTS.forEach(function(e) {
+    var sp = document.createElement('span');
+    sp.textContent = e;
+    sp.style.cssText = 'cursor:pointer;padding:3px 5px;border-radius:5px;font-size:1.1rem;transition:background .1s';
+    sp.onmouseover = function(){ this.style.background='var(--bg2,#f5f0e8)'; };
+    sp.onmouseout = function(){ this.style.background=''; };
+    sp.onclick = function(ev) { ev.stopPropagation(); picker.remove(); profToggleReaction(type, refId, msgId, e); };
+    picker.appendChild(sp);
+  });
+  // Position near the button
+  btn.style.position = 'relative';
+  btn.appendChild(picker);
+  picker.style.bottom = '100%';
+  picker.style.left = '0';
+  // Close on outside click
+  setTimeout(function() {
+    document.addEventListener('click', function handler(ev) {
+      if (!picker.contains(ev.target)) { picker.remove(); document.removeEventListener('click', handler); }
+    });
+  }, 10);
+}
+
+function profToggleReaction(type, refId, msgId, emoji) {
+  var me = window._pUser;
+  if (!me) return;
+  var fio = window._pFio || me.email;
+  var col, docRef;
+  if (type === 'group') {
+    var collection = window._profCollection || 'messages';
+    docRef = db2.collection('groups').doc(refId).collection(collection).doc(msgId);
+  } else {
+    docRef = db2.collection('dm').doc(refId).collection('messages').doc(msgId);
+  }
+  // Read current reactions, toggle user
+  docRef.get().then(function(snap) {
+    if (!snap.exists) return;
+    var reactions = snap.data().reactions || {};
+    if (!reactions[emoji]) reactions[emoji] = {};
+    if (reactions[emoji][me.uid]) {
+      delete reactions[emoji][me.uid];
+      if (Object.keys(reactions[emoji]).length === 0) delete reactions[emoji];
+    } else {
+      reactions[emoji][me.uid] = fio;
+    }
+    return docRef.update({ reactions: reactions });
+  }).catch(function(e) { console.warn('Reaction error:', e); });
 }
 </script>
 </body>

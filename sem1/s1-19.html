@@ -6,194 +6,101 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>§19. Метод Рое</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
-<style>
-:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8}
-*{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
-.wrap{max-width:760px;margin:0 auto;padding:2rem 1.5rem 4rem}
-.lecture-tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;padding:.2rem .5rem;border-radius:3px;display:inline-block;margin-bottom:.5rem;background:#e8f4f0;color:#1a6b5a}
-.lecture-num{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);margin-bottom:.3rem}
-h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;line-height:1.15;margin-bottom:1.5rem;color:var(--text)}
-h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--accent);margin:2rem 0 .8rem;padding-top:.5rem;border-top:1px solid var(--border)}
-h3{font-family:'Source Serif 4',serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:1.5rem 0 .5rem}
-p{margin-bottom:1rem;text-align:justify;hyphens:auto}
-.equation{margin:1.5rem 0;text-align:center;overflow-x:auto}
-.definition{background:var(--bg2);border-left:3px solid var(--accent2);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
-.theorem{background:#fdf6ee;border-left:3px solid var(--accent);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
-.theorem .th-title{font-family:'Playfair Display',serif;font-weight:700;color:var(--accent);margin-bottom:.3rem}
-.remark{background:#f0f7f4;border-left:3px solid var(--accent2);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:.92rem}
-code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:.1rem .3rem;border-radius:3px}
-.lecture-nav{display:flex;justify-content:space-between;gap:1rem;margin-top:3rem;padding-top:1.5rem;border-top:2px solid var(--border);flex-wrap:wrap}
-.lecture-nav a{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);text-decoration:none;padding:.5rem .8rem;border:1px solid var(--border);border-radius:6px;transition:all .15s;max-width:48%}
-.lecture-nav a:hover{border-color:var(--accent);background:rgba(180,74,45,.05)}
-.nav-prev{text-align:left}
-.nav-next{text-align:right;margin-left:auto}
-</style>
 </head>
 <body>
 <script src="../js/nav.js"></script>
 
-<div class="wrap">
-<span class="lecture-tag">Задача Римана</span>
+<nav class="sidebar">
+  <h2>§19 Метод Рое</h2>
+  <div class="g">Содержание</div>
+  <a href="#position">Положение в классификации</a>
+  <a href="#linearization">Линеаризация</a>
+  <a href="#roe-matrix">Матрица Рое</a>
+  <a href="#flux">Численный поток</a>
+  <a href="#entropy">Энтропийная коррекция</a>
+  <a href="#properties">Свойства</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="s1-18.html">← §18 Классификация</a>
+  <a href="s1-20.html">→ §20 Метод Ошера</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-riemann">Задача Римана</span>
 <div class="lecture-num">§19 · Семестр 1</div>
 <h1>Метод Рое</h1>
 
-<p>Метод Рое</p>
+<h2 id="position">Положение в классификации</h2>
 
-<p>Положение метода Рое в классификации приближённых решателей. Метод Рое относится к классу приближённых решателей задачи Римана, основанных на линеаризации исходной системы законов сохранения. В
-отличие от точного решателя, метод Рое заменяет нелинейную задачу Римана эквивалентной задачей Римана для линейной гиперболической системы с
-постоянной матрицей коэффициентов, специально построенной по паре состояний по обе стороны границы ячейки. Такой подход позволяет сохранить</p>
+<p>Метод Рое относится к классу приближённых решателей задачи Римана, основанных на линеаризации исходной системы законов сохранения. В отличие от точного решателя, метод Рое заменяет нелинейную задачу Римана эквивалентной задачей Римана для линейной гиперболической системы с постоянной матрицей коэффициентов, специально построенной по паре состояний по обе стороны границы ячейки.</p>
 
-<p>Идея линеаризации и матрица Рое. Рассмотрим одномерную систему
-законов сохранения</p>
+<h2 id="linearization">Идея линеаризации</h2>
 
-<p>\partial u \partial f (u)
-+
-=0
-\partial t
-\partial x
-и задачу Римана с начальными состояниями uL и u𝑅 . Метод Рое заключается
-в замене этой задачи задачей Римана для линейной системы</p>
+<p>Рассмотрим систему законов сохранения и задачу Римана с начальными состояниями \(\mathbf{u}_L\) и \(\mathbf{u}_R\). Метод Рое заключается в замене этой задачи задачей Римана для линейной системы</p>
 
-<p>\partial u
-\partial u
-+ Ã(uL ,u𝑅 )
-= 0,
-\partial t
-\partial x</p>
+<div class="eq">\[
+\frac{\partial\mathbf{u}}{\partial t} + \tilde{A}(\mathbf{u}_L, \mathbf{u}_R)\frac{\partial\mathbf{u}}{\partial x} = 0,
+\tag{19.1}
+\]</div>
 
-<p>где матрица Ã постоянна в рамках локальной задачи Римана и аппроксимирует матрицу Якоби \partial f /\partial u на паре состояний (uL ,u𝑅 ).
-Матрица Рое выбирается так, чтобы выполнялось соотношение</p>
+<p>где матрица \(\tilde{A}\) постоянна в рамках локальной задачи Римана и аппроксимирует матрицу Якоби \(\partial\mathbf{f}/\partial\mathbf{u}\) на паре состояний.</p>
 
-<p>(︀
-)︀
-f (u𝑅 ) − f (uL ) = Ã(uL ,u𝑅 ) u𝑅 − uL ,</p>
+<h2 id="roe-matrix">Матрица Рое и её свойства</h2>
 
-<p>обеспечивающее точное воспроизведение интегрального баланса на разрыве
-между левым и правым состояниями. Кроме того, при совпадении состояний
-матрица Рое должна переходить в точную матрицу Якоби,</p>
+<p>Матрица Рое выбирается так, чтобы выполнялось соотношение</p>
 
-<p>Ã(u,u) =</p>
+<div class="eq">\[
+\mathbf{f}(\mathbf{u}_R) - \mathbf{f}(\mathbf{u}_L) = \tilde{A}(\mathbf{u}_L, \mathbf{u}_R)\bigl(\mathbf{u}_R - \mathbf{u}_L\bigr),
+\tag{19.2}
+\]</div>
 
-<p>\partial f
-(u),
-\partial u</p>
+<p>обеспечивающее точное воспроизведение интегрального баланса на разрыве. Кроме того, при совпадении состояний матрица Рое должна переходить в точную матрицу Якоби: \(\tilde{A}(\mathbf{u}, \mathbf{u}) = \partial\mathbf{f}/\partial\mathbf{u}(\mathbf{u})\), и обладать вещественными собственными значениями и полным набором собственных векторов.</p>
 
-<p>и обладать вещественными собственными значениями и полным набором собственных векторов.</p>
+<p>Разложим скачок по собственным векторам матрицы Рое:</p>
 
-<p>Усреднённые величины Рое для уравнений Эйлера. Для одномерных уравнений Эйлера матрица Рое строится на основе специального усреднения физических величин. Вводятся усреднённые скорость и энтальпия</p>
+<div class="eq">\[
+\mathbf{u}_R - \mathbf{u}_L = \sum_{k=1}^{m} \alpha_k \mathbf{r}_k,
+\tag{19.3}
+\]</div>
 
-<p>\sqrt
-v˜ =</p>
+<p>где \(\mathbf{r}_k\) — правые собственные векторы, \(\alpha_k\) — волновые амплитуды.</p>
 
-<p>\sqrt
-\rhoL vL + \rho𝑅 v𝑅
-,
-\sqrt
-\sqrt
-\rhoL + \rho𝑅</p>
+<h2 id="flux">Численный поток метода Рое</h2>
 
-<p>\sqrt
-˜ =
-𝐻</p>
+<p>Численный поток метода Рое определяется выражением</p>
 
-<p>\sqrt
-\rhoL 𝐻L + \rho𝑅 𝐻𝑅
-,
-\sqrt
-\sqrt
-\rhoL + \rho 𝑅</p>
+<div class="eq">\[
+\mathbf{F}_\text{Roe} = \frac{1}{2}\bigl[\mathbf{f}(\mathbf{u}_L) + \mathbf{f}(\mathbf{u}_R)\bigr] - \frac{1}{2}\sum_{k=1}^{m}|\tilde{\lambda}_k|\,\alpha_k\,\mathbf{r}_k.
+\tag{19.4}
+\]</div>
 
-<p>где</p>
+<p>Первый член соответствует центральной аппроксимации потока, в то время как второй член представляет собой численную диссипацию, связанную с распространением волн линеаризованной системы. Таким образом, диссипативные свойства метода Рое не вводятся искусственно, а непосредственно следуют из волновой структуры задачи.</p>
 
-<p>𝐻=</p>
+<h2 id="entropy">Энтропийная коррекция</h2>
 
-<p>𝐸+p
-,
-\rho</p>
+<p>Линеаризация, лежащая в основе метода Рое, может приводить к нарушению энтропийного условия вблизи центров волн разрежения, где собственные скорости обращаются в нуль. Для устранения этого эффекта используется <em>энтропийная коррекция</em>, заключающаяся в модификации модулей собственных значений \(|\tilde{\lambda}_k|\) в окрестности нуля. После введения такой коррекции метод Рое становится энтропийно корректным и пригодным для практических расчётов.</p>
 
-<p>𝐸=</p>
+<h2 id="properties">Свойства и область применения</h2>
 
-<p>p
-+ \rhov 2 .
-\gamma−1 2</p>
+<p>Метод Рое является консервативным, обладает малой численной диффузией и точно передаёт контактные разрывы. Эти свойства делают его эффективным базовым решателем в схемах повышенного порядка точности. В то же время необходимость спектрального разложения и введения энтропийной коррекции определяет границы применимости метода и мотивирует использование альтернативных приближённых решателей.</p>
 
-<p>Скорость звука в усреднённом состоянии определяется формулой</p>
-
-<p>\sqrt︃
-a
-˜=</p>
-
-<p>(︂</p>
-
-<p>)︂
-˜ − v˜2 .
-(\gamma − 1) 𝐻</p>
-
-<p>Собственные значения матрицы Рое имеют вид</p>
-
-<p>˜ 1 = v˜ − a
-\lambda
-˜,</p>
-
-<p>˜ 2 = v˜,
-\lambda</p>
-
-<p>˜ 3 = v˜ + a
-\lambda
-˜.</p>
-
-<p>Собственные векторы совпадают с собственными векторами матрицы Якоби
-уравнений Эйлера, взятыми в усреднённом состоянии Рое.</p>
-
-<p>Решение линеаризованной задачи Римана. Для системы (§19.1) задача Римана имеет аналитическое решение. Скачок решения u𝑅 − uL раскладывается по собственным векторам матрицы Рое:</p>
-
-<p>u𝑅 − uL =</p>
-
-<p>\sum︁</p>
-
-<p>\alphak rk ,</p>
-
-<p>k=1
-где rk — собственные векторы, а коэффициенты \alphak определяются из этого
-разложения и характеризуют вклад соответствующих элементарных волн.</p>
-
-<p>Численный поток метода Рое. Используя аналитическое решение линеаризованной задачи Римана, численный поток через границу ячейки записывается в виде</p>
-
-<p>]︀ 1 \sum︁
-1 [︀
-˜ k |\alphak rk .
-FRoe = f (uL ) + f (u𝑅 ) −
-|\lambda
-2</p>
-
-<p>k=1</p>
-
-<p>Первый член соответствует центральной аппроксимации потока, в то время как второй член представляет собой численную диссипацию, связанную
-с распространением волн линеаризованной системы. Таким образом, диссипативные свойства метода Рое не вводятся искусственно, а непосредственно
-следуют из волновой структуры задачи.</p>
-
-<p>Энтропийная коррекция. Линеаризация, лежащая в основе метода
-Рое, может приводить к нарушению энтропийного условия вблизи центров
-волн разрежения, где собственные скорости обращаются в нуль. Для устранения этого эффекта используется энтропийная коррекция, заключающаяся</p>
-
-<p>˜ k | в окрестности нуля. Пов модификации модулей собственных значений |\lambda
-сле введения такой коррекции метод Рое становится энтропийно корректным
-и пригодным для практических расчётов.</p>
-
-<p>Свойства и область применения метода Рое. Метод Рое является консервативным, обладает малой численной диффузией и точно передаёт
-контактные разрывы. Эти свойства делают его эффективным базовым решателем в схемах повышенного порядка точности. В то же время необходимость
-спектрального разложения и введения энтропийной коррекции определяет
-границы применимости метода и мотивирует использование альтернативных
-приближённых решателей.</p>
-
-<div class="lecture-nav"><a href="s1-18.html" class="nav-prev">← §18. Приближённые решатели: классификация</a><a href="s1-20.html" class="nav-next">§20. Метод Ошера →</a></div>
+<div class="lecture-nav">
+<a href="s1-18.html" class="nav-prev">← §18. Приближённые решатели: классификация</a>
+<a href="s1-20.html" class="nav-next">§20. Метод Ошера →</a>
+</div>
+</div>
 </div>
 
-<!-- Comments -->
-<div style="max-width:760px;margin:0 auto;padding:0 1.5rem 2rem">
+<div class="comments-wrap">
 <div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">
 <h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
 <div id="comments-list"><p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p></div>
@@ -201,127 +108,14 @@ FRoe = f (uL ) + f (u𝑅 ) −
 <textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
 <button onclick="window._postComment()" style="margin-top:.4rem;background:#b44a2d;color:#fff;border:none;padding:6px 18px;border-radius:5px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer">Отправить</button>
 </div>
-<div id="comment-login">
-<p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p>
+<div id="comment-login"><p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p></div>
 </div>
 </div>
-</div>
-
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
 <script src="../js/auth.js"></script>
-<script>
-// === Comments System ===
-(function(){
-  if (typeof firebase === 'undefined') { console.warn('Comments: firebase not loaded'); return; }
-  var db, auth;
-  try { db = firebase.firestore(); auth = firebase.auth(); }
-  catch(e) { console.warn('Comments: firebase not initialized', e); return; }
-
-  var PAGE_ID = location.pathname.split('/').pop().replace('.html','') || 'index';
-  var ADMINS = (typeof ADMIN_EMAILS !== 'undefined') ? ADMIN_EMAILS : [];
-
-  function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-  function loadComments() {
-    var list = document.getElementById('comments-list');
-    if (!list) return;
-    db.collection('comments').where('page','==',PAGE_ID).get().then(function(snap) {
-      var docs = [];
-      snap.forEach(function(d) { docs.push(d); });
-      docs.sort(function(a,b) {
-        var ta = a.data().createdAt ? a.data().createdAt.seconds : 0;
-        var tb = b.data().createdAt ? b.data().createdAt.seconds : 0;
-        return tb - ta;
-      });
-      if (docs.length === 0) {
-        list.innerHTML = '<p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p>';
-        return;
-      }
-      var user = auth.currentUser;
-      var isAdm = user && ADMINS.indexOf(user.email) >= 0;
-      var html = '';
-      docs.forEach(function(doc) {
-        var c = doc.data();
-        var date = c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-        var del = isAdm ? ' <button onclick="window._deleteComment(\''+doc.id+'\')" style="font-size:.7rem;color:#c44;background:none;border:none;cursor:pointer">удалить</button>' : '';
-        var badge = '';
-        if (c.authorRole === 'superadmin') badge = ' <span style="font-size:.6rem;background:#faeeda;color:#854f0b;padding:1px 4px;border-radius:3px;font-weight:700">преподаватель</span>';
-        html += '<div style="padding:.6rem 0;border-bottom:1px solid #ede6da">';
-        html += '<div style="display:flex;justify-content:space-between;align-items:baseline">';
-        html += '<strong style="font-size:.88rem">'+(c.authorFio||c.authorEmail)+badge+'</strong>';
-        html += '<span style="font-size:.72rem;color:#9a8d7e">'+date+del+'</span></div>';
-        html += '<p style="font-size:.88rem;margin-top:.2rem;margin-bottom:0">'+esc(c.text)+'</p></div>';
-      });
-      list.innerHTML = html;
-    }).catch(function(e) {
-      list.innerHTML = '<p style="color:#c44;font-size:.85rem">Ошибка: '+e.message+'</p>';
-    });
-  }
-
-  window._postComment = function() {
-    var text = document.getElementById('comment-text').value.trim();
-    if (!text) return;
-    var user = auth.currentUser;
-    if (!user) return;
-    var fio = user.email;
-    var role = (ADMINS.indexOf(user.email) >= 0) ? 'superadmin' : 'student';
-    db.collection('users').doc(user.uid).get().then(function(ud) {
-      if (ud.exists && ud.data().fio) fio = ud.data().fio;
-    }).catch(function(){}).finally(function() {
-      db.collection('comments').add({
-        page: PAGE_ID, text: text,
-        authorEmail: user.email, authorFio: fio, authorUid: user.uid, authorRole: role,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(function() {
-        document.getElementById('comment-text').value = '';
-        loadComments();
-      }).catch(function(e) { alert('Ошибка: '+e.message); });
-    });
-  };
-
-  window._deleteComment = function(id) {
-    if (!confirm('Удалить?')) return;
-    db.collection('comments').doc(id).delete().then(loadComments).catch(function(e){alert(e.message);});
-  };
-
-  var _checkAuthRetries = 0;
-  function checkAuth() {
-    var user = auth.currentUser;
-    var form = document.getElementById('comment-form');
-    var login = document.getElementById('comment-login');
-    if (!form || !login) return;
-    if (user && window._userApproved) {
-      form.style.display = '';
-      login.style.display = 'none';
-      _checkAuthRetries = 0;
-    } else if (user && typeof window._userApproved === 'undefined' && _checkAuthRetries < 15) {
-      _checkAuthRetries++;
-      setTimeout(checkAuth, 400);
-    } else if (user) {
-      form.style.display = 'none';
-      login.style.display = '';
-      login.querySelector('p').textContent = 'Ваш профиль ещё не подтверждён.';
-      _checkAuthRetries = 0;
-    } else {
-      form.style.display = 'none';
-      login.style.display = '';
-      _checkAuthRetries = 0;
-    }
-  }
-
-  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', loadComments); }
-  else { loadComments(); }
-
-  function safeCheckAuth() {
-    if (document.getElementById('comment-form')) checkAuth();
-    else setTimeout(safeCheckAuth, 200);
-  }
-  auth.onAuthStateChanged(function() { setTimeout(safeCheckAuth, 500); });
-  window.addEventListener('authReady', safeCheckAuth);
-})();
-</script>
+<script src="../js/comments.js"></script>
 </body>
 </html>

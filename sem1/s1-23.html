@@ -6,129 +6,113 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>§23. Метод Годунова–Колгана</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
-<style>
-:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8}
-*{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
-.wrap{max-width:760px;margin:0 auto;padding:2rem 1.5rem 4rem}
-.lecture-tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;padding:.2rem .5rem;border-radius:3px;display:inline-block;margin-bottom:.5rem;background:#e6f1fb;color:#3a5ba0}
-.lecture-num{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);margin-bottom:.3rem}
-h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;line-height:1.15;margin-bottom:1.5rem;color:var(--text)}
-h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--accent);margin:2rem 0 .8rem;padding-top:.5rem;border-top:1px solid var(--border)}
-h3{font-family:'Source Serif 4',serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:1.5rem 0 .5rem}
-p{margin-bottom:1rem;text-align:justify;hyphens:auto}
-.equation{margin:1.5rem 0;text-align:center;overflow-x:auto}
-.definition{background:var(--bg2);border-left:3px solid var(--accent2);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
-.theorem{background:#fdf6ee;border-left:3px solid var(--accent);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
-.theorem .th-title{font-family:'Playfair Display',serif;font-weight:700;color:var(--accent);margin-bottom:.3rem}
-.remark{background:#f0f7f4;border-left:3px solid var(--accent2);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:.92rem}
-code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:.1rem .3rem;border-radius:3px}
-.lecture-nav{display:flex;justify-content:space-between;gap:1rem;margin-top:3rem;padding-top:1.5rem;border-top:2px solid var(--border);flex-wrap:wrap}
-.lecture-nav a{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);text-decoration:none;padding:.5rem .8rem;border:1px solid var(--border);border-radius:6px;transition:all .15s;max-width:48%}
-.lecture-nav a:hover{border-color:var(--accent);background:rgba(180,74,45,.05)}
-.nav-prev{text-align:left}
-.nav-next{text-align:right;margin-left:auto}
-</style>
 </head>
 <body>
 <script src="../js/nav.js"></script>
 
-<div class="wrap">
-<span class="lecture-tag">Высокий порядок</span>
+<nav class="sidebar">
+  <h2>§23 Колган</h2>
+  <div class="g">Содержание</div>
+  <a href="#motivation">Мотивация</a>
+  <a href="#reconstruction">Линейная реконструкция</a>
+  <a href="#left-right">Левые и правые состояния</a>
+  <a href="#slopes">Выбор наклонов</a>
+  <a href="#flux">Численный поток</a>
+  <a href="#properties">Свойства</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="s1-22.html">← §22 HLLC</a>
+  <a href="s1-24.html">→ §24 Колган–Родионов</a>
+</nav>
+<div class="main"><div class="main-inner">
+<span class="lecture-tag tag-highorder">Высокий порядок</span>
 <div class="lecture-num">§23 · Семестр 1</div>
 <h1>Метод Годунова–Колгана</h1>
 
-<p>Метод Годунова–Колгана</p>
-
-<p>Мотивация метода Годунова–Колгана. Классическая схема Годунова основана на кусочно-постоянной аппроксимации решения внутри ячеек
-расчётной сетки. Такой подход обеспечивает монотонность и устойчивость
-схемы, однако приводит лишь к первому порядку точности по пространству
-и значительной численной диффузии в областях гладкого решения.
-Метод Годунова–Колгана предназначен для повышения порядка аппроксимации за счёт более точного представления решения внутри ячейки, при
-сохранении базовой структуры метода Годунова и использования решателя
-задачи Римана на границах ячеек.</p>
-
-<p>Линейная реконструкция решения внутри ячейки. В методе Годунова–Колгана решение внутри каждой ячейки аппроксимируется линейной
-функцией:</p>
-
-<p>⃒
-u(x,tn )⃒x\in[x</p>
-
-<p>i− 1</p>
-
-<p>, xi+ 1 ]</p>
-
-<p>= uni + \sigmai (x − xi ),</p>
-
-<p>n</p>
-
-<p>где ui — среднее значение в i-й ячейке, xi — её центр, а \sigmai — наклон линейной
-реконструкции.
-Такое представление обеспечивает второй порядок аппроксимации в областях гладкого решения при соответствующем выборе наклонов \sigmai .</p>
-
-<p>Определение левых и правых состояний на границе ячейки. Из
-линейной реконструкции определяются левое и правое состояния на границе</p>
-
-<p>ячейки:</p>
-
-<p>uLi+ 1 = uni + ∆x \sigmai ,
-2</p>
-
-<p>n
-u𝑅
-i− 21 = ui − ∆x \sigmai .</p>
-
-<p>Выбор наклонов и повышение порядка аппроксимации. В простейшем варианте наклон</p>
-
-<p>\sigmai может быть определён как центральная раз-</p>
-
-<p>ность:</p>
-
-<p>uni+1 − uni−1
-\sigmai =
-.
-2∆x
-При таком выборе метод Годунова–Колгана обладает вторым порядком аппроксимации по пространству в областях гладкого решения.
-Однако вблизи разрывов использование центральных разностей приводит</p>
-
-<p>\sigmai</p>
-
-<p>к появлению нефизических осцилляций. Поэтому на практике наклоны</p>
-
-<p>подлежат ограничению, что позволяет сохранить монотонность схемы. Конкретные способы ограничения рассматриваются в последующих методах и не
-являются частью классической формулировки метода Годунова–Колгана.</p>
-
-<p>Вычисление численного потока. Численный поток через границу ячейL
-i+ 12</p>
-
-<p>ки вычисляется путём решения задачи Римана с начальными данными u
-и u</p>
-
-<p>𝑅
-:
-i+ 21</p>
-
-<p>(︀
-)︀
-𝐹i+ 12 = 𝐹 uLi+ 1 , u𝑅
-1 ,
-i+</p>
-
-<p>где 𝐹 — численный поток, определяемый выбранным решателем задачи Римана (точным или приближённым).
-Таким образом, метод Годунова–Колгана сохраняет ключевую идею схемы Годунова — использование локальных задач Римана, но повышает точность за счёт более точной аппроксимации данных на границе ячеек.</p>
-
-<p>Свойства метода Годунова–Колгана. Метод Годунова–Колгана является консервативным и при корректном выборе наклонов обеспечивает второй порядок точности на гладких решениях. По сравнению с классической
-схемой Годунова он обладает существенно меньшей численной диффузией.</p>
-
-<p>В то же время линейная реконструкция сама по себе не гарантирует монотонности, что требует дальнейшего развития метода. Эта проблема послужила основой для построения метода Годунова–Колгана–Родионова, рассматриваемого в следующем параграфе.</p>
-
-<div class="lecture-nav"><a href="s1-22.html" class="nav-prev">← §22. Метод HLLC</a><a href="s1-24.html" class="nav-next">§24. Метод Годунова–Колгана–Родионова →</a></div>
+<!-- SVG: reconstruction comparison -->
+<div class="figure">
+<svg viewBox="0 0 560 220" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+  <g stroke="#d9cfc0" stroke-width="1" stroke-dasharray="4,3">
+    <line x1="80" y1="20" x2="80" y2="190"/><line x1="160" y1="20" x2="160" y2="190"/>
+    <line x1="240" y1="20" x2="240" y2="190"/><line x1="320" y1="20" x2="320" y2="190"/>
+    <line x1="400" y1="20" x2="400" y2="190"/><line x1="480" y1="20" x2="480" y2="190"/>
+  </g>
+  <line x1="60" y1="185" x2="500" y2="185" stroke="#d9cfc0" stroke-width="1"/>
+  <text x="280" y="15" font-family="Playfair Display,serif" font-size="10" fill="#3a5ba0" text-anchor="middle" font-weight="700">Годунов (кусочно-постоянная)</text>
+  <line x1="80" y1="140" x2="160" y2="140" stroke="#3a5ba0" stroke-width="2.5"/>
+  <line x1="160" y1="100" x2="240" y2="100" stroke="#3a5ba0" stroke-width="2.5"/>
+  <line x1="240" y1="60" x2="320" y2="60" stroke="#3a5ba0" stroke-width="2.5"/>
+  <line x1="320" y1="120" x2="400" y2="120" stroke="#3a5ba0" stroke-width="2.5"/>
+  <line x1="400" y1="80" x2="480" y2="80" stroke="#3a5ba0" stroke-width="2.5"/>
+  <text x="280" y="210" font-family="Playfair Display,serif" font-size="10" fill="#b44a2d" text-anchor="middle" font-weight="700">Колган (кусочно-линейная)</text>
+  <line x1="80" y1="155" x2="160" y2="125" stroke="#b44a2d" stroke-width="2"/>
+  <line x1="160" y1="115" x2="240" y2="85" stroke="#b44a2d" stroke-width="2"/>
+  <line x1="240" y1="45" x2="320" y2="75" stroke="#b44a2d" stroke-width="2"/>
+  <line x1="320" y1="135" x2="400" y2="105" stroke="#b44a2d" stroke-width="2"/>
+  <line x1="400" y1="90" x2="480" y2="70" stroke="#b44a2d" stroke-width="2"/>
+  <g fill="#6b5d4f"><circle cx="120" cy="140" r="3"/><circle cx="200" cy="100" r="3"/><circle cx="280" cy="60" r="3"/><circle cx="360" cy="120" r="3"/><circle cx="440" cy="80" r="3"/></g>
+  <circle cx="240" cy="85" r="4" fill="#b44a2d"/><circle cx="240" cy="45" r="4" fill="#b44a2d"/>
+  <text x="218" y="42" font-family="JetBrains Mono,monospace" font-size="8" fill="#b44a2d">u_R</text>
+  <text x="218" y="92" font-family="JetBrains Mono,monospace" font-size="8" fill="#b44a2d">u_L</text>
+</svg>
+<div class="caption">Кусочно-постоянная (Годунов) vs кусочно-линейная (Колган) реконструкция. Наклоны определяют \(u_L, u_R\) на границах.</div>
 </div>
 
-<!-- Comments -->
-<div style="max-width:760px;margin:0 auto;padding:0 1.5rem 2rem">
+<h2 id="motivation">Мотивация</h2>
+<p>Классическая схема Годунова основана на кусочно-постоянной аппроксимации решения внутри ячеек расчётной сетки. Такой подход обеспечивает монотонность и устойчивость схемы, однако приводит лишь к первому порядку точности по пространству и значительной численной диффузии в областях гладкого решения.</p>
+<p>Метод Годунова–Колгана предназначен для повышения порядка аппроксимации за счёт более точного представления решения внутри ячейки, при сохранении базовой структуры метода Годунова и использования решателя задачи Римана на границах ячеек.</p>
+
+<h2 id="reconstruction">Линейная реконструкция решения внутри ячейки</h2>
+<p>В методе Годунова–Колгана решение внутри каждой ячейки аппроксимируется линейной функцией:</p>
+<div class="eq">\[
+u(x, t_n)\big|_{x \in [x_{i-1/2}, x_{i+1/2}]} = u_i^n + \sigma_i(x - x_i),
+\tag{23.1}
+\]</div>
+<p>где \(u_i^n\) — среднее значение в \(i\)-й ячейке, \(x_i\) — её центр, а \(\sigma_i\) — наклон линейной реконструкции. Такое представление обеспечивает второй порядок аппроксимации в областях гладкого решения при соответствующем выборе наклонов \(\sigma_i\).</p>
+
+<h2 id="left-right">Определение левых и правых состояний</h2>
+<p>Из линейной реконструкции определяются левое и правое состояния на границе ячейки:</p>
+<div class="eq">\[
+u_{i+1/2}^L = u_i^n + \frac{\Delta x}{2}\sigma_i, \qquad u_{i+1/2}^R = u_{i+1}^n - \frac{\Delta x}{2}\sigma_{i+1}.
+\tag{23.2}
+\]</div>
+
+<h2 id="slopes">Выбор наклонов</h2>
+<p>Наклон \(\sigma_i\) может быть определён как центральная разность:</p>
+<div class="eq">\[
+\sigma_i = \frac{u_{i+1}^n - u_{i-1}^n}{2\Delta x}.
+\]</div>
+<p>Однако такой выбор не гарантирует монотонности. Для её обеспечения наклон ограничивается (лимитируется), что рассматривается в следующем параграфе.</p>
+
+<h2 id="flux">Численный поток</h2>
+<p>Численный поток вычисляется по формуле</p>
+<div class="eq">\[
+F_{i+1/2} = F\bigl(u_{i+1/2}^L,\; u_{i+1/2}^R\bigr),
+\tag{23.3}
+\]</div>
+<p>где \(F\) — численный поток, определяемый выбранным решателем задачи Римана (точным или приближённым). Таким образом, метод Годунова–Колгана сохраняет ключевую идею схемы Годунова — использование локальных задач Римана, но повышает точность за счёт более точной аппроксимации данных на границе ячеек.</p>
+
+<h2 id="properties">Свойства</h2>
+<p>Метод Годунова–Колгана является консервативным и при корректном выборе наклонов обеспечивает второй порядок точности на гладких решениях. По сравнению с классической схемой Годунова он обладает существенно меньшей численной диффузией.</p>
+<div class="remark">
+<strong>Замечание.</strong> Линейная реконструкция сама по себе не гарантирует монотонности, что требует дальнейшего развития метода. Эта проблема послужила основой для построения метода Годунова–Колгана–Родионова, рассматриваемого в следующем параграфе.
+</div>
+
+<div class="lecture-nav">
+<a href="s1-22.html" class="nav-prev">← §22. HLLC</a>
+<a href="s1-24.html" class="nav-next">§24. Колган–Родионов →</a>
+</div>
+</div></div>
+
+<div class="comments-wrap">
 <div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">
 <h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
 <div id="comments-list"><p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p></div>
@@ -136,127 +120,14 @@ i+</p>
 <textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
 <button onclick="window._postComment()" style="margin-top:.4rem;background:#b44a2d;color:#fff;border:none;padding:6px 18px;border-radius:5px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer">Отправить</button>
 </div>
-<div id="comment-login">
-<p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p>
+<div id="comment-login"><p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p></div>
 </div>
 </div>
-</div>
-
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
 <script src="../js/auth.js"></script>
-<script>
-// === Comments System ===
-(function(){
-  if (typeof firebase === 'undefined') { console.warn('Comments: firebase not loaded'); return; }
-  var db, auth;
-  try { db = firebase.firestore(); auth = firebase.auth(); }
-  catch(e) { console.warn('Comments: firebase not initialized', e); return; }
-
-  var PAGE_ID = location.pathname.split('/').pop().replace('.html','') || 'index';
-  var ADMINS = (typeof ADMIN_EMAILS !== 'undefined') ? ADMIN_EMAILS : [];
-
-  function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-  function loadComments() {
-    var list = document.getElementById('comments-list');
-    if (!list) return;
-    db.collection('comments').where('page','==',PAGE_ID).get().then(function(snap) {
-      var docs = [];
-      snap.forEach(function(d) { docs.push(d); });
-      docs.sort(function(a,b) {
-        var ta = a.data().createdAt ? a.data().createdAt.seconds : 0;
-        var tb = b.data().createdAt ? b.data().createdAt.seconds : 0;
-        return tb - ta;
-      });
-      if (docs.length === 0) {
-        list.innerHTML = '<p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p>';
-        return;
-      }
-      var user = auth.currentUser;
-      var isAdm = user && ADMINS.indexOf(user.email) >= 0;
-      var html = '';
-      docs.forEach(function(doc) {
-        var c = doc.data();
-        var date = c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-        var del = isAdm ? ' <button onclick="window._deleteComment(\''+doc.id+'\')" style="font-size:.7rem;color:#c44;background:none;border:none;cursor:pointer">удалить</button>' : '';
-        var badge = '';
-        if (c.authorRole === 'superadmin') badge = ' <span style="font-size:.6rem;background:#faeeda;color:#854f0b;padding:1px 4px;border-radius:3px;font-weight:700">преподаватель</span>';
-        html += '<div style="padding:.6rem 0;border-bottom:1px solid #ede6da">';
-        html += '<div style="display:flex;justify-content:space-between;align-items:baseline">';
-        html += '<strong style="font-size:.88rem">'+(c.authorFio||c.authorEmail)+badge+'</strong>';
-        html += '<span style="font-size:.72rem;color:#9a8d7e">'+date+del+'</span></div>';
-        html += '<p style="font-size:.88rem;margin-top:.2rem;margin-bottom:0">'+esc(c.text)+'</p></div>';
-      });
-      list.innerHTML = html;
-    }).catch(function(e) {
-      list.innerHTML = '<p style="color:#c44;font-size:.85rem">Ошибка: '+e.message+'</p>';
-    });
-  }
-
-  window._postComment = function() {
-    var text = document.getElementById('comment-text').value.trim();
-    if (!text) return;
-    var user = auth.currentUser;
-    if (!user) return;
-    var fio = user.email;
-    var role = (ADMINS.indexOf(user.email) >= 0) ? 'superadmin' : 'student';
-    db.collection('users').doc(user.uid).get().then(function(ud) {
-      if (ud.exists && ud.data().fio) fio = ud.data().fio;
-    }).catch(function(){}).finally(function() {
-      db.collection('comments').add({
-        page: PAGE_ID, text: text,
-        authorEmail: user.email, authorFio: fio, authorUid: user.uid, authorRole: role,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(function() {
-        document.getElementById('comment-text').value = '';
-        loadComments();
-      }).catch(function(e) { alert('Ошибка: '+e.message); });
-    });
-  };
-
-  window._deleteComment = function(id) {
-    if (!confirm('Удалить?')) return;
-    db.collection('comments').doc(id).delete().then(loadComments).catch(function(e){alert(e.message);});
-  };
-
-  var _checkAuthRetries = 0;
-  function checkAuth() {
-    var user = auth.currentUser;
-    var form = document.getElementById('comment-form');
-    var login = document.getElementById('comment-login');
-    if (!form || !login) return;
-    if (user && window._userApproved) {
-      form.style.display = '';
-      login.style.display = 'none';
-      _checkAuthRetries = 0;
-    } else if (user && typeof window._userApproved === 'undefined' && _checkAuthRetries < 15) {
-      _checkAuthRetries++;
-      setTimeout(checkAuth, 400);
-    } else if (user) {
-      form.style.display = 'none';
-      login.style.display = '';
-      login.querySelector('p').textContent = 'Ваш профиль ещё не подтверждён.';
-      _checkAuthRetries = 0;
-    } else {
-      form.style.display = 'none';
-      login.style.display = '';
-      _checkAuthRetries = 0;
-    }
-  }
-
-  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', loadComments); }
-  else { loadComments(); }
-
-  function safeCheckAuth() {
-    if (document.getElementById('comment-form')) checkAuth();
-    else setTimeout(safeCheckAuth, 200);
-  }
-  auth.onAuthStateChanged(function() { setTimeout(safeCheckAuth, 500); });
-  window.addEventListener('authReady', safeCheckAuth);
-})();
-</script>
+<script src="../js/comments.js"></script>
 </body>
 </html>

@@ -6,208 +6,113 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>§17. Точный решатель задачи Римана</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
-<style>
-:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8}
-*{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
-.wrap{max-width:760px;margin:0 auto;padding:2rem 1.5rem 4rem}
-.lecture-tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;padding:.2rem .5rem;border-radius:3px;display:inline-block;margin-bottom:.5rem;background:#e8f4f0;color:#1a6b5a}
-.lecture-num{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);margin-bottom:.3rem}
-h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;line-height:1.15;margin-bottom:1.5rem;color:var(--text)}
-h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--accent);margin:2rem 0 .8rem;padding-top:.5rem;border-top:1px solid var(--border)}
-h3{font-family:'Source Serif 4',serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:1.5rem 0 .5rem}
-p{margin-bottom:1rem;text-align:justify;hyphens:auto}
-.equation{margin:1.5rem 0;text-align:center;overflow-x:auto}
-.definition{background:var(--bg2);border-left:3px solid var(--accent2);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
-.theorem{background:#fdf6ee;border-left:3px solid var(--accent);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
-.theorem .th-title{font-family:'Playfair Display',serif;font-weight:700;color:var(--accent);margin-bottom:.3rem}
-.remark{background:#f0f7f4;border-left:3px solid var(--accent2);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:.92rem}
-code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:.1rem .3rem;border-radius:3px}
-.lecture-nav{display:flex;justify-content:space-between;gap:1rem;margin-top:3rem;padding-top:1.5rem;border-top:2px solid var(--border);flex-wrap:wrap}
-.lecture-nav a{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);text-decoration:none;padding:.5rem .8rem;border:1px solid var(--border);border-radius:6px;transition:all .15s;max-width:48%}
-.lecture-nav a:hover{border-color:var(--accent);background:rgba(180,74,45,.05)}
-.nav-prev{text-align:left}
-.nav-next{text-align:right;margin-left:auto}
-</style>
 </head>
 <body>
 <script src="../js/nav.js"></script>
 
-<div class="wrap">
-<span class="lecture-tag">Задача Римана</span>
+<nav class="sidebar">
+  <h2>§17 Точный решатель</h2>
+  <div class="g">Содержание</div>
+  <a href="#purpose">Назначение</a>
+  <a href="#unknowns">Неизвестные</a>
+  <a href="#wave-functions">Функции волн</a>
+  <a href="#iteration">Итерация по давлению</a>
+  <a href="#sampling">Процедура выборки</a>
+  <a href="#godunov-use">Использование в методе Годунова</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="s1-16.html">← §16 Точная задача</a>
+  <a href="s1-18.html">→ §18 Классификация</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-riemann">Задача Римана</span>
 <div class="lecture-num">§17 · Семестр 1</div>
-<h1>Точный решатель задачи Римана для одномерных</h1>
+<h1>Точный решатель задачи Римана для одномерных законов сохранения</h1>
 
-<p>Точный решатель задачи Римана для одномерных
-законов сохранения</p>
+<h2 id="purpose">Назначение точного решателя</h2>
 
-<p>Назначение точного решателя задачи Римана. В предыдущем параграфе была описана структура точного решения задачи Римана для одномерных гиперболических систем и, в частности, для уравнений Эйлера.</p>
+<p>В предыдущем параграфе была описана структура точного решения задачи Римана для одномерных гиперболических систем и, в частности, для уравнений Эйлера. Однако для использования этой теории в численных методах необходимо не только качественное описание волн, но и алгоритм, позволяющий по заданным левому и правому состояниям \((\rho_L, v_L, p_L)\), \((\rho_R, v_R, p_R)\) вычислить параметры промежуточного состояния и определить значения решения в заданной точке диаграммы \(x\)–\(t\). Такой алгоритм называют <em>точным решателем задачи Римана</em>.</p>
 
-<p>Однако для использования этой теории в численных методах необходимо не
-только качественное описание волн, но и алгоритм, позволяющий по заданным левому и правому состояниям</p>
+<p>Точный решатель используется, в частности, в методе Годунова для вычисления численных потоков через границы ячеек разностной сетки.</p>
 
-<p>(\rhoL , vL , pL ),</p>
+<h2 id="unknowns">Неизвестные промежуточного состояния</h2>
 
-<p>(\rho𝑅 , v𝑅 , p𝑅 )</p>
+<p>Структура решения задачи Римана для уравнений Эйлера предполагает существование промежуточного состояния, разделённого контактным разрывом, в котором давление и скорость постоянны. Следовательно, основными неизвестными задачи являются \(p_*\), \(v_*\). После их определения плотности \(\rho_{*L}\) и \(\rho_{*R}\) вычисляются отдельно по формулам, соответствующим типу левой и правой волн.</p>
 
-<p>вычислить параметры промежуточного состояния и определить значения решения в заданной точке диаграммы x–t. Такой алгоритм называют точным</p>
+<h2 id="wave-functions">Функции левой и правой волны</h2>
 
-<p>решателем задачи Римана.
-Точный решатель используется, в частности, в методе Годунова для вычисления численных потоков через границы ячеек разностной сетки.</p>
+<p>Для построения алгоритма удобно ввести функции, описывающие связь между давлением и скоростью по каждую сторону контактного разрыва. Для заданного давления \(p\) определим функции \(f_L(p)\) и \(f_R(p)\) так, что</p>
 
-<p>Неизвестные промежуточного состояния. Структура решения задачи Римана для уравнений Эйлера предполагает существование промежуточного состояния, разделённого контактным разрывом, в котором давление и
-скорость постоянны. Следовательно, основными неизвестными задачи являются</p>
+<div class="eq">\[
+v_* = v_L - f_L(p_*), \qquad v_* = v_R + f_R(p_*).
+\]</div>
 
-<p>p* ,</p>
+<p>Функциональный вид этих зависимостей определяется типом соответствующей волны. Если \(p \le p_L\), то левая волна является волной разрежения, и функция \(f_L(p)\) имеет вид</p>
 
-<p>После их определения плотности \rho*L и \rho*𝑅 вычисляются отдельно по формулам, соответствующим типу левой и правой волн.
-Таким образом, центральной задачей точного решателя является определение величин p* и v* .</p>
+<div class="eq">\[
+f_L(p) = \frac{2a_L}{\gamma - 1}\left[\left(\frac{p}{p_L}\right)^{(\gamma-1)/(2\gamma)} - 1\right].
+\]</div>
 
-<p>Функции левой и правой волны. Для построения алгоритма удобно ввести функции, описывающие связь между давлением и скоростью по
-каждую сторону контактного разрыва. Для заданного давления p определим
-функции fL (p) и f𝑅 (p) так, что</p>
+<p>Если же \(p > p_L\), то левая волна является ударной, и</p>
 
-<p>v* = vL − fL (p* ),</p>
+<div class="eq">\[
+f_L(p) = (p - p_L)\sqrt{\frac{A_L}{p + B_L}}, \qquad A_L = \frac{2}{(\gamma+1)\rho_L}, \quad B_L = \frac{\gamma-1}{\gamma+1}p_L.
+\]</div>
 
-<p>v* = v𝑅 + f𝑅 (p* ).</p>
+<p>Аналогичные формулы справедливы для правой волны \(f_R(p)\).</p>
 
-<p>Функциональный вид этих зависимостей определяется типом соответствующей волны.</p>
+<h2 id="iteration">Итерационная процедура определения давления</h2>
 
-<p>Левая волна. Если p \le pL , то левая волна является волной разрежения, и
-функция fL (p) имеет вид</p>
+<p>Приравнивая два выражения для \(v_*\), получаем нелинейное уравнение относительно \(p_*\):</p>
 
-<p>fL (p) =</p>
+<div class="eq">\[
+f_L(p_*) + f_R(p_*) + v_R - v_L = 0.
+\]</div>
 
-<p>2aL
-\gamma−1</p>
+<p>Это уравнение решается итерационным методом (например, методом Ньютона). После определения \(p_*\) вычисляется \(v_*\):</p>
 
-<p>[︃(︂</p>
+<div class="eq">\[
+v_* = \frac{1}{2}(v_L + v_R) + \frac{1}{2}\bigl(f_R(p_*) - f_L(p_*)\bigr).
+\]</div>
 
-<p>p
-pL</p>
+<h2 id="sampling">Процедура выборки решения</h2>
 
-<p>)︂ \gamma−1
-2\gamma</p>
+<p>Для практического применения решателя необходимо определить значение решения в заданной точке диаграммы \(x\)–\(t\), обычно в точке \(x = 0\) при \(t > 0\). Это эквивалентно определению знака автомодельной переменной \(\xi = x/t\).</p>
 
-<p>]︃
-−1 .</p>
+<p>Процедура выборки состоит в сравнении \(\xi\) со скоростями волн: \(S_L\), \(S_C = v_*\), \(S_R\), а в случае разрежений — с границами веера \(S_H\) и \(S_T\). В зависимости от положения точки \(\xi\) она попадает либо в область исходного состояния, либо в область промежуточного состояния, либо внутрь веера разрежения, где состояние определяется по автомодельным формулам.</p>
 
-<p>Если p &gt; pL , то левая волна является ударной, и функция fL (p) записывается
-как</p>
+<h2 id="godunov-use">Использование в методе Годунова</h2>
 
-<p>\sqrt︃
-fL (p) = (p − pL )</p>
+<p>В методе Годунова точный решатель задачи Римана применяется для вычисления численного потока через границу ячейки:</p>
 
-<p>1
-.
-\gamma−1
-(\gamma + 1)\rhoL p + \gamma+1
-pL</p>
+<div class="eq">\[
+\mathbf{F}_{i+1/2} = \mathbf{f}\bigl(\mathbf{u}(0, t_n + 0)\bigr).
+\]</div>
 
-<p>Правая волна. Аналогично, если p \le p𝑅 , правая волна является волной
-разрежения, и</p>
+<p>Таким образом, решатель задачи Римана является центральным элементом схемы, обеспечивающим корректный учёт волновой структуры решения и физический баланс консервативных величин.</p>
 
-<p>f𝑅 (p) =</p>
-
-<p>2a𝑅
-\gamma−1</p>
-
-<p>[︃(︂</p>
-
-<p>p
-p𝑅</p>
-
-<p>)︂ \gamma−1
-2\gamma</p>
-
-<p>]︃
-−1 .</p>
-
-<p>Если p &gt; p𝑅 , то правая волна является ударной, и</p>
-
-<p>\sqrt︃
-f𝑅 (p) = (p − p𝑅 )</p>
-
-<p>1
-.
-(\gamma + 1)\rho𝑅 p + \gamma−1
-p
-\gamma+1 𝑅</p>
-
-<p>Уравнение на давление в промежуточном состоянии. Из условий
-равенства скорости по обе стороны контактного разрыва следует нелинейное
-уравнение относительно p* :</p>
-
-<p>fL (p* ) + f𝑅 (p* ) + v𝑅 − vL = 0.</p>
-
-<p>Это уравнение является скалярным, монотонным по p* , и потому может быть
-эффективно решено итерационными методами.</p>
-
-<p>Замечание. На практике для решения уравнения (§17.5) используется метод Ньютона или его модификации, причём в качестве начального приближения берётся либо акустическая аппроксимация, либо среднее по давлению.
-После нахождения p* скорость v* вычисляется, например, по формуле</p>
-
-<p>v* =</p>
-
-<p>(vL + v𝑅 + f𝑅 (p* ) − fL (p* )) .</p>
-
-<p>Вычисление плотностей в промежуточных состояниях. После определения p* и v* плотности \rho*L и \rho*𝑅 находятся в зависимости от типа волн.</p>
-
-<p>Для волны разрежения используется адиабатическое соотношение</p>
-
-<p>(︂</p>
-
-<p>p*
-\rho* = \rho
-p</p>
-
-<p>)︂1/\gamma
-.</p>
-
-<p>Для ударной волны плотность определяется из соотношений Ранкина–Гюгонио:</p>
-
-<p>\rho* = \rho</p>
-
-<p>p* /p + (\gamma − 1)/(\gamma + 1)
-.
-(\gamma − 1)/(\gamma + 1) p* /p + 1</p>
-
-<p>Процедура выборки решения. Для практического применения решателя необходимо определить значение решения в заданной точке диаграммы</p>
-
-<p>x–t, обычно в точке x = 0 при t &gt; 0. Это эквивалентно определению знака
-автомодельной переменной</p>
-
-<p>𝜉=</p>
-
-<p>x
-.
-t</p>
-
-<p>Процедура выборки состоит в сравнении 𝜉 со скоростями волн:</p>
-
-<p>SL , S𝐶 = v* , S𝑅 ,
-а в случае разрежений — с границами веера S𝐻 и ST . В зависимости от положения точки 𝜉 она попадает либо в область исходного состояния, либо в
-область промежуточного состояния, либо внутрь веера разрежения, где состояние определяется по автомодельным формулам.</p>
-
-<p>Использование точного решателя в методе Годунова. В методе Годунова точный решатель задачи Римана применяется для вычисления численного потока через границу ячейки:</p>
-
-<p>(︀
-)︀
-Fi+ 21 = f u(0,tn + 0) .
-Таким образом, решатель задачи Римана является центральным элементом
-схемы, обеспечивающим корректный учёт волновой структуры решения и
-физический баланс консервативных величин.</p>
-
-<p>Подчеркнём, что, несмотря на высокую вычислительную стоимость, точный решатель задачи Римана служит эталоном, на основе которого строятся
-приближённые решатели, рассматриваемые в последующих параграфах.
-65</p>
-
-<div class="lecture-nav"><a href="s1-16.html" class="nav-prev">← §16. Точная задача Римана</a><a href="s1-18.html" class="nav-next">§18. Приближённые решатели: классификация →</a></div>
+<div class="remark">
+<strong>Замечание.</strong> Несмотря на высокую вычислительную стоимость, точный решатель задачи Римана служит эталоном, на основе которого строятся приближённые решатели, рассматриваемые в последующих параграфах.
 </div>
 
-<!-- Comments -->
-<div style="max-width:760px;margin:0 auto;padding:0 1.5rem 2rem">
+<div class="lecture-nav">
+<a href="s1-16.html" class="nav-prev">← §16. Точная задача Римана</a>
+<a href="s1-18.html" class="nav-next">§18. Приближённые решатели: классификация →</a>
+</div>
+</div>
+</div>
+
+<div class="comments-wrap">
 <div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">
 <h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
 <div id="comments-list"><p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p></div>
@@ -215,127 +120,14 @@ Fi+ 21 = f u(0,tn + 0) .
 <textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
 <button onclick="window._postComment()" style="margin-top:.4rem;background:#b44a2d;color:#fff;border:none;padding:6px 18px;border-radius:5px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer">Отправить</button>
 </div>
-<div id="comment-login">
-<p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p>
+<div id="comment-login"><p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p></div>
 </div>
 </div>
-</div>
-
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
 <script src="../js/auth.js"></script>
-<script>
-// === Comments System ===
-(function(){
-  if (typeof firebase === 'undefined') { console.warn('Comments: firebase not loaded'); return; }
-  var db, auth;
-  try { db = firebase.firestore(); auth = firebase.auth(); }
-  catch(e) { console.warn('Comments: firebase not initialized', e); return; }
-
-  var PAGE_ID = location.pathname.split('/').pop().replace('.html','') || 'index';
-  var ADMINS = (typeof ADMIN_EMAILS !== 'undefined') ? ADMIN_EMAILS : [];
-
-  function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-  function loadComments() {
-    var list = document.getElementById('comments-list');
-    if (!list) return;
-    db.collection('comments').where('page','==',PAGE_ID).get().then(function(snap) {
-      var docs = [];
-      snap.forEach(function(d) { docs.push(d); });
-      docs.sort(function(a,b) {
-        var ta = a.data().createdAt ? a.data().createdAt.seconds : 0;
-        var tb = b.data().createdAt ? b.data().createdAt.seconds : 0;
-        return tb - ta;
-      });
-      if (docs.length === 0) {
-        list.innerHTML = '<p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p>';
-        return;
-      }
-      var user = auth.currentUser;
-      var isAdm = user && ADMINS.indexOf(user.email) >= 0;
-      var html = '';
-      docs.forEach(function(doc) {
-        var c = doc.data();
-        var date = c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-        var del = isAdm ? ' <button onclick="window._deleteComment(\''+doc.id+'\')" style="font-size:.7rem;color:#c44;background:none;border:none;cursor:pointer">удалить</button>' : '';
-        var badge = '';
-        if (c.authorRole === 'superadmin') badge = ' <span style="font-size:.6rem;background:#faeeda;color:#854f0b;padding:1px 4px;border-radius:3px;font-weight:700">преподаватель</span>';
-        html += '<div style="padding:.6rem 0;border-bottom:1px solid #ede6da">';
-        html += '<div style="display:flex;justify-content:space-between;align-items:baseline">';
-        html += '<strong style="font-size:.88rem">'+(c.authorFio||c.authorEmail)+badge+'</strong>';
-        html += '<span style="font-size:.72rem;color:#9a8d7e">'+date+del+'</span></div>';
-        html += '<p style="font-size:.88rem;margin-top:.2rem;margin-bottom:0">'+esc(c.text)+'</p></div>';
-      });
-      list.innerHTML = html;
-    }).catch(function(e) {
-      list.innerHTML = '<p style="color:#c44;font-size:.85rem">Ошибка: '+e.message+'</p>';
-    });
-  }
-
-  window._postComment = function() {
-    var text = document.getElementById('comment-text').value.trim();
-    if (!text) return;
-    var user = auth.currentUser;
-    if (!user) return;
-    var fio = user.email;
-    var role = (ADMINS.indexOf(user.email) >= 0) ? 'superadmin' : 'student';
-    db.collection('users').doc(user.uid).get().then(function(ud) {
-      if (ud.exists && ud.data().fio) fio = ud.data().fio;
-    }).catch(function(){}).finally(function() {
-      db.collection('comments').add({
-        page: PAGE_ID, text: text,
-        authorEmail: user.email, authorFio: fio, authorUid: user.uid, authorRole: role,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(function() {
-        document.getElementById('comment-text').value = '';
-        loadComments();
-      }).catch(function(e) { alert('Ошибка: '+e.message); });
-    });
-  };
-
-  window._deleteComment = function(id) {
-    if (!confirm('Удалить?')) return;
-    db.collection('comments').doc(id).delete().then(loadComments).catch(function(e){alert(e.message);});
-  };
-
-  var _checkAuthRetries = 0;
-  function checkAuth() {
-    var user = auth.currentUser;
-    var form = document.getElementById('comment-form');
-    var login = document.getElementById('comment-login');
-    if (!form || !login) return;
-    if (user && window._userApproved) {
-      form.style.display = '';
-      login.style.display = 'none';
-      _checkAuthRetries = 0;
-    } else if (user && typeof window._userApproved === 'undefined' && _checkAuthRetries < 15) {
-      _checkAuthRetries++;
-      setTimeout(checkAuth, 400);
-    } else if (user) {
-      form.style.display = 'none';
-      login.style.display = '';
-      login.querySelector('p').textContent = 'Ваш профиль ещё не подтверждён.';
-      _checkAuthRetries = 0;
-    } else {
-      form.style.display = 'none';
-      login.style.display = '';
-      _checkAuthRetries = 0;
-    }
-  }
-
-  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', loadComments); }
-  else { loadComments(); }
-
-  function safeCheckAuth() {
-    if (document.getElementById('comment-form')) checkAuth();
-    else setTimeout(safeCheckAuth, 200);
-  }
-  auth.onAuthStateChanged(function() { setTimeout(safeCheckAuth, 500); });
-  window.addEventListener('authReady', safeCheckAuth);
-})();
-</script>
+<script src="../js/comments.js"></script>
 </body>
 </html>

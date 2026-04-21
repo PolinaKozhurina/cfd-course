@@ -438,56 +438,68 @@ firebase.auth().onAuthStateChanged(async user => {
 // ===== Unified Messenger =====
 var _profChatMode = null, _profChatId = null, _profFilter = 'all', _profUnsub = null;
 var _profChats = [], _allRegUsers = [];
+var _profBuilding = false;
 
-var EMOJIS = '😊😂🤣❤️🔥👍👎😎🤔🙏💪🎉✅❌⚠️💡📌🚀😴🤷‍♂️👋😍😭🤩😱🫡👀💀🤡🧠📊📈🔧💻🗂️✍️';
+var EMOJIS_STR = '😊😂🤣❤️🔥👍👎😎🤔🙏💪🎉✅❌⚠️💡📌🚀😴🤷‍♂️👋😍😭🤩😱🫡👀💀🤡🧠📊📈🔧💻🗂️✍️';
+
+function _isAdminEmail(email) {
+  return (typeof ADMIN_EMAILS !== 'undefined') && (Array.isArray(ADMIN_EMAILS) ? ADMIN_EMAILS.includes(email) : email === ADMIN_EMAILS);
+}
 
 function profToggleEmoji() {
   var el = document.getElementById('profEmojiPicker');
   if (el.style.display === 'none') {
     if (!el.innerHTML) {
-      var html = '';
-      for (var ch of EMOJIS) { if (ch.trim()) html += '<span onclick="profInsertEmoji(this.textContent)" style="padding:2px 4px;border-radius:4px;transition:background .1s" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'\'">'+ch+'</span>'; }
-      // Split grapheme clusters properly
-      var arr = [...EMOJIS];
-      html = '';
-      arr.forEach(function(e) { html += '<span onclick="profInsertEmoji(this.textContent)" style="padding:2px 4px;border-radius:4px;transition:background .1s;cursor:pointer" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'\'">'+e+'</span>'; });
-      el.innerHTML = html;
+      var arr = [...EMOJIS_STR];
+      el.innerHTML = arr.map(function(e){ return '<span onclick="profInsertEmoji(this.textContent)" style="padding:2px 4px;border-radius:4px;cursor:pointer" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'\'">'+e+'</span>'; }).join('');
     }
     el.style.display = '';
   } else { el.style.display = 'none'; }
 }
-function profInsertEmoji(e) {
-  var inp = document.getElementById('profChatInput');
-  if (inp) { inp.value += e; inp.focus(); }
-}
+function profInsertEmoji(e) { var inp = document.getElementById('profChatInput'); if(inp){inp.value+=e;inp.focus();} }
 
 function getDmId(a, b) { return [a, b].sort().join('_'); }
+function _getInitials(n) { if(!n)return'?';var p=n.trim().split(/\s+/);return p.length>=2?(p[0][0]+p[1][0]).toUpperCase():n.slice(0,2).toUpperCase(); }
 
 async function profBuildChatList() {
+  if (_profBuilding) return;
+  _profBuilding = true;
   _profChats = [];
   var me = window._pUser;
-  if (!me) return;
+  if (!me) { _profBuilding = false; return; }
 
-  // Load all registered users
+  // Load all users
   try {
     var uSnap = await db2.collection('users').get();
     _allRegUsers = [];
     uSnap.forEach(function(d) { _allRegUsers.push({ uid: d.id, ...d.data() }); });
   } catch(e) {}
 
-  // Group chat (own group)
-  if (window._pGroup) {
-    var gid = window._pGroup;
-    var members = _allRegUsers.filter(u => u.group === gid).map(u => u.fio || u.email).join(', ');
+  var gid = window._pGroup;
+
+  // 1. Official group chat (with admin) — groups/{id}/messages/
+  if (gid) {
+    var members = _allRegUsers.filter(function(u){ return u.group === gid; }).map(function(u){ return u.fio || u.email; }).join(', ');
     var lastMsg = '', lastTime = 0;
     try {
       var gs = await db2.collection('groups').doc(gid).collection('messages').orderBy('createdAt','desc').limit(1).get();
       if (!gs.empty) { var m = gs.docs[0].data(); lastMsg = (m.authorFio||'').split(' ')[0]+': '+(m.text||'').slice(0,35); lastTime = m.createdAt ? m.createdAt.seconds : 0; }
     } catch(e) {}
-    _profChats.push({ type:'group', id:gid, label:'👥 Моя группа', sub:members, lastMsg, lastTime, unread:0 });
+    _profChats.push({ type:'group', id:gid, chatKind:'official', label:'👥 Группа (Admin)', sub:members, lastMsg:lastMsg, lastTime:lastTime, unread:0 });
   }
 
-  // DM chats (existing)
+  // 2. Student-only group chat — groups/{id}/student_chat/
+  if (gid) {
+    var studentMembers = _allRegUsers.filter(function(u){ return u.group === gid && !_isAdminEmail(u.email); }).map(function(u){ return u.fio || u.email; }).join(', ');
+    var lastMsg2 = '', lastTime2 = 0;
+    try {
+      var gs2 = await db2.collection('groups').doc(gid).collection('student_chat').orderBy('createdAt','desc').limit(1).get();
+      if (!gs2.empty) { var m2 = gs2.docs[0].data(); lastMsg2 = (m2.authorFio||'').split(' ')[0]+': '+(m2.text||'').slice(0,35); lastTime2 = m2.createdAt ? m2.createdAt.seconds : 0; }
+    } catch(e) {}
+    _profChats.push({ type:'group', id:gid, chatKind:'student', label:'💬 Группа (свои)', sub:studentMembers, lastMsg:lastMsg2, lastTime:lastTime2, unread:0 });
+  }
+
+  // 3. DM chats
   try {
     var dmSnap = await db2.collection('dm').where('participants','array-contains',me.uid).get();
     for (var doc of dmSnap.docs) {
@@ -496,22 +508,22 @@ async function profBuildChatList() {
       if (!otherUid) continue;
       var other = _allRegUsers.find(function(u){ return u.uid === otherUid; });
       var name = other ? (other.fio || other.email) : otherUid;
-      var isAdm = other && (typeof ADMIN_EMAILS !== 'undefined') && ADMIN_EMAILS.includes(other.email);
-      var icon = isAdm ? '👨‍🏫' : '✉️';
-      var sub = other && other.group ? other.group.replace('group_','Гр.') : '';
-      if (isAdm) sub = 'преподаватель';
-      var lastMsg='',lastTime=0,unread=0;
+      var isAdm = other && _isAdminEmail(other.email);
+      var icon = isAdm ? '🛡️' : '✉️';
+      var sub = isAdm ? 'Admin' : (other && other.group ? other.group.replace('group_','Гр.') : '');
+      var lastMsg3='',lastTime3=0,unread=0;
       try {
         var mSnap = await db2.collection('dm').doc(doc.id).collection('messages').orderBy('createdAt','desc').limit(5).get();
-        if (!mSnap.empty) { var m2=mSnap.docs[0].data(); lastMsg=(m2.text||'').slice(0,40); lastTime=m2.createdAt?m2.createdAt.seconds:0;
+        if (!mSnap.empty) { var m3=mSnap.docs[0].data(); lastMsg3=(m3.text||'').slice(0,40); lastTime3=m3.createdAt?m3.createdAt.seconds:0;
           mSnap.forEach(function(md){ var msg=md.data(); if(msg.authorUid!==me.uid&&!msg.readAt)unread++; });
         }
       } catch(e) {}
-      _profChats.push({ type:'dm', id:otherUid, dmDocId:doc.id, label:icon+' '+name, sub:sub, lastMsg:lastMsg, lastTime:lastTime, unread:unread });
+      _profChats.push({ type:'dm', id:otherUid, dmDocId:doc.id, label:icon+' '+name, sub:sub, lastMsg:lastMsg3, lastTime:lastTime3, unread:unread });
     }
   } catch(e) {}
 
   _profChats.sort(function(a,b){ return (b.unread-a.unread)||(b.lastTime-a.lastTime); });
+  _profBuilding = false;
   profRenderChatList();
 }
 
@@ -536,10 +548,11 @@ function profRenderChatList() {
   _profChats.forEach(function(c) {
     if (_profFilter !== 'all' && c.type !== _profFilter) return;
     if (search && !(c.label+' '+c.sub).toLowerCase().includes(search)) return;
-    var isActive = c.type===_profChatMode && c.id===_profChatId;
+    var isActive = c.type===_profChatMode && c.id===_profChatId && (c.chatKind||'')===(window._profChatKind||'');
     var unreadBadge = c.unread>0?'<span style="min-width:14px;height:14px;border-radius:7px;background:#c44;color:#fff;font-size:.55rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 3px;font-family:JetBrains Mono,monospace">'+c.unread+'</span>':'';
     var time = c.lastTime?new Date(c.lastTime*1000).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-    html += '<div onclick="profOpenChat(\''+c.type+'\',\''+c.id+'\')" style="padding:6px 8px;cursor:pointer;border-bottom:1px solid var(--border);'+(isActive?'background:#fff;':'')+'transition:background .1s">';
+    var ck = c.chatKind||'';
+    html += '<div onclick="profOpenChat(\''+c.type+'\',\''+c.id+'\',\''+ck+'\')" style="padding:6px 8px;cursor:pointer;border-bottom:1px solid var(--border);'+(isActive?'background:#fff;':'')+'transition:background .1s">';
     html += '<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:.78rem;font-weight:600">'+c.label+'</span>';
     html += '<span style="display:flex;align-items:center;gap:3px">'+unreadBadge+'<span style="font-size:.55rem;color:var(--text3)">'+time+'</span></span></div>';
     if (c.sub) html += '<div style="font-size:.62rem;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.sub+'</div>';
@@ -550,48 +563,40 @@ function profRenderChatList() {
   body.innerHTML = html;
 }
 
-function profOpenChat(type, id) {
-  _profChatMode = type; _profChatId = id;
+function profOpenChat(type, id, chatKind) {
+  _profChatMode = type; _profChatId = id; window._profChatKind = chatKind || '';
   document.getElementById('profChatInputWrap').style.display = 'flex';
   document.getElementById('profEmojiPicker').style.display = 'none';
   profRenderChatList();
-  if (type === 'group') profLoadGroupChat(id);
+  if (type === 'group') profLoadGroupChat(id, chatKind);
   else profLoadDmChat(id);
 }
 
-function profStartNewDm() {
-  var opts = _allRegUsers.filter(function(u) {
-    return u.uid !== window._pUser.uid;
-  }).map(function(u) {
-    return (u.fio||u.email) + (u.group?' ('+u.group.replace('group_','Гр.')+')':'');
-  });
-  var uids = _allRegUsers.filter(function(u){ return u.uid !== window._pUser.uid; }).map(function(u){ return u.uid; });
-  var choice = prompt('Выберите номер:\n' + opts.map(function(o,i){ return (i+1)+'. '+o; }).join('\n'));
-  if (!choice) return;
-  var idx = parseInt(choice) - 1;
-  if (idx >= 0 && idx < uids.length) profOpenChat('dm', uids[idx]);
-}
-
-// ===== Group Chat =====
-function profLoadGroupChat(gid) {
+// ===== Group Chat (official or student-only) =====
+function profLoadGroupChat(gid, chatKind) {
   var header = document.getElementById('profChatHeader');
+  var collection = chatKind === 'student' ? 'student_chat' : 'messages';
+  var title = chatKind === 'student' ? '💬 <strong>Чат группы (свои)</strong>' : '👥 <strong>Чат группы (Admin)</strong>';
   var members = _allRegUsers.filter(function(u){ return u.group===gid; }).map(function(u){ return u.fio||u.email; }).join(', ');
-  header.innerHTML = '👥 <strong>Моя группа</strong> <span style="font-size:.72rem;font-weight:400;color:var(--text2)">'+members+'</span>';
+  header.innerHTML = title + ' <span style="font-size:.7rem;font-weight:400;color:var(--text2)">'+members+'</span>';
   if (_profUnsub) { _profUnsub(); _profUnsub = null; }
-  _profUnsub = db2.collection('groups').doc(gid).collection('messages').orderBy('createdAt','asc')
+  window._profCollection = collection;
+  _profUnsub = db2.collection('groups').doc(gid).collection(collection).orderBy('createdAt','asc')
     .onSnapshot(function(s){ profRenderMsgs(s,'group',gid); },
-    function(){ db2.collection('groups').doc(gid).collection('messages').orderBy('createdAt','asc').get().then(function(s){ profRenderMsgs(s,'group',gid); }); });
+    function(){ db2.collection('groups').doc(gid).collection(collection).orderBy('createdAt','asc').get().then(function(s){ profRenderMsgs(s,'group',gid); }); });
 }
 
 // ===== DM Chat =====
 function profLoadDmChat(uid) {
   var other = _allRegUsers.find(function(u){ return u.uid === uid; });
   var header = document.getElementById('profChatHeader');
-  var isAdm = other && (typeof ADMIN_EMAILS !== 'undefined') && ADMIN_EMAILS.includes(other.email);
-  header.innerHTML = (isAdm?'👨‍🏫':'✉️')+' <strong>'+(other?(other.fio||other.email):uid)+'</strong>'+(isAdm?' <span style="font-size:.7rem;color:var(--accent3)">преподаватель</span>':'');
+  var isAdm = other && _isAdminEmail(other.email);
+  var adminTag = isAdm ? ' <span style="font-size:.62rem;background:#fde8e8;color:#c44;padding:1px 5px;border-radius:3px;font-weight:700">Admin</span>' : '';
+  header.innerHTML = (isAdm?'🛡️':'✉️')+' <strong>'+(other?(other.fio||other.email):uid)+'</strong>'+adminTag;
   var me = window._pUser;
   var dmId = getDmId(me.uid, uid);
   if (_profUnsub) { _profUnsub(); _profUnsub = null; }
+  window._profCollection = null;
   _profUnsub = db2.collection('dm').doc(dmId).collection('messages').orderBy('createdAt','asc')
     .onSnapshot(function(s){ profRenderMsgs(s,'dm',dmId); },
     function(){ db2.collection('dm').doc(dmId).collection('messages').orderBy('createdAt','asc').get().then(function(s){ profRenderMsgs(s,'dm',dmId); }); });
@@ -605,20 +610,45 @@ function profRenderMsgs(snap, type, refId) {
     var m = doc.data();
     var date = m.createdAt ? new Date(m.createdAt.seconds*1000).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
     var isSelf = me && m.authorUid === me.uid;
-    var isTeacher = m.role === 'admin' || ((typeof ADMIN_EMAILS!=='undefined') && ADMIN_EMAILS.includes(m.authorEmail));
+    var isTeacher = m.role === 'admin' || _isAdminEmail(m.authorEmail||'');
     var align = isSelf ? 'flex-end' : 'flex-start';
     var bg = isSelf ? '#e8f4f0' : (isTeacher ? '#e6f1fb' : '#f5f0e8');
     var border = isSelf ? '#1a6b5a' : (isTeacher ? '#3a5ba0' : '#d9cfc0');
     var name = m.authorFio || m.authorEmail || '';
-    var roleTag = isTeacher && !isSelf ? ' <span style="font-size:.55rem;background:#e6f1fb;color:#3a5ba0;padding:1px 3px;border-radius:3px;font-weight:700">преп.</span>' : '';
+    var roleTag = isTeacher && !isSelf ? ' <span style="font-size:.55rem;background:#fde8e8;color:#c44;padding:1px 4px;border-radius:3px;font-weight:700">Admin</span>' : '';
 
     // Track unread
     if (!isSelf) {
-      if (type === 'group' && m.role === 'admin') {
+      if (type === 'group') {
         var rBy = m.readBy || {};
         if (!rBy[me.uid]) unreadIds.push({ id: doc.id, type: 'group' });
       } else if (type === 'dm' && !m.readAt) {
         unreadIds.push({ id: doc.id, type: 'dm' });
+      }
+    }
+
+    // Read receipts for own messages
+    var readHtml = '';
+    if (isSelf) {
+      if (type === 'group') {
+        var rBy2 = m.readBy || {};
+        var rList = Object.values(rBy2);
+        if (rList.length > 0) {
+          var avs = '';
+          rList.forEach(function(r) {
+            var ini = _getInitials(r.fio||r.email);
+            var colors = ['#1a6b5a','#3a5ba0','#854f0b','#7c3aed','#b44a2d'];
+            var c = colors[Math.abs((r.fio||r.email||'').length)%colors.length];
+            avs += '<span title="'+(r.fio||r.email)+'" style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:'+c+';color:#fff;font-size:.45rem;font-weight:700;font-family:JetBrains Mono,monospace;border:1px solid #fff;margin-left:-2px">'+ini+'</span>';
+          });
+          readHtml = '<div style="display:flex;align-items:center;gap:2px;margin-top:2px;justify-content:flex-end"><span style="font-size:.55rem;color:#1a6b5a">✓✓</span><span style="display:inline-flex">'+avs+'</span></div>';
+        } else {
+          readHtml = '<div style="text-align:right;font-size:.55rem;color:#9a8d7e;margin-top:2px">✓</div>';
+        }
+      } else if (type === 'dm') {
+        readHtml = m.readAt
+          ? '<div style="text-align:right;font-size:.55rem;color:#1a6b5a;margin-top:2px">✓✓ прочитано</div>'
+          : '<div style="text-align:right;font-size:.55rem;color:#9a8d7e;margin-top:2px">✓</div>';
       }
     }
 
@@ -628,7 +658,7 @@ function profRenderMsgs(snap, type, refId) {
     html += '<strong style="font-size:.7rem">'+name+roleTag+'</strong>';
     html += '<span style="font-size:.58rem;color:#9a8d7e;white-space:nowrap">'+date+'</span></div>';
     html += '<div style="font-size:.83rem">'+(m.text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div>';
-    html += '</div></div>';
+    html += readHtml + '</div></div>';
   });
   if (!html) html = '<p style="text-align:center;color:#9a8d7e;padding:1.5rem;font-size:.8rem">Нет сообщений. Напишите первое!</p>';
   body.innerHTML = html;
@@ -641,12 +671,12 @@ function profRenderMsgs(snap, type, refId) {
         var fio = window._pFio || me.email;
         var rd = {};
         rd['readBy.'+me.uid] = { email:me.email, fio:fio, at:Date.now() };
-        db2.collection('groups').doc(refId).collection('messages').doc(u.id).update(rd).catch(function(){});
+        db2.collection('groups').doc(refId).collection(window._profCollection||'messages').doc(u.id).update(rd).catch(function(){});
       } else {
         db2.collection('dm').doc(refId).collection('messages').doc(u.id).update({ readAt:Date.now() }).catch(function(){});
       }
     });
-    setTimeout(profBuildChatList, 800);
+    setTimeout(function(){ _profBuilding=false; profBuildChatList(); }, 800);
   }
 }
 
@@ -661,10 +691,11 @@ async function profSendGroupMsg() {
   var me = window._pUser, group = _profChatId;
   if (!text || !me || !group) return;
   var fio = window._pFio || me.email;
+  var collection = window._profCollection || 'messages';
   try {
-    await db2.collection('groups').doc(group).collection('messages').add({
+    await db2.collection('groups').doc(group).collection(collection).add({
       text:text, role:'student', authorEmail:me.email, authorFio:fio, authorUid:me.uid,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      readBy:{}, createdAt:firebase.firestore.FieldValue.serverTimestamp()
     });
     input.value = '';
   } catch(e) { alert('Ошибка: '+e.message); }
@@ -684,9 +715,44 @@ async function profSendDmMsg() {
       readAt:null, createdAt:firebase.firestore.FieldValue.serverTimestamp()
     });
     input.value = '';
-    // Refresh list to show new chat
-    setTimeout(profBuildChatList, 500);
+    setTimeout(function(){ _profBuilding=false; profBuildChatList(); }, 500);
   } catch(e) { alert('Ошибка: '+e.message); }
+}
+
+function profStartNewDm() {
+  var existing = document.getElementById('newChatModal');
+  if (existing) existing.remove();
+  var users = _allRegUsers.filter(function(u){ return u.uid !== window._pUser.uid; });
+  var modal = document.createElement('div');
+  modal.id = 'newChatModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35)';
+  modal.onclick = function(e){ if(e.target===modal) modal.remove(); };
+  var box = document.createElement('div');
+  box.style.cssText = 'background:#fff;border-radius:10px;width:360px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,.2);overflow:hidden';
+  var header = '<div style="padding:10px 14px;border-bottom:1px solid var(--border,#d9cfc0);display:flex;justify-content:space-between;align-items:center"><strong style="font-size:.9rem;font-family:Playfair Display,serif">Новый чат</strong><button onclick="document.getElementById(\'newChatModal\').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text2,#6b5d4f)">✕</button></div>';
+  var search = '<div style="padding:8px 14px;border-bottom:1px solid var(--border,#d9cfc0)"><input type="text" id="newChatSearch" placeholder="Поиск по имени..." oninput="profFilterNewChat()" autofocus style="width:100%;font-family:Source Serif 4,Georgia,serif;font-size:.88rem;padding:6px 10px;border:1px solid var(--border,#d9cfc0);border-radius:5px;background:#fff"></div>';
+  var list = '<div id="newChatList" style="flex:1;overflow-y:auto;max-height:50vh">';
+  users.forEach(function(u) {
+    var isAdm = _isAdminEmail(u.email);
+    var icon = isAdm ? '🛡️' : '👤';
+    var role = isAdm ? '<span style="font-size:.6rem;background:#fde8e8;color:#c44;padding:1px 4px;border-radius:3px;font-weight:700;margin-left:4px">Admin</span>' : '';
+    var group = u.group ? '<span style="font-size:.68rem;color:var(--text3,#9a8d7e);margin-left:4px">'+u.group.replace('group_','Гр.')+'</span>' : '';
+    list += '<div onclick="document.getElementById(\'newChatModal\').remove();profOpenChat(\'dm\',\''+u.uid+'\')" data-search="'+((u.fio||'')+' '+(u.email||'')).toLowerCase()+'" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border,#d9cfc0);transition:background .1s" onmouseover="this.style.background=\'var(--bg2,#f5f0e8)\'" onmouseout="this.style.background=\'\'">';
+    list += '<div style="font-size:.85rem;font-weight:600">'+icon+' '+(u.fio||u.email)+role+group+'</div>';
+    list += (u.fio ? '<div style="font-size:.7rem;color:var(--text3,#9a8d7e)">'+u.email+'</div>' : '');
+    list += '</div>';
+  });
+  list += '</div>';
+  box.innerHTML = header + search + list;
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+  setTimeout(function(){ var s=document.getElementById('newChatSearch'); if(s) s.focus(); }, 100);
+}
+
+function profFilterNewChat() {
+  var q = (document.getElementById('newChatSearch').value||'').toLowerCase();
+  var items = document.querySelectorAll('#newChatList > div');
+  items.forEach(function(el){ el.style.display = (!q || el.dataset.search.includes(q)) ? '' : 'none'; });
 }
 </script>
 </body>

@@ -207,8 +207,9 @@ document.addEventListener('DOMContentLoaded', function() {
         <button class="btn btn-sm" id="chatFilterDm" onclick="setChatFilter('dm')" style="font-size:.65rem;flex:1">Личные</button>
       </div>
       <div id="chatListBody" style="flex:1;overflow-y:auto"></div>
-      <div style="padding:6px 8px;border-top:1px solid var(--border)">
-        <button class="btn btn-sm" onclick="sendToAllGroups()" style="width:100%;font-size:.68rem">📢 Всем группам</button>
+      <div style="padding:5px 6px;border-top:1px solid var(--border);display:flex;gap:4px">
+        <button class="btn btn-sm" onclick="sendToAllGroups()" style="flex:1;font-size:.68rem">📢 Всем</button>
+        <button class="btn btn-sm" onclick="adminStartNewDm()" style="flex:1;font-size:.68rem;background:var(--accent3);color:#fff;border-color:var(--accent3)">+ Личный чат</button>
       </div>
     </div>
     <!-- Chat window -->
@@ -1367,7 +1368,7 @@ function renderGroupMsgs(snap,gid) {
     var date=m.createdAt?new Date(m.createdAt.seconds*1000).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
     var isA=m.role==='admin',align=isA?'flex-end':'flex-start',bg=isA?'#e6f1fb':'#f5f0e8',border=isA?'#3a5ba0':'#d9cfc0';
     var name=m.authorFio||m.authorEmail||'';
-    var roleTag=isA?'<span style="font-size:.6rem;background:#e6f1fb;color:#3a5ba0;padding:1px 4px;border-radius:3px;font-weight:700;margin-left:4px">преп.</span>':'';
+    var roleTag=isA?'<span style="font-size:.6rem;background:#fde8e8;color:#c44;padding:1px 4px;border-radius:3px;font-weight:700;margin-left:4px">Admin</span>':'';
     var delBtn=isA?' <button onclick="delGrpMsg(\''+gid+'\',\''+doc.id+'\')" style="font-size:.62rem;color:#c44;background:none;border:none;cursor:pointer;opacity:.6">✕</button>':'';
     var readHtml='';
     if(isA){var rBy=m.readBy||{},rList=Object.values(rBy),rc=rList.length;
@@ -1464,6 +1465,51 @@ function toggleAdminEmoji() {
   } else { el.style.display = 'none'; }
 }
 function insertAdminEmoji(e) { var inp = document.getElementById('adminChatInput'); if(inp){inp.value+=e;inp.focus();} }
+
+function adminStartNewDm() {
+  var existing = document.getElementById('newChatModal');
+  if (existing) existing.remove();
+
+  var users = allUsers.filter(function(u){ return !isAdmin(u.email); });
+  var modal = document.createElement('div');
+  modal.id = 'newChatModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35)';
+  modal.onclick = function(e){ if(e.target===modal) modal.remove(); };
+
+  var box = document.createElement('div');
+  box.style.cssText = 'background:#fff;border-radius:10px;width:380px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,.2);overflow:hidden';
+
+  var header = '<div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">' +
+    '<strong style="font-size:.9rem;font-family:Playfair Display,serif">Новый личный чат</strong>' +
+    '<button onclick="document.getElementById(\'newChatModal\').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text2)">✕</button></div>';
+
+  var search = '<div style="padding:8px 14px;border-bottom:1px solid var(--border)">' +
+    '<input type="text" id="adminNewChatSearch" placeholder="Поиск по имени..." oninput="adminFilterNewChat()" autofocus ' +
+    'style="width:100%;font-family:Source Serif 4,serif;font-size:.88rem;padding:6px 10px;border:1px solid var(--border);border-radius:5px"></div>';
+
+  var list = '<div id="adminNewChatList" style="flex:1;overflow-y:auto;max-height:50vh">';
+  users.forEach(function(u) {
+    var group = u.group ? '<span style="font-size:.68rem;color:var(--text3);margin-left:4px">'+u.group.replace('group_','Гр.')+'</span>' : '';
+    list += '<div onclick="document.getElementById(\'newChatModal\').remove();openChat(\'dm\',\''+u.uid+'\')" data-search="'+((u.fio||'')+' '+(u.email||'')).toLowerCase()+'" ' +
+      'style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s" ' +
+      'onmouseover="this.style.background=\'var(--bg2)\'" onmouseout="this.style.background=\'\'">' +
+      '<div style="font-size:.85rem;font-weight:600">✉️ '+(u.fio||u.email)+group+'</div>' +
+      (u.fio ? '<div style="font-size:.7rem;color:var(--text3)">'+u.email+'</div>' : '') +
+      '</div>';
+  });
+  list += '</div>';
+
+  box.innerHTML = header + search + list;
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+  setTimeout(function(){ var s=document.getElementById('adminNewChatSearch'); if(s) s.focus(); }, 100);
+}
+
+function adminFilterNewChat() {
+  var q = (document.getElementById('adminNewChatSearch').value||'').toLowerCase();
+  var items = document.querySelectorAll('#adminNewChatList > div');
+  items.forEach(function(el){ el.style.display = (!q || el.dataset.search.includes(q)) ? '' : 'none'; });
+}
 </script>
 </body>
 </html>

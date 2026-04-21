@@ -3294,11 +3294,24 @@ const obs = new IntersectionObserver(entries => {
 }, { rootMargin: '-20% 0px -70% 0px' });
 sections.forEach(s => obs.observe(s));
 </script>
+<main>
 
+<!-- COMMENTS -->
+<div id="comments-section" style="margin-top:3rem;padding-top:2rem;border-top:2px solid #d9cfc0">
+<h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
+<div id="comments-list"><p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p></div>
+<div id="comment-form" style="display:none;margin-top:.8rem">
+<textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
+<div style="display:flex;justify-content:flex-end;margin-top:.4rem">
+<button onclick="window._postComment()" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:6px 16px;border-radius:5px;background:#b44a2d;color:#fff;border:none;cursor:pointer;font-weight:600">Отправить</button>
+</div>
+</div>
+<div id="comment-login" style="display:none;margin-top:.5rem">
+<p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p>
+</div>
+</div>
 
-</body>
-</html><!-- COMMENTS -->
-
+</main>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -3308,19 +3321,10 @@ sections.forEach(s => obs.observe(s));
 <script>
 // === Comments System ===
 (function(){
-  // Wait for Firebase to be ready
-  if (typeof firebase === 'undefined') {
-    console.warn('Comments: firebase not loaded');
-    return;
-  }
+  if (typeof firebase === 'undefined') { console.warn('Comments: firebase not loaded'); return; }
   var db, auth;
-  try {
-    db = firebase.firestore();
-    auth = firebase.auth();
-  } catch(e) {
-    console.warn('Comments: firebase not initialized', e);
-    return;
-  }
+  try { db = firebase.firestore(); auth = firebase.auth(); }
+  catch(e) { console.warn('Comments: firebase not initialized', e); return; }
 
   var PAGE_ID = location.pathname.split('/').pop().replace('.html','') || 'index';
   var ADMINS = (typeof ADMIN_EMAILS !== 'undefined') ? ADMIN_EMAILS : [];
@@ -3348,7 +3352,7 @@ sections.forEach(s => obs.observe(s));
       docs.forEach(function(doc) {
         var c = doc.data();
         var date = c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-        var del = isAdm ? ' <button onclick="window._deleteComment(\''+doc.id+'\')" style="font-size:.7rem;color:#c44;background:none;border:none;cursor:pointer">удалить</button>' : '';
+        var del = isAdm ? ' <button onclick="window._deleteComment(\\''+doc.id+'\\')" style="font-size:.7rem;color:#c44;background:none;border:none;cursor:pointer">удалить</button>' : '';
         var badge = '';
         if (c.authorRole === 'superadmin') badge = ' <span style="font-size:.6rem;background:#faeeda;color:#854f0b;padding:1px 4px;border-radius:3px;font-weight:700">преподаватель</span>';
         html += '<div style="padding:.6rem 0;border-bottom:1px solid #ede6da">';
@@ -3371,7 +3375,6 @@ sections.forEach(s => obs.observe(s));
     if (!user) return;
     var fio = user.email;
     var role = (ADMINS.indexOf(user.email) >= 0) ? 'superadmin' : 'student';
-    // Try to get FIO
     db.collection('users').doc(user.uid).get().then(function(ud) {
       if (ud.exists && ud.data().fio) fio = ud.data().fio;
     }).catch(function(){}).finally(function() {
@@ -3391,57 +3394,28 @@ sections.forEach(s => obs.observe(s));
     db.collection('comments').doc(id).delete().then(loadComments).catch(function(e){alert(e.message);});
   };
 
-  // Show/hide form based on auth
   function checkAuth() {
     var user = auth.currentUser;
     var form = document.getElementById('comment-form');
     var login = document.getElementById('comment-login');
     if (!form || !login) return;
-    if (user && window._userApproved) {
-      form.style.display = '';
-      login.style.display = 'none';
-    } else if (user) {
-      form.style.display = 'none';
-      login.style.display = '';
-      login.querySelector('p').textContent = 'Ваш профиль ещё не подтверждён.';
-    } else {
-      form.style.display = 'none';
-      login.style.display = '';
-    }
+    if (user && window._userApproved) { form.style.display = ''; login.style.display = 'none'; }
+    else if (user) { form.style.display = 'none'; login.style.display = ''; login.querySelector('p').textContent = 'Ваш профиль ещё не подтверждён.'; }
+    else { form.style.display = 'none'; login.style.display = ''; }
   }
 
-  // Load comments when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadComments);
-  } else {
-    loadComments();
-  }
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', loadComments); }
+  else { loadComments(); }
 
-  // Check auth now and when it changes
   function safeCheckAuth() {
     if (document.getElementById('comment-form')) checkAuth();
     else setTimeout(safeCheckAuth, 200);
   }
-  auth.onAuthStateChanged(function() {
-    setTimeout(safeCheckAuth, 500);
-  });
+  auth.onAuthStateChanged(function() { setTimeout(safeCheckAuth, 500); });
   window.addEventListener('authReady', safeCheckAuth);
 })();
 </script>
-<div id="comments-section" style="margin-top:3rem;padding-top:2rem;border-top:2px solid #d9cfc0">
-<h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
-<div id="comments-list" style="margin-bottom:1rem">
-<p style="color:#9a8d7e;font-size:.85rem">Загрузка комментариев...</p>
-</div>
-<div id="comment-form" style="display:none">
-<textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
-<div style="display:flex;justify-content:flex-end;margin-top:.4rem">
-<button onclick="postComment()" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:6px 16px;border-radius:5px;background:#b44a2d;color:#fff;border:none;cursor:pointer;font-weight:600">Отправить</button>
-</div>
-</div>
-<div id="comment-login" style="display:none">
-<p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p>
-</div>
-</div>
 
 
+</body>
+</html>

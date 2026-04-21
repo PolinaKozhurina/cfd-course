@@ -6,197 +6,171 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>§5. Методы исследования устойчивости</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
-<style>
-:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8}
-*{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
-.wrap{max-width:760px;margin:0 auto;padding:2rem 1.5rem 4rem}
-.lecture-tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;padding:.2rem .5rem;border-radius:3px;display:inline-block;margin-bottom:.5rem;background:#f3e8f9;color:#7b3fa0}
-.lecture-num{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);margin-bottom:.3rem}
-h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;line-height:1.15;margin-bottom:1.5rem;color:var(--text)}
-h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--accent);margin:2rem 0 .8rem;padding-top:.5rem;border-top:1px solid var(--border)}
-h3{font-family:'Source Serif 4',serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:1.5rem 0 .5rem}
-p{margin-bottom:1rem;text-align:justify;hyphens:auto}
-.equation{margin:1.5rem 0;text-align:center;overflow-x:auto}
-.definition{background:var(--bg2);border-left:3px solid var(--accent2);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
-.theorem{background:#fdf6ee;border-left:3px solid var(--accent);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
-.theorem .th-title{font-family:'Playfair Display',serif;font-weight:700;color:var(--accent);margin-bottom:.3rem}
-.remark{background:#f0f7f4;border-left:3px solid var(--accent2);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:.92rem}
-code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:.1rem .3rem;border-radius:3px}
-.lecture-nav{display:flex;justify-content:space-between;gap:1rem;margin-top:3rem;padding-top:1.5rem;border-top:2px solid var(--border);flex-wrap:wrap}
-.lecture-nav a{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);text-decoration:none;padding:.5rem .8rem;border:1px solid var(--border);border-radius:6px;transition:all .15s;max-width:48%}
-.lecture-nav a:hover{border-color:var(--accent);background:rgba(180,74,45,.05)}
-.nav-prev{text-align:left}
-.nav-next{text-align:right;margin-left:auto}
-</style>
 </head>
 <body>
 <script src="../js/nav.js"></script>
 
-<div class="wrap">
-<span class="lecture-tag">Основы</span>
+<nav class="sidebar">
+  <h2>§5 Устойчивость</h2>
+  <div class="g">Содержание</div>
+  <a href="#spectral">Спектральный метод</a>
+  <a href="#harmonics">Гармоники</a>
+  <a href="#multiplier">Множитель перехода</a>
+  <a href="#neumann">Условие Неймана</a>
+  <a href="#example">Пример: схема «уголок»</a>
+  <a href="#exercise">Упражнение</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="s1-04.html">← §4 Дифф. приближение</a>
+  <a href="s1-06.html">→ §6 Дисперсия</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-basics">Основы</span>
 <div class="lecture-num">§5 · Семестр 1</div>
-<h1>Методы исследования устойчивости разностных схем.</h1>
+<h1>Методы исследования устойчивости разностных схем. Метод гармоник. Множитель перехода</h1>
 
-<p>Методы исследования устойчивости разностных схем.
-Дифференциальное приближение. Метод гармоник.
-Множитель перехода
-В прошлом параграфе было введено понятие устойчивости. Простыми</p>
+<h2 id="spectral">Спектральный признак устойчивости</h2>
 
-<p>словами, разностная схема устойчива по правой части, если малые возмуще-</p>
+<p>В прошлом параграфе было введено понятие устойчивости. Простыми словами, разностная схема устойчива по правой части, если малые возмущения сеточной функции \(u_i^n\) приводят к малому изменению решения. Близость решений оценивается с использованием сеточных норм.</p>
 
-<p>n</p>
+<p>Спектральный признак устойчивости разностных схем является наиболее распространённым в силу своей простоты и универсальности. Его можно применять как к явным, так и к неявным схемам, к системам уравнений, к задачам со многими переменными. Однако стоит обратить внимание, что мы не всегда можем им воспользоваться.</p>
 
-<p>ния сеточной функции ui приводят к малому изменению решения. Близость
-решений оценивается с использованием сеточных норм.
-Спектральный признак устойчивости разностных схем является наиболее распространенным в силу своей простоты и универсальности. Его можно
-применять как к явным, так и к неявным схемам, к системам уравнений, к
-задачам со многими переменными. Однако стоит обратить внимание, что мы
-не всегда можем им воспользоваться.</p>
+<div class="remark">
+<strong>Замечание.</strong> Метод гармоник допускает использование только для <strong>однородных</strong> уравнений с <strong>постоянными</strong> коэффициентами без учёта краевых условий.
+</div>
 
-<p>Замечание. Метод гармоник допускает использование только для однородных уравнений с постоянными коэффициентами без учета краевых условий.</p>
+<p>Суть метода заключается в том, что свойства разностных схем оцениваются по поведению во времени решений специального вида (гармонических функций, или гармоник), являющихся собственными функциями <em>оператора перехода</em>.</p>
 
-<p>Суть метода заключается в том, что свойства разностных схем оцениваются по поведению во времени решений специального вида (гармонических
-функций, или гармоник), являющихся собственными функциями</p>
+<h2 id="harmonics">Гармоники и оператор перехода</h2>
 
-<p>оператора</p>
+<div class="definition">
+<strong>Определение 1.</strong> <em>Оператор перехода</em> — оператор, обеспечивающий переход решения с предыдущего временного слоя на следующий.
+</div>
 
-<p>перехода.
-Определение 1. Оператор перехода — оператор, обеспечивающий переход
-решения с предыдущего временного слоя на следующий.
-Для функций непрерывных аргументов x, t гармоникой называют выра-</p>
+<p>Для функций непрерывных аргументов \(x, t\) гармоникой называют выражение \(u = e^{i\omega t + ikx}\), где \(\omega\) и \(k\) — постоянные, причём \(k\) — вещественное. Для дискретных функций, определённых на сетке \(x_m = mh\), \(t_n = n\tau\), гармоника имеет вид</p>
 
-<p>i\omegat+ikx</p>
+<div class="eq">\[
+u_m^n = \exp(\omega\tau n + ikhm) = \lambda^n \exp(i\alpha m),
+\tag{5.1}
+\]</div>
 
-<p>жение u = 𝑒</p>
+<p>где \(\lambda = \exp(\omega\tau)\), \(\alpha = kh\). Величина \(\alpha\) меняется от 0 (постоянная в направлении \(x\) функция) до \(2\pi\) (функция с наибольшей частотой изменения \(x\) по сетке). Заметим, что в некоторых руководствах верхнее значение \(\alpha\) ограничивают значением \(\pi\), что соответствует одной полуволне периодической функции на сеточном интервале.</p>
 
-<p>, где \omega и k — постоянные, причем k — вещественное. Для</p>
+<h2 id="multiplier">Множитель перехода</h2>
 
-<p>дискретных функций, определенных на сетке xm = mℎ, tn = \pi\tau , гармоника
-имеет вид</p>
+<p>Подстановка \(u_m^n = \lambda^n \exp(i\alpha m)\) в разностную схему даёт соотношение, связывающее между собой \(\lambda\) и \(\alpha\): так называемое <em>характеристическое (дисперсионное) уравнение</em> \(\lambda = \lambda(\alpha)\). Величина \(\lambda\) — в общем случае комплексная — именуется <em>множителем (коэффициентом) перехода</em>. Смысл последнего названия ясен из равенств</p>
 
-<p>unm = exp (\omega\tau n + ikℎm) = \lambdan exp (i\alpham),</p>
+<div class="eq">\[
+u_m^n = \lambda^n \exp(i\alpha m), \qquad u_m^{n+1} = \lambda^{n+1} \exp(i\alpha m),
+\]</div>
 
-<p>где \lambda = exp (\omega\tau ), \alpha = kℎ. Величина \alpha меняется от 0 (постоянная в направлении x функция) до 2\pi (функция с наибольшей частотой изменения x по
-сетке). Заметим, что в некоторых руководствах верхнее значение \alpha ограничивают значением \pi , что соответствует одной полуволне периодической функции на сеточном интервале.
-Подстановка</p>
+<p>откуда \(u_m^{n+1} = \lambda u_m^n\). Сеточная функция \(u_m^0\) в форме (5.1) имеет вид \(\exp(i\alpha m)\), и её можно рассматривать как начальное условие задачи. Из (5.1) следует, что \(u_m^n = \lambda^n u_m^0\), откуда</p>
 
-<p>unm = \lambdan exp (i\alpham) в разностную схему дает соотношение</p>
+<div class="eq">\[
+\max_m |u_m^n| = |\lambda|^n \max_m |u_m^0|.
+\tag{5.2}
+\]</div>
 
-<p>свзяывающее между собой \lambda и \alpha: так называемое характеристическое (дисперсионное) уравнение \lambda = \lambda(\alpha). Величина \lambda</p>
-
-<p>— в общем случае комплекс-</p>
-
-<p>ная — именуется множителем (коэффициентом) перехода. Смысл последнего
-названия ясен из равенств</p>
-
-<p>unm = \lambdan exp (i\alpham),
-n+1</p>
-
-<p>откуда um</p>
-
-<p>n+1
-un+1
-exp (i\alpham)
-m = \lambda</p>
-
-<p>= \lambdaunm . Сеточная функция u0m в форме (§5.1) имеет вид exp (i\alpham),</p>
-
-<p>и ее можно рассматривать как начальное условие задачи. Из (§5.1) следует,</p>
-
-<p>n</p>
-
-<p>n 0
-um , откуда</p>
-
-<p>что um = \lambda</p>
-
-<p>max |unm | = |\lambda|n max |u0m |
-m</p>
-
-<p>m</p>
+<h2 id="neumann">Необходимое условие устойчивости (условие Неймана)</h2>
 
 <p>Воспользуемся вторым определением устойчивости</p>
 
-<p>‖u(ℎ) ‖𝑈ℎ \le 𝐶‖f (ℎ) ‖𝐹ℎ ,</p>
+<div class="eq">\[
+\|u^{(h)}\|_{U_h} \le C\|f^{(h)}\|_{F_h}, \qquad C \ne C(h) > 0
+\tag{5.3}
+\]</div>
 
-<p>𝐶 ̸= 𝐶(ℎ) &gt; 0</p>
+<p>и введём нормы следующим образом</p>
 
-<p>‖u(ℎ) ‖𝑈ℎ = max ‖f (ℎ) ‖𝐹ℎ = max ‖u0m ‖</p>
+<div class="eq">\[
+\|u^{(h)}\|_{U_h} = \max_{m,n}\|u_m^n\|, \qquad \|f^{(h)}\|_{F_h} = \max_m \|u_m^0\|.
+\tag{5.4}
+\]</div>
 
-<p>и введем нормы следующим образом</p>
+<p>Тогда, как следует из соотношений (5.2)–(5.4), для устойчивости схемы во всяком случае необходимо, чтобы при всех \(n\) и для всех гармоник (\(0 \le \alpha \le 2\pi\)) имело место условие \(|\lambda|^n \le C\), \(n = 0, 1, \ldots, N\). Замечая, что \(n \sim 1/\tau\), имеем</p>
 
-<p>m,n</p>
+<div class="eq">\[
+|\lambda(\alpha)| \le 1 + C\tau.
+\tag{5.5}
+\]</div>
 
-<p>m</p>
+<p>Это ограничение есть <strong>необходимое спектральное условие устойчивости (условие Неймана)</strong>, выражающее ограниченность гармоник по модулю при \(\tau \to 0\), \(n \to \infty\). Геометрическое истолкование условия (5.5) сводится к тому, что в комплексной плоскости \(\mathrm{Re}\,\lambda + i\,\mathrm{Im}\,\lambda\) все значения \(\lambda(\alpha)\) при \(0 \le \alpha \le 2\pi\) не должны выходить из круга радиуса \(1 + C\tau\). На практике обычно заменяют неравенство (5.5) условием</p>
 
-<p>Тогда, как следует из соотношений (§5.2) — (§5.4), для устойчивости схемы
-во всяком случае необходимо, чтобы при всех n и для всех гармоник (0 \le</p>
+<div class="eq">\[
+|\lambda| \le 1.
+\]</div>
 
-<p>\alpha \le 2\pi) имело место условие |\lambda|n \le 𝐶 , n = 0, 1, . . . , N . Замечая, что n ∼ 1/\tau ,
-имеем</p>
-
-<p>|\lambda(\alpha)| \le 1 + 𝐶\tau.</p>
-
-<p>Это ограничение есть необходимое спектральное условие устойчивости
-(условие Неймана), выражающее ограниченность гармоник по модулю при</p>
-
-<p>\tau \to 0, n \to inf . Геометрическое истолкование условия (§5.5) сводится к тому,
-что в комплексной плоскости Re \lambda + iIm \lambda все значения \lambda(\alpha) при (0 \le \alpha \le 2\pi)
-не должны выходить из круга радиуса 1+𝐶\tau . На практике обычно заменяют
-неравенство (§5.5) условием</p>
-
-<p>|\lambda| \le 1.
-Рассмотрим применение спектрального метода для исследования устойчивости полученных ранее схем. Исходное дифференциальное уравнение ut +</p>
-
-<p>aux = 0, a = const &gt; 0.</p>
-
-<p>Пример. Явная схема с нессиметричной аппроксимацией ux разностью назад</p>
-
-<p>n
-unm − unm−1
-un+1
-m − um
-+a
-= 0,
-\tau
-ℎ
-n
-n
-un+1
-m = (1 − r)um + rum−1 ,</p>
-
-<p>r=</p>
-
-<p>a\tau
-.
-ℎ</p>
-
-<p>Характеристическое уравнение \lambda = 1 − r + r exp (−i\alpha) — уравнение окружности радиуса r с центром в точке 1 − r . Условие Неймана выполняется при</p>
-
-<p>r \le 1, что совпадает с критерием Куранта.</p>
-
-<p>Упражнение. Найдите характеристическое уравнение и определите радиус
-сходимости для схемы</p>
-
-<p>n
-un − unm
-un+1
-m − um
-+ a m+1
-= 0.
-\tau
-ℎ</p>
-
-<p>22</p>
-
-<div class="lecture-nav"><a href="s1-04.html" class="nav-prev">← §4. Первое дифференциальное приближение</a><a href="s1-06.html" class="nav-next">§6. Диссипативные и дисперсионные свойства →</a></div>
+<!-- SVG: Neumann condition in complex plane -->
+<div class="figure">
+<svg viewBox="0 0 340 300" xmlns="http://www.w3.org/2000/svg" style="max-width:320px">
+  <defs><marker id="ar5" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2c2419"/></marker></defs>
+  <!-- Axes -->
+  <line x1="30" y1="150" x2="310" y2="150" stroke="#d9cfc0" stroke-width="1"/>
+  <line x1="170" y1="280" x2="170" y2="20" stroke="#d9cfc0" stroke-width="1"/>
+  <text x="315" y="155" font-family="Source Serif 4,serif" font-size="12" fill="#6b5d4f" font-style="italic">Re λ</text>
+  <text x="175" y="16" font-family="Source Serif 4,serif" font-size="12" fill="#6b5d4f" font-style="italic">Im λ</text>
+  <!-- Unit circle -->
+  <circle cx="170" cy="150" r="110" fill="rgba(26,107,90,0.06)" stroke="#1a6b5a" stroke-width="2" stroke-dasharray="6,3"/>
+  <text x="240" y="60" font-family="JetBrains Mono,monospace" font-size="9" fill="#1a6b5a">|λ| = 1</text>
+  <!-- Example: upwind scheme curve for r=0.7 -->
+  <circle cx="137" cy="150" r="77" fill="none" stroke="#b44a2d" stroke-width="2"/>
+  <text x="58" y="230" font-family="JetBrains Mono,monospace" font-size="9" fill="#b44a2d">λ(α), r=0.7</text>
+  <!-- Center point -->
+  <circle cx="137" cy="150" r="3" fill="#b44a2d"/>
+  <text x="115" y="142" font-family="JetBrains Mono,monospace" font-size="8" fill="#b44a2d">1−r</text>
+  <!-- Origin -->
+  <circle cx="170" cy="150" r="2.5" fill="#2c2419"/>
+  <text x="174" y="164" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b5d4f">0</text>
+  <!-- Point at alpha=0 -->
+  <circle cx="214" cy="150" r="3.5" fill="#3a5ba0"/>
+  <text x="218" y="143" font-family="JetBrains Mono,monospace" font-size="8" fill="#3a5ba0">α=0</text>
+  <!-- Label -->
+  <text x="170" y="295" font-family="Source Serif 4,serif" font-size="10" fill="#9a8d7e" text-anchor="middle" font-style="italic">Область устойчивости: λ(α) внутри единичного круга</text>
+</svg>
+<div class="caption">Условие Неймана: множитель перехода \(\lambda(\alpha)\) для схемы «уголок» при \(r=0.7\) — окружность радиуса \(r\) с центром в \(1-r\), лежащая внутри единичного круга.</div>
 </div>
 
-<!-- Comments -->
-<div style="max-width:760px;margin:0 auto;padding:0 1.5rem 2rem">
+<h2 id="example">Пример: схема «уголок»</h2>
+
+<p>Рассмотрим применение спектрального метода для исследования устойчивости. Исходное дифференциальное уравнение \(u_t + au_x = 0\), \(a = \mathrm{const} > 0\).</p>
+
+<p>Явная схема с несимметричной аппроксимацией \(u_x\) разностью назад:</p>
+
+<div class="eq">\[
+\frac{u_m^{n+1} - u_m^n}{\tau} + a\frac{u_m^n - u_{m-1}^n}{h} = 0,
+\]</div>
+
+<div class="eq">\[
+u_m^{n+1} = (1 - r)u_m^n + r\,u_{m-1}^n, \qquad r = \frac{a\tau}{h}.
+\]</div>
+
+<p>Характеристическое уравнение \(\lambda = 1 - r + r\exp(-i\alpha)\) — уравнение окружности радиуса \(r\) с центром в точке \(1-r\). Условие Неймана выполняется при \(r \le 1\), что совпадает с <em>критерием Куранта</em>.</p>
+
+<h2 id="exercise">Упражнение</h2>
+
+<div class="exercise">
+<strong>Упражнение.</strong> Найдите характеристическое уравнение и определите область устойчивости для схемы
+\[ \frac{u_m^{n+1} - u_m^n}{\tau} + a\frac{u_{m+1}^n - u_m^n}{h} = 0. \]
+</div>
+
+<div class="lecture-nav">
+<a href="s1-04.html" class="nav-prev">← §4. Первое дифференциальное приближение</a>
+<a href="s1-06.html" class="nav-next">§6. Диссипация и дисперсия →</a>
+</div>
+</div>
+</div>
+
+<div class="comments-wrap">
 <div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">
 <h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
 <div id="comments-list"><p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p></div>
@@ -204,9 +178,7 @@ m − um
 <textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
 <button onclick="window._postComment()" style="margin-top:.4rem;background:#b44a2d;color:#fff;border:none;padding:6px 18px;border-radius:5px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer">Отправить</button>
 </div>
-<div id="comment-login">
-<p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p>
-</div>
+<div id="comment-login"><p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p></div>
 </div>
 </div>
 
@@ -215,116 +187,6 @@ m − um
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
 <script src="../js/auth.js"></script>
-<script>
-// === Comments System ===
-(function(){
-  if (typeof firebase === 'undefined') { console.warn('Comments: firebase not loaded'); return; }
-  var db, auth;
-  try { db = firebase.firestore(); auth = firebase.auth(); }
-  catch(e) { console.warn('Comments: firebase not initialized', e); return; }
-
-  var PAGE_ID = location.pathname.split('/').pop().replace('.html','') || 'index';
-  var ADMINS = (typeof ADMIN_EMAILS !== 'undefined') ? ADMIN_EMAILS : [];
-
-  function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-  function loadComments() {
-    var list = document.getElementById('comments-list');
-    if (!list) return;
-    db.collection('comments').where('page','==',PAGE_ID).get().then(function(snap) {
-      var docs = [];
-      snap.forEach(function(d) { docs.push(d); });
-      docs.sort(function(a,b) {
-        var ta = a.data().createdAt ? a.data().createdAt.seconds : 0;
-        var tb = b.data().createdAt ? b.data().createdAt.seconds : 0;
-        return tb - ta;
-      });
-      if (docs.length === 0) {
-        list.innerHTML = '<p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p>';
-        return;
-      }
-      var user = auth.currentUser;
-      var isAdm = user && ADMINS.indexOf(user.email) >= 0;
-      var html = '';
-      docs.forEach(function(doc) {
-        var c = doc.data();
-        var date = c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-        var del = isAdm ? ' <button onclick="window._deleteComment(\''+doc.id+'\')" style="font-size:.7rem;color:#c44;background:none;border:none;cursor:pointer">удалить</button>' : '';
-        var badge = '';
-        if (c.authorRole === 'superadmin') badge = ' <span style="font-size:.6rem;background:#faeeda;color:#854f0b;padding:1px 4px;border-radius:3px;font-weight:700">преподаватель</span>';
-        html += '<div style="padding:.6rem 0;border-bottom:1px solid #ede6da">';
-        html += '<div style="display:flex;justify-content:space-between;align-items:baseline">';
-        html += '<strong style="font-size:.88rem">'+(c.authorFio||c.authorEmail)+badge+'</strong>';
-        html += '<span style="font-size:.72rem;color:#9a8d7e">'+date+del+'</span></div>';
-        html += '<p style="font-size:.88rem;margin-top:.2rem;margin-bottom:0">'+esc(c.text)+'</p></div>';
-      });
-      list.innerHTML = html;
-    }).catch(function(e) {
-      list.innerHTML = '<p style="color:#c44;font-size:.85rem">Ошибка: '+e.message+'</p>';
-    });
-  }
-
-  window._postComment = function() {
-    var text = document.getElementById('comment-text').value.trim();
-    if (!text) return;
-    var user = auth.currentUser;
-    if (!user) return;
-    var fio = user.email;
-    var role = (ADMINS.indexOf(user.email) >= 0) ? 'superadmin' : 'student';
-    db.collection('users').doc(user.uid).get().then(function(ud) {
-      if (ud.exists && ud.data().fio) fio = ud.data().fio;
-    }).catch(function(){}).finally(function() {
-      db.collection('comments').add({
-        page: PAGE_ID, text: text,
-        authorEmail: user.email, authorFio: fio, authorUid: user.uid, authorRole: role,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(function() {
-        document.getElementById('comment-text').value = '';
-        loadComments();
-      }).catch(function(e) { alert('Ошибка: '+e.message); });
-    });
-  };
-
-  window._deleteComment = function(id) {
-    if (!confirm('Удалить?')) return;
-    db.collection('comments').doc(id).delete().then(loadComments).catch(function(e){alert(e.message);});
-  };
-
-  var _checkAuthRetries = 0;
-  function checkAuth() {
-    var user = auth.currentUser;
-    var form = document.getElementById('comment-form');
-    var login = document.getElementById('comment-login');
-    if (!form || !login) return;
-    if (user && window._userApproved) {
-      form.style.display = '';
-      login.style.display = 'none';
-      _checkAuthRetries = 0;
-    } else if (user && typeof window._userApproved === 'undefined' && _checkAuthRetries < 15) {
-      _checkAuthRetries++;
-      setTimeout(checkAuth, 400);
-    } else if (user) {
-      form.style.display = 'none';
-      login.style.display = '';
-      login.querySelector('p').textContent = 'Ваш профиль ещё не подтверждён.';
-      _checkAuthRetries = 0;
-    } else {
-      form.style.display = 'none';
-      login.style.display = '';
-      _checkAuthRetries = 0;
-    }
-  }
-
-  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', loadComments); }
-  else { loadComments(); }
-
-  function safeCheckAuth() {
-    if (document.getElementById('comment-form')) checkAuth();
-    else setTimeout(safeCheckAuth, 200);
-  }
-  auth.onAuthStateChanged(function() { setTimeout(safeCheckAuth, 500); });
-  window.addEventListener('authReady', safeCheckAuth);
-})();
-</script>
+<script src="../js/comments.js"></script>
 </body>
 </html>

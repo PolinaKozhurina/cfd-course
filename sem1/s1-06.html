@@ -6,278 +6,177 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>§6. Диссипативные и дисперсионные свойства</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
-<style>
-:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8}
-*{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
-.wrap{max-width:760px;margin:0 auto;padding:2rem 1.5rem 4rem}
-.lecture-tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;padding:.2rem .5rem;border-radius:3px;display:inline-block;margin-bottom:.5rem;background:#f3e8f9;color:#7b3fa0}
-.lecture-num{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);margin-bottom:.3rem}
-h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;line-height:1.15;margin-bottom:1.5rem;color:var(--text)}
-h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--accent);margin:2rem 0 .8rem;padding-top:.5rem;border-top:1px solid var(--border)}
-h3{font-family:'Source Serif 4',serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:1.5rem 0 .5rem}
-p{margin-bottom:1rem;text-align:justify;hyphens:auto}
-.equation{margin:1.5rem 0;text-align:center;overflow-x:auto}
-.definition{background:var(--bg2);border-left:3px solid var(--accent2);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
-.theorem{background:#fdf6ee;border-left:3px solid var(--accent);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
-.theorem .th-title{font-family:'Playfair Display',serif;font-weight:700;color:var(--accent);margin-bottom:.3rem}
-.remark{background:#f0f7f4;border-left:3px solid var(--accent2);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:.92rem}
-code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:.1rem .3rem;border-radius:3px}
-.lecture-nav{display:flex;justify-content:space-between;gap:1rem;margin-top:3rem;padding-top:1.5rem;border-top:2px solid var(--border);flex-wrap:wrap}
-.lecture-nav a{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);text-decoration:none;padding:.5rem .8rem;border:1px solid var(--border);border-radius:6px;transition:all .15s;max-width:48%}
-.lecture-nav a:hover{border-color:var(--accent);background:rgba(180,74,45,.05)}
-.nav-prev{text-align:left}
-.nav-next{text-align:right;margin-left:auto}
-</style>
 </head>
 <body>
 <script src="../js/nav.js"></script>
 
-<div class="wrap">
-<span class="lecture-tag">Основы</span>
+<nav class="sidebar">
+  <h2>§6 Дисперсия</h2>
+  <div class="g">Содержание</div>
+  <a href="#dissipation">Диссипативная поверхность</a>
+  <a href="#dispersion">Дисперсионное соотношение</a>
+  <a href="#phase">Фазовая скорость</a>
+  <a href="#normal-anom">Нормальная / аномальная</a>
+  <a href="#properties">Общие свойства</a>
+  <a href="#model">Модельная задача</a>
+  <a href="#fourier">Разложение Фурье</a>
+  <a href="#results">Результаты расчётов</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="s1-05.html">← §5 Устойчивость</a>
+  <a href="s1-07.html">→ §7 Неопр. коэффициенты</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-basics">Основы</span>
 <div class="lecture-num">§6 · Семестр 1</div>
-<h1>Диссипативные и дисперсионные свойства</h1>
+<h1>Диссипативные и&nbsp;дисперсионные свойства разностных схем</h1>
 
-<p>Диссипативные и дисперсионные поверхности. Приведенная фазовая скорость. «Нормальная» и «аномальная» дисперсия
-В прошлом параграфе было введено понятие оператора перехода и рас-</p>
+<p>В прошлом параграфе было введено понятие оператора перехода и рассмотрен метод исследования на устойчивость с помощью гармоник. Остановимся на не менее важных свойствах схемы, которые также тесно связаны с обсуждаемым оператором.</p>
 
-<p>смотрен метод исследования на устойчивость с помощью гармоник. Остановимся на не менее важных свойствах схемы, которые также тесно связаны с
-обсуждаемым оператором.
-После несложных преобразований множителя перехода получим:</p>
+<h2 id="dissipation">Диссипативная поверхность</h2>
 
-<p>\sqrt︁
-|\lambda| = |1 − r + r exp (ikℎ)| = ((1 − r) + r \cdot cos (kℎ))2 + sin2 (kℎ).</p>
+<p>После несложных преобразований множителя перехода получим:</p>
 
-<p>Упражнение. Получите это выражение.
-Модуль множителя перехода |q| является функцией от числа КурантаФридрихса-Леви r и приведенного волнового числа</p>
+<div class="eq">\[
+|\lambda| = |1 - r + r\exp(ikh)| = \sqrt{\bigl((1-r) + r\cos(kh)\bigr)^2 + \sin^2(kh)}.
+\tag{6.1}
+\]</div>
 
-<p>kh, изменяющегося в пре-</p>
+<div class="exercise">
+<strong>Упражнение.</strong> Получите это выражение.
+</div>
 
-<p>делах от −\pi до \pi : (−\pi \le kℎ \le \pi). Он показывает, как изменяется амплитуда бегущей волны при переходе на следующий слой. Если модуль перехода
-меньше или равен единице, то амплитуда волны не возрастает. Если для заданного r амплитуды всех волн при (−\pi \le kℎ \le \pi) не возрастают, то говорят,
-что данное число r принадлежит области устойчивости дискретного оператора. Опираясь на (§6.1) можно показать, что область устойчивости разностной схемы «уголок» представляет собой единичный отрезок r</p>
+<p>Модуль множителя перехода \(|q|\) является функцией от числа Куранта–Фридрихса–Леви \(r\) и приведённого волнового числа \(kh\), изменяющегося в пределах от \(-\pi\) до \(\pi\): \(-\pi \le kh \le \pi\). Он показывает, как изменяется амплитуда бегущей волны при переходе на следующий слой. Если модуль перехода меньше или равен единице, то амплитуда волны не возрастает. Если для заданного \(r\) амплитуды всех волн при \(-\pi \le kh \le \pi\) не возрастают, то говорят, что данное число \(r\) принадлежит области устойчивости дискретного оператора. Опираясь на (6.1) можно показать, что область устойчивости разностной схемы «уголок» представляет собой единичный отрезок \(r \in [0, 1]\).</p>
 
-<p>\in [0, 1].</p>
+<p>Если в области устойчивости модуль перехода любой волны равен единице, то дискретный оператор называется <em>бездиссипативным</em>, в противном случае имеет место <em>численная диссипация</em>.</p>
 
-<p>Если в области устойчивости модуль перехода любой волны равен единице,
-то дискретный оператор называется бездиссипативным, в противном случае
-имеет место численная диссипация.
-Диссипативные свойства дискретного оператора для всех n приведенных
-волновых чисел наиболее наглядно можно представить в виде двумерной поверхности</p>
+<p>Диссипативные свойства дискретного оператора для всех приведённых волновых чисел наиболее наглядно можно представить в виде двумерной поверхности \(|q| = f(r, kh)\). Для схемы «уголок» диссипативная поверхность изображена на рис.&nbsp;1а, где по оси \(z\) отложены значения модуля перехода, по оси \(x\) — значения числа \(r \in [0, 1]\), по оси \(y\) — значения приведённого волнового числа \(kh \in [-\pi, \pi]\). Видно, что модуль перехода стремится к единице для длинноволновых гармоник, для которых \(kh \approx 0\), и равен единице на границе области устойчивости, при \(r = 1\), \(-\pi \le kh \le \pi\).</p>
 
-<p>|q| = f (r, kℎ). Для схемы «уголок» диссипативная поверхность</p>
+<h2 id="dispersion">Дисперсионное соотношение</h2>
 
-<p>изображена на рис. 1а, где по оси z отложены значения модуля перехода, по</p>
+<p>Из (6.1) также следует дисперсионное соотношение:</p>
 
-<p>оси x — значения числа r \in [0, 1] , по оси y — значения приведенного волнового числа kℎ \in [−\pi, \pi]. Видно, что модуль перехода стремится к единице для
-длинноволновых гармоник, для которых kℎ ≈ 0, и равен единице на границе
-области устойчивости, при r = 1, (−\pi \le kℎ \le \pi).</p>
+<div class="eq">\[
+q = \exp(i\omega\tau) = r \cdot \exp(ikh) + (1-r) \quad \Rightarrow \quad \omega = -\frac{i}{\tau}\arg\bigl[r \cdot \exp(ikh) + (1-r)\bigr].
+\tag{6.2}
+\]</div>
 
-<p>(а)</p>
+<h2 id="phase">Приведённая фазовая скорость</h2>
 
-<p>(б)</p>
+<p>Из дисперсионного соотношения получается выражение для приведённой фазовой скорости бегущих волн:</p>
 
-<p>Рис. 1: Диссипативная и дисперсионная поверхности схемы «уголок»</p>
+<div class="eq">\[
+\gamma(r, kh) = \frac{\omega}{kc} = -\frac{i}{\tau kc}\arg\bigl[r \cdot \exp(ikh) + (1-r)\bigr] = -\frac{i}{r \cdot kh}\arg\bigl[r \cdot \exp(ikh) + (1-r)\bigr].
+\]</div>
 
-<p>Из (§6.1) также следует дисперсионное соотношение:</p>
+<p>Приведённая фазовая скорость бегущих волн, описываемых исходным дифференциальным оператором, не зависит от номера гармоники и равна единице. Как ранее уже отмечалось, зависимость фазовой скорости от длины волны называется <em>дисперсией</em>.</p>
 
-<p>i
-q = exp i\omega\tau = r \cdot exp ikℎ + (1 − r) \Rightarrow \omega = − arg [r \cdot exp ikℎ + (1 − r)] , (§6.2)
-\tau
-откуда получается выражение для приведенной фазовой скорости бегущих
-волн:</p>
+<h2 id="normal-anom">Нормальная и аномальная дисперсия</h2>
 
-<p>\gamma(r, kℎ) =</p>
+<div class="definition">
+<strong>Определение 1.</strong> Если приведённая фазовая скорость принимает значения меньше единицы, то дисперсия называется «<em>нормальной</em>», в обратном случае — «<em>аномальной</em>».
+</div>
 
-<p>\omega
-i
-=−
-arg [r \cdot exp ikℎ + (1 − r)] =
-kc
-\tau kc
-i
-=−
-arg [r \cdot exp ikℎ + (1 − r)] .
-r \cdot kℎ</p>
+<p>В случае нормальной дисперсии гармоника отстаёт от «эталонной» гармоники, двигающейся с фазовой скоростью \(c\), в случае аномальной дисперсии — опережает её.</p>
 
-<p>Приведенная фазовая скорость бегущих волн, описываемых исходным
-дифференциальным оператором, не зависит от номера гармоники и равна
-единице. Как ранее уже отмечалось, зависимость фазовой скорости от длины волны называется дисперсией.</p>
+<p>Дисперсионные свойства дискретного оператора представляются его «дисперсионной поверхностью». На рис.&nbsp;1б приведена дисперсионная поверхность разностного оператора «уголок». Здесь по оси \(z\) отложены значения приведённой фазовой скорости \(\gamma\), по оси \(x\) — значения числа \(r \in [0, 1]\), по оси \(y\) — значения приведённого волнового числа \(kh \in [-\pi, \pi]\). Дисперсия стремится к нулю, что соответствует стремлению \(\gamma\) к единице, для длинноволновых гармоник, для которых \(kh \approx 0\), и на границе области устойчивости, при \(r = 1\), \(-\pi \le kh \le \pi\).</p>
 
-<p>Определение 1. Если приведенная фазовая скорость принимает значения
-меньше единицы, то дисперсия называется «нормальной», в обратном случае
-– «аномальной».</p>
+<h2 id="properties">Общие свойства диссипации и дисперсии</h2>
 
-<p>В случае нормальной дисперсии гармоника отстает от «эталонной» гармоники, двигающейся с фазовой скоростью c, в случае аномальной дисперсии —
-опережает ее.
-Дисперсионные свойства дискретного оператора представляются его «дисперсионной поверхностью». На рис. 1б приведена дисперсионная поверхность
-разностного оператора «уголок». Здесь по оси где по оси z отложены значения приведенной фазовой скорости \gamma , по оси x — значения числа r \in [0, 1],
-по оси y — значения приведенного волнового числа kℎ \in [−\pi, \pi]. Дисперсия
-стремится к нулю, что соответствует стремлению \gamma к единице, для длинноволновых гармоник, для которых kℎ ≈ 0 и на границе области устойчивости,
-при r = 1, (−\pi \le kℎ \le \pi).
-Стремление к нулю дисперсии и диссипации длинноволновых гармоник
-является общим свойством всех дискретных операторов, аппроксимирующих
-исходный дифференциальный оператор. Характер касания дисперсионных и
-диссипативных поверхностей единичной плоскости определяется порядком
-аппроксимации разностного оператора. Тот факт, что при r = 1 все гармоники не диссипируют и не диспергируют, говорит о том, что разностный оператор при данном числе Куранта переносит начальный профиль без каких-либо
-искажений.
-Из непрерывности дисперсионной и диссипативной поверхностей следует,
-что в некоторой окрестности этого числа точность численного решения также
-будет аномально высокой и эту область можно назвать «каналом высокой
-точности» дискретного оператора.
-Из рис. 1б видно, что дисперсия схемы «уголок» при r</p>
+<p>Стремление к нулю дисперсии и диссипации длинноволновых гармоник является общим свойством всех дискретных операторов, аппроксимирующих исходный дифференциальный оператор. Характер касания дисперсионных и диссипативных поверхностей единичной плоскости определяется порядком аппроксимации разностного оператора. Тот факт, что при \(r = 1\) все гармоники не диссипируют и не диспергируют, говорит о том, что разностный оператор при данном числе Куранта переносит начальный профиль без каких-либо искажений.</p>
 
-<p>&lt; 0.5 является</p>
+<p>Из непрерывности дисперсионной и диссипативной поверхностей следует, что в некоторой окрестности этого числа точность численного решения также будет аномально высокой и эту область можно назвать «<em>каналом высокой точности</em>» дискретного оператора.</p>
 
-<p>нормальной, а при r &gt; 0.5 — аномальной. При r = 0.5 дисперсия отсутствует.
-Диссипативная и дисперсионная поверхности дают полное представление
-о свойствах разностной схемы, позволяют предсказывать поведение дискретного решения на разных начальных условиях. Рассмотрим модельную задачу</p>
+<p>Из рис.&nbsp;1б видно, что дисперсия схемы «уголок» при \(r < 0.5\) является нормальной, а при \(r > 0.5\) — аномальной. При \(r = 0.5\) дисперсия отсутствует.</p>
 
-<p>с периодическими начальными условиями на отрезке x \in [0, 2\pi]:</p>
+<div class="remark">
+<strong>Итого для схемы «уголок»:</strong> Диссипативная и дисперсионная поверхности дают полное представление о свойствах разностной схемы, позволяют предсказывать поведение дискретного решения на разных начальных условиях.
+</div>
 
-<p>\partial u
-\partial u
-+c\cdot
-= 0,
-\partial t
-\partial x
-u(x, 0) = f (x),</p>
+<h2 id="model">Модельная задача</h2>
 
-<p>c = 1,</p>
+<p>Рассмотрим модельную задачу с периодическими начальными условиями на отрезке \(x \in [0, 2\pi]\):</p>
 
-<div class="equation">\[t \in [0, \infty) , \tag{6.3}\]</div>
+<div class="eq">\[
+\frac{\partial u}{\partial t} + c\frac{\partial u}{\partial x} = 0, \quad c = 1, \quad t \in [0, \infty),
+\tag{6.3}
+\]</div>
 
-<p>x \in [0, 2\pi]</p>
+<p>\(u(x, 0) = f(x)\), \(x \in [0, 2\pi]\), \(u(0, t) = u(1, t)\),</p>
 
-<p>u(0, t) = u(1, t),</p>
+<p>и двумя видами начальных условий — достаточно гладкими и разрывными.</p>
 
-<p>и двумя видами начальных условий — достаточно гладкими и разрывными.
-В качестве гладкого начального условия возьмем «двойной гауссиан» с
-параметрами:</p>
+<p>В качестве гладкого начального условия возьмём «двойной гауссиан» с параметрами:</p>
 
-<div class="equation">\[f (x) = exp [−(x−x1 )2/Δ2 ] + exp [−(x−x2 )2/Δ2 ], \tag{6.4}\]</div>
+<div class="eq">\[
+f(x) = \exp\!\left[-\frac{(x - x_1)^2}{\Delta^2}\right] + \exp\!\left[-\frac{(x - x_2)^2}{\Delta^2}\right],
+\tag{6.4}
+\]</div>
 
-<p>x1 = 0.5\pi,</p>
-
-<p>x2 = 0.7\pi,</p>
-
-<p>∆ = 0.1\pi,</p>
+<p>\(x_1 = 0.5\pi\), \(x_2 = 0.7\pi\), \(\Delta = 0.1\pi\),</p>
 
 <p>а в качестве разрывного — «ступеньку»:</p>
 
-<p>f (x) =</p>
+<div class="eq">\[
+f(x) = \begin{cases} 1, & 0.2\pi \le x \le 0.4\pi, \\ 0, & (0 \le x \le 0.2\pi) \cup (0.4\pi < x \le 2\pi). \end{cases}
+\tag{6.5}
+\]</div>
 
-<p>⎧
-⎪
-⎨ 1,</p>
+<h2 id="fourier">Разложение Фурье начальных данных</h2>
 
-<p>0.2\pi \le x \le 0.4\pi,</p>
+<p>Аппроксимируем дифференциальную задачу (6.3)–(6.5) разностной схемой «уголок». Разобьём отрезок \(x \in [0, 2\pi]\) на \(N = 100\) равных интервалов с шагом \(h = 0.2\pi\) и спроецируем на неё начальные данные (6.4)–(6.5):</p>
 
-<p>⎪
-⎩ 0,</p>
+<div class="eq">\[
+f_i^{(1)} = \exp\!\left\{-\frac{[(i-1)h - x_1]^2}{(0.1\pi)^2}\right\} + \exp\!\left\{-\frac{[(i-1)h - x_2]^2}{(0.1\pi)^2}\right\},
+\tag{6.6}
+\]</div>
 
-<p>(0 \le x \le 0.2\pi) ∪ (0.4\pi &lt; x \le 2\pi).</p>
-
-<p>Аппроксимируем дифференциальную задачу (§6.3) —(§6.5) разностной схемой «уголок». Разобьём отрезок x \in [0, 2\pi] на N = 100 равных интервалов с
-шагом ℎ = 0.2\pi и спроецируем на нее начальные данные (§6.4) —(§6.4):</p>
-
-<p>{︃
-(1)</p>
-
-<p>[(i − 1)ℎ − x1 ]
-(0.1\pi)2</p>
-
-<p>}︃</p>
-
-<p>{︃
-+ exp −</p>
-
-<p>fi</p>
-
-<p>= exp −</p>
-
-<p>(2)</p>
-
-<p>⎧
-⎪
-⎨ 1,</p>
-
-<p>11 \le i \le 21,</p>
-
-<p>⎪
-⎩ 0,</p>
-
-<p>(1 \le i \le 11) ∪ (21 &lt; i \le 101)</p>
-
-<p>fi</p>
-
-<p>=</p>
-
-<p>[(i − 1)ℎ − x2 ]
-(0.1\pi)2</p>
-
-<div class="equation">\[}︃ , \tag{6.6}\]</div>
-
-<p>,</p>
-
-<p>i = 1, . . . , 101.</p>
+<div class="eq">\[
+f_i^{(2)} = \begin{cases} 1, & 11 \le i \le 21, \\ 0, & (1 \le i \le 11) \cup (21 < i \le 101). \end{cases}
+\]</div>
 
 <p>Разложим эти сеточные функции в ряд Фурье:</p>
 
-<p>fn(m) =</p>
+<div class="eq">\[
+f_n^{(m)} = \sum_{k=0}^{N} a_k^{(m)} \cdot \exp[-i(kh) \cdot n], \quad m = 1, 2, \quad n = 1, \ldots, N+1,
+\tag{6.7}
+\]</div>
 
-<p>N
-\sum︁
-(m)
-ak \cdot exp [−i(kℎ) \cdot n],</p>
+<p>где коэффициенты разложения определяются по формуле:</p>
 
-<p>m = 1, 2,</p>
+<div class="eq">\[
+a_k^{(m)} = \frac{1}{N+1} \sum_{n=1}^{N+1} f_n^{(m)} \cdot \exp[i(kh) \cdot n].
+\tag{6.8}
+\]</div>
 
-<p>n = 1, . . . , N + 1,</p>
+<h2 id="results">Результаты расчётов</h2>
 
-<p>k=0
-где коэффициенты разложения определяются по формуле:</p>
+<p>В начальный момент времени все гармоники разложения (6.7) подогнаны друг к другу так, что в сумме составляют начальные данные. В последующие моменты времени каждая гармоника будет уменьшаться в амплитуде в соответствии с её местом на диссипативной поверхности, и распространяться со своей фазовой скоростью, определяемой дисперсионной поверхностью, так что «пакет» гармоник начнёт разъезжаться. Полная картина будет ещё зависеть от числа Куранта–Фридрихса–Леви \(r\).</p>
 
-<p>(m)
-ak =</p>
+<p>Из рис.&nbsp;1а видно, что наибольшая диссипация высоких гармоник имеет место при \(r = 0.5\). На рис.&nbsp;4 приведены результаты расчёта переноса начальных профилей (6.6), рассчитанные по схеме «уголок» при разных числах Куранта, до одного и того же момента времени. Сплошной линией показано аналитическое решение дифференциальной задачи, линией с маркерами — решение, рассчитанное по разностной схеме.</p>
 
-<p>N
-+1
-\sum︁
-\cdot
-fn(m) \cdot exp [i(kℎ) \cdot n].
-N + 1 n=1</p>
-
-<p>На рис. 2 представлены графики начальных данных (2.43), на рис. 3—</p>
-
-<p>(m)</p>
-
-<p>модули их коэффициентов разложения ak</p>
-
-<p>Рис. 2</p>
-
-<p>Рис. 3</p>
-
-<p>В начальный момент времени все гармоники разложения (§6.7) подогнаны
-друг к другу так, что в сумме составляют начальные данные. В последующие моменты времени каждая гармоника будет уменьшаться в амплитуде в
-соответствии с ее местом на диссипативной поверхности, и распространяться со своей фазовой скоростью, определяемой дисперсионной поверхностью,
-так что «пакет» гармоник начнет разъезжаться. Полная картина будет еще
-зависеть от числа Куранта–Фридрихса–Леви r .
-Из рис. 1а видно, что наибольшая диссипация высоких гармоник имеет
-место при r = 0.5. На рис. 4 приведен результаты расчета переноса начальных профилей (§6.6), рассчитанные по схеме «уголок» при разных числах
-Куранта, до одного и того же момента времени. Сплошной линией показано
-аналитическое решение дифференциальной задачи, линией с маркерами —
-решение, рассчитанное по разностной схеме.</p>
-
-<p>Рис. 4: Результаты расчета по схеме «уголок» (Simplest Upwind)</p>
-
-<div class="lecture-nav"><a href="s1-05.html" class="nav-prev">← §5. Методы исследования устойчивости</a><a href="s1-07.html" class="nav-next">§7. Метод неопределённых коэффициентов →</a></div>
+<div class="remark">
+<strong>Ключевой вывод:</strong> Диссипативная и дисперсионная поверхности полностью характеризуют поведение разностной схемы на различных начальных данных. Гладкие профили (гауссиан) хорошо переносятся даже при умеренной диссипации, тогда как разрывные профили (ступенька) требуют точного выбора числа Куранта для минимизации осцилляций и размазывания.
 </div>
 
-<!-- Comments -->
-<div style="max-width:760px;margin:0 auto;padding:0 1.5rem 2rem">
+<div class="lecture-nav">
+<a href="s1-05.html" class="nav-prev">← §5. Методы исследования устойчивости</a>
+<a href="s1-07.html" class="nav-next">§7. Метод неопределённых коэффициентов →</a>
+</div>
+</div>
+</div>
+
+<div class="comments-wrap">
 <div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">
 <h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
 <div id="comments-list"><p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p></div>
@@ -285,9 +184,7 @@ N + 1 n=1</p>
 <textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
 <button onclick="window._postComment()" style="margin-top:.4rem;background:#b44a2d;color:#fff;border:none;padding:6px 18px;border-radius:5px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer">Отправить</button>
 </div>
-<div id="comment-login">
-<p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p>
-</div>
+<div id="comment-login"><p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p></div>
 </div>
 </div>
 
@@ -296,116 +193,6 @@ N + 1 n=1</p>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
 <script src="../js/auth.js"></script>
-<script>
-// === Comments System ===
-(function(){
-  if (typeof firebase === 'undefined') { console.warn('Comments: firebase not loaded'); return; }
-  var db, auth;
-  try { db = firebase.firestore(); auth = firebase.auth(); }
-  catch(e) { console.warn('Comments: firebase not initialized', e); return; }
-
-  var PAGE_ID = location.pathname.split('/').pop().replace('.html','') || 'index';
-  var ADMINS = (typeof ADMIN_EMAILS !== 'undefined') ? ADMIN_EMAILS : [];
-
-  function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-  function loadComments() {
-    var list = document.getElementById('comments-list');
-    if (!list) return;
-    db.collection('comments').where('page','==',PAGE_ID).get().then(function(snap) {
-      var docs = [];
-      snap.forEach(function(d) { docs.push(d); });
-      docs.sort(function(a,b) {
-        var ta = a.data().createdAt ? a.data().createdAt.seconds : 0;
-        var tb = b.data().createdAt ? b.data().createdAt.seconds : 0;
-        return tb - ta;
-      });
-      if (docs.length === 0) {
-        list.innerHTML = '<p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p>';
-        return;
-      }
-      var user = auth.currentUser;
-      var isAdm = user && ADMINS.indexOf(user.email) >= 0;
-      var html = '';
-      docs.forEach(function(doc) {
-        var c = doc.data();
-        var date = c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-        var del = isAdm ? ' <button onclick="window._deleteComment(\''+doc.id+'\')" style="font-size:.7rem;color:#c44;background:none;border:none;cursor:pointer">удалить</button>' : '';
-        var badge = '';
-        if (c.authorRole === 'superadmin') badge = ' <span style="font-size:.6rem;background:#faeeda;color:#854f0b;padding:1px 4px;border-radius:3px;font-weight:700">преподаватель</span>';
-        html += '<div style="padding:.6rem 0;border-bottom:1px solid #ede6da">';
-        html += '<div style="display:flex;justify-content:space-between;align-items:baseline">';
-        html += '<strong style="font-size:.88rem">'+(c.authorFio||c.authorEmail)+badge+'</strong>';
-        html += '<span style="font-size:.72rem;color:#9a8d7e">'+date+del+'</span></div>';
-        html += '<p style="font-size:.88rem;margin-top:.2rem;margin-bottom:0">'+esc(c.text)+'</p></div>';
-      });
-      list.innerHTML = html;
-    }).catch(function(e) {
-      list.innerHTML = '<p style="color:#c44;font-size:.85rem">Ошибка: '+e.message+'</p>';
-    });
-  }
-
-  window._postComment = function() {
-    var text = document.getElementById('comment-text').value.trim();
-    if (!text) return;
-    var user = auth.currentUser;
-    if (!user) return;
-    var fio = user.email;
-    var role = (ADMINS.indexOf(user.email) >= 0) ? 'superadmin' : 'student';
-    db.collection('users').doc(user.uid).get().then(function(ud) {
-      if (ud.exists && ud.data().fio) fio = ud.data().fio;
-    }).catch(function(){}).finally(function() {
-      db.collection('comments').add({
-        page: PAGE_ID, text: text,
-        authorEmail: user.email, authorFio: fio, authorUid: user.uid, authorRole: role,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(function() {
-        document.getElementById('comment-text').value = '';
-        loadComments();
-      }).catch(function(e) { alert('Ошибка: '+e.message); });
-    });
-  };
-
-  window._deleteComment = function(id) {
-    if (!confirm('Удалить?')) return;
-    db.collection('comments').doc(id).delete().then(loadComments).catch(function(e){alert(e.message);});
-  };
-
-  var _checkAuthRetries = 0;
-  function checkAuth() {
-    var user = auth.currentUser;
-    var form = document.getElementById('comment-form');
-    var login = document.getElementById('comment-login');
-    if (!form || !login) return;
-    if (user && window._userApproved) {
-      form.style.display = '';
-      login.style.display = 'none';
-      _checkAuthRetries = 0;
-    } else if (user && typeof window._userApproved === 'undefined' && _checkAuthRetries < 15) {
-      _checkAuthRetries++;
-      setTimeout(checkAuth, 400);
-    } else if (user) {
-      form.style.display = 'none';
-      login.style.display = '';
-      login.querySelector('p').textContent = 'Ваш профиль ещё не подтверждён.';
-      _checkAuthRetries = 0;
-    } else {
-      form.style.display = 'none';
-      login.style.display = '';
-      _checkAuthRetries = 0;
-    }
-  }
-
-  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', loadComments); }
-  else { loadComments(); }
-
-  function safeCheckAuth() {
-    if (document.getElementById('comment-form')) checkAuth();
-    else setTimeout(safeCheckAuth, 200);
-  }
-  auth.onAuthStateChanged(function() { setTimeout(safeCheckAuth, 500); });
-  window.addEventListener('authReady', safeCheckAuth);
-})();
-</script>
+<script src="../js/comments.js"></script>
 </body>
 </html>

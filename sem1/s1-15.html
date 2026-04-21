@@ -6,184 +6,142 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>§15. Метод Годунова</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
-<style>
-:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8}
-*{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
-.wrap{max-width:760px;margin:0 auto;padding:2rem 1.5rem 4rem}
-.lecture-tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;padding:.2rem .5rem;border-radius:3px;display:inline-block;margin-bottom:.5rem;background:#fde8e8;color:#c44}
-.lecture-num{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);margin-bottom:.3rem}
-h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;line-height:1.15;margin-bottom:1.5rem;color:var(--text)}
-h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--accent);margin:2rem 0 .8rem;padding-top:.5rem;border-top:1px solid var(--border)}
-h3{font-family:'Source Serif 4',serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:1.5rem 0 .5rem}
-p{margin-bottom:1rem;text-align:justify;hyphens:auto}
-.equation{margin:1.5rem 0;text-align:center;overflow-x:auto}
-.definition{background:var(--bg2);border-left:3px solid var(--accent2);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
-.theorem{background:#fdf6ee;border-left:3px solid var(--accent);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
-.theorem .th-title{font-family:'Playfair Display',serif;font-weight:700;color:var(--accent);margin-bottom:.3rem}
-.remark{background:#f0f7f4;border-left:3px solid var(--accent2);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:.92rem}
-code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:.1rem .3rem;border-radius:3px}
-.lecture-nav{display:flex;justify-content:space-between;gap:1rem;margin-top:3rem;padding-top:1.5rem;border-top:2px solid var(--border);flex-wrap:wrap}
-.lecture-nav a{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);text-decoration:none;padding:.5rem .8rem;border:1px solid var(--border);border-radius:6px;transition:all .15s;max-width:48%}
-.lecture-nav a:hover{border-color:var(--accent);background:rgba(180,74,45,.05)}
-.nav-prev{text-align:left}
-.nav-next{text-align:right;margin-left:auto}
-</style>
 </head>
 <body>
 <script src="../js/nav.js"></script>
 
-<div class="wrap">
-<span class="lecture-tag">Газодинамика</span>
+<nav class="sidebar">
+  <h2>§15 Метод Годунова</h2>
+  <div class="g">Содержание</div>
+  <a href="#euler-vars">Эйлеровы переменные</a>
+  <a href="#integral">Интегральная форма</a>
+  <a href="#godunov-idea">Идея метода Годунова</a>
+  <a href="#riemann-role">Роль задачи Римана</a>
+  <a href="#scheme">Разностная схема</a>
+  <a href="#conservation">Консервативность</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="s1-14.html">← §14 Устойчивость «крест»</a>
+  <a href="s1-16.html">→ §16 Точная задача Римана</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-gasdyn">Газодинамика</span>
 <div class="lecture-num">§15 · Семестр 1</div>
-<h1>Метод Годунова</h1>
+<h1>Одномерные уравнения газовой динамики в&nbsp;переменных Эйлера. Метод Годунова</h1>
 
-<p>Одномерные уравнения газовой динамики в переменных Эйлера. Метод Годунова. Построение разностной схемы на основе решения задачи Римана.
-Консервативность разностной схемы и её физический смысл.</p>
+<p>Одномерные уравнения газовой динамики в эйлеровых переменных описывают движение сплошной среды в неподвижной системе координат и имеют вид системы законов сохранения</p>
 
-<p>Одномерные уравнения газовой динамики и роль консервативной формы. Одномерные уравнения газовой динамики в эйлеровых переменных описывают движение сплошной среды в неподвижной системе координат и имеют вид системы законов сохранения</p>
+<div class="eq">\[
+\frac{\partial\mathbf{u}}{\partial t} + \frac{\partial\mathbf{f}(\mathbf{u})}{\partial x} = 0,
+\tag{15.1}
+\]</div>
 
-<p>\partial u \partial f (u)
-+
-= 0,
-\partial t
-\partial x</p>
+<p>где вектор консервативных переменных \(\mathbf{u} = (\rho,\; \rho v,\; E)^T\) включает плотность, импульс и полную энергию, а вектор потоков \(\mathbf{f}(\mathbf{u}) = (\rho v,\; \rho v^2 + p,\; v(E+p))^T\) определяется физическими законами газовой динамики и уравнением состояния.</p>
 
-<p>где вектор консервативных переменных</p>
+<p>Подчеркнём, что именно консервативная форма уравнений является принципиальной для задач газовой динамики. Она непосредственно выражает баланс массы, импульса и энергии в конечном объёме и сохраняет физический смысл даже в условиях разрывного течения.</p>
 
-<p>⎛</p>
+<h2 id="integral">Интегральная форма законов сохранения</h2>
 
-<p>⎞</p>
+<p>Для любого конечного интервала \([x_1, x_2]\) интегральная форма законов сохранения имеет вид</p>
 
-<p>\rho
-⎜ ⎟
-⎜ ⎟
-u = ⎜\rhov ⎟
-⎝ ⎠
-𝐸
-включает плотность, импульс и полную энергию, а вектор потоков</p>
+<div class="eq">\[
+\frac{d}{dt}\int_{x_1}^{x_2}\mathbf{u}(x,t)\,dx + \mathbf{f}\bigl(\mathbf{u}(x_2,t)\bigr) - \mathbf{f}\bigl(\mathbf{u}(x_1,t)\bigr) = 0.
+\tag{15.2}
+\]</div>
 
-<p>⎛</p>
+<p>Эта форма уравнений сохраняет физический смысл баланса консервативных величин и не предполагает гладкости решения. Именно интегральная форма служит естественной основой для построения разностных схем в задачах газовой динамики.</p>
 
-<p>⎞</p>
+<h2 id="godunov-idea">Метод Годунова как принцип построения разностной схемы</h2>
 
-<p>\rhov
-⎜
-⎟
-⎜ 2
-⎟
-f (u) = ⎜ \rhov + p ⎟
-⎝
-⎠
-v(𝐸 + p)
-определяется физическими законами газовой динамики и уравнением состояния.</p>
+<p>Метод Годунова представляет собой консервативный подход к построению разностных схем для гиперболических систем. Его основная идея состоит в том, что численное решение рассматривается как среднее значение истинного решения в конечных объёмах пространства.</p>
 
-<p>Подчеркнём, что именно консервативная форма уравнений является принципиальной для задач газовой динамики. Она непосредственно выражает баланс массы, импульса и энергии в конечном объёме и сохраняет физический
-смысл даже в условиях разрывного течения. Гиперболический характер системы уравнений Эйлера приводит к тому, что образование ударных волн и
-контактных разрывов является типичным явлением, а не исключением.</p>
+<p>Расчётная область разбивается на ячейки \([x_{i-1/2}, x_{i+1/2}]\), и в каждой ячейке вводится среднее по объёму значение</p>
 
-<p>Интегральная форма законов сохранения и постановка численной задачи. Для любого конечного интервала [x1 ,x2 ] интегральная форма
-законов сохранения имеет вид</p>
+<div class="eq">\[
+\mathbf{u}_i^n = \frac{1}{\Delta x}\int_{x_{i-1/2}}^{x_{i+1/2}}\mathbf{u}(x, t_n)\,dx.
+\tag{15.3}
+\]</div>
 
-<p>𝑑
-𝑑t</p>
+<h2 id="riemann-role">Роль задачи Римана и вычисление численных потоков</h2>
 
-<p>\int︁ x2</p>
+<p>Кусочно-постоянная аппроксимация решения приводит к возникновению разрывов на границах ячеек. Эволюция решения в окрестности каждой границы описывается локальной <em>задачей Римана</em> о распаде произвольного разрыва между левым и правым состояниями.</p>
 
-<p>(︀
-)︀
-(︀
-)︀
-u(x,t) 𝑑x + f u(x2 ,t) − f u(x1 ,t) = 0.</p>
+<p>Решение задачи Римана обладает автомодельной структурой и описывает волны, которые переносят массу, импульс и энергию через границу ячейки. В методе Годунова численный поток через границу определяется как значение физического потока, вычисленного по точному решению соответствующей задачи Римана в пределе \(t \to t^n + 0\).</p>
 
-<p>x1</p>
+<h2 id="scheme">Консервативная разностная схема</h2>
 
-<p>Эта форма уравнений сохраняет физический смысл баланса консервативных
-величин и не предполагает гладкости решения. Именно интегральная форма служит естественной основой для построения разностных схем в задачах
-газовой динамики.
-При численном решении основной задачей является построение такой схемы, которая корректно аппроксимирует интегральные законы сохранения и
-обеспечивает правильный дискретный баланс массы, импульса и энергии.</p>
+<p>Разностная схема метода Годунова имеет вид</p>
 
-<p>Метод Годунова как принцип построения разностной схемы. Метод Годунова представляет собой консервативный подход к построению разностных схем для гиперболических систем. Его основная идея состоит в том,
-что численное решение рассматривается как среднее значение истинного решения в конечных объёмах пространства.
-Расчётная область разбивается на ячейки [xi− 1 ,xi+ 1 ], и в каждой ячейке</p>
+<div class="eq">\[
+\mathbf{u}_i^{n+1} = \mathbf{u}_i^n - \frac{\Delta t}{\Delta x}\left(\mathbf{F}_{i+1/2} - \mathbf{F}_{i-1/2}\right),
+\tag{15.4}
+\]</div>
 
-<p>вводится среднее по объёму значение</p>
+<p>где численные потоки \(\mathbf{F}_{i\pm 1/2}\) получаются из решений задач Римана на соответствующих границах ячеек. Эта формула представляет собой дискретную аппроксимацию интегрального баланса консервативных величин.</p>
 
-<p>uni =
-∆x</p>
+<h2 id="conservation">Физический смысл консервативности</h2>
 
-<p>\int︁ x</p>
+<p>Консервативность разностной схемы означает, что изменение массы, импульса и энергии в каждой ячейке происходит исключительно за счёт потоков через её границы. Тем самым в дискретной постановке точно воспроизводится физический баланс консервативных величин.</p>
 
-<p>i+ 1</p>
+<p>Если разностная схема не обладает консервативной формой, то даже при формальной устойчивости она может приводить к нефизическим результатам, таким как неправильная скорость распространения ударных волн или нарушение энергетического баланса. Метод Годунова, будучи строго консервативным, избегает этих недостатков и обеспечивает корректное описание разрывных течений.</p>
 
-<p>xi− 1</p>
-
-<p>Такое представление численного решения непосредственно согласуется с интегральной формой законов сохранения и обеспечивает дискретный баланс
-консервативных величин.</p>
-
-<p>Роль задачи Римана и вычисление численных потоков. Кусочнопостоянная аппроксимация решения приводит к возникновению разрывов на
-границах ячеек. Эволюция решения в окрестности каждой границы описывается локальной задачей Римана о распаде произвольного разрыва между
-левым и правым состояниями.</p>
-
-<p>Решение задачи Римана обладает автомодельной структурой и описывает
-волны, которые переносят массу, импульс и энергию через границу ячейки. В
-методе Годунова численный поток через границу определяется как значение
-физического потока, вычисленного по точному решению соответствующей</p>
-
-<p>n</p>
-
-<p>задачи Римана в пределе t \to t</p>
-
-<p>+ 0.</p>
-
-<p>Важно отметить, что задача Римана в методе Годунова играет конструктивную роль: она определяет способ вычисления потоков и обеспечивает корректный учёт локальной волновой структуры течения.</p>
-
-<p>Консервативная разностная схема и её свойства. Разностная схема
-метода Годунова имеет вид</p>
-
-<p>∆t
-n
-un+1
-=
-u
-−
-i
-i</p>
-
-<p>(︁</p>
-
-<p>∆x</p>
-
-<p>)︁</p>
-
-<p>Fi+ 12 − Fi− 12 ,</p>
-
-<p>где численные потоки Fi\pm 1 получаются из решений задач Римана на соот2</p>
-
-<p>ветствующих границах ячеек. Эта формула представляет собой дискретную
-аппроксимацию интегрального баланса консервативных величин.</p>
-
-<p>Физический смысл консервативности схемы. Консервативность разностной схемы означает, что изменение массы, импульса и энергии в каждой
-ячейке происходит исключительно за счёт потоков через её границы. Тем
-самым в дискретной постановке точно воспроизводится физический баланс
-консервативных величин.
-Если разностная схема не обладает консервативной формой, то даже при
-формальной устойчивости она может приводить к нефизическим результатам, таким как неправильная скорость распространения ударных волн или
-нарушение энергетического баланса. Метод Годунова, будучи строго консервативным, избегает этих недостатков и обеспечивает корректное описание
-разрывных течений.
-Метод Годунова имеет первый порядок аппроксимации по пространству
-и времени. Численная диффузия схемы обусловлена кусочно-постоянной аппроксимацией решения. Несмотря на это, метод надёжно описывает ударные</p>
-
-<p>волны и контактные разрывы и служит фундаментальной основой для построения более точных разностных схем газовой динамики.</p>
-
-<div class="lecture-nav"><a href="s1-14.html" class="nav-prev">← §14. Устойчивость схемы «крест»</a><a href="s1-16.html" class="nav-next">§16. Точная задача Римана →</a></div>
+<div class="remark">
+<strong>Замечание.</strong> Метод Годунова имеет первый порядок аппроксимации по пространству и времени. Численная диффузия схемы обусловлена кусочно-постоянной аппроксимацией решения. Несмотря на это, метод надёжно описывает ударные волны и контактные разрывы и служит фундаментальной основой для построения более точных разностных схем газовой динамики.
 </div>
 
-<!-- Comments -->
-<div style="max-width:760px;margin:0 auto;padding:0 1.5rem 2rem">
+<!-- SVG: Godunov method idea -->
+<div class="figure">
+<svg viewBox="0 0 560 160" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+  <defs><marker id="ar15" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2c2419"/></marker></defs>
+  <!-- Cells -->
+  <rect x="40" y="60" width="120" height="60" fill="rgba(180,74,45,0.08)" stroke="#b44a2d" stroke-width="1.5" rx="4"/>
+  <rect x="160" y="60" width="120" height="60" fill="rgba(26,107,90,0.08)" stroke="#1a6b5a" stroke-width="1.5" rx="4"/>
+  <rect x="280" y="60" width="120" height="60" fill="rgba(58,91,160,0.08)" stroke="#3a5ba0" stroke-width="1.5" rx="4"/>
+  <rect x="400" y="60" width="120" height="60" fill="rgba(133,79,11,0.08)" stroke="#854f0b" stroke-width="1.5" rx="4"/>
+  <!-- Cell averages -->
+  <text x="100" y="95" font-family="Source Serif 4,serif" font-size="13" fill="#b44a2d" text-anchor="middle" font-weight="600">u<tspan font-size="9" dy="2">i−1</tspan></text>
+  <text x="220" y="95" font-family="Source Serif 4,serif" font-size="13" fill="#1a6b5a" text-anchor="middle" font-weight="600">u<tspan font-size="9" dy="2">i</tspan></text>
+  <text x="340" y="95" font-family="Source Serif 4,serif" font-size="13" fill="#3a5ba0" text-anchor="middle" font-weight="600">u<tspan font-size="9" dy="2">i+1</tspan></text>
+  <text x="460" y="95" font-family="Source Serif 4,serif" font-size="13" fill="#854f0b" text-anchor="middle" font-weight="600">u<tspan font-size="9" dy="2">i+2</tspan></text>
+  <!-- Riemann problems at interfaces -->
+  <text x="160" y="50" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="middle">Задача</text>
+  <text x="160" y="58" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="middle">Римана</text>
+  <line x1="160" y1="35" x2="160" y2="125" stroke="#9a8d7e" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="280" y="50" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="middle">Задача</text>
+  <text x="280" y="58" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="middle">Римана</text>
+  <line x1="280" y1="35" x2="280" y2="125" stroke="#9a8d7e" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="400" y="50" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="middle">Задача</text>
+  <text x="400" y="58" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="middle">Римана</text>
+  <line x1="400" y1="35" x2="400" y2="125" stroke="#9a8d7e" stroke-width="1" stroke-dasharray="4,3"/>
+  <!-- Flux arrows -->
+  <line x1="150" y1="140" x2="170" y2="140" stroke="#b44a2d" stroke-width="2" marker-end="url(#ar15)"/>
+  <text x="160" y="155" font-family="JetBrains Mono,monospace" font-size="8" fill="#b44a2d" text-anchor="middle">F<tspan font-size="6" dy="1">i−½</tspan></text>
+  <line x1="270" y1="140" x2="290" y2="140" stroke="#1a6b5a" stroke-width="2" marker-end="url(#ar15)"/>
+  <text x="280" y="155" font-family="JetBrains Mono,monospace" font-size="8" fill="#1a6b5a" text-anchor="middle">F<tspan font-size="6" dy="1">i+½</tspan></text>
+  <!-- Title -->
+  <text x="280" y="18" font-family="Playfair Display,serif" font-size="11" fill="#2c2419" text-anchor="middle" font-weight="700">Кусочно-постоянная аппроксимация + задачи Римана на границах</text>
+</svg>
+<div class="caption">Идея метода Годунова: кусочно-постоянное решение в ячейках, задачи Римана на границах определяют численные потоки.</div>
+</div>
+
+<div class="lecture-nav">
+<a href="s1-14.html" class="nav-prev">← §14. Устойчивость схемы «крест»</a>
+<a href="s1-16.html" class="nav-next">§16. Точная задача Римана →</a>
+</div>
+</div>
+</div>
+
+<div class="comments-wrap">
 <div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">
 <h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
 <div id="comments-list"><p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p></div>
@@ -191,9 +149,7 @@ i</p>
 <textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
 <button onclick="window._postComment()" style="margin-top:.4rem;background:#b44a2d;color:#fff;border:none;padding:6px 18px;border-radius:5px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer">Отправить</button>
 </div>
-<div id="comment-login">
-<p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p>
-</div>
+<div id="comment-login"><p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p></div>
 </div>
 </div>
 
@@ -202,116 +158,6 @@ i</p>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
 <script src="../js/auth.js"></script>
-<script>
-// === Comments System ===
-(function(){
-  if (typeof firebase === 'undefined') { console.warn('Comments: firebase not loaded'); return; }
-  var db, auth;
-  try { db = firebase.firestore(); auth = firebase.auth(); }
-  catch(e) { console.warn('Comments: firebase not initialized', e); return; }
-
-  var PAGE_ID = location.pathname.split('/').pop().replace('.html','') || 'index';
-  var ADMINS = (typeof ADMIN_EMAILS !== 'undefined') ? ADMIN_EMAILS : [];
-
-  function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-  function loadComments() {
-    var list = document.getElementById('comments-list');
-    if (!list) return;
-    db.collection('comments').where('page','==',PAGE_ID).get().then(function(snap) {
-      var docs = [];
-      snap.forEach(function(d) { docs.push(d); });
-      docs.sort(function(a,b) {
-        var ta = a.data().createdAt ? a.data().createdAt.seconds : 0;
-        var tb = b.data().createdAt ? b.data().createdAt.seconds : 0;
-        return tb - ta;
-      });
-      if (docs.length === 0) {
-        list.innerHTML = '<p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p>';
-        return;
-      }
-      var user = auth.currentUser;
-      var isAdm = user && ADMINS.indexOf(user.email) >= 0;
-      var html = '';
-      docs.forEach(function(doc) {
-        var c = doc.data();
-        var date = c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-        var del = isAdm ? ' <button onclick="window._deleteComment(\''+doc.id+'\')" style="font-size:.7rem;color:#c44;background:none;border:none;cursor:pointer">удалить</button>' : '';
-        var badge = '';
-        if (c.authorRole === 'superadmin') badge = ' <span style="font-size:.6rem;background:#faeeda;color:#854f0b;padding:1px 4px;border-radius:3px;font-weight:700">преподаватель</span>';
-        html += '<div style="padding:.6rem 0;border-bottom:1px solid #ede6da">';
-        html += '<div style="display:flex;justify-content:space-between;align-items:baseline">';
-        html += '<strong style="font-size:.88rem">'+(c.authorFio||c.authorEmail)+badge+'</strong>';
-        html += '<span style="font-size:.72rem;color:#9a8d7e">'+date+del+'</span></div>';
-        html += '<p style="font-size:.88rem;margin-top:.2rem;margin-bottom:0">'+esc(c.text)+'</p></div>';
-      });
-      list.innerHTML = html;
-    }).catch(function(e) {
-      list.innerHTML = '<p style="color:#c44;font-size:.85rem">Ошибка: '+e.message+'</p>';
-    });
-  }
-
-  window._postComment = function() {
-    var text = document.getElementById('comment-text').value.trim();
-    if (!text) return;
-    var user = auth.currentUser;
-    if (!user) return;
-    var fio = user.email;
-    var role = (ADMINS.indexOf(user.email) >= 0) ? 'superadmin' : 'student';
-    db.collection('users').doc(user.uid).get().then(function(ud) {
-      if (ud.exists && ud.data().fio) fio = ud.data().fio;
-    }).catch(function(){}).finally(function() {
-      db.collection('comments').add({
-        page: PAGE_ID, text: text,
-        authorEmail: user.email, authorFio: fio, authorUid: user.uid, authorRole: role,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(function() {
-        document.getElementById('comment-text').value = '';
-        loadComments();
-      }).catch(function(e) { alert('Ошибка: '+e.message); });
-    });
-  };
-
-  window._deleteComment = function(id) {
-    if (!confirm('Удалить?')) return;
-    db.collection('comments').doc(id).delete().then(loadComments).catch(function(e){alert(e.message);});
-  };
-
-  var _checkAuthRetries = 0;
-  function checkAuth() {
-    var user = auth.currentUser;
-    var form = document.getElementById('comment-form');
-    var login = document.getElementById('comment-login');
-    if (!form || !login) return;
-    if (user && window._userApproved) {
-      form.style.display = '';
-      login.style.display = 'none';
-      _checkAuthRetries = 0;
-    } else if (user && typeof window._userApproved === 'undefined' && _checkAuthRetries < 15) {
-      _checkAuthRetries++;
-      setTimeout(checkAuth, 400);
-    } else if (user) {
-      form.style.display = 'none';
-      login.style.display = '';
-      login.querySelector('p').textContent = 'Ваш профиль ещё не подтверждён.';
-      _checkAuthRetries = 0;
-    } else {
-      form.style.display = 'none';
-      login.style.display = '';
-      _checkAuthRetries = 0;
-    }
-  }
-
-  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', loadComments); }
-  else { loadComments(); }
-
-  function safeCheckAuth() {
-    if (document.getElementById('comment-form')) checkAuth();
-    else setTimeout(safeCheckAuth, 200);
-  }
-  auth.onAuthStateChanged(function() { setTimeout(safeCheckAuth, 500); });
-  window.addEventListener('authReady', safeCheckAuth);
-})();
-</script>
+<script src="../js/comments.js"></script>
 </body>
 </html>

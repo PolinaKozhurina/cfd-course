@@ -6,141 +6,142 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>§11. Устойчивость схем с положительными коэффициентами</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
-<style>
-:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8}
-*{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
-.wrap{max-width:760px;margin:0 auto;padding:2rem 1.5rem 4rem}
-.lecture-tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;padding:.2rem .5rem;border-radius:3px;display:inline-block;margin-bottom:.5rem;background:#faeeda;color:#854f0b}
-.lecture-num{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);margin-bottom:.3rem}
-h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;line-height:1.15;margin-bottom:1.5rem;color:var(--text)}
-h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--accent);margin:2rem 0 .8rem;padding-top:.5rem;border-top:1px solid var(--border)}
-h3{font-family:'Source Serif 4',serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:1.5rem 0 .5rem}
-p{margin-bottom:1rem;text-align:justify;hyphens:auto}
-.equation{margin:1.5rem 0;text-align:center;overflow-x:auto}
-.definition{background:var(--bg2);border-left:3px solid var(--accent2);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
-.theorem{background:#fdf6ee;border-left:3px solid var(--accent);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
-.theorem .th-title{font-family:'Playfair Display',serif;font-weight:700;color:var(--accent);margin-bottom:.3rem}
-.remark{background:#f0f7f4;border-left:3px solid var(--accent2);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:.92rem}
-code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:.1rem .3rem;border-radius:3px}
-.lecture-nav{display:flex;justify-content:space-between;gap:1rem;margin-top:3rem;padding-top:1.5rem;border-top:2px solid var(--border);flex-wrap:wrap}
-.lecture-nav a{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);text-decoration:none;padding:.5rem .8rem;border:1px solid var(--border);border-radius:6px;transition:all .15s;max-width:48%}
-.lecture-nav a:hover{border-color:var(--accent);background:rgba(180,74,45,.05)}
-.nav-prev{text-align:left}
-.nav-next{text-align:right;margin-left:auto}
-</style>
 </head>
 <body>
 <script src="../js/nav.js"></script>
 
-<div class="wrap">
-<span class="lecture-tag">Свойства</span>
+<nav class="sidebar">
+  <h2>§11 Полож. коэффициенты</h2>
+  <div class="g">Содержание</div>
+  <a href="#positive">Положительные коэффициенты</a>
+  <a href="#conservation">Консервативность</a>
+  <a href="#monotonicity">Монотонность</a>
+  <a href="#stability">Устойчивость</a>
+  <a href="#tvd-link">Связь с TVD</a>
+  <a href="#hierarchy">Иерархия свойств</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="s1-10.html">← §10 TVD</a>
+  <a href="s1-12.html">→ §12 Лагранж</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-props">Свойства</span>
 <div class="lecture-num">§11 · Семестр 1</div>
-<h1>Устойчивость схем с положительными коэффициентами</h1>
+<h1>Теоремы об&nbsp;устойчивости, монотонности и&nbsp;консервативности линейных схем с&nbsp;положительными коэффициентами</h1>
 
-<p>Теоремы об устойчивости, монотонности и консервативности линейных разностных схем с положительными коэффициентами. Необходимые и достаточные условия</p>
+<p>Рассматриваются линейные разностные схемы для гиперболических уравнений, в которых обновление решения осуществляется линейным оператором с неотрицательными коэффициентами. Такие схемы играют фундаментальную роль в теории разностных схем, поскольку позволяют установить строгие и наглядные условия устойчивости, монотонности и консервативности.</p>
 
-<p>Рассматриваются линейные разностные схемы для гиперболических уравнений, в которых обновление решения осуществляется линейным оператором
-с неотрицательными коэффициентами. Такие схемы играют фундаментальную роль в теории разностных схем, поскольку позволяют установить строгие
-и наглядные условия устойчивости, монотонности и консервативности.</p>
+<h2 id="positive">Линейные схемы с положительными коэффициентами</h2>
 
-<p>Линейные схемы с положительными коэффициентами
-Рассмотрим линейную разностную схему вида</p>
+<p>Рассмотрим линейную разностную схему вида</p>
 
-<p>un+1
-=
-i</p>
+<div class="eq">\[
+u_i^{n+1} = \sum_k a_{ik}\, u_k^n,
+\tag{11.1}
+\]</div>
 
-<p>\sum︁</p>
+<p>где коэффициенты \(a_{ik}\) не зависят от \(n\).</p>
 
-<p>aik unk ,</p>
-
-<p>Определение 1. Линейная разностная схема (§11.1) называется схемой с
-положительными коэффициентами, если</p>
-
-<p>aik \ge 0</p>
-
-<p>для всех i,k.</p>
-
-<p>Консервативность
-Теорема 1 (необходимое и достаточное условие консервативности). Линейная разностная схема (§11.1) является консервативной тогда и только тогда, когда для всех i выполняется условие</p>
-
-<p>\sum︁</p>
-
-<p>aik = 1.</p>
-
-<p>k</p>
-
-<p>Доказательство. Необходимость условия (§11.2) следует из требования точного сохранения постоянного решения. Достаточность обусловлена тем, что
-при выполнении (§11.2) схема может быть приведена к консервативной форме
-с численными потоками, которые взаимно компенсируются при суммировании по ячейкам.</p>
-
-<p>Монотонность
-Теорема 2 (условие монотонности). Линейная разностная схема (§11.1)
-является монотонной тогда и только тогда, когда все её коэффициенты
-неотрицательны, то есть</p>
-
-<p>aik \ge 0 для всех i,k.
-Доказательство. Если коэффициенты неотрицательны, то un+1
-является моi
-n</p>
-
-<p>нотонной функцией значений uk , что по определению означает монотонность
-схемы. Обратно, если хотя бы один коэффициент отрицателен, то существует</p>
-
-<p>n</p>
-
-<p>набор значений uk , при котором монотонность нарушается.</p>
-
-<p>Устойчивость
-Теорема 3 (устойчивость в норме L\infty ). Линейная разностная схема с неотрицательными коэффициентами, удовлетворяющая условию консервативности (§11.2), является устойчивой в норме L\infty , то есть</p>
-
-<p>‖un+1 ‖\infty \le ‖un ‖\infty .
-Доказательство. Из неотрицательности коэффициентов и условия (§11.2)
-n+1</p>
-
-<p>следует, что каждое значение ui</p>
-
-<p>является выпуклой комбинацией значений</p>
-
-<p>предыдущего слоя. Следовательно,</p>
-
-<p>min unk \le un+1
-\le max unk ,
-i
-k</p>
-
-<p>k</p>
-
-<p>что эквивалентно устойчивости в норме L\infty .</p>
-
-<p>Связь устойчивости, монотонности и TVD
-Теорема 4. Линейная консервативная монотонная схема с положительными коэффициентами является TVD.
-Доказательство. Монотонность схемы обеспечивает выполнение дискретного принципа максимума. Из этого следует, что разности между соседними узлами не могут увеличиваться в сумме, что приводит к невозрастанию полной
-вариации решения.</p>
-
-<p>Замечание. Обратное утверждение, вообще говоря, неверно: TVD-свойство
-не гарантирует монотонности схемы.</p>
-
-<p>Итоговые соотношения
-Замечание. Для линейных разностных схем с положительными коэффициентами имеет место следующая иерархия свойств:</p>
-
-<p>неотрицательные коэффициенты</p>
-
-<p>=\Rightarrow монотонность =\Rightarrow устойчивость в L\infty =\Rightarrow</p>
-
-<p>Эта цепочка лежит в основе классической теории монотонных схем и служит
-отправной точкой для построения более сложных нелинейных методов.</p>
-
-<p>44</p>
-
-<div class="lecture-nav"><a href="s1-10.html" class="nav-prev">← §10. TVD-свойство разностных схем</a><a href="s1-12.html" class="nav-next">§12. Уравнения газодинамики в переменных Лагранжа →</a></div>
+<div class="definition">
+<strong>Определение 1.</strong> Линейная разностная схема (11.1) называется <em>схемой с положительными коэффициентами</em>, если \(a_{ik} \ge 0\) для всех \(i, k\).
 </div>
 
-<!-- Comments -->
-<div style="max-width:760px;margin:0 auto;padding:0 1.5rem 2rem">
+<h2 id="conservation">Консервативность</h2>
+
+<div class="theorem">
+<strong>Теорема 1 (необходимое и достаточное условие консервативности).</strong> Линейная разностная схема (11.1) является консервативной тогда и только тогда, когда для всех \(i\) выполняется условие
+\[
+\sum_k a_{ik} = 1.
+\tag{11.2}
+\]
+</div>
+
+<p><em>Доказательство.</em> Необходимость условия (11.2) следует из требования точного сохранения постоянного решения. Достаточность обусловлена тем, что при выполнении (11.2) схема может быть приведена к консервативной форме с численными потоками, которые взаимно компенсируются при суммировании по ячейкам.</p>
+
+<h2 id="monotonicity">Монотонность</h2>
+
+<div class="theorem">
+<strong>Теорема 2 (условие монотонности).</strong> Линейная разностная схема (11.1) является монотонной тогда и только тогда, когда все её коэффициенты неотрицательны, то есть \(a_{ik} \ge 0\) для всех \(i, k\).
+</div>
+
+<h2 id="stability">Устойчивость</h2>
+
+<div class="theorem">
+<strong>Теорема 3 (устойчивость в \(L_\infty\)).</strong> Если линейная разностная схема (11.1) имеет неотрицательные коэффициенты и удовлетворяет условию консервативности (11.2), то она устойчива в норме \(L_\infty\):
+\[
+\|u^{n+1}\|_\infty \le \|u^n\|_\infty.
+\]
+</div>
+
+<div class="proof">
+<p>Из неотрицательности коэффициентов и условия (11.2) следует, что каждое значение \(u_i^{n+1}\) является выпуклой комбинацией значений предыдущего слоя. Следовательно,</p>
+\[
+\min_k u_k^n \le u_i^{n+1} \le \max_k u_k^n,
+\]
+<p>что эквивалентно устойчивости в норме \(L_\infty\).</p>
+</div>
+
+<h2 id="tvd-link">Связь устойчивости, монотонности и TVD</h2>
+
+<div class="theorem">
+<strong>Теорема 4.</strong> Линейная консервативная монотонная схема с положительными коэффициентами является TVD.
+</div>
+
+<p><em>Доказательство.</em> Монотонность схемы обеспечивает выполнение дискретного принципа максимума. Из этого следует, что разности между соседними узлами не могут увеличиваться в сумме, что приводит к невозрастанию полной вариации решения.</p>
+
+<div class="remark">
+<strong>Замечание.</strong> Обратное утверждение, вообще говоря, неверно: TVD-свойство не гарантирует монотонности схемы.
+</div>
+
+<h2 id="hierarchy">Иерархия свойств</h2>
+
+<div class="remark">
+<strong>Итоговые соотношения.</strong> Для линейных разностных схем с положительными коэффициентами имеет место следующая иерархия свойств:
+\[
+\text{неотрицательные коэффициенты} \Longrightarrow \text{монотонность} \Longrightarrow \text{устойчивость в } L_\infty \Longrightarrow \text{TVD}
+\]
+Эта цепочка лежит в основе классической теории монотонных схем и служит отправной точкой для построения более сложных нелинейных методов.
+</div>
+
+<!-- SVG: Hierarchy diagram -->
+<div class="figure">
+<svg viewBox="0 0 600 80" xmlns="http://www.w3.org/2000/svg" style="max-width:560px">
+  <defs><marker id="ar11" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2c2419"/></marker></defs>
+  <rect x="0" y="15" width="130" height="50" rx="6" fill="#fdf6ee" stroke="#b44a2d" stroke-width="1.5"/>
+  <text x="65" y="36" font-family="Source Serif 4,serif" font-size="10" fill="#b44a2d" text-anchor="middle" font-weight="600">a_ik ≥ 0</text>
+  <text x="65" y="52" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b5d4f" text-anchor="middle">Σa_ik = 1</text>
+  <line x1="132" y1="40" x2="155" y2="40" stroke="#2c2419" stroke-width="1.5" marker-end="url(#ar11)"/>
+  <rect x="158" y="15" width="120" height="50" rx="6" fill="#e8f4f0" stroke="#1a6b5a" stroke-width="1.5"/>
+  <text x="218" y="44" font-family="Source Serif 4,serif" font-size="11" fill="#1a6b5a" text-anchor="middle" font-weight="600">Монотонность</text>
+  <line x1="280" y1="40" x2="303" y2="40" stroke="#2c2419" stroke-width="1.5" marker-end="url(#ar11)"/>
+  <rect x="306" y="15" width="130" height="50" rx="6" fill="#e6f1fb" stroke="#3a5ba0" stroke-width="1.5"/>
+  <text x="371" y="36" font-family="Source Serif 4,serif" font-size="11" fill="#3a5ba0" text-anchor="middle" font-weight="600">Устойчивость</text>
+  <text x="371" y="52" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">в L∞</text>
+  <line x1="438" y1="40" x2="461" y2="40" stroke="#2c2419" stroke-width="1.5" marker-end="url(#ar11)"/>
+  <rect x="464" y="15" width="90" height="50" rx="6" fill="#faeeda" stroke="#854f0b" stroke-width="1.5"/>
+  <text x="509" y="44" font-family="Source Serif 4,serif" font-size="12" fill="#854f0b" text-anchor="middle" font-weight="700">TVD</text>
+</svg>
+<div class="caption">Иерархия свойств линейных схем с положительными коэффициентами.</div>
+</div>
+
+<div class="lecture-nav">
+<a href="s1-10.html" class="nav-prev">← §10. TVD-свойство</a>
+<a href="s1-12.html" class="nav-next">§12. Уравнения газодинамики в переменных Лагранжа →</a>
+</div>
+</div>
+</div>
+
+<div class="comments-wrap">
 <div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">
 <h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
 <div id="comments-list"><p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p></div>
@@ -148,9 +149,7 @@ k</p>
 <textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
 <button onclick="window._postComment()" style="margin-top:.4rem;background:#b44a2d;color:#fff;border:none;padding:6px 18px;border-radius:5px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer">Отправить</button>
 </div>
-<div id="comment-login">
-<p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p>
-</div>
+<div id="comment-login"><p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p></div>
 </div>
 </div>
 
@@ -159,116 +158,6 @@ k</p>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
 <script src="../js/auth.js"></script>
-<script>
-// === Comments System ===
-(function(){
-  if (typeof firebase === 'undefined') { console.warn('Comments: firebase not loaded'); return; }
-  var db, auth;
-  try { db = firebase.firestore(); auth = firebase.auth(); }
-  catch(e) { console.warn('Comments: firebase not initialized', e); return; }
-
-  var PAGE_ID = location.pathname.split('/').pop().replace('.html','') || 'index';
-  var ADMINS = (typeof ADMIN_EMAILS !== 'undefined') ? ADMIN_EMAILS : [];
-
-  function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-  function loadComments() {
-    var list = document.getElementById('comments-list');
-    if (!list) return;
-    db.collection('comments').where('page','==',PAGE_ID).get().then(function(snap) {
-      var docs = [];
-      snap.forEach(function(d) { docs.push(d); });
-      docs.sort(function(a,b) {
-        var ta = a.data().createdAt ? a.data().createdAt.seconds : 0;
-        var tb = b.data().createdAt ? b.data().createdAt.seconds : 0;
-        return tb - ta;
-      });
-      if (docs.length === 0) {
-        list.innerHTML = '<p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p>';
-        return;
-      }
-      var user = auth.currentUser;
-      var isAdm = user && ADMINS.indexOf(user.email) >= 0;
-      var html = '';
-      docs.forEach(function(doc) {
-        var c = doc.data();
-        var date = c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-        var del = isAdm ? ' <button onclick="window._deleteComment(\''+doc.id+'\')" style="font-size:.7rem;color:#c44;background:none;border:none;cursor:pointer">удалить</button>' : '';
-        var badge = '';
-        if (c.authorRole === 'superadmin') badge = ' <span style="font-size:.6rem;background:#faeeda;color:#854f0b;padding:1px 4px;border-radius:3px;font-weight:700">преподаватель</span>';
-        html += '<div style="padding:.6rem 0;border-bottom:1px solid #ede6da">';
-        html += '<div style="display:flex;justify-content:space-between;align-items:baseline">';
-        html += '<strong style="font-size:.88rem">'+(c.authorFio||c.authorEmail)+badge+'</strong>';
-        html += '<span style="font-size:.72rem;color:#9a8d7e">'+date+del+'</span></div>';
-        html += '<p style="font-size:.88rem;margin-top:.2rem;margin-bottom:0">'+esc(c.text)+'</p></div>';
-      });
-      list.innerHTML = html;
-    }).catch(function(e) {
-      list.innerHTML = '<p style="color:#c44;font-size:.85rem">Ошибка: '+e.message+'</p>';
-    });
-  }
-
-  window._postComment = function() {
-    var text = document.getElementById('comment-text').value.trim();
-    if (!text) return;
-    var user = auth.currentUser;
-    if (!user) return;
-    var fio = user.email;
-    var role = (ADMINS.indexOf(user.email) >= 0) ? 'superadmin' : 'student';
-    db.collection('users').doc(user.uid).get().then(function(ud) {
-      if (ud.exists && ud.data().fio) fio = ud.data().fio;
-    }).catch(function(){}).finally(function() {
-      db.collection('comments').add({
-        page: PAGE_ID, text: text,
-        authorEmail: user.email, authorFio: fio, authorUid: user.uid, authorRole: role,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(function() {
-        document.getElementById('comment-text').value = '';
-        loadComments();
-      }).catch(function(e) { alert('Ошибка: '+e.message); });
-    });
-  };
-
-  window._deleteComment = function(id) {
-    if (!confirm('Удалить?')) return;
-    db.collection('comments').doc(id).delete().then(loadComments).catch(function(e){alert(e.message);});
-  };
-
-  var _checkAuthRetries = 0;
-  function checkAuth() {
-    var user = auth.currentUser;
-    var form = document.getElementById('comment-form');
-    var login = document.getElementById('comment-login');
-    if (!form || !login) return;
-    if (user && window._userApproved) {
-      form.style.display = '';
-      login.style.display = 'none';
-      _checkAuthRetries = 0;
-    } else if (user && typeof window._userApproved === 'undefined' && _checkAuthRetries < 15) {
-      _checkAuthRetries++;
-      setTimeout(checkAuth, 400);
-    } else if (user) {
-      form.style.display = 'none';
-      login.style.display = '';
-      login.querySelector('p').textContent = 'Ваш профиль ещё не подтверждён.';
-      _checkAuthRetries = 0;
-    } else {
-      form.style.display = 'none';
-      login.style.display = '';
-      _checkAuthRetries = 0;
-    }
-  }
-
-  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', loadComments); }
-  else { loadComments(); }
-
-  function safeCheckAuth() {
-    if (document.getElementById('comment-form')) checkAuth();
-    else setTimeout(safeCheckAuth, 200);
-  }
-  auth.onAuthStateChanged(function() { setTimeout(safeCheckAuth, 500); });
-  window.addEventListener('authReady', safeCheckAuth);
-})();
-</script>
+<script src="../js/comments.js"></script>
 </body>
 </html>

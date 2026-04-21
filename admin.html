@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <h3>Индивидуальные оценки</h3>
     <p style="font-size:.85rem;color:var(--text2);margin-bottom:.8rem"><strong>Зачёт</strong> (работа за семестр, групповая) — до 50 баллов. <strong>Экзамен</strong> (индивидуальное задание) — до 50 баллов. Итого 100.</p>
     <table>
-      <thead><tr><th>ФИО</th><th>Уч. группа</th><th>Раб. группа</th><th>Задание</th><th>Зачёт (50)</th><th>Экзамен (50)</th><th>Итого</th><th>Комментарий</th><th></th></tr></thead>
+      <thead><tr><th>ФИО</th><th>Уч. группа</th><th>Раб. группа</th><th>Прогресс зачёта</th><th>Задание</th><th>Зачёт (50)</th><th>Экзамен (50)</th><th>Итого</th><th>Комментарий</th><th></th></tr></thead>
       <tbody id="gradesBody"></tbody>
     </table>
   </div>
@@ -285,6 +285,14 @@ async function loadAllData() {
     resultsSnap.forEach(doc => {
       allResults[gid][doc.id] = doc.data();
     });
+    // Load admin checklist progress
+    try {
+      const aSnap = await db.collection('groups').doc(gid).collection('admin_checklist').get();
+      let checked = 0;
+      aSnap.forEach(doc => { if (doc.data().checked) checked++; });
+      allGroups[gid].adminChecked = checked;
+      allGroups[gid].adminTotal = 71; // total checkboxes in review
+    } catch(e) { allGroups[gid].adminChecked = 0; allGroups[gid].adminTotal = 71; }
   }
 
   // Load grades
@@ -583,6 +591,13 @@ function renderGrades() {
     const fio = u.fio || u.email;
     const sg = u.studyGroup || '—';
     const rg = u.group ? u.group.replace('group_', '№') : '—';
+    // Progress from admin checklist
+    const grp = u.group ? allGroups[u.group] : null;
+    const adminChecked = grp ? (grp.adminChecked || 0) : 0;
+    const adminTotal = grp ? (grp.adminTotal || 71) : 71;
+    const pct = adminTotal > 0 ? Math.round(adminChecked / adminTotal * 100) : 0;
+    const pctColor = pct >= 80 ? '#1a6b5a' : (pct >= 40 ? '#854f0b' : '#c44');
+    const progressHtml = `<div style="display:flex;align-items:center;gap:.4rem"><div style="flex:1;background:#ede6da;border-radius:3px;height:8px;min-width:60px"><div style="background:${pctColor};height:100%;border-radius:3px;width:${pct}%"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:${pctColor};font-weight:700">${pct}%</span></div>`;
     // Find their task
     const task = allTaskClaims[u.uid] || '—';
     // Load existing grade
@@ -595,6 +610,7 @@ function renderGrades() {
       <td style="font-weight:600">${fio}</td>
       <td style="font-size:.82rem">${sg}</td>
       <td><span class="badge b-group">${rg}</span></td>
+      <td>${progressHtml}</td>
       <td style="font-size:.82rem">${task}</td>
       <td><input type="number" min="0" max="50" value="${zachet}" class="grade-input" id="zachet-${u.uid}"></td>
       <td><input type="number" min="0" max="50" value="${exam}" class="grade-input" id="exam-${u.uid}"></td>
@@ -603,7 +619,7 @@ function renderGrades() {
       <td><button class="btn btn-primary btn-sm" onclick="saveIndividualGrade('${u.uid}')">💾</button></td>
     </tr>`;
   }
-  if (!html) html = '<tr><td colspan="9" style="text-align:center;color:var(--text3)">Нет студентов</td></tr>';
+  if (!html) html = '<tr><td colspan="10" style="text-align:center;color:var(--text3)">Нет студентов</td></tr>';
   tbody.innerHTML = html;
 }
 

@@ -113,6 +113,9 @@ td{padding:5px 10px;border:1px solid var(--border)}
     <div class="stat"><div class="num" id="statPassed">0</div><div class="label">Принято</div></div>
     <div class="stat"><div class="num" id="statFailed">0</div><div class="label">С ошибками</div></div>
     <div class="stat"><div class="num" id="statPending">0</div><div class="label">Не сдано</div></div>
+    <div class="stat"><div class="num" id="statProgress">—</div><div class="label">Прогресс зачёта</div></div>
+    <div class="stat"><div class="num" id="statZachet">—</div><div class="label">Зачёт (50)</div></div>
+    <div class="stat"><div class="num" id="statExam">—</div><div class="label">Экзамен (50)</div></div>
   </div>
 
   <div id="gradeSection" style="display:none">
@@ -357,6 +360,18 @@ firebase.auth().onAuthStateChanged(async user => {
   document.getElementById('statFailed').textContent = failed;
   document.getElementById('statPending').textContent = pending;
 
+  // Load admin checklist progress for this group
+  if (userGroup) {
+    try {
+      const aSnap = await db2.collection('groups').doc(userGroup).collection('admin_checklist').get();
+      let adminChecked = 0;
+      aSnap.forEach(function(doc) { if (doc.data().checked) adminChecked++; });
+      const pct = Math.round(adminChecked / 71 * 100);
+      document.getElementById('statProgress').textContent = pct + '%';
+      document.getElementById('statProgress').style.color = pct >= 80 ? '#1a6b5a' : (pct >= 40 ? '#854f0b' : '#c44');
+    } catch(e) {}
+  }
+
   // Load individual grades
   try {
     const gradeDoc = await db2.collection('individual_grades').doc(user.uid).get();
@@ -364,6 +379,8 @@ firebase.auth().onAuthStateChanged(async user => {
       const g = gradeDoc.data();
       const z = g.zachet || 0;
       const e = g.exam || 0;
+      document.getElementById('statZachet').textContent = z || '—';
+      document.getElementById('statExam').textContent = e || '—';
       document.getElementById('gradeSection').style.display = '';
       document.getElementById('gradeZachet').textContent = z;
       document.getElementById('gradeExam').textContent = e;

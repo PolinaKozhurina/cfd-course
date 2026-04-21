@@ -1383,7 +1383,7 @@ function renderGroupMsgs(snap,gid) {
     var rks=Object.keys(m.reactions||{}),reactH='';
     if(rks.length>0||true){reactH='<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px">';
       rks.forEach(function(ej){var rv=m.reactions[ej]||{},rc=Object.keys(rv).length;if(rc===0)return;var myR=me&&rv[me.uid],rTt=Object.values(rv).join(', ');
-        reactH+='<span onclick="adminToggleReaction(\'group\',\''+gid+'\',\''+doc.id+'\',\''+ej+'\',\'messages\')" title="'+rTt+'" style="cursor:pointer;padding:1px 5px;border-radius:10px;font-size:.75rem;background:'+(myR?'#e8f4f0':'#f5f0e8')+';border:1px solid '+(myR?'#1a6b5a':'#d9cfc0')+';user-select:none">'+ej+' <span style="font-size:.6rem;font-family:JetBrains Mono,monospace">'+rc+'</span></span>';});
+        reactH+='<span data-react="'+ej+'" data-rtype="group" data-rref="'+gid+'" data-rmsg="'+doc.id+'" data-rcol="messages" class="admin-react-toggle,\''+gid+'\',\''+doc.id+'\',\''+ej+'\',\'messages\')" title="'+rTt+'" style="cursor:pointer;padding:1px 5px;border-radius:10px;font-size:.75rem;background:'+(myR?'#e8f4f0':'#f5f0e8')+';border:1px solid '+(myR?'#1a6b5a':'#d9cfc0')+';user-select:none">'+ej+' <span style="font-size:.6rem;font-family:JetBrains Mono,monospace">'+rc+'</span></span>';});
       reactH+='<span style="cursor:pointer;padding:1px 5px;border-radius:10px;font-size:.72rem;background:var(--bg2);border:1px solid var(--border);opacity:.4;user-select:none" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.4" onclick="adminShowReactPicker(this,\'group\',\''+gid+'\',\''+doc.id+'\',\'messages\')">+</span></div>';}
     html+=reactH+readHtml+'</div></div>';
   });
@@ -1576,6 +1576,28 @@ function adminToggleReaction(chatType, refId, msgId, emoji, col) {
     return docRef.update({ reactions: reactions });
   }).catch(function(e) { console.warn('Reaction error:', e); });
 }
+
+// Global delegation for admin chat reactions
+document.addEventListener('DOMContentLoaded', function() {
+  var chatBody = document.getElementById('adminChatBody');
+  if (!chatBody) return;
+  chatBody.addEventListener('click', function(ev) {
+    var toggle = ev.target.closest('[data-react]');
+    if (toggle) {
+      adminToggleReaction(toggle.dataset.rtype, toggle.dataset.rref, toggle.dataset.rmsg, toggle.dataset.react, toggle.dataset.rcol);
+      return;
+    }
+    var addBtn = ev.target.closest('.adm-react-add,[onclick*="adminShowReactPicker"]');
+    if (addBtn) {
+      ev.stopPropagation();
+      var rtype = addBtn.dataset.rtype || addBtn.getAttribute('data-rtype');
+      var rref = addBtn.dataset.rref || addBtn.getAttribute('data-rref');
+      var rmsg = addBtn.dataset.rmsg || addBtn.getAttribute('data-rmsg');
+      var rcol = addBtn.dataset.rcol || 'messages';
+      if (rtype && rref && rmsg) adminShowReactPicker(addBtn, rtype, rref, rmsg, rcol);
+    }
+  });
+});
 </script>
 </body>
 </html>

@@ -662,9 +662,9 @@ function profRenderMsgs(snap, type, refId) {
     html += '<div style="font-size:.83rem">'+(m.text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div>';
 
     // Reactions
+    // Reactions
     var reactions = m.reactions || {};
     var reactHtml = '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px">';
-    var hasReactions = false;
     var reactKeys = Object.keys(reactions);
     for (var ri = 0; ri < reactKeys.length; ri++) {
       var emoji = reactKeys[ri];
@@ -672,15 +672,13 @@ function profRenderMsgs(snap, type, refId) {
       var rNames = Object.values(reactors);
       var rCount = rNames.length;
       if (rCount === 0) continue;
-      hasReactions = true;
       var myReact = me && reactors[me.uid];
       var rTitle = rNames.join(', ');
       var rBg = myReact ? '#e8f4f0' : '#f5f0e8';
       var rBorder = myReact ? '#1a6b5a' : '#d9cfc0';
-      reactHtml += '<span onclick="profToggleReaction(\''+type+'\',\''+refId+'\',\''+doc.id+'\',\''+emoji+'\')" title="'+rTitle+'" style="cursor:pointer;padding:1px 5px;border-radius:10px;font-size:.75rem;background:'+rBg+';border:1px solid '+rBorder+';user-select:none">'+emoji+' <span style="font-size:.6rem;font-family:JetBrains Mono,monospace">'+rCount+'</span></span>';
+      reactHtml += '<span data-react="'+emoji+'" data-rtype="'+type+'" data-rref="'+refId+'" data-rmsg="'+doc.id+'" title="'+rTitle+'" style="cursor:pointer;padding:1px 5px;border-radius:10px;font-size:.75rem;background:'+rBg+';border:1px solid '+rBorder+';user-select:none" class="prof-react-toggle">'+emoji+' <span style="font-size:.6rem;font-family:JetBrains Mono,monospace">'+rCount+'</span></span>';
     }
-    // Add reaction button
-    reactHtml += '<span class="prof-react-btn" style="cursor:pointer;padding:1px 5px;border-radius:10px;font-size:.72rem;background:var(--bg2,#f5f0e8);border:1px solid var(--border,#d9cfc0);opacity:.4;transition:opacity .15s;user-select:none" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.4" onclick="profShowReactPicker(this,\''+type+'\',\''+refId+'\',\''+doc.id+'\')">+</span>';
+    reactHtml += '<span data-rtype="'+type+'" data-rref="'+refId+'" data-rmsg="'+doc.id+'" style="cursor:pointer;padding:1px 5px;border-radius:10px;font-size:.72rem;background:var(--bg2,#f5f0e8);border:1px solid var(--border,#d9cfc0);opacity:.4;transition:opacity .15s;user-select:none" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.4" class="prof-react-add">+</span>';
     reactHtml += '</div>';
 
     html += reactHtml;
@@ -689,6 +687,20 @@ function profRenderMsgs(snap, type, refId) {
   if (!html) html = '<p style="text-align:center;color:#9a8d7e;padding:1.5rem;font-size:.8rem">Нет сообщений. Напишите первое!</p>';
   body.innerHTML = html;
   body.scrollTop = body.scrollHeight;
+
+  // Attach reaction handlers via event delegation
+  body.onclick = function(ev) {
+    var el = ev.target.closest('.prof-react-toggle');
+    if (el) {
+      profToggleReaction(el.dataset.rtype, el.dataset.rref, el.dataset.rmsg, el.dataset.react);
+      return;
+    }
+    var addBtn = ev.target.closest('.prof-react-add');
+    if (addBtn) {
+      profShowReactPicker(addBtn, addBtn.dataset.rtype, addBtn.dataset.rref, addBtn.dataset.rmsg);
+      return;
+    }
+  };
 
   // Mark as read
   if (unreadIds.length > 0 && me) {

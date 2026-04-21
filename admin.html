@@ -1248,7 +1248,10 @@ var _chatListData = [];
 
 function renderMsgGroupSelect() { buildChatList(); }
 
+var _buildingChatList = false;
 async function buildChatList() {
+  if (_buildingChatList) return;
+  _buildingChatList = true;
   _chatListData = [];
   for (const gid of Object.keys(allGroups).sort()) {
     const members = allGroups[gid].members.map(m => m.fio || m.email).join(', ');
@@ -1281,7 +1284,8 @@ async function buildChatList() {
       }
     } catch(e) {}
   }
-  _chatListData.sort((a,b)=>(b.unread-a.unread)||(b.lastTime-a.lastTime));
+  _chatListData.sort(function(a,b){ return (b.unread-a.unread)||(b.lastTime-a.lastTime); });
+  _buildingChatList = false;
   renderChatList();
   updateMsgTabBadge();
 }
@@ -1431,7 +1435,7 @@ function renderDmMsgs(snap,dmId){
       db.collection('dm').doc(dmId).collection('messages').doc(msgId).update({readAt:Date.now()}).catch(function(){});
     });
     // Refresh chat list badges after a short delay
-    setTimeout(buildChatList, 800);
+    setTimeout(function(){_buildingChatList=false;buildChatList();}, 800);
   }
 }
 
@@ -1442,7 +1446,7 @@ async function sendAdminDm(){
   var fio=user.email;try{var ud=await db.collection('users').doc(user.uid).get();if(ud.exists&&ud.data().fio)fio=ud.data().fio;}catch(e){}
   var dmId=getDmId(user.uid,uid);
   try{await db.collection('dm').doc(dmId).set({participants:[user.uid,uid],updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-    await db.collection('dm').doc(dmId).collection('messages').add({text,authorEmail:user.email,authorFio:fio,authorUid:user.uid,readAt:null,createdAt:firebase.firestore.FieldValue.serverTimestamp()});input.value='';buildChatList();}catch(e){alert('Ошибка: '+e.message);}
+    await db.collection('dm').doc(dmId).collection('messages').add({text,authorEmail:user.email,authorFio:fio,authorUid:user.uid,readAt:null,createdAt:firebase.firestore.FieldValue.serverTimestamp()});input.value='';_buildingChatList=false;buildChatList();}catch(e){alert('Ошибка: '+e.message);}
 }
 
 async function delDmMsg(dmId,msgId){if(!confirm('Удалить?'))return;try{await db.collection('dm').doc(dmId).collection('messages').doc(msgId).delete();}catch(e){alert(e.message);}}

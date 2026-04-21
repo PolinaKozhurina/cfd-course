@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <link rel="icon" href="favicon.ico" type="image/x-icon">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Разностные схемы и параллельная реализация</title>
+<title>Вычислительная газовая динамика — Курсы</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8;--shadow:rgba(44,36,25,.06)}
@@ -24,20 +24,22 @@ body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;
 
 .wrap{max-width:900px;margin:0 auto;padding:2rem 1.5rem}
 
-.nav-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:.6rem 1.5rem;position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
-.nav-bar .brand{font-family:'Playfair Display',serif;font-weight:700;font-size:1rem;color:var(--accent);text-decoration:none;white-space:nowrap}
-.nav-links{display:flex;gap:.3rem;flex-wrap:wrap}
-.nav-links a{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text2);text-decoration:none;padding:.3rem .55rem;border-radius:4px;transition:all .15s;white-space:nowrap}
-.nav-links a:hover{background:var(--bg3);color:var(--text)}
-.nav-links a.active{background:var(--accent);color:#fff}
-.auth-btn{font-family:'JetBrains Mono',monospace;font-size:.72rem;background:var(--accent2);color:#fff;border:none;padding:.35rem .8rem;border-radius:4px;cursor:pointer;transition:opacity .15s;white-space:nowrap}
-.auth-btn:hover{opacity:.85}
+/* Course block */
+.course-block{margin-bottom:2.5rem}
+.course-header{display:flex;align-items:baseline;gap:1rem;margin-bottom:.3rem;flex-wrap:wrap;cursor:pointer;user-select:none;padding:.4rem 0}
+.course-header:hover h2{color:var(--accent)}
+.course-header h2{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:var(--text);margin:0;display:flex;align-items:center;gap:.5rem;transition:color .15s}
+.course-header h2 .toggle-arrow{color:var(--text3);font-size:.8rem;transition:transform .25s}
+.course-header h2 .toggle-arrow.collapsed{transform:rotate(-90deg)}
+.course-header .sem{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent);background:rgba(180,74,45,.08);padding:.2rem .6rem;border-radius:3px;letter-spacing:.04em}
+.course-header .lecture-count{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3)}
+.course-body{overflow:hidden;transition:max-height .35s ease}
+.course-body.collapsed{max-height:0 !important}
 
-h2{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:900;margin:2.5rem 0 1rem;padding-top:.5rem}
-h2 .n{color:var(--accent);font-weight:400;margin-right:.1em}
-h3{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--accent);margin:1.5rem 0 .5rem}
+.section-label{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin:1.5rem 0 .5rem;display:flex;align-items:center;gap:.6rem}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
 
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:0 0 1rem}
 .card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.3rem 1.2rem;transition:all .2s;position:relative;overflow:hidden;text-decoration:none;color:inherit;display:block}
 .card:hover{border-color:var(--accent);box-shadow:0 4px 20px var(--shadow);transform:translateY(-2px)}
 .card .card-tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;padding:.15rem .45rem;border-radius:3px;display:inline-block;margin-bottom:.5rem}
@@ -52,10 +54,7 @@ h3{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:v
 .card .card-meta span{display:flex;align-items:center;gap:.25rem}
 .card .solver-badge{position:absolute;top:.8rem;right:.8rem;background:var(--accent);color:#fff;font-family:'JetBrains Mono',monospace;font-size:.58rem;padding:.15rem .4rem;border-radius:3px;text-transform:uppercase;letter-spacing:.06em}
 
-.section-label{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin:2rem 0 .5rem;display:flex;align-items:center;gap:.6rem}
-.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
-
-.schedule{margin:1.5rem 0}
+.schedule{margin:1rem 0 1.5rem}
 .schedule-row{display:grid;grid-template-columns:90px 1fr;gap:1rem;padding:.6rem 0;border-bottom:1px solid var(--border);font-size:.9rem;align-items:baseline}
 .schedule-row:last-child{border-bottom:none}
 .schedule-row .week{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);font-weight:500}
@@ -70,40 +69,24 @@ h3{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:v
 .info-box ul{margin:.3rem 0 0 1.2rem}
 .info-box li{margin:.15rem 0}
 
+.coming-soon{padding:2rem;text-align:center;color:var(--text3);font-style:italic;font-size:.92rem;border:2px dashed var(--border);border-radius:10px;margin:1rem 0}
+
 .footer{margin-top:3rem;padding:1.5rem 0;border-top:1px solid var(--border);font-size:.8rem;color:var(--text3);text-align:center}
 .footer a{color:var(--accent);text-decoration:none}
 </style>
 </head>
 <body>
-
-<!-- NAV -->
-<nav class="nav-bar">
-  <a href="index.html" class="brand">CFD Course</a>
-  <div class="nav-links">
-    <a href="index.html" class="active">Главная</a>
-    <a href="flic.html">FLIC</a>
-    <a href="godunov.html">Годунов</a>
-    <a href="mader.html">Мейдер</a>
-    <a href="pimple.html">SIMPLE+</a>
-    <a href="mesh.html">Сетки</a>
-    <a href="unstruct.html">Неструкт.</a>
-    <a href="mpi.html">MPI</a>
-    <a href="checklist.html">Зачёт</a>
-    <a href="assignments.html" style="color:#6b5d4f;text-decoration:none;padding:3px 7px;border-radius:4px;transition:all .15s">Задания</a>
-<a href="profile.html">Профиль</a>
-  </div>
-  <button class="auth-btn" id="authBtn" onclick="toggleAuth()">Войти</button>
-</nav>
+<script src="js/nav.js"></script>
 
 <!-- HERO -->
 <div class="hero-wrap">
   <div class="hero">
-    <div class="tag">4 курс · Весна 2026</div>
-    <h1>Разностные схемы<br>и параллельная реализация</h1>
+    <div class="tag">МИФИ · Кафедра вычислительной математики</div>
+    <h1>Вычислительная<br>газовая динамика</h1>
     <p class="sub">Численные методы для уравнений газовой динамики: от ударных труб до детонационных волн. Каждая лекция — с интерактивным солвером в браузере.</p>
     <div class="hero-meta">
-      <span><span class="dot" style="background:var(--accent)"></span>7 лекций + солверы</span>
-      <span><span class="dot" style="background:var(--accent2)"></span>Зачёт 21 апреля</span>
+      <span><span class="dot" style="background:var(--accent)"></span>Интерактивные лекции</span>
+      <span><span class="dot" style="background:var(--accent2)"></span>Автопроверка кода</span>
       <span><span class="dot" style="background:var(--accent3)"></span>Групповая работа</span>
     </div>
   </div>
@@ -111,114 +94,122 @@ h3{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:v
 
 <div class="wrap">
 
-<!-- LECTURES -->
-<div class="section-label">Лекции</div>
+<!-- ============================================================
+     COURSE: Разностные схемы (Семестр 2, Весна 2026)
+     ============================================================ -->
+<div class="course-block" id="course-diff-schemes">
+  <div class="course-header" onclick="toggleCourse('diff-schemes')">
+    <h2><span class="toggle-arrow" id="arrow-diff-schemes">▾</span> Разностные схемы и параллельная реализация</h2>
+    <span class="sem">Весна 2026</span>
+    <span class="lecture-count">7 лекций · Семестр 2</span>
+  </div>
+  <div class="course-body" id="body-diff-schemes">
 
-<div class="cards">
-
-  <a href="flic.html" class="card">
-    <span class="card-tag gas">Газодинамика</span>
-    <span class="solver-badge">JS солвер</span>
-    <h4>Метод FLIC</h4>
-    <p>Fluid-in-Cell: лагранжев этап + эйлеров перенос. Тест Сода с точным решением Римана.</p>
-    <div class="card-meta">
-      <span>14 секций</span>
-      <span>MathJax</span>
-      <span>74 KB</span>
+    <div class="section-label">Газодинамика</div>
+    <div class="cards">
+      <a href="flic.html" class="card">
+        <span class="card-tag gas">Газодинамика</span>
+        <span class="solver-badge">JS солвер</span>
+        <h4>Метод FLIC</h4>
+        <p>Fluid-in-Cell: лагранжев этап + эйлеров перенос. Тест Сода с точным решением Римана.</p>
+        <div class="card-meta"><span>14 секций</span><span>MathJax</span><span>74 KB</span></div>
+      </a>
+      <a href="godunov.html" class="card">
+        <span class="card-tag gas">Газодинамика</span>
+        <span class="solver-badge">JS солвер</span>
+        <h4>Годунов + HLLC + MUSCL</h4>
+        <p>Приближённые решатели Римана, реконструкция 2-го порядка, SSP-RK2. Переход 1D → 2D.</p>
+        <div class="card-meta"><span>16 секций</span><span>Переключатели</span><span>41 KB</span></div>
+      </a>
+      <a href="mader.html" class="card">
+        <span class="card-tag gas">Газодинамика</span>
+        <span class="solver-badge">JS солвер</span>
+        <h4>2DE Мейдера</h4>
+        <p>5 фаз, искусственная вязкость, Donor-Acceptor, кинетика Аррениуса. Детонация и Corner Turning.</p>
+        <div class="card-meta"><span>17 секций</span><span>3 теста</span><span>47 KB</span></div>
+      </a>
     </div>
-  </a>
 
-  <a href="godunov.html" class="card">
-    <span class="card-tag gas">Газодинамика</span>
-    <span class="solver-badge">JS солвер</span>
-    <h4>Годунов + HLLC + MUSCL</h4>
-    <p>Приближённые решатели Римана, реконструкция 2-го порядка, SSP-RK2. Переход 1D → 2D.</p>
-    <div class="card-meta">
-      <span>16 секций</span>
-      <span>Переключатели</span>
-      <span>41 KB</span>
+    <div class="section-label">Несжимаемые течения</div>
+    <div class="cards">
+      <a href="pimple.html" class="card">
+        <span class="card-tag inc">Несжимаемые</span>
+        <span class="solver-badge">JS солвер</span>
+        <h4>SIMPLE / PISO / PIMPLE</h4>
+        <p>Разнесённая сетка, предиктор-корректор, уравнение Пуассона. Каверна, Тейлор-Грин, ступенька.</p>
+        <div class="card-meta"><span>98 секций</span><span>45 KB JS</span><span>1.2 MB</span></div>
+      </a>
     </div>
-  </a>
 
-  <a href="mader.html" class="card">
-    <span class="card-tag gas">Газодинамика</span>
-    <span class="solver-badge">JS солвер</span>
-    <h4>2DE Мейдера</h4>
-    <p>5 фаз, искусственная вязкость, Donor-Acceptor, кинетика Аррениуса. Детонация и Corner Turning.</p>
-    <div class="card-meta">
-      <span>17 секций</span>
-      <span>3 теста</span>
-      <span>47 KB</span>
+    <div class="section-label">Сетки и параллелизм</div>
+    <div class="cards">
+      <a href="mesh.html" class="card">
+        <span class="card-tag mesh">Сетки</span>
+        <span class="solver-badge">Интерактив</span>
+        <h4>Построение неструктурированных сеток</h4>
+        <p>Триангуляция Делоне (Bowyer-Watson), CDT, алгоритм Рупперта. Генератор сеток в браузере.</p>
+        <div class="card-meta"><span>Интерактив</span><span>95 KB JS</span></div>
+      </a>
+      <a href="unstruct.html" class="card">
+        <span class="card-tag mesh">Сетки</span>
+        <h4>КОМ на неструктурированных сетках</h4>
+        <p>Структуры данных Node/Face/Cell, HLLC на треугольниках, схемы Годунова и Колгана. C++ примеры.</p>
+        <div class="card-meta"><span>Текст + код</span><span>293 KB</span></div>
+      </a>
+      <a href="mpi.html" class="card">
+        <span class="card-tag mpi">Параллелизм</span>
+        <span class="solver-badge">Интерактив</span>
+        <h4>MPI декомпозиция</h4>
+        <p>RCB, BFS-разбиение, halo-обмен. Интерактивная демонстрация декомпозиции области.</p>
+        <div class="card-meta"><span>Демо</span><span>104 KB</span></div>
+      </a>
     </div>
-  </a>
 
-  <a href="pimple.html" class="card">
-    <span class="card-tag inc">Несжимаемые</span>
-    <span class="solver-badge">JS солвер</span>
-    <h4>SIMPLE / PISO / PIMPLE</h4>
-    <p>Разнесённая сетка, предиктор-корректор, уравнение Пуассона. Каверна, Тейлор-Грин, ступенька.</p>
-    <div class="card-meta">
-      <span>98 секций</span>
-      <span>45 KB JS</span>
-      <span>1.2 MB</span>
+    <div class="section-label">Контроль</div>
+    <div class="cards">
+      <a href="checklist.html" class="card" style="border-color:var(--accent)">
+        <span class="card-tag check">Зачёт</span>
+        <h4>Чек-лист зачёта</h4>
+        <p>Все задания, маркеры CHECK:, контрольные значения, эталонные графики.</p>
+        <div class="card-meta"><span>33 маркера</span><span>9 блоков</span></div>
+      </a>
+      <a href="assignments.html" class="card">
+        <span class="card-tag check">Задания</span>
+        <h4>Индивидуальные задания</h4>
+        <p>Персональные задачи для каждого студента по материалам курса.</p>
+        <div class="card-meta"><span>Персональные</span></div>
+      </a>
     </div>
-  </a>
 
-  <a href="mesh.html" class="card">
-    <span class="card-tag mesh">Сетки</span>
-    <span class="solver-badge">Интерактив</span>
-    <h4>Построение неструктурированных сеток</h4>
-    <p>Триангуляция Делоне (Bowyer-Watson), CDT, алгоритм Рупперта. Генератор сеток в браузере.</p>
-    <div class="card-meta">
-      <span>Интерактив</span>
-      <span>95 KB JS</span>
+    <div class="section-label">Программа</div>
+    <div class="schedule">
+      <div class="schedule-row"><div class="week">Неделя 1–2</div><div class="topic"><a href="flic.html">Метод FLIC</a> — уравнения Эйлера, расщепление по физическим процессам</div></div>
+      <div class="schedule-row"><div class="week">Неделя 3–4</div><div class="topic"><a href="godunov.html">Годунов + HLLC</a> — решатели Римана, MUSCL, WENO, переход 1D → 2D</div></div>
+      <div class="schedule-row"><div class="week">Неделя 5–6</div><div class="topic"><a href="mader.html">2DE Мейдера</a> — искусственная вязкость, Donor-Acceptor, детонация</div></div>
+      <div class="schedule-row"><div class="week">Неделя 7–8</div><div class="topic"><a href="pimple.html">SIMPLE / PISO / PIMPLE</a> — несжимаемые течения, staggered grid</div></div>
+      <div class="schedule-row"><div class="week">Неделя 9–10</div><div class="topic"><a href="mesh.html">Неструктурированные сетки</a> — Делоне, CDT, Рупперт</div></div>
+      <div class="schedule-row"><div class="week">Неделя 11–12</div><div class="topic"><a href="unstruct.html">КОМ на неструкт. сетках</a> + <a href="mpi.html">MPI параллелизм</a></div></div>
+      <div class="schedule-row"><div class="week" style="color:var(--accent)">21 апреля</div><div class="topic"><a href="checklist.html" style="color:var(--accent);font-weight:600">Зачёт</a> — демонстрация кода и результатов по чек-листу</div></div>
     </div>
-  </a>
 
-  <a href="unstruct.html" class="card">
-    <span class="card-tag mesh">Сетки</span>
-    <h4>КОМ на неструктурированных сетках</h4>
-    <p>Структуры данных Node/Face/Cell, HLLC на треугольниках, схемы Годунова и Колгана. C++ примеры.</p>
-    <div class="card-meta">
-      <span>Текст + код</span>
-      <span>293 KB</span>
-    </div>
-  </a>
-
-  <a href="mpi.html" class="card">
-    <span class="card-tag mpi">Параллелизм</span>
-    <span class="solver-badge">Интерактив</span>
-    <h4>MPI декомпозиция</h4>
-    <p>RCB, BFS-разбиение, halo-обмен. Интерактивная демонстрация декомпозиции области.</p>
-    <div class="card-meta">
-      <span>Демо</span>
-      <span>104 KB</span>
-    </div>
-  </a>
-
-  <a href="checklist.html" class="card" style="border-color:var(--accent)">
-    <span class="card-tag check">Зачёт</span>
-    <h4>Чек-лист зачёта</h4>
-    <p>Все задания, маркеры CHECK:, контрольные значения, эталонные графики. Структура папки группы.</p>
-    <div class="card-meta">
-      <span>33 маркера</span>
-      <span>9 блоков</span>
-    </div>
-  </a>
-
+  </div>
 </div>
 
-<!-- SCHEDULE -->
-<div class="section-label">Программа</div>
-
-<div class="schedule">
-  <div class="schedule-row"><div class="week">Неделя 1–2</div><div class="topic"><a href="flic.html">Метод FLIC</a> — уравнения Эйлера, расщепление по физическим процессам</div></div>
-  <div class="schedule-row"><div class="week">Неделя 3–4</div><div class="topic"><a href="godunov.html">Годунов + HLLC</a> — решатели Римана, MUSCL, WENO, переход 1D → 2D</div></div>
-  <div class="schedule-row"><div class="week">Неделя 5–6</div><div class="topic"><a href="mader.html">2DE Мейдера</a> — искусственная вязкость, Donor-Acceptor, детонация</div></div>
-  <div class="schedule-row"><div class="week">Неделя 7–8</div><div class="topic"><a href="pimple.html">SIMPLE / PISO / PIMPLE</a> — несжимаемые течения, staggered grid</div></div>
-  <div class="schedule-row"><div class="week">Неделя 9–10</div><div class="topic"><a href="mesh.html">Неструктурированные сетки</a> — Делоне, CDT, Рупперт</div></div>
-  <div class="schedule-row"><div class="week">Неделя 11–12</div><div class="topic"><a href="unstruct.html">КОМ на неструкт. сетках</a> + <a href="mpi.html">MPI параллелизм</a></div></div>
-  <div class="schedule-row"><div class="week" style="color:var(--accent)">21 апреля</div><div class="topic"><a href="checklist.html" style="color:var(--accent);font-weight:600">Зачёт</a> — демонстрация кода и результатов по чек-листу</div></div>
+<!-- ============================================================
+     COURSE: Основы ЧМ (Семестр 1, Осень 2025) — placeholder
+     ============================================================ -->
+<div class="course-block" id="course-sem1">
+  <div class="course-header" onclick="toggleCourse('sem1')">
+    <h2><span class="toggle-arrow collapsed" id="arrow-sem1">▾</span> Основы численных методов</h2>
+    <span class="sem">Осень 2025</span>
+    <span class="lecture-count">Семестр 1 · скоро</span>
+  </div>
+  <div class="course-body collapsed" id="body-sem1" style="max-height:0">
+    <div class="coming-soon">
+      Лекции первого семестра будут добавлены в ближайшее время.<br>
+      Введение в разностные схемы, устойчивость, аппроксимация, сходимость.
+    </div>
+  </div>
 </div>
 
 <!-- INFO -->
@@ -246,7 +237,7 @@ h3{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:v
   <div class="info-box">
     <h4>Как сдавать</h4>
     <ul>
-      <li>Зарегистрироваться на сайте (кнопка «Войти»)</li>
+      <li>Зарегистрироваться на сайте (кнопка «Профиль»)</li>
       <li>Ввести номер группы</li>
       <li>Заполнить контрольные значения из расчётов</li>
       <li>Система автоматически сравнит с эталоном</li>
@@ -265,18 +256,38 @@ h3{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:v
 
 <!-- FOOTER -->
 <div class="footer">
-  <p>Курс: Разностные схемы и параллельная реализация · Весна 2026</p>
+  <p>Вычислительная газовая динамика · МИФИ</p>
   <p style="margin-top:.3rem">Исходный код: <a href="https://github.com/cfd-course/cfd-course.github.io">GitHub</a></p>
 </div>
 
 </div>
 
 <script>
+function toggleCourse(id) {
+  var body = document.getElementById('body-' + id);
+  var arrow = document.getElementById('arrow-' + id);
+  if (body.classList.contains('collapsed')) {
+    body.style.maxHeight = body.scrollHeight + 'px';
+    body.classList.remove('collapsed');
+    arrow.classList.remove('collapsed');
+    setTimeout(function(){ body.style.maxHeight = 'none'; }, 400);
+  } else {
+    body.style.maxHeight = body.scrollHeight + 'px';
+    body.offsetHeight; // force reflow
+    body.style.maxHeight = '0';
+    body.classList.add('collapsed');
+    arrow.classList.add('collapsed');
+  }
+}
+document.querySelectorAll('.course-body:not(.collapsed)').forEach(function(el){
+  el.style.maxHeight = 'none';
+});
+
 function toggleAuth() {
   if (typeof CFDAuth !== 'undefined') {
     CFDAuth.openModal();
   } else {
-    alert('Firebase не подключен.\n\nДля подключения:\n1. Создайте проект на firebase.google.com\n2. Заполните js/firebase-config.js\n3. Раскомментируйте скрипты в index.html');
+    alert('Firebase не подключен.');
   }
 }
 </script>

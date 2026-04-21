@@ -292,7 +292,56 @@
     // Dispatch event so comment scripts can react
     window.dispatchEvent(new CustomEvent('authReady', { detail: { user: user, approved: !!window._userApproved } }));
     updateUI();
+
+    // Check for unread DMs and show badge
+    if (user && !window._userIsAdmin) {
+      checkUnreadDm(user);
+    }
   });
+
+  // --- Check unread DMs ---
+  async function checkUnreadDm(user) {
+    try {
+      var admins = (typeof ADMIN_EMAILS !== 'undefined') ? (Array.isArray(ADMIN_EMAILS) ? ADMIN_EMAILS : [ADMIN_EMAILS]) : [];
+      if (admins.length === 0) return;
+      var adminSnap = await db.collection('users').where('email', '==', admins[0]).limit(1).get();
+      if (adminSnap.empty) return;
+      var adminUid = adminSnap.docs[0].id;
+      var dmId = [user.uid, adminUid].sort().join('_');
+      // Listen for unread messages in real-time
+      db.collection('dm').doc(dmId).collection('messages')
+        .where('readAt', '==', null)
+        .onSnapshot(function(snap) {
+          var unread = 0;
+          snap.forEach(function(doc) {
+            if (doc.data().authorUid !== user.uid) unread++;
+          });
+          showDmBadge(unread);
+        }, function() {});
+    } catch(e) {}
+  }
+
+  function showDmBadge(count) {
+    var existing = document.getElementById('dm-unread-badge');
+    if (existing) existing.remove();
+    if (count <= 0) return;
+    var container = document.getElementById('auth-container');
+    if (!container) return;
+    var badge = document.createElement('span');
+    badge.id = 'dm-unread-badge';
+    badge.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:9px;background:#c44;color:#fff;font-family:JetBrains Mono,monospace;font-size:.6rem;font-weight:700;padding:0 4px;margin-left:4px;cursor:pointer;animation:dm-pulse 2s infinite';
+    badge.textContent = count;
+    badge.title = count + ' непрочитанных личных сообщений';
+    badge.onclick = function() { window.location.href = 'profile.html'; };
+    container.appendChild(badge);
+    // Add pulse animation if not exists
+    if (!document.getElementById('dm-badge-style')) {
+      var s = document.createElement('style');
+      s.id = 'dm-badge-style';
+      s.textContent = '@keyframes dm-pulse{0%,100%{opacity:1}50%{opacity:.6}}';
+      document.head.appendChild(s);
+    }
+  }
 
   // --- UI Updates ---
   function updateUI() {

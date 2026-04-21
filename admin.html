@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <button class="tab" onclick="showTab('tasks')">Задания</button>
   <button class="tab" onclick="showTab('grades')">Оценки</button>
   <button class="tab" onclick="showTab('github')">GitHub-проверка</button>
-  <button class="tab" onclick="showTab('messages')">Сообщения</button>
+  <button class="tab" onclick="showTab('messages')" id="tabBtnMessages">Сообщения <span id="msgTabBadge" style="display:none;min-width:16px;height:16px;border-radius:8px;background:#c44;color:#fff;font-size:.6rem;font-weight:700;font-family:JetBrains Mono,monospace;align-items:center;justify-content:center;padding:0 4px;margin-left:2px;vertical-align:middle"></span></button>
 </div>
 
 <!-- TAB 1: Students -->
@@ -215,10 +215,14 @@ document.addEventListener('DOMContentLoaded', function() {
     <div style="flex:1;display:flex;flex-direction:column">
       <div id="adminChatHeader" style="background:var(--bg2);padding:.5rem .8rem;font-size:.82rem;font-weight:600;border-bottom:1px solid var(--border);min-height:36px">Выберите чат</div>
       <div id="adminChatBody" style="flex:1;overflow-y:auto;padding:.8rem;background:#fff"></div>
-      <div id="adminChatInputWrap" style="display:none;gap:.4rem;padding:.5rem .8rem;border-top:1px solid var(--border);background:var(--bg2)">
-        <input type="text" id="adminChatInput" placeholder="Написать сообщение..." onkeydown="if(event.key==='Enter')sendCurrentChat()" style="flex:1;font-family:'Source Serif 4',Georgia,serif;font-size:.88rem;padding:6px 10px;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text)">
+      <div id="adminChatInputWrap" style="display:none;gap:.4rem;padding:.5rem .8rem;border-top:1px solid var(--border);background:var(--bg2);align-items:flex-end">
+        <div style="position:relative;flex:1;display:flex;align-items:center">
+          <input type="text" id="adminChatInput" placeholder="Написать сообщение..." onkeydown="if(event.key==='Enter')sendCurrentChat()" style="flex:1;font-family:'Source Serif 4',Georgia,serif;font-size:.88rem;padding:6px 32px 6px 10px;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text)">
+          <button onclick="toggleAdminEmoji()" style="position:absolute;right:4px;background:none;border:none;cursor:pointer;font-size:1.1rem;line-height:1" title="Эмодзи">😊</button>
+        </div>
         <button class="btn btn-primary" onclick="sendCurrentChat()">→</button>
       </div>
+      <div id="adminEmojiPicker" style="display:none;padding:6px 8px;border-top:1px solid var(--border);background:var(--bg2);max-height:100px;overflow-y:auto;font-size:1.3rem;line-height:2;cursor:pointer;user-select:none"></div>
     </div>
   </div>
 </div>
@@ -1279,6 +1283,17 @@ async function buildChatList() {
   }
   _chatListData.sort((a,b)=>(b.unread-a.unread)||(b.lastTime-a.lastTime));
   renderChatList();
+  updateMsgTabBadge();
+}
+
+function updateMsgTabBadge() {
+  var total = 0;
+  _chatListData.forEach(function(c) { total += c.unread; });
+  var badge = document.getElementById('msgTabBadge');
+  if (badge) {
+    if (total > 0) { badge.textContent = total; badge.style.display = 'inline-flex'; }
+    else { badge.style.display = 'none'; }
+  }
 }
 
 function setChatFilter(f) {
@@ -1394,7 +1409,7 @@ function loadAdminDmChat(uid){
 
 function renderDmMsgs(snap,dmId){
   var body=document.getElementById('adminChatBody');if(!body)return;
-  var me=auth.currentUser,html='';
+  var me=auth.currentUser,html='',unreadIds=[];
   snap.forEach(function(doc){
     var m=doc.data(),date=m.createdAt?new Date(m.createdAt.seconds*1000).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
     var isMine=me&&m.authorUid===me.uid,align=isMine?'flex-end':'flex-start',bg=isMine?'#e6f1fb':'#f5f0e8',border=isMine?'#3a5ba0':'#d9cfc0';
@@ -1402,12 +1417,22 @@ function renderDmMsgs(snap,dmId){
     var delBtn=isMine?' <button onclick="delDmMsg(\''+dmId+'\',\''+doc.id+'\')" style="font-size:.62rem;color:#c44;background:none;border:none;cursor:pointer;opacity:.6">✕</button>':'';
     var readHtml='';
     if(isMine){readHtml=m.readAt?'<div style="text-align:right;font-size:.58rem;color:#1a6b5a;margin-top:2px">✓✓ прочитано '+new Date(m.readAt).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</div>':'<div style="text-align:right;font-size:.58rem;color:#9a8d7e;margin-top:2px">✓ отправлено</div>';}
+    // Track unread from student
+    if(!isMine && !m.readAt) unreadIds.push(doc.id);
     html+='<div style="display:flex;justify-content:'+align+';margin-bottom:5px"><div style="max-width:75%;background:'+bg+';border:1px solid '+border+';border-radius:8px;padding:5px 9px;font-size:.84rem">';
     html+='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:1px"><strong style="font-size:.75rem">'+name+'</strong><span style="font-size:.62rem;color:var(--text3);white-space:nowrap">'+date+delBtn+'</span></div>';
     html+='<div>'+m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div>'+readHtml+'</div></div>';
   });
   if(!html)html='<p style="text-align:center;color:var(--text3);padding:2rem;font-size:.85rem">Нет сообщений</p>';
   body.innerHTML=html;body.scrollTop=body.scrollHeight;
+  // Mark student messages as read by admin
+  if(unreadIds.length>0){
+    unreadIds.forEach(function(msgId){
+      db.collection('dm').doc(dmId).collection('messages').doc(msgId).update({readAt:Date.now()}).catch(function(){});
+    });
+    // Refresh chat list badges after a short delay
+    setTimeout(buildChatList, 800);
+  }
 }
 
 async function sendAdminDm(){
@@ -1421,6 +1446,20 @@ async function sendAdminDm(){
 }
 
 async function delDmMsg(dmId,msgId){if(!confirm('Удалить?'))return;try{await db.collection('dm').doc(dmId).collection('messages').doc(msgId).delete();}catch(e){alert(e.message);}}
+
+// ===== Emoji =====
+var _adminEmojis = '😊😂🤣❤️🔥👍👎😎🤔🙏💪🎉✅❌⚠️💡📌🚀😴🤷‍♂️👋😍😭🤩😱🫡👀💀🤡🧠📊📈🔧💻🗂️✍️';
+function toggleAdminEmoji() {
+  var el = document.getElementById('adminEmojiPicker');
+  if (el.style.display === 'none') {
+    if (!el.innerHTML) {
+      var arr = [..._adminEmojis];
+      el.innerHTML = arr.map(function(e){ return '<span onclick="insertAdminEmoji(this.textContent)" style="padding:2px 4px;border-radius:4px;cursor:pointer" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'\'">'+e+'</span>'; }).join('');
+    }
+    el.style.display = '';
+  } else { el.style.display = 'none'; }
+}
+function insertAdminEmoji(e) { var inp = document.getElementById('adminChatInput'); if(inp){inp.value+=e;inp.focus();} }
 </script>
 </body>
 </html>

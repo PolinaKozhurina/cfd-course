@@ -1239,53 +1239,50 @@ async function runPlagiarismCheck() {
   btn.disabled = false;
 }
 
-// ===== Messenger System =====
+// ===== Messenger System (clean, no reactions) =====
 
-var _currentChatMode = null; // 'group' or 'dm'
-var _currentChatId = null;
-var _chatFilter = 'all';
-let _chatUnsubscribe = null;
-var _chatListData = [];
+var _currentChatMode = null, _currentChatId = null, _chatFilter = 'all';
+var _chatUnsubscribe = null, _chatListData = [], _buildingChatList = false;
+var _chatVersion = 0; // increments on each openChat, callbacks check this
 
 function renderMsgGroupSelect() { buildChatList(); }
 
-var _buildingChatList = false;
 async function buildChatList() {
   if (_buildingChatList) return;
   _buildingChatList = true;
   _chatListData = [];
-  for (const gid of Object.keys(allGroups).sort()) {
-    const members = allGroups[gid].members.map(m => m.fio || m.email).join(', ');
-    let lastMsg = '', lastTime = 0;
+  for (var gid of Object.keys(allGroups).sort()) {
+    var members = allGroups[gid].members.map(function(m){return m.fio||m.email;}).join(', ');
+    var lastMsg = '', lastTime = 0;
     try {
-      const snap = await db.collection('groups').doc(gid).collection('messages').orderBy('createdAt','desc').limit(1).get();
-      if (!snap.empty) { const m = snap.docs[0].data(); lastMsg = (m.authorFio||'').split(' ')[0]+': '+(m.text||'').slice(0,40); lastTime = m.createdAt ? m.createdAt.seconds : 0; }
+      var gs = await db.collection('groups').doc(gid).collection('messages').orderBy('createdAt','desc').limit(1).get();
+      if (!gs.empty) { var m = gs.docs[0].data(); lastMsg = (m.authorFio||'').split(' ')[0]+': '+(m.text||'').slice(0,40); lastTime = m.createdAt ? m.createdAt.seconds : 0; }
     } catch(e) {}
-    _chatListData.push({type:'group',id:gid,label:gid.replace('group_','Группа '),sub:members,lastMsg,lastTime,unread:0});
+    _chatListData.push({type:'group',id:gid,label:gid.replace('group_','Группа '),sub:members,lastMsg:lastMsg,lastTime:lastTime,unread:0});
   }
-  const me = auth.currentUser;
+  var me = auth.currentUser;
   if (me) {
     try {
-      const dmSnap = await db.collection('dm').where('participants','array-contains',me.uid).get();
-      for (const doc of dmSnap.docs) {
-        const d = doc.data();
-        const otherUid = d.participants.find(p => p !== me.uid);
+      var dmSnap = await db.collection('dm').where('participants','array-contains',me.uid).get();
+      for (var doc of dmSnap.docs) {
+        var d = doc.data();
+        var otherUid = d.participants.find(function(p){return p!==me.uid;});
         if (!otherUid) continue;
-        const student = allUsers.find(u => u.uid === otherUid);
-        const name = student ? (student.fio||student.email) : otherUid;
-        const group = student && student.group ? student.group.replace('group_','Гр.') : '';
-        let lastMsg='',lastTime=0,unread=0;
+        var student = allUsers.find(function(u){return u.uid===otherUid;});
+        var name = student ? (student.fio||student.email) : otherUid;
+        var group = student && student.group ? student.group.replace('group_','Гр.') : '';
+        var lastMsg2='',lastTime2=0,unread=0;
         try {
-          const mSnap = await db.collection('dm').doc(doc.id).collection('messages').orderBy('createdAt','desc').limit(5).get();
-          if (!mSnap.empty) { const m=mSnap.docs[0].data(); lastMsg=(m.text||'').slice(0,45); lastTime=m.createdAt?m.createdAt.seconds:0;
-            mSnap.forEach(function(md){var msg=md.data();if(msg.authorUid!==me.uid&&!msg.readAt)unread++;});
+          var mSnap = await db.collection('dm').doc(doc.id).collection('messages').orderBy('createdAt','desc').limit(5).get();
+          if (!mSnap.empty) { var m2=mSnap.docs[0].data(); lastMsg2=(m2.text||'').slice(0,45); lastTime2=m2.createdAt?m2.createdAt.seconds:0;
+            mSnap.forEach(function(md){if(md.data().authorUid!==me.uid&&!md.data().readAt)unread++;});
           }
         } catch(e) {}
-        _chatListData.push({type:'dm',id:otherUid,dmDocId:doc.id,label:name,sub:group,lastMsg,lastTime,unread});
+        _chatListData.push({type:'dm',id:otherUid,label:name,sub:group,lastMsg:lastMsg2,lastTime:lastTime2,unread:unread});
       }
     } catch(e) {}
   }
-  _chatListData.sort(function(a,b){ return (b.unread-a.unread)||(b.lastTime-a.lastTime); });
+  _chatListData.sort(function(a,b){return (b.unread-a.unread)||(b.lastTime-a.lastTime);});
   _buildingChatList = false;
   renderChatList();
   updateMsgTabBadge();
@@ -1293,86 +1290,89 @@ async function buildChatList() {
 
 function updateMsgTabBadge() {
   var total = 0;
-  _chatListData.forEach(function(c) { total += c.unread; });
+  _chatListData.forEach(function(c){total+=c.unread;});
   var badge = document.getElementById('msgTabBadge');
-  if (badge) {
-    if (total > 0) { badge.textContent = total; badge.style.display = 'inline-flex'; }
-    else { badge.style.display = 'none'; }
-  }
+  if (badge) { if (total>0){badge.textContent=total;badge.style.display='inline-flex';} else {badge.style.display='none';} }
 }
 
 function setChatFilter(f) {
   _chatFilter = f;
   ['All','Group','Dm'].forEach(function(n){
-    var el=document.getElementById('chatFilter'+n); if(!el) return;
-    var active = f===n.toLowerCase() || (f==='all' && n==='All');
-    var col = n==='Dm' ? 'var(--accent3)' : 'var(--accent)';
-    el.style.background=active?col:''; el.style.color=active?'#fff':''; el.style.borderColor=active?col:'';
+    var el=document.getElementById('chatFilter'+n); if(!el)return;
+    var active=(f==='all'&&n==='All')||(f===n.toLowerCase());
+    el.style.background=active?(n==='Dm'?'var(--accent3)':'var(--accent)'):'';
+    el.style.color=active?'#fff':'';
+    el.style.borderColor=active?(n==='Dm'?'var(--accent3)':'var(--accent)'):'';
   });
   renderChatList();
 }
-
-function filterChatList() { renderChatList(); }
+function filterChatList(){renderChatList();}
 
 function renderChatList() {
-  const body = document.getElementById('chatListBody');
-  if (!body) return;
-  const search = (document.getElementById('chatSearchInput').value||'').toLowerCase();
-  let html = '';
-  for (const c of _chatListData) {
-    if (_chatFilter!=='all' && c.type!==_chatFilter) continue;
-    if (search && !(c.label+' '+c.sub).toLowerCase().includes(search)) continue;
-    const isActive = c.type===_currentChatMode && c.id===_currentChatId;
-    const icon = c.type==='group'?'👥':'✉️';
-    const unreadBadge = c.unread>0?'<span style="min-width:16px;height:16px;border-radius:8px;background:#c44;color:#fff;font-size:.58rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;font-family:JetBrains Mono,monospace">'+c.unread+'</span>':'';
-    const time = c.lastTime?new Date(c.lastTime*1000).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-    html += '<div onclick="openChat(\''+c.type+'\',\''+c.id+'\')" style="padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--border);'+(isActive?'background:#fff;':'')+'transition:background .1s">';
-    html += '<div style="display:flex;justify-content:space-between;align-items:center">';
-    html += '<span style="font-size:.82rem;font-weight:600">'+icon+' '+c.label+'</span>';
-    html += '<span style="display:flex;align-items:center;gap:4px">'+unreadBadge+'<span style="font-size:.6rem;color:var(--text3)">'+time+'</span></span></div>';
-    if (c.sub) html += '<div style="font-size:.68rem;color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.sub+'</div>';
-    if (c.lastMsg) html += '<div style="font-size:.72rem;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.lastMsg+'</div>';
-    html += '</div>';
-  }
-  if (!html) html = '<p style="text-align:center;padding:1.5rem;color:var(--text3);font-size:.82rem">Нет чатов</p>';
-  body.innerHTML = html;
+  var body=document.getElementById('chatListBody'); if(!body)return;
+  var search=(document.getElementById('chatSearchInput').value||'').toLowerCase();
+  var html='';
+  _chatListData.forEach(function(c){
+    if(_chatFilter!=='all'&&c.type!==_chatFilter) return;
+    if(search&&!(c.label+' '+c.sub).toLowerCase().includes(search)) return;
+    var isActive=c.type===_currentChatMode&&c.id===_currentChatId;
+    var icon=c.type==='group'?'👥':'✉️';
+    var unreadBadge=c.unread>0?'<span style="min-width:16px;height:16px;border-radius:8px;background:#c44;color:#fff;font-size:.58rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;font-family:JetBrains Mono,monospace">'+c.unread+'</span>':'';
+    var time=c.lastTime?new Date(c.lastTime*1000).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+    html+='<div onclick="openChat(\''+c.type+'\',\''+c.id+'\')" style="padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--border);'+(isActive?'background:#fff;':'')+'transition:background .1s">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:.82rem;font-weight:600">'+icon+' '+c.label+'</span>';
+    html+='<span style="display:flex;align-items:center;gap:4px">'+unreadBadge+'<span style="font-size:.6rem;color:var(--text3)">'+time+'</span></span></div>';
+    if(c.sub) html+='<div style="font-size:.68rem;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.sub+'</div>';
+    if(c.lastMsg) html+='<div style="font-size:.72rem;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.lastMsg+'</div>';
+    html+='</div>';
+  });
+  if(!html) html='<p style="text-align:center;padding:1.5rem;color:var(--text3);font-size:.82rem">Нет чатов</p>';
+  body.innerHTML=html;
 }
 
 function openChat(type, id) {
+  _chatVersion++;
   _currentChatMode=type; _currentChatId=id;
+  if(_chatUnsubscribe){_chatUnsubscribe();_chatUnsubscribe=null;}
   document.getElementById('adminChatInputWrap').style.display='flex';
+  document.getElementById('adminChatBody').innerHTML='';
   renderChatList();
-  if (type==='group') loadAdminGroupChat(id); else loadAdminDmChat(id);
+  if(type==='group') loadGroupChat(id); else loadDmChat(id);
 }
 
-function sendCurrentChat() { if(_currentChatMode==='dm') sendAdminDm(); else sendAdminChat(); }
-function getDmId(uid1,uid2){return [uid1,uid2].sort().join('_');}
+function sendCurrentChat(){if(_currentChatMode==='dm')sendDm();else sendGroupMsg();}
+function getDmId(a,b){return [a,b].sort().join('_');}
 function getInitials(n){if(!n)return'?';var p=n.trim().split(/\s+/);return p.length>=2?(p[0][0]+p[1][0]).toUpperCase():n.slice(0,2).toUpperCase();}
 
-function loadAdminGroupChat(gid) {
+// ===== Group Chat =====
+function loadGroupChat(gid) {
+  var ver = _chatVersion;
   var header=document.getElementById('adminChatHeader');
-  var members=allGroups[gid]?allGroups[gid].members.map(m=>m.fio||m.email).join(', '):'';
+  var members=allGroups[gid]?allGroups[gid].members.map(function(m){return m.fio||m.email;}).join(', '):'';
   header.innerHTML='👥 <strong>'+gid.replace('group_','Группа ')+'</strong> <span style="font-size:.75rem;font-weight:400;color:var(--text2)">'+members+'</span>';
-  if(_chatUnsubscribe){_chatUnsubscribe();_chatUnsubscribe=null;}
   _chatUnsubscribe=db.collection('groups').doc(gid).collection('messages').orderBy('createdAt','asc')
-    .onSnapshot(function(s){renderGroupMsgs(s,gid);},function(){db.collection('groups').doc(gid).collection('messages').orderBy('createdAt','asc').get().then(function(s){renderGroupMsgs(s,gid);});});
+    .onSnapshot(function(s){ if(_chatVersion===ver) renderGroupMsgs(s,gid); });
 }
 
-function renderGroupMsgs(snap,gid) {
-  if (_currentChatMode !== 'group' || _currentChatId !== gid) return;
-  var body=document.getElementById('adminChatBody'); if(!body) return;
-  var html='';
+function renderGroupMsgs(snap, gid) {
+  var body=document.getElementById('adminChatBody'); if(!body)return;
+  var me=auth.currentUser;
   var groupMembers=allGroups[gid]?allGroups[gid].members:[];
-  var studentCount=groupMembers.filter(m=>!isAdmin(m.email)).length;
+  var studentCount=groupMembers.filter(function(m){return !isAdmin(m.email);}).length;
+  var html='';
   snap.forEach(function(doc){
     var m=doc.data();
     var date=m.createdAt?new Date(m.createdAt.seconds*1000).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-    var isA=m.role==='admin',align=isA?'flex-end':'flex-start',bg=isA?'#e6f1fb':'#f5f0e8',border=isA?'#3a5ba0':'#d9cfc0';
-    var name=m.authorFio||'';if(m.role==='admin'&&(!name||name.includes('@')))name='Admin';if(!name)name=m.authorEmail||'';
-    var roleTag=isA?'<span style="font-size:.6rem;background:#fde8e8;color:#c44;padding:1px 4px;border-radius:3px;font-weight:700;margin-left:4px">Admin</span>':'';
+    var isA=m.role==='admin';
+    var name=m.authorFio||'';if(isA&&(!name||name.includes('@')))name='Admin';if(!name)name=m.authorEmail||'';
+    var roleTag=isA?' <span style="font-size:.6rem;background:#fde8e8;color:#c44;padding:1px 4px;border-radius:3px;font-weight:700">Admin</span>':'';
     var delBtn=isA?' <button onclick="delGrpMsg(\''+gid+'\',\''+doc.id+'\')" style="font-size:.62rem;color:#c44;background:none;border:none;cursor:pointer;opacity:.6">✕</button>':'';
+    var align=isA?'flex-end':'flex-start';
+    var bg=isA?'#e6f1fb':'#f5f0e8';
+    var border=isA?'#3a5ba0':'#d9cfc0';
     var readHtml='';
-    if(isA){var rBy=m.readBy||{},rList=Object.values(rBy),rc=rList.length;
+    if(isA){
+      var rBy=m.readBy||{},rList=Object.values(rBy),rc=rList.length;
       if(rc===0){readHtml='<div style="text-align:right;font-size:.6rem;color:#9a8d7e;margin-top:2px">✓ отправлено</div>';}
       else{var avs='';rList.forEach(function(r){var ini=getInitials(r.fio||r.email),colors=['#1a6b5a','#3a5ba0','#854f0b','#7c3aed','#b44a2d'],c=colors[Math.abs((r.fio||r.email||'').length)%colors.length];avs+='<span title="'+(r.fio||r.email)+'" style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:'+c+';color:#fff;font-size:.5rem;font-weight:700;font-family:JetBrains Mono,monospace;border:1.5px solid #fff;margin-left:-3px">'+ini+'</span>';});
         readHtml='<div style="display:flex;align-items:center;gap:3px;margin-top:2px;justify-content:flex-end"><span style="font-size:.6rem;color:#1a6b5a">✓✓ '+(rc>=studentCount?'все':rc+'/'+studentCount)+'</span><span style="display:inline-flex;margin-left:2px">'+avs+'</span></div>';}
@@ -1380,229 +1380,115 @@ function renderGroupMsgs(snap,gid) {
     html+='<div style="display:flex;justify-content:'+align+';margin-bottom:5px"><div style="max-width:75%;background:'+bg+';border:1px solid '+border+';border-radius:8px;padding:5px 9px;font-size:.84rem">';
     html+='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:1px"><strong style="font-size:.75rem">'+name+roleTag+'</strong><span style="font-size:.62rem;color:var(--text3);white-space:nowrap">'+date+delBtn+'</span></div>';
     html+='<div>'+m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div>';
-    // Reactions
-    var rks=Object.keys(m.reactions||{}),reactH='';
-    if(rks.length>0||true){reactH='<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px">';
-      rks.forEach(function(ej){var rv=m.reactions[ej]||{},rc=Object.keys(rv).length;if(rc===0)return;var myR=me&&rv[me.uid],rTt=Object.values(rv).join(', ');
-        reactH+='<span data-react="'+ej+'" data-rtype="group" data-rref="'+gid+'" data-rmsg="'+doc.id+'" data-rcol="messages" class="admin-react-toggle,\''+gid+'\',\''+doc.id+'\',\''+ej+'\',\'messages\')" title="'+rTt+'" style="cursor:pointer;padding:1px 5px;border-radius:10px;font-size:.75rem;background:'+(myR?'#e8f4f0':'#f5f0e8')+';border:1px solid '+(myR?'#1a6b5a':'#d9cfc0')+';user-select:none">'+ej+' <span style="font-size:.6rem;font-family:JetBrains Mono,monospace">'+rc+'</span></span>';});
-      reactH+='<span style="cursor:pointer;padding:1px 5px;border-radius:10px;font-size:.72rem;background:var(--bg2);border:1px solid var(--border);opacity:.4;user-select:none" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.4" onclick="adminShowReactPicker(this,\'group\',\''+gid+'\',\''+doc.id+'\',\'messages\')">+</span></div>';}
-    html+=reactH+readHtml+'</div></div>';
+    html+=readHtml+'</div></div>';
   });
   if(!html) html='<p style="text-align:center;color:var(--text3);padding:2rem;font-size:.85rem">Нет сообщений</p>';
   body.innerHTML=html; body.scrollTop=body.scrollHeight;
 }
 
-async function sendAdminChat(){
+async function sendGroupMsg(){
   var gid=_currentChatId,input=document.getElementById('adminChatInput'),text=input.value.trim();
-  if(!gid||!text||_currentChatMode!=='group') return;
-  var user=auth.currentUser;if(!user) return;
+  if(!gid||!text||_currentChatMode!=='group')return;
+  var user=auth.currentUser;if(!user)return;
   var fio=user.email;try{var ud=await db.collection('users').doc(user.uid).get();if(ud.exists&&ud.data().fio)fio=ud.data().fio;else if(isAdmin(user.email))fio='Admin';}catch(e){}
-  try{await db.collection('groups').doc(gid).collection('messages').add({text,role:'admin',authorEmail:user.email,authorFio:fio,authorUid:user.uid,readBy:{},createdAt:firebase.firestore.FieldValue.serverTimestamp()});input.value='';}catch(e){alert('Ошибка: '+e.message);}
+  try{await db.collection('groups').doc(gid).collection('messages').add({text:text,role:'admin',authorEmail:user.email,authorFio:fio,authorUid:user.uid,readBy:{},createdAt:firebase.firestore.FieldValue.serverTimestamp()});input.value='';}catch(e){alert('Ошибка: '+e.message);}
 }
 
 async function sendToAllGroups(){
-  var text=prompt('Сообщение для ВСЕХ групп:');if(!text||!text.trim()) return;
-  var user=auth.currentUser;if(!user) return;
+  var text=prompt('Сообщение для ВСЕХ групп:');if(!text||!text.trim())return;
+  var user=auth.currentUser;if(!user)return;
   var fio=user.email;try{var ud=await db.collection('users').doc(user.uid).get();if(ud.exists&&ud.data().fio)fio=ud.data().fio;else if(isAdmin(user.email))fio='Admin';}catch(e){}
-  try{for(var gid of Object.keys(allGroups)){await db.collection('groups').doc(gid).collection('messages').add({text:text.trim(),role:'admin',authorEmail:user.email,authorFio:fio,authorUid:user.uid,readBy:{},createdAt:firebase.firestore.FieldValue.serverTimestamp()});}alert('Отправлено '+Object.keys(allGroups).length+' группам ✓');}catch(e){alert('Ошибка: '+e.message);}
+  try{for(var gid of Object.keys(allGroups)){await db.collection('groups').doc(gid).collection('messages').add({text:text.trim(),role:'admin',authorEmail:user.email,authorFio:fio,authorUid:user.uid,readBy:{},createdAt:firebase.firestore.FieldValue.serverTimestamp()});}alert('Отправлено ✓');}catch(e){alert('Ошибка: '+e.message);}
 }
 
 async function delGrpMsg(gid,msgId){if(!confirm('Удалить?'))return;try{await db.collection('groups').doc(gid).collection('messages').doc(msgId).delete();}catch(e){alert(e.message);}}
 
-function loadAdminDmChat(uid){
-  var student=allUsers.find(u=>u.uid===uid);
+// ===== DM Chat =====
+function loadDmChat(uid) {
+  var ver = _chatVersion;
+  var student=allUsers.find(function(u){return u.uid===uid;});
   var header=document.getElementById('adminChatHeader');
   header.innerHTML='✉️ <strong>'+(student?(student.fio||student.email):uid)+'</strong>'+(student&&student.group?' <span style="font-size:.75rem;font-weight:400;color:var(--text2)">'+student.group.replace('group_','Гр.')+'</span>':'');
-  var me=auth.currentUser;if(!me) return;
+  var me=auth.currentUser;if(!me)return;
   var dmId=getDmId(me.uid,uid);
-  if(_chatUnsubscribe){_chatUnsubscribe();_chatUnsubscribe=null;}
   _chatUnsubscribe=db.collection('dm').doc(dmId).collection('messages').orderBy('createdAt','asc')
-    .onSnapshot(function(s){renderDmMsgs(s,dmId);},function(){db.collection('dm').doc(dmId).collection('messages').orderBy('createdAt','asc').get().then(function(s){renderDmMsgs(s,dmId);});});
+    .onSnapshot(function(s){ if(_chatVersion===ver) renderDmMsgs(s,dmId); });
 }
 
 function renderDmMsgs(snap,dmId){
-  // Guard: only render if this DM is still the active chat
-  if (_currentChatMode !== 'dm') return;
-  var me=auth.currentUser;
-  if (me && getDmId(me.uid, _currentChatId) !== dmId) return;
   var body=document.getElementById('adminChatBody');if(!body)return;
-  var me=auth.currentUser,html='',unreadIds=[];
+  var me=auth.currentUser;
+  var html='',unreadIds=[];
   snap.forEach(function(doc){
-    var m=doc.data(),date=m.createdAt?new Date(m.createdAt.seconds*1000).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-    var isMine=me&&m.authorUid===me.uid,align=isMine?'flex-end':'flex-start',bg=isMine?'#e6f1fb':'#f5f0e8',border=isMine?'#3a5ba0':'#d9cfc0';
-    var name=m.authorFio||'';if(m.role==='admin'&&(!name||name.includes('@')))name='Admin';if(!name)name=m.authorEmail||'';
+    var m=doc.data();
+    var date=m.createdAt?new Date(m.createdAt.seconds*1000).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+    var isMine=me&&m.authorUid===me.uid;
+    var name=m.authorFio||'';if(!isMine&&(!name||name.includes('@')))name=m.authorEmail||'';if(isMine&&(!name||name.includes('@')))name='Admin';
     var delBtn=isMine?' <button onclick="delDmMsg(\''+dmId+'\',\''+doc.id+'\')" style="font-size:.62rem;color:#c44;background:none;border:none;cursor:pointer;opacity:.6">✕</button>':'';
+    var align=isMine?'flex-end':'flex-start';
+    var bg=isMine?'#e6f1fb':'#f5f0e8';
+    var border=isMine?'#3a5ba0':'#d9cfc0';
     var readHtml='';
-    if(isMine){readHtml=m.readAt?'<div style="text-align:right;font-size:.58rem;color:#1a6b5a;margin-top:2px">✓✓ прочитано '+new Date(m.readAt).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</div>':'<div style="text-align:right;font-size:.58rem;color:#9a8d7e;margin-top:2px">✓ отправлено</div>';}
-    // Track unread from student
-    if(!isMine && !m.readAt) unreadIds.push(doc.id);
+    if(isMine){readHtml=m.readAt?'<div style="text-align:right;font-size:.58rem;color:#1a6b5a;margin-top:2px">✓✓ прочитано</div>':'<div style="text-align:right;font-size:.58rem;color:#9a8d7e;margin-top:2px">✓ отправлено</div>';}
+    if(!isMine&&!m.readAt) unreadIds.push(doc.id);
     html+='<div style="display:flex;justify-content:'+align+';margin-bottom:5px"><div style="max-width:75%;background:'+bg+';border:1px solid '+border+';border-radius:8px;padding:5px 9px;font-size:.84rem">';
     html+='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:1px"><strong style="font-size:.75rem">'+name+'</strong><span style="font-size:.62rem;color:var(--text3);white-space:nowrap">'+date+delBtn+'</span></div>';
     html+='<div>'+m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div>';
-    var rks2=Object.keys(m.reactions||{}),reactH2='';
-    if(rks2.length>0||true){reactH2='<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px">';
-      rks2.forEach(function(ej){var rv=m.reactions[ej]||{},rc=Object.keys(rv).length;if(rc===0)return;var myR=me&&rv[me.uid],rTt=Object.values(rv).join(', ');
-        reactH2+='<span onclick="adminToggleReaction(\'dm\',\''+dmId+'\',\''+doc.id+'\',\''+ej+'\',\'messages\')" title="'+rTt+'" style="cursor:pointer;padding:1px 5px;border-radius:10px;font-size:.75rem;background:'+(myR?'#e8f4f0':'#f5f0e8')+';border:1px solid '+(myR?'#1a6b5a':'#d9cfc0')+';user-select:none">'+ej+' <span style="font-size:.6rem;font-family:JetBrains Mono,monospace">'+rc+'</span></span>';});
-      reactH2+='<span style="cursor:pointer;padding:1px 5px;border-radius:10px;font-size:.72rem;background:var(--bg2);border:1px solid var(--border);opacity:.4;user-select:none" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.4" onclick="adminShowReactPicker(this,\'dm\',\''+dmId+'\',\''+doc.id+'\',\'messages\')">+</span></div>';}
-    html+=reactH2+readHtml+'</div></div>';
+    html+=readHtml+'</div></div>';
   });
-  if(!html)html='<p style="text-align:center;color:var(--text3);padding:2rem;font-size:.85rem">Нет сообщений</p>';
+  if(!html) html='<p style="text-align:center;color:var(--text3);padding:2rem;font-size:.85rem">Нет сообщений</p>';
   body.innerHTML=html;body.scrollTop=body.scrollHeight;
-  // Mark student messages as read by admin
+  // Mark student messages as read
   if(unreadIds.length>0){
-    unreadIds.forEach(function(msgId){
-      db.collection('dm').doc(dmId).collection('messages').doc(msgId).update({readAt:Date.now()}).catch(function(){});
-    });
-    // Refresh chat list badges after a short delay
-    setTimeout(function(){_buildingChatList=false;buildChatList();}, 800);
+    unreadIds.forEach(function(msgId){db.collection('dm').doc(dmId).collection('messages').doc(msgId).update({readAt:Date.now()}).catch(function(){});});
+    setTimeout(function(){_buildingChatList=false;buildChatList();},800);
   }
 }
 
-async function sendAdminDm(){
+async function sendDm(){
   var uid=_currentChatId,input=document.getElementById('adminChatInput'),text=input.value.trim();
   if(!uid||!text||_currentChatMode!=='dm')return;
   var user=auth.currentUser;if(!user)return;
   var fio=user.email;try{var ud=await db.collection('users').doc(user.uid).get();if(ud.exists&&ud.data().fio)fio=ud.data().fio;else if(isAdmin(user.email))fio='Admin';}catch(e){}
   var dmId=getDmId(user.uid,uid);
   try{await db.collection('dm').doc(dmId).set({participants:[user.uid,uid],updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-    await db.collection('dm').doc(dmId).collection('messages').add({text,authorEmail:user.email,authorFio:fio,authorUid:user.uid,readAt:null,createdAt:firebase.firestore.FieldValue.serverTimestamp()});input.value='';_buildingChatList=false;buildChatList();}catch(e){alert('Ошибка: '+e.message);}
+    await db.collection('dm').doc(dmId).collection('messages').add({text:text,authorEmail:user.email,authorFio:fio,authorUid:user.uid,readAt:null,createdAt:firebase.firestore.FieldValue.serverTimestamp()});input.value='';_buildingChatList=false;buildChatList();}catch(e){alert('Ошибка: '+e.message);}
 }
 
 async function delDmMsg(dmId,msgId){if(!confirm('Удалить?'))return;try{await db.collection('dm').doc(dmId).collection('messages').doc(msgId).delete();}catch(e){alert(e.message);}}
 
 // ===== Emoji =====
-var _adminEmojis = '😊😂🤣❤️🔥👍👎😎🤔🙏💪🎉✅❌⚠️💡📌🚀😴🤷‍♂️👋😍😭🤩😱🫡👀💀🤡🧠📊📈🔧💻🗂️✍️';
-function toggleAdminEmoji() {
-  var el = document.getElementById('adminEmojiPicker');
-  if (el.style.display === 'none') {
-    if (!el.innerHTML) {
-      var arr = [..._adminEmojis];
-      el.innerHTML = arr.map(function(e){ return '<span onclick="insertAdminEmoji(this.textContent)" style="padding:2px 4px;border-radius:4px;cursor:pointer" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'\'">'+e+'</span>'; }).join('');
-    }
-    el.style.display = '';
-  } else { el.style.display = 'none'; }
-}
-function insertAdminEmoji(e) { var inp = document.getElementById('adminChatInput'); if(inp){inp.value+=e;inp.focus();} }
+var _adminEmojis='😊😂🤣❤️🔥👍👎😎🤔🙏💪🎉✅❌⚠️💡📌🚀😴👋😍😭🤩😱👀🧠📊📈🔧💻✍️';
+function toggleAdminEmoji(){var el=document.getElementById('adminEmojiPicker');if(el.style.display==='none'){if(!el.innerHTML){var arr=[..._adminEmojis];el.innerHTML=arr.map(function(e){return '<span onclick="insertAdminEmoji(this.textContent)" style="padding:2px 4px;border-radius:4px;cursor:pointer" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'\'">'+e+'</span>';}).join('');}el.style.display='';}else{el.style.display='none';}}
+function insertAdminEmoji(e){var inp=document.getElementById('adminChatInput');if(inp){inp.value+=e;inp.focus();}}
 
-function adminStartNewDm() {
-  var existing = document.getElementById('newChatModal');
-  if (existing) existing.remove();
-
-  var users = allUsers.filter(function(u){ return !isAdmin(u.email); });
-  var modal = document.createElement('div');
-  modal.id = 'newChatModal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35)';
-  modal.onclick = function(e){ if(e.target===modal) modal.remove(); };
-
-  var box = document.createElement('div');
-  box.style.cssText = 'background:#fff;border-radius:10px;width:380px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,.2);overflow:hidden';
-
-  var header = '<div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">' +
-    '<strong style="font-size:.9rem;font-family:Playfair Display,serif">Новый личный чат</strong>' +
-    '<button onclick="document.getElementById(\'newChatModal\').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text2)">✕</button></div>';
-
-  var search = '<div style="padding:8px 14px;border-bottom:1px solid var(--border)">' +
-    '<input type="text" id="adminNewChatSearch" placeholder="Поиск по имени..." oninput="adminFilterNewChat()" autofocus ' +
-    'style="width:100%;font-family:Source Serif 4,serif;font-size:.88rem;padding:6px 10px;border:1px solid var(--border);border-radius:5px"></div>';
-
-  var list = '<div id="adminNewChatList" style="flex:1;overflow-y:auto;max-height:50vh">';
-  users.forEach(function(u) {
-    var group = u.group ? '<span style="font-size:.68rem;color:var(--text3);margin-left:4px">'+u.group.replace('group_','Гр.')+'</span>' : '';
-    list += '<div onclick="document.getElementById(\'newChatModal\').remove();openChat(\'dm\',\''+u.uid+'\')" data-search="'+((u.fio||'')+' '+(u.email||'')).toLowerCase()+'" ' +
-      'style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s" ' +
-      'onmouseover="this.style.background=\'var(--bg2)\'" onmouseout="this.style.background=\'\'">' +
-      '<div style="font-size:.85rem;font-weight:600">✉️ '+(u.fio||u.email)+group+'</div>' +
-      (u.fio ? '<div style="font-size:.7rem;color:var(--text3)">'+u.email+'</div>' : '') +
-      '</div>';
+// ===== New DM Modal =====
+function adminStartNewDm(){
+  var existing=document.getElementById('newChatModal');if(existing)existing.remove();
+  var users=allUsers.filter(function(u){return !isAdmin(u.email);});
+  var modal=document.createElement('div');modal.id='newChatModal';
+  modal.style.cssText='position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35)';
+  modal.onclick=function(e){if(e.target===modal)modal.remove();};
+  var box=document.createElement('div');
+  box.style.cssText='background:#fff;border-radius:10px;width:380px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,.2);overflow:hidden';
+  var h='<div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"><strong style="font-size:.9rem;font-family:Playfair Display,serif">Новый личный чат</strong><button onclick="document.getElementById(\'newChatModal\').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer">✕</button></div>';
+  var s='<div style="padding:8px 14px;border-bottom:1px solid var(--border)"><input type="text" id="adminNewChatSearch" placeholder="Поиск..." oninput="adminFilterNewChat()" autofocus style="width:100%;font-size:.88rem;padding:6px 10px;border:1px solid var(--border);border-radius:5px"></div>';
+  var l='<div id="adminNewChatList" style="flex:1;overflow-y:auto;max-height:50vh">';
+  users.forEach(function(u){
+    var group=u.group?'<span style="font-size:.68rem;color:var(--text3);margin-left:4px">'+u.group.replace('group_','Гр.')+'</span>':'';
+    l+='<div onclick="document.getElementById(\'newChatModal\').remove();openChat(\'dm\',\''+u.uid+'\')" data-search="'+((u.fio||'')+' '+(u.email||'')).toLowerCase()+'" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s" onmouseover="this.style.background=\'var(--bg2)\'" onmouseout="this.style.background=\'\'">';
+    l+='<div style="font-size:.85rem;font-weight:600">✉️ '+(u.fio||u.email)+group+'</div>';
+    l+=(u.fio?'<div style="font-size:.7rem;color:var(--text3)">'+u.email+'</div>':'');
+    l+='</div>';
   });
-  list += '</div>';
-
-  box.innerHTML = header + search + list;
-  modal.appendChild(box);
-  document.body.appendChild(modal);
-  setTimeout(function(){ var s=document.getElementById('adminNewChatSearch'); if(s) s.focus(); }, 100);
+  l+='</div>';
+  box.innerHTML=h+s+l;modal.appendChild(box);document.body.appendChild(modal);
+  setTimeout(function(){var si=document.getElementById('adminNewChatSearch');if(si)si.focus();},100);
 }
-
-function adminFilterNewChat() {
-  var q = (document.getElementById('adminNewChatSearch').value||'').toLowerCase();
-  var items = document.querySelectorAll('#adminNewChatList > div');
-  items.forEach(function(el){ el.style.display = (!q || el.dataset.search.includes(q)) ? '' : 'none'; });
+function adminFilterNewChat(){
+  var q=(document.getElementById('adminNewChatSearch').value||'').toLowerCase();
+  document.querySelectorAll('#adminNewChatList > div').forEach(function(el){el.style.display=(!q||el.dataset.search.includes(q))?'':'none';});
 }
-
-// ===== Reactions =====
-var QUICK_REACTS = ['👍','❤️','😂','🔥','😱','✅'];
-
-function adminShowReactPicker(btn, chatType, refId, msgId, col) {
-  var old = document.getElementById('reactPicker');
-  if (old) old.remove();
-  var picker = document.createElement('div');
-  picker.id = 'reactPicker';
-  picker.style.cssText = 'position:absolute;z-index:999;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);padding:4px;display:flex;gap:2px';
-  QUICK_REACTS.forEach(function(e) {
-    var sp = document.createElement('span');
-    sp.textContent = e;
-    sp.style.cssText = 'cursor:pointer;padding:3px 5px;border-radius:5px;font-size:1.1rem;transition:background .1s';
-    sp.onmouseover = function(){ this.style.background='var(--bg2)'; };
-    sp.onmouseout = function(){ this.style.background=''; };
-    sp.onclick = function(ev) { ev.stopPropagation(); picker.remove(); adminToggleReaction(chatType, refId, msgId, e, col); };
-    picker.appendChild(sp);
-  });
-  btn.style.position = 'relative';
-  btn.appendChild(picker);
-  picker.style.bottom = '100%';
-  picker.style.left = '0';
-  setTimeout(function() {
-    document.addEventListener('click', function handler(ev) {
-      if (!picker.contains(ev.target)) { picker.remove(); document.removeEventListener('click', handler); }
-    });
-  }, 10);
-}
-
-function adminToggleReaction(chatType, refId, msgId, emoji, col) {
-  var me = auth.currentUser;
-  if (!me) return;
-  var fio = 'Admin';
-  var docRef;
-  if (chatType === 'group') {
-    docRef = db.collection('groups').doc(refId).collection(col||'messages').doc(msgId);
-  } else {
-    docRef = db.collection('dm').doc(refId).collection('messages').doc(msgId);
-  }
-  docRef.get().then(function(snap) {
-    if (!snap.exists) return;
-    var reactions = snap.data().reactions || {};
-    if (!reactions[emoji]) reactions[emoji] = {};
-    if (reactions[emoji][me.uid]) {
-      delete reactions[emoji][me.uid];
-      if (Object.keys(reactions[emoji]).length === 0) delete reactions[emoji];
-    } else {
-      reactions[emoji][me.uid] = fio;
-    }
-    return docRef.update({ reactions: reactions });
-  }).catch(function(e) { console.warn('Reaction error:', e); });
-}
-
-// Global delegation for admin chat reactions
-document.addEventListener('DOMContentLoaded', function() {
-  var chatBody = document.getElementById('adminChatBody');
-  if (!chatBody) return;
-  chatBody.addEventListener('click', function(ev) {
-    var toggle = ev.target.closest('[data-react]');
-    if (toggle) {
-      adminToggleReaction(toggle.dataset.rtype, toggle.dataset.rref, toggle.dataset.rmsg, toggle.dataset.react, toggle.dataset.rcol);
-      return;
-    }
-    var addBtn = ev.target.closest('.adm-react-add,[onclick*="adminShowReactPicker"]');
-    if (addBtn) {
-      ev.stopPropagation();
-      var rtype = addBtn.dataset.rtype || addBtn.getAttribute('data-rtype');
-      var rref = addBtn.dataset.rref || addBtn.getAttribute('data-rref');
-      var rmsg = addBtn.dataset.rmsg || addBtn.getAttribute('data-rmsg');
-      var rcol = addBtn.dataset.rcol || 'messages';
-      if (rtype && rref && rmsg) adminShowReactPicker(addBtn, rtype, rref, rmsg, rcol);
-    }
-  });
-});
 </script>
 </body>
 </html>

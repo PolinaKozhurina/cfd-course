@@ -150,6 +150,30 @@ td{padding:5px 10px;border:1px solid var(--border)}
     Результаты отправляются со страницы <a href="checklist.html" class="test-link">чек-листа зачёта</a>
   </p>
 
+  <!-- GROUP CHAT -->
+  <div id="profileChat" style="display:none;margin-top:1.5rem">
+    <h2>💬 Чат группы с преподавателем</h2>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div id="pcChatBody" style="height:250px;overflow-y:auto;padding:10px;background:#fff;font-size:.85rem"></div>
+      <div style="display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--border);background:var(--bg2)">
+        <input type="text" id="pcChatInput" placeholder="Написать в групповой чат..." onkeydown="if(event.key==='Enter')window._profileSendChat()" style="flex:1;font-family:'Source Serif 4',Georgia,serif;font-size:.88rem;padding:6px 10px;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text)">
+        <button onclick="window._profileSendChat()" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:5px 14px;border-radius:5px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-weight:600">→</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DM CHAT -->
+  <div id="profileDm" style="display:none;margin-top:1.5rem">
+    <h2>✉️ Личные сообщения с преподавателем</h2>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div id="dmChatBody" style="height:250px;overflow-y:auto;padding:10px;background:#fff;font-size:.85rem"></div>
+      <div style="display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--border);background:var(--bg2)">
+        <input type="text" id="dmChatInput" placeholder="Личное сообщение преподавателю..." onkeydown="if(event.key==='Enter')window._profileSendDm()" style="flex:1;font-family:'Source Serif 4',Georgia,serif;font-size:.88rem;padding:6px 10px;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text)">
+        <button onclick="window._profileSendDm()" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:5px 14px;border-radius:5px;background:var(--accent3);color:#fff;border:none;cursor:pointer;font-weight:600">→</button>
+      </div>
+    </div>
+  </div>
+
   <div style="text-align:center;margin-top:2rem">
     <button class="login-btn" style="background:var(--bg3);color:var(--text2)" onclick="firebase.auth().signOut()">Выйти</button>
   </div>
@@ -388,7 +412,216 @@ firebase.auth().onAuthStateChanged(async user => {
       document.getElementById('gradeComment').textContent = g.comment || '';
     }
   } catch (e2) {}
+
+  // Load group chat
+  if (userGroup) {
+    document.getElementById('profileChat').style.display = '';
+    window._profileGroup = userGroup;
+    window._profileUser = user;
+    loadProfileChat(userGroup);
+  }
+
+  // Load DM chat — find admin UID
+  try {
+    var admins = (typeof ADMIN_EMAILS !== 'undefined') ? (Array.isArray(ADMIN_EMAILS) ? ADMIN_EMAILS : [ADMIN_EMAILS]) : [];
+    if (admins.length > 0 && !admins.includes(user.email)) {
+      // Find admin's UID
+      var adminSnap = await db2.collection('users').where('email', '==', admins[0]).limit(1).get();
+      if (!adminSnap.empty) {
+        var adminUid = adminSnap.docs[0].id;
+        window._dmAdminUid = adminUid;
+        window._profileUser = user;
+        document.getElementById('profileDm').style.display = '';
+        loadProfileDm(user.uid, adminUid);
+      }
+    }
+  } catch(e3) { console.warn('DM init error:', e3); }
 });
+
+// ===== Profile Chat =====
+var _pcUnsub = null;
+
+function loadProfileChat(groupId) {
+  if (_pcUnsub) { _pcUnsub(); _pcUnsub = null; }
+  _pcUnsub = db2.collection('groups').doc(groupId).collection('messages')
+    .orderBy('createdAt', 'asc')
+    .onSnapshot(function(snap) {
+      renderProfileChat(snap, groupId);
+    }, function(err) {
+      db2.collection('groups').doc(groupId).collection('messages')
+        .orderBy('createdAt', 'asc').get().then(function(s) { renderProfileChat(s, groupId); });
+    });
+}
+
+function renderProfileChat(snap, groupId) {
+  var body = document.getElementById('pcChatBody');
+  if (!body) return;
+  var html = '';
+  var user = window._profileUser;
+  var unreadIds = [];
+
+  snap.forEach(function(doc) {
+    var m = doc.data();
+    var date = m.createdAt ? new Date(m.createdAt.seconds * 1000).toLocaleString('ru', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    var isSelf = user && m.authorUid === user.uid;
+    var isTeacher = m.role === 'admin';
+    var align = isSelf ? 'flex-end' : 'flex-start';
+    var bg = isTeacher ? '#e6f1fb' : (isSelf ? '#e8f4f0' : '#f5f0e8');
+    var border = isTeacher ? '#3a5ba0' : (isSelf ? '#1a6b5a' : '#d9cfc0');
+    var name = m.authorFio || m.authorEmail || '';
+    var roleTag = isTeacher ? ' <span style="font-size:.58rem;background:#e6f1fb;color:#3a5ba0;padding:1px 3px;border-radius:3px;font-weight:700">преп.</span>' : '';
+
+    // Track unread admin messages
+    if (isTeacher && user) {
+      var readBy = m.readBy || {};
+      if (!readBy[user.uid]) unreadIds.push(doc.id);
+    }
+
+    html += '<div style="display:flex;justify-content:' + align + ';margin-bottom:5px">';
+    html += '<div style="max-width:80%;background:' + bg + ';border:1px solid ' + border + ';border-radius:8px;padding:5px 8px">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:1px">';
+    html += '<strong style="font-size:.72rem">' + name + roleTag + '</strong>';
+    html += '<span style="font-size:.6rem;color:#9a8d7e;white-space:nowrap">' + date + '</span></div>';
+    html += '<div style="font-size:.84rem">' + (m.text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '</div>';
+    html += '</div></div>';
+  });
+  if (!html) html = '<p style="text-align:center;color:#9a8d7e;padding:1.5rem;font-size:.82rem">Нет сообщений. Напишите первое!</p>';
+  body.innerHTML = html;
+  body.scrollTop = body.scrollHeight;
+
+  // Mark admin messages as read
+  if (unreadIds.length > 0 && user) {
+    var fio = user.email;
+    db2.collection('users').doc(user.uid).get().then(function(ud) {
+      if (ud.exists && ud.data().fio) fio = ud.data().fio;
+      var readData = {};
+      readData['readBy.' + user.uid] = { email: user.email, fio: fio, at: Date.now() };
+      unreadIds.forEach(function(msgId) {
+        db2.collection('groups').doc(groupId).collection('messages').doc(msgId).update(readData).catch(function(){});
+      });
+    }).catch(function(){});
+  }
+}
+
+window._profileSendChat = async function() {
+  var input = document.getElementById('pcChatInput');
+  if (!input) return;
+  var text = input.value.trim();
+  var user = window._profileUser;
+  var group = window._profileGroup;
+  if (!text || !user || !group) return;
+
+  var fio = user.email;
+  try {
+    var ud = await db2.collection('users').doc(user.uid).get();
+    if (ud.exists && ud.data().fio) fio = ud.data().fio;
+  } catch(e) {}
+
+  try {
+    await db2.collection('groups').doc(group).collection('messages').add({
+      text: text,
+      role: 'student',
+      authorEmail: user.email,
+      authorFio: fio,
+      authorUid: user.uid,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    input.value = '';
+  } catch(e) { alert('Ошибка: ' + e.message); }
+};
+
+// ===== DM Chat =====
+var _dmUnsub = null;
+
+function getDmId(uid1, uid2) {
+  return [uid1, uid2].sort().join('_');
+}
+
+function loadProfileDm(myUid, adminUid) {
+  if (_dmUnsub) { _dmUnsub(); _dmUnsub = null; }
+  var dmId = getDmId(myUid, adminUid);
+  _dmUnsub = db2.collection('dm').doc(dmId).collection('messages')
+    .orderBy('createdAt', 'asc')
+    .onSnapshot(function(snap) { renderProfileDm(snap, dmId); },
+    function(err) {
+      db2.collection('dm').doc(dmId).collection('messages')
+        .orderBy('createdAt', 'asc').get().then(function(s) { renderProfileDm(s, dmId); });
+    });
+}
+
+function renderProfileDm(snap, dmId) {
+  var body = document.getElementById('dmChatBody');
+  if (!body) return;
+  var user = window._profileUser;
+  var html = '';
+  var unreadIds = [];
+
+  snap.forEach(function(doc) {
+    var m = doc.data();
+    var date = m.createdAt ? new Date(m.createdAt.seconds * 1000).toLocaleString('ru', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    var isMine = user && m.authorUid === user.uid;
+    var align = isMine ? 'flex-end' : 'flex-start';
+    var bg = isMine ? '#e8f4f0' : '#e6f1fb';
+    var border = isMine ? '#1a6b5a' : '#3a5ba0';
+    var name = m.authorFio || m.authorEmail || '';
+    var roleTag = !isMine ? ' <span style="font-size:.58rem;background:#e6f1fb;color:#3a5ba0;padding:1px 3px;border-radius:3px;font-weight:700">преп.</span>' : '';
+
+    // Track unread admin messages
+    if (!isMine && !m.readAt) unreadIds.push(doc.id);
+
+    html += '<div style="display:flex;justify-content:' + align + ';margin-bottom:5px">';
+    html += '<div style="max-width:80%;background:' + bg + ';border:1px solid ' + border + ';border-radius:8px;padding:5px 8px">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:1px">';
+    html += '<strong style="font-size:.72rem">' + name + roleTag + '</strong>';
+    html += '<span style="font-size:.6rem;color:#9a8d7e;white-space:nowrap">' + date + '</span></div>';
+    html += '<div style="font-size:.84rem">' + (m.text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '</div>';
+    html += '</div></div>';
+  });
+  if (!html) html = '<p style="text-align:center;color:#9a8d7e;padding:1.5rem;font-size:.82rem">Нет личных сообщений. Напишите первое!</p>';
+  body.innerHTML = html;
+  body.scrollTop = body.scrollHeight;
+
+  // Mark as read
+  if (unreadIds.length > 0) {
+    unreadIds.forEach(function(msgId) {
+      db2.collection('dm').doc(dmId).collection('messages').doc(msgId).update({
+        readAt: Date.now()
+      }).catch(function(){});
+    });
+  }
+}
+
+window._profileSendDm = async function() {
+  var input = document.getElementById('dmChatInput');
+  if (!input) return;
+  var text = input.value.trim();
+  var user = window._profileUser;
+  var adminUid = window._dmAdminUid;
+  if (!text || !user || !adminUid) return;
+
+  var fio = user.email;
+  try {
+    var ud = await db2.collection('users').doc(user.uid).get();
+    if (ud.exists && ud.data().fio) fio = ud.data().fio;
+  } catch(e) {}
+
+  var dmId = getDmId(user.uid, adminUid);
+  try {
+    await db2.collection('dm').doc(dmId).set({
+      participants: [user.uid, adminUid],
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    await db2.collection('dm').doc(dmId).collection('messages').add({
+      text: text,
+      authorEmail: user.email,
+      authorFio: fio,
+      authorUid: user.uid,
+      readAt: null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    input.value = '';
+  } catch(e) { alert('Ошибка: ' + e.message); }
+};
 </script>
 </body>
 </html>

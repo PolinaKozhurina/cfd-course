@@ -3394,14 +3394,30 @@ sections.forEach(s => obs.observe(s));
     db.collection('comments').doc(id).delete().then(loadComments).catch(function(e){alert(e.message);});
   };
 
+  var _checkAuthRetries = 0;
   function checkAuth() {
     var user = auth.currentUser;
     var form = document.getElementById('comment-form');
     var login = document.getElementById('comment-login');
     if (!form || !login) return;
-    if (user && window._userApproved) { form.style.display = ''; login.style.display = 'none'; }
-    else if (user) { form.style.display = 'none'; login.style.display = ''; login.querySelector('p').textContent = 'Ваш профиль ещё не подтверждён.'; }
-    else { form.style.display = 'none'; login.style.display = ''; }
+    if (user && window._userApproved) {
+      form.style.display = '';
+      login.style.display = 'none';
+      _checkAuthRetries = 0;
+    } else if (user && typeof window._userApproved === 'undefined' && _checkAuthRetries < 15) {
+      // _userApproved not yet loaded by auth.js — retry
+      _checkAuthRetries++;
+      setTimeout(checkAuth, 400);
+    } else if (user) {
+      form.style.display = 'none';
+      login.style.display = '';
+      login.querySelector('p').textContent = 'Ваш профиль ещё не подтверждён.';
+      _checkAuthRetries = 0;
+    } else {
+      form.style.display = 'none';
+      login.style.display = '';
+      _checkAuthRetries = 0;
+    }
   }
 
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', loadComments); }

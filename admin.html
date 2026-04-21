@@ -195,19 +195,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- TAB: Messages -->
 <div id="tab-messages" class="panel">
-  <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+  <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.8rem;flex-wrap:wrap">
+    <select id="msgChatType" onchange="switchChatType()" style="font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:5px 10px;border:1px solid var(--border);border-radius:4px">
+      <option value="group">Чат группы</option>
+      <option value="dm">Личное сообщение</option>
+    </select>
     <select id="msgGroupSelect" onchange="loadAdminChat()" style="font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:5px 10px;border:1px solid var(--border);border-radius:4px">
       <option value="">Выберите группу</option>
     </select>
-    <button class="btn" onclick="sendToAllGroups()" title="Отправить сообщение всем группам сразу">📢 Всем группам</button>
+    <select id="msgDmSelect" onchange="loadAdminDm()" style="display:none;font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:5px 10px;border:1px solid var(--border);border-radius:4px">
+      <option value="">Выберите студента</option>
+    </select>
+    <button class="btn" onclick="sendToAllGroups()" title="Отправить сообщение всем группам сразу" id="btnBroadcast">📢 Всем группам</button>
   </div>
   <div id="adminChatWrap" style="display:none">
     <div class="card" style="padding:0;overflow:hidden">
       <div id="adminChatHeader" style="background:var(--bg2);padding:.5rem .8rem;font-size:.82rem;font-weight:600;border-bottom:1px solid var(--border)"></div>
       <div id="adminChatBody" style="height:400px;overflow-y:auto;padding:.8rem;background:#fff"></div>
       <div style="display:flex;gap:.4rem;padding:.5rem .8rem;border-top:1px solid var(--border);background:var(--bg2)">
-        <input type="text" id="adminChatInput" placeholder="Написать сообщение..." onkeydown="if(event.key==='Enter')sendAdminChat()" style="flex:1;font-family:'Source Serif 4',Georgia,serif;font-size:.88rem;padding:6px 10px;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text)">
-        <button class="btn btn-primary" onclick="sendAdminChat()">→</button>
+        <input type="text" id="adminChatInput" placeholder="Написать сообщение..." onkeydown="if(event.key==='Enter')sendCurrentChat()" style="flex:1;font-family:'Source Serif 4',Georgia,serif;font-size:.88rem;padding:6px 10px;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text)">
+        <button class="btn btn-primary" onclick="sendCurrentChat()">→</button>
       </div>
     </div>
   </div>
@@ -1224,7 +1231,11 @@ async function runPlagiarismCheck() {
   btn.disabled = false;
 }
 
-// ===== Group Chat =====
+// ===== Chat System (Group + DM) =====
+
+var _currentChatMode = 'group'; // 'group' or 'dm'
+var _currentDmUid = null;
+let _chatUnsubscribe = null;
 
 function renderMsgGroupSelect() {
   const sel = document.getElementById('msgGroupSelect');
@@ -1234,28 +1245,64 @@ function renderMsgGroupSelect() {
     const members = allGroups[gid].members.map(m => m.fio || m.email).join(', ');
     sel.innerHTML += `<option value="${gid}">${gid.replace('group_','Группа ')} — ${members}</option>`;
   }
+  // DM select
+  const dmSel = document.getElementById('msgDmSelect');
+  if (!dmSel) return;
+  dmSel.innerHTML = '<option value="">Выберите студента</option>';
+  for (const u of allUsers) {
+    if (isAdmin(u.email)) continue;
+    const label = (u.fio || u.email) + (u.group ? ' · ' + u.group.replace('group_','Гр.') : '');
+    dmSel.innerHTML += `<option value="${u.uid}">${label}</option>`;
+  }
 }
 
-let _chatUnsubscribe = null;
+function switchChatType() {
+  _currentChatMode = document.getElementById('msgChatType').value;
+  const grpSel = document.getElementById('msgGroupSelect');
+  const dmSel = document.getElementById('msgDmSelect');
+  const bcast = document.getElementById('btnBroadcast');
+  if (_currentChatMode === 'dm') {
+    grpSel.style.display = 'none';
+    dmSel.style.display = '';
+    bcast.style.display = 'none';
+    document.getElementById('adminChatWrap').style.display = 'none';
+    if (_chatUnsubscribe) { _chatUnsubscribe(); _chatUnsubscribe = null; }
+  } else {
+    grpSel.style.display = '';
+    dmSel.style.display = 'none';
+    bcast.style.display = '';
+    document.getElementById('adminChatWrap').style.display = 'none';
+    if (_chatUnsubscribe) { _chatUnsubscribe(); _chatUnsubscribe = null; }
+  }
+}
+
+function sendCurrentChat() {
+  if (_currentChatMode === 'dm') sendAdminDm();
+  else sendAdminChat();
+}
+
+function getDmId(uid1, uid2) {
+  return [uid1, uid2].sort().join('_');
+}
+
+// ===== Group Chat =====
 
 function loadAdminChat() {
   const gid = document.getElementById('msgGroupSelect').value;
   const wrap = document.getElementById('adminChatWrap');
   if (!gid) { wrap.style.display = 'none'; return; }
   wrap.style.display = '';
-  
+  _currentDmUid = null;
+
   const header = document.getElementById('adminChatHeader');
   const members = allGroups[gid] ? allGroups[gid].members.map(m => m.fio || m.email).join(', ') : '';
   header.textContent = gid.replace('group_','Группа ') + ' — ' + members;
 
   if (_chatUnsubscribe) { _chatUnsubscribe(); _chatUnsubscribe = null; }
-
   _chatUnsubscribe = db.collection('groups').doc(gid).collection('messages')
     .orderBy('createdAt', 'asc')
-    .onSnapshot(function(snap) {
-      renderAdminChatMessages(snap, gid);
-    }, function(err) {
-      console.warn('Chat listener error:', err);
+    .onSnapshot(function(snap) { renderAdminChatMessages(snap, gid); },
+    function(err) {
       db.collection('groups').doc(gid).collection('messages')
         .orderBy('createdAt', 'asc').get().then(function(s){ renderAdminChatMessages(s, gid); });
     });
@@ -1284,19 +1331,16 @@ function renderAdminChatMessages(snap, gid) {
     const border = isMsgAdmin ? '#3a5ba0' : '#d9cfc0';
     const name = m.authorFio || m.authorEmail || '';
     const roleTag = isMsgAdmin ? '<span style="font-size:.6rem;background:#e6f1fb;color:#3a5ba0;padding:1px 4px;border-radius:3px;font-weight:700;margin-left:4px">преп.</span>' : '';
-    const delBtn = isMsgAdmin ? ' <button onclick="deleteAdminChat(\''+gid+'\',\''+doc.id+'\')" style="font-size:.62rem;color:#c44;background:none;border:none;cursor:pointer;opacity:.6" title="Удалить">✕</button>' : '';
+    const delBtn = isMsgAdmin ? ' <button onclick="deleteGroupMsg(\''+gid+'\',\''+doc.id+'\')" style="font-size:.62rem;color:#c44;background:none;border:none;cursor:pointer;opacity:.6" title="Удалить">✕</button>' : '';
 
-    // Read receipts (only for admin's own messages)
     let readHtml = '';
     if (isMsgAdmin) {
       const readBy = m.readBy || {};
       const readList = Object.values(readBy);
       const readCount = readList.length;
-
       if (readCount === 0) {
         readHtml = '<div style="display:flex;align-items:center;gap:3px;margin-top:3px;justify-content:flex-end"><span style="font-size:.62rem;color:#9a8d7e">отправлено ✓</span></div>';
       } else {
-        // Show avatars of who read + status text
         let avatars = '';
         readList.forEach(function(r) {
           const ini = getInitials(r.fio || r.email);
@@ -1305,9 +1349,7 @@ function renderAdminChatMessages(snap, gid) {
           avatars += '<span title="'+(r.fio||r.email)+'" style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:'+color+';color:#fff;font-size:.52rem;font-weight:700;font-family:JetBrains Mono,monospace;border:1.5px solid #fff;margin-left:-4px">'+ini+'</span>';
         });
         const statusText = readCount >= studentCount ? 'прочитано всеми' : 'прочитано ' + readCount + '/' + studentCount;
-        readHtml = '<div style="display:flex;align-items:center;gap:4px;margin-top:3px;justify-content:flex-end">' +
-          '<span style="font-size:.62rem;color:#1a6b5a">✓✓ ' + statusText + '</span>' +
-          '<span style="display:inline-flex;margin-left:2px">' + avatars + '</span></div>';
+        readHtml = '<div style="display:flex;align-items:center;gap:4px;margin-top:3px;justify-content:flex-end"><span style="font-size:.62rem;color:#1a6b5a">✓✓ ' + statusText + '</span><span style="display:inline-flex;margin-left:2px">' + avatars + '</span></div>';
       }
     }
 
@@ -1317,8 +1359,7 @@ function renderAdminChatMessages(snap, gid) {
     html += '<strong style="font-size:.78rem;color:var(--text)">'+name+roleTag+'</strong>';
     html += '<span style="font-size:.65rem;color:var(--text3);white-space:nowrap">'+date+delBtn+'</span></div>';
     html += '<div>'+m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div>';
-    html += readHtml;
-    html += '</div></div>';
+    html += readHtml + '</div></div>';
   });
   if (!html) html = '<p style="text-align:center;color:var(--text3);padding:2rem;font-size:.85rem">Нет сообщений. Напишите первое!</p>';
   body.innerHTML = html;
@@ -1330,24 +1371,14 @@ async function sendAdminChat() {
   const input = document.getElementById('adminChatInput');
   const text = input.value.trim();
   if (!gid || !text) return;
-  
   const user = auth.currentUser;
   if (!user) return;
   let fio = user.email;
-  try {
-    const ud = await db.collection('users').doc(user.uid).get();
-    if (ud.exists && ud.data().fio) fio = ud.data().fio;
-  } catch(e) {}
-
+  try { const ud = await db.collection('users').doc(user.uid).get(); if (ud.exists && ud.data().fio) fio = ud.data().fio; } catch(e) {}
   try {
     await db.collection('groups').doc(gid).collection('messages').add({
-      text: text,
-      role: 'admin',
-      authorEmail: user.email,
-      authorFio: fio,
-      authorUid: user.uid,
-      readBy: {},
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      text: text, role: 'admin', authorEmail: user.email, authorFio: fio, authorUid: user.uid,
+      readBy: {}, createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     input.value = '';
   } catch(e) { alert('Ошибка: ' + e.message); }
@@ -1356,37 +1387,120 @@ async function sendAdminChat() {
 async function sendToAllGroups() {
   const text = prompt('Сообщение для ВСЕХ групп:');
   if (!text || !text.trim()) return;
-  
   const user = auth.currentUser;
   if (!user) return;
   let fio = user.email;
+  try { const ud = await db.collection('users').doc(user.uid).get(); if (ud.exists && ud.data().fio) fio = ud.data().fio; } catch(e) {}
   try {
-    const ud = await db.collection('users').doc(user.uid).get();
-    if (ud.exists && ud.data().fio) fio = ud.data().fio;
-  } catch(e) {}
-
-  const groups = Object.keys(allGroups);
-  try {
-    for (const gid of groups) {
+    for (const gid of Object.keys(allGroups)) {
       await db.collection('groups').doc(gid).collection('messages').add({
-        text: text.trim(),
-        role: 'admin',
-        authorEmail: user.email,
-        authorFio: fio,
-        authorUid: user.uid,
-        readBy: {},
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        text: text.trim(), role: 'admin', authorEmail: user.email, authorFio: fio, authorUid: user.uid,
+        readBy: {}, createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     }
-    alert('Отправлено ' + groups.length + ' группе(ам) ✓');
+    alert('Отправлено ' + Object.keys(allGroups).length + ' группе(ам) ✓');
   } catch(e) { alert('Ошибка: ' + e.message); }
 }
 
-async function deleteAdminChat(gid, msgId) {
-  if (!confirm('Удалить сообщение?')) return;
+async function deleteGroupMsg(gid, msgId) {
+  if (!confirm('Удалить?')) return;
+  try { await db.collection('groups').doc(gid).collection('messages').doc(msgId).delete(); } catch(e) { alert(e.message); }
+}
+
+// ===== DM Chat =====
+
+function loadAdminDm() {
+  const uid = document.getElementById('msgDmSelect').value;
+  const wrap = document.getElementById('adminChatWrap');
+  if (!uid) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  _currentDmUid = uid;
+
+  const student = allUsers.find(u => u.uid === uid);
+  const header = document.getElementById('adminChatHeader');
+  header.innerHTML = '✉️ Личное: <strong>' + (student ? (student.fio || student.email) : uid) + '</strong>' +
+    (student && student.group ? ' · ' + student.group.replace('group_','Гр.') : '');
+
+  const me = auth.currentUser;
+  if (!me) return;
+  const dmId = getDmId(me.uid, uid);
+
+  if (_chatUnsubscribe) { _chatUnsubscribe(); _chatUnsubscribe = null; }
+  _chatUnsubscribe = db.collection('dm').doc(dmId).collection('messages')
+    .orderBy('createdAt', 'asc')
+    .onSnapshot(function(snap) { renderDmMessages(snap, dmId); },
+    function(err) {
+      db.collection('dm').doc(dmId).collection('messages')
+        .orderBy('createdAt', 'asc').get().then(function(s){ renderDmMessages(s, dmId); });
+    });
+}
+
+function renderDmMessages(snap, dmId) {
+  const body = document.getElementById('adminChatBody');
+  if (!body) return;
+  const me = auth.currentUser;
+  let html = '';
+
+  snap.forEach(function(doc) {
+    const m = doc.data();
+    const date = m.createdAt ? new Date(m.createdAt.seconds * 1000).toLocaleString('ru', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    const isMine = me && m.authorUid === me.uid;
+    const align = isMine ? 'flex-end' : 'flex-start';
+    const bg = isMine ? '#e6f1fb' : '#f5f0e8';
+    const border = isMine ? '#3a5ba0' : '#d9cfc0';
+    const name = m.authorFio || m.authorEmail || '';
+    const delBtn = isMine ? ' <button onclick="deleteDmMsg(\''+dmId+'\',\''+doc.id+'\')" style="font-size:.62rem;color:#c44;background:none;border:none;cursor:pointer;opacity:.6">✕</button>' : '';
+
+    // Read status for admin's messages
+    let readHtml = '';
+    if (isMine) {
+      if (m.readAt) {
+        const readDate = new Date(m.readAt).toLocaleString('ru', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+        readHtml = '<div style="text-align:right;font-size:.6rem;color:#1a6b5a;margin-top:2px">✓✓ прочитано ' + readDate + '</div>';
+      } else {
+        readHtml = '<div style="text-align:right;font-size:.6rem;color:#9a8d7e;margin-top:2px">✓ отправлено</div>';
+      }
+    }
+
+    html += '<div style="display:flex;justify-content:'+align+';margin-bottom:6px">';
+    html += '<div style="max-width:75%;background:'+bg+';border:1px solid '+border+';border-radius:8px;padding:6px 10px;font-size:.85rem">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:2px">';
+    html += '<strong style="font-size:.78rem">'+name+'</strong>';
+    html += '<span style="font-size:.65rem;color:var(--text3);white-space:nowrap">'+date+delBtn+'</span></div>';
+    html += '<div>'+m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div>';
+    html += readHtml + '</div></div>';
+  });
+  if (!html) html = '<p style="text-align:center;color:var(--text3);padding:2rem;font-size:.85rem">Нет сообщений. Напишите первое!</p>';
+  body.innerHTML = html;
+  body.scrollTop = body.scrollHeight;
+}
+
+async function sendAdminDm() {
+  const uid = _currentDmUid;
+  const input = document.getElementById('adminChatInput');
+  const text = input.value.trim();
+  if (!uid || !text) return;
+  const user = auth.currentUser;
+  if (!user) return;
+  let fio = user.email;
+  try { const ud = await db.collection('users').doc(user.uid).get(); if (ud.exists && ud.data().fio) fio = ud.data().fio; } catch(e) {}
+  const dmId = getDmId(user.uid, uid);
   try {
-    await db.collection('groups').doc(gid).collection('messages').doc(msgId).delete();
+    // Ensure DM doc exists with participant info
+    await db.collection('dm').doc(dmId).set({
+      participants: [user.uid, uid], updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    await db.collection('dm').doc(dmId).collection('messages').add({
+      text: text, authorEmail: user.email, authorFio: fio, authorUid: user.uid,
+      readAt: null, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    input.value = '';
   } catch(e) { alert('Ошибка: ' + e.message); }
+}
+
+async function deleteDmMsg(dmId, msgId) {
+  if (!confirm('Удалить?')) return;
+  try { await db.collection('dm').doc(dmId).collection('messages').doc(msgId).delete(); } catch(e) { alert(e.message); }
 }
 </script>
 </body>

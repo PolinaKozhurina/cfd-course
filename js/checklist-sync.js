@@ -189,7 +189,7 @@
       '</div>' +
       '<div id="cp-chat-box" style="display:none;border:1px solid var(--border,#d9cfc0);border-radius:8px;overflow:hidden;background:#fff;margin-top:4px">' +
         '<div id="cp-chat-body" style="height:250px;overflow-y:auto;padding:8px;font-size:.85rem"></div>' +
-        '<div id="cp-chat-input-wrap" style="display:none;border-top:1px solid var(--border,#d9cfc0);padding:6px;background:var(--surface,#f5f0e8);display:flex;gap:4px">' +
+        '<div id="cp-chat-input-wrap" style="display:none;border-top:1px solid var(--border,#d9cfc0);padding:6px;background:var(--surface,#f5f0e8);gap:4px">' +
           '<input type="text" id="cp-chat-input" placeholder="Написать..." style="flex:1;font-family:Source Serif 4,Georgia,serif;font-size:.85rem;padding:5px 8px;border:1px solid var(--border,#d9cfc0);border-radius:5px;background:#fff;color:var(--text,#2c2419)">' +
           '<button onclick="window._sendStudentChat()" style="font-family:JetBrains Mono,monospace;font-size:.75rem;padding:4px 12px;border-radius:5px;background:var(--accent,#b44a2d);color:#fff;border:none;cursor:pointer;font-weight:600">→</button>' +
         '</div>' +

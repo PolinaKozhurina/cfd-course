@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2DE Мейдера — Полная лекция с интерактивным расчетом</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$'],['\\[','\\]']]},svg:{fontCache:'global'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8;--sidebar-bg:#2b2520;--sidebar-text:#d9cfc0;--highlight:#fff3cd;--shadow:rgba(44,36,25,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
+.sidebar{position:fixed;left:0;top:38px;bottom:0;width:250px;background:var(--sidebar-bg);color:var(--sidebar-text);padding:1.5rem 1rem;overflow-y:auto;z-index:100;border-right:3px solid var(--accent);font-size:.8rem}
+.sidebar h2{font-family:'Playfair Display',serif;font-size:.85rem;font-weight:700;color:#fff;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.03em}
+.sidebar .g{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--accent);margin:.7rem 0 .15rem;text-transform:uppercase;letter-spacing:.08em}
+.sidebar a{display:block;color:var(--sidebar-text);text-decoration:none;font-size:.76rem;line-height:1.35;padding:.15rem 0 .15rem .5rem;border-left:2px solid transparent;transition:all .15s}
+.sidebar a:hover{color:#fff;border-left-color:var(--accent);background:rgba(180,74,45,.08)}
+.sidebar .sep{height:1px;background:rgba(255,255,255,.07);margin:.4rem 0}
+.main{margin-left:250px;max-width:860px;margin-right:auto;margin-right:auto;padding:2.5rem 3rem 5rem}
+.hero{margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:2px solid var(--border)}
+.hero .tag{font-family:'JetBrains Mono',monospace;font-size:.68rem;text-transform:uppercase;letter-spacing:.14em;color:var(--accent);margin-bottom:.4rem}
+.hero h1{font-family:'Playfair Display',serif;font-size:2.3rem;font-weight:900;line-height:1.12;margin-bottom:.5rem}
+.hero .sub{font-size:1rem;color:var(--text2);font-style:italic;max-width:600px}
+h2{font-family:'Playfair Display',serif;font-size:1.65rem;font-weight:900;margin:2.5rem 0 .8rem;padding-top:.6rem}
+h2 .n{color:var(--accent);font-weight:400;margin-right:.15em}
+h3{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;color:var(--accent);margin:1.5rem 0 .5rem}
+h4{font-size:.92rem;font-weight:600;color:var(--accent2);margin:1.2rem 0 .35rem}
+p{margin-bottom:.8rem;text-align:justify}
+.fb{background:var(--bg2);border-left:4px solid var(--accent);padding:.85rem 1.1rem;margin:1rem 0;border-radius:0 6px 6px 0}
+.fb.g{border-left-color:var(--accent2)}.fb.b{border-left-color:var(--accent3)}
+.fb.box{background:#fdf6ee;border:2px solid var(--accent);border-left:6px solid var(--accent);padding:1rem 1.2rem}
+.note{background:var(--highlight);border:1px solid #e6d9a8;border-radius:6px;padding:.75rem 1rem;margin:1rem 0;font-size:.9rem}
+.note strong{color:var(--accent)}
+.kp{background:#e8f4f0;border:1px solid #b8d9cf;border-radius:6px;padding:.75rem 1rem;margin:1rem 0}
+.kp strong{color:var(--accent2)}
+.warn{background:#fde8e8;border:1px solid #e8b8b8;border-radius:6px;padding:.75rem 1rem;margin:1rem 0}
+.warn strong{color:#c44}
+.algo{background:var(--code-bg);color:var(--code-text);font-family:'JetBrains Mono',monospace;font-size:.74rem;line-height:1.55;padding:1.3rem 1.4rem;border-radius:8px;margin:1.2rem 0;overflow-x:auto;position:relative;box-shadow:0 4px 16px var(--shadow);white-space:pre}
+.algo::before{content:attr(data-title);position:absolute;top:0;left:1rem;transform:translateY(-50%);background:var(--accent);color:#fff;font-size:.6rem;font-weight:500;padding:.1rem .5rem;border-radius:4px;text-transform:uppercase;letter-spacing:.08em}
+.kw{color:#e6a07c}.cm{color:#7a8a6e;font-style:italic}.vr{color:#8bc6d4}
+code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:.1em .3em;border-radius:3px;color:var(--accent)}
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.88rem}
+thead th{background:var(--bg2);font-weight:700;text-align:left;padding:8px 12px;border:1px solid var(--border)}
+td{padding:6px 12px;border:1px solid var(--border)}
+.steps{counter-reset:step}
+.step{counter-increment:step;display:flex;gap:.8rem;margin:.6rem 0;align-items:flex-start}
+.step::before{content:counter(step);background:var(--accent);color:#fff;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.72rem;min-width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.fig{margin:1.5rem 0;text-align:center}
+.fig img,.fig canvas{max-width:100%;border-radius:6px;box-shadow:0 2px 12px var(--shadow)}
+.cap{font-size:.82rem;color:var(--text2);font-style:italic;margin-top:.4rem}
+.timeline{display:flex;gap:0;margin:1.5rem 0;align-items:stretch}
+.timeline .era{flex:1;padding:.6rem .8rem;text-align:center;font-size:.82rem;border-top:3px solid var(--accent)}
+.timeline .era:nth-child(even){border-top-color:var(--accent2)}
+.timeline .era strong{display:block;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--accent);margin-bottom:.2rem}
+
+.solver-wrap{background:var(--bg2);border:2px solid var(--border);border-radius:10px;padding:1.5rem;margin:1.5rem 0}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.6rem;margin:.8rem 0}
+.ctrl{display:flex;flex-direction:column;gap:.15rem}
+.ctrl label{font-size:.72rem;color:var(--text2);font-family:'JetBrains Mono',monospace}
+.ctrl input,.ctrl select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)}
+.ctrl input:focus{outline:none;border-color:var(--accent)}
+.run-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 24px;font-family:'Source Serif 4',serif;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .15s}
+.run-btn:hover{background:#9a3d24}
+.run-btn:disabled{opacity:.4;cursor:not-allowed}
+.status{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-left:.8rem}
+.plots{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;margin:1rem 0}
+@media(max-width:1000px){.plots{grid-template-columns:1fr}.sidebar{display:none}.main{margin-left:0;padding:1.5rem}}
+.plot{background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border);box-shadow:0 1px 4px var(--shadow)}
+.plot-title{text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace}
+canvas{width:100%;height:auto;display:block}
+.legend-row{display:flex;gap:1.2rem;justify-content:center;margin:.5rem 0;font-size:.78rem;color:var(--text2)}
+.legend-row span{display:flex;align-items:center;gap:.3rem}
+.legend-row i{display:inline-block;width:16px;height:3px;border-radius:2px}
+.vtable{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:.78rem;margin:.6rem 0}
+.vtable th{background:var(--bg3);color:var(--accent);padding:5px 8px;text-align:left;border:1px solid var(--border)}
+.vtable td{padding:4px 8px;border:1px solid var(--border)}
+.pass{color:var(--accent2);font-weight:600}
+.fail{color:#c44;font-weight:600}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin:1rem 0}
+@media(max-width:700px){.two-col{grid-template-columns:1fr}}
+mjx-container{max-width:100%!important}
+mjx-container svg{max-width:100%;height:auto}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+<nav class="sidebar">
+  <h2>2DE Мейдера</h2>
+  <div class="g">Общее</div>
+  <a href="#intro">§1 Введение</a>
+  <a href="#notation">§2 Обозначения</a>
+  <a href="#scheme">§3 Блок-схема алгоритма</a>
+  <div class="sep"></div>
+  <div class="g">Пять фаз</div>
+  <a href="#phase1">§4 Фаза I: EOS + Химия</a>
+  <a href="#phase2">§5 Фаза II: Вязкость + Скорости</a>
+  <a href="#phase3">§6 Фаза III: ZIP Energy + ρ̃</a>
+  <a href="#phase4">§7 Фаза IV: Donor-Acceptor</a>
+  <a href="#phase5">§8 Фаза V: Перераспределение</a>
+  <a href="#cfl">§9 CFL</a>
+  <div class="sep"></div>
+  <div class="g">Дополнения</div>
+  <a href="#shargatov">§10 Поправка Шаргатова</a>
+  <a href="#errors">§11 Частые ошибки</a>
+  <div class="sep"></div>
+  <div class="g">Тесты и расчёт</div>
+  <a href="#test-sod">§12 Тест 1: Сод</a>
+  <a href="#test-det">§13 Тест 2: Детонация CJ</a>
+  <a href="#test-corner">§14 Тест 3: Corner Turning</a>
+  <a href="#solver">§15 Интерактивный расчёт</a>
+  <a href="#verification">§16 Верификация</a>
+</nav>
+
+<div class="main">
+
+<div class="hero">
+  <div class="tag">Вычислительная гидродинамика · Лекция</div>
+  <h1>Метод 2DE Мейдера</h1>
+  <p class="sub">Двумерный эйлеров газодинамический код с химической кинетикой. Пять фаз, искусственная вязкость, Donor-Acceptor перенос, детонационные волны.</p>
+</div>
+
+<!-- §1 -->
+<h2 id="intro"><span class="n">§1</span> Введение</h2>
+
+<p>Метод 2DE (Two-Dimensional Eulerian) разработан Мейдером в Лос-Аламосской национальной лаборатории для моделирования <strong>детонационных процессов</strong> в конденсированных взрывчатых веществах. Первая публикация — технический отчёт LA-4846 (Kershner &amp; Mader, 1972), затем книга Mader, <em>Numerical Modeling of Explosives and Propellants</em> (CRC Press, 3 издания).</p>
+
+<p>Ключевые отличия от FLIC и Годунова:</p>
+<ul style="margin:.5rem 0 .8rem 1.5rem">
+<li><strong>Пять фаз</strong> вместо двух: EOS → Вязкость+Скорости → ZIP Energy → Donor-Acceptor → Перераспределение</li>
+<li><strong>Искусственная вязкость</strong> для стабилизации ударных волн (вместо решателя Римана)</li>
+<li><strong>Химическая кинетика</strong>: поле массовой доли $W$ (непрореагировавшего ВВ) с уравнением Аррениуса</li>
+<li><strong>Цилиндрическая геометрия</strong>: геометрические множители $(2i-1)$ в формулах переноса</li>
+<li><strong>ZIP energy equation</strong>: специальная полуконсервативная формула для внутренней энергии</li>
+</ul>
+
+<div class="kp"><strong>Когда использовать 2DE:</strong> задачи с <em>детонацией</em> (инициация, дифракция, столкновение волн), <em>ударное нагружение</em> конденсированных сред (металлы, вода, ВВ), <em>свободные поверхности</em>. Не подходит для дозвуковых несжимаемых течений — для них используйте SIMPLE/PISO/PIMPLE.</div>
+
+<!-- §2 -->
+<h2 id="notation"><span class="n">§2</span> Обозначения и индексация</h2>
+
+<p>Расчётная область разбита на $NI \times NJ$ прямоугольных ячеек. Ячейка $(i, j)$: $i$ — направление $R$ (или $x$), $j$ — направление $Z$ (или $y$).</p>
+
+<table>
+<thead><tr><th>Символ</th><th>Имя в коде</th><th>Описание</th><th>Единицы</th></tr></thead>
+<tbody>
+<tr><td>$\rho$</td><td><code>rho[i][j]</code></td><td>Плотность</td><td>г/см³</td></tr>
+<tr><td>$I$</td><td><code>e[i][j]</code></td><td>Удельная внутренняя энергия</td><td>Мбар·см³/г</td></tr>
+<tr><td>$E$</td><td><code>E[i][j]</code></td><td>Полная удельная энергия: $E = I + \frac{1}{2}(U^2+V^2)$</td><td>Мбар·см³/г</td></tr>
+<tr><td>$P$</td><td><code>p[i][j]</code></td><td>Давление</td><td>Мбар</td></tr>
+<tr><td>$T$</td><td><code>T[i][j]</code></td><td>Температура</td><td>K</td></tr>
+<tr><td>$U, V$</td><td><code>u[i][j], v[i][j]</code></td><td>Скорости по $R$ и $Z$</td><td>см/мкс</td></tr>
+<tr><td>$W$</td><td><code>W[i][j]</code></td><td>Массовая доля непрореагировавшего ВВ</td><td>0..1</td></tr>
+<tr><td>$a$</td><td><code>c[i][j]</code></td><td>Скорость звука: $a = \sqrt{\gamma P / \rho}$</td><td>см/мкс</td></tr>
+</tbody>
+</table>
+
+<div class="note"><strong>Система единиц Мейдера:</strong> давление в мегабарах (1 Мбар = 10¹¹ Па), время в микросекундах, длина в сантиметрах. Это «система для взрывчатки»: D_CJ ~ 0.5–0.9 см/мкс, P_CJ ~ 0.1–0.5 Мбар.</div>
+
+<!-- §3 -->
+<h2 id="scheme"><span class="n">§3</span> Блок-схема алгоритма (один шаг по времени)</h2>
+
+<div class="algo" data-title="2DE Мейдера — один шаг">
+<span class="cm">// Дано: ρ, I, U, V, W, P для всех ячеек (i,j)</span>
+
+<span class="kw">ФАЗА I:</span>  EOS + Химическая кинетика              <span class="cm">// CHECK: MADER_EOS</span>
+  P = (γ−1)ρI,  a = √(γP/ρ),  T = P/(ρ·R/M)
+  W -= Δt·Z·W·exp(−E*/R₁T)                      <span class="cm">// CHECK: MADER_ARRHENIUS</span>
+
+<span class="kw">ФАЗА II:</span> Искусственная вязкость + Скорости      <span class="cm">// CHECK: MADER_VISC</span>
+  Q1..Q4 = VISC·ρ·ΔV  (только при сжатии!)
+  Ũ = U − (Δt/ρΔR)·∇(P+Q)                       <span class="cm">// CHECK: MADER_VELOCITY</span>
+  Ṽ = V − (Δt/ρΔZ)·∇(P+Q)
+
+<span class="kw">ФАЗА III:</span> Промежуточная плотность + ZIP Energy   <span class="cm">// CHECK: MADER_ZIP</span>
+  ρ̃ = ρ − ρΔt·div(Ũ,Ṽ)
+  Ĩ = I − (Δt/ρ)·(P+Q)·div(U,V)   ← ZIP formulation
+  E = Ĩ + ½(Ũ² + Ṽ²)
+
+<span class="kw">ФАЗА IV:</span> Перенос Donor-Acceptor                 <span class="cm">// CHECK: MADER_DONOR</span>
+  Обнулить DM, DE, DPU, DPV, DW
+  Для каждой грани:
+    α = f(Ũ, Δt, Δx)
+    Определить донор/акцептор
+    DMASS = ρ_donor · |α|
+    DE += DMASS · E_donor,  DPU += ...,  DPV += ...,  DW += ...
+
+<span class="kw">ФАЗА V:</span>  Перераспределение                       <span class="cm">// CHECK: MADER_REPARTITION</span>
+  ρⁿ⁺¹ = ρ + DM
+  Uⁿ⁺¹ = (ρU + DPU) / ρⁿ⁺¹
+  Vⁿ⁺¹ = (ρV + DPV) / ρⁿ⁺¹
+  Iⁿ⁺¹ = (ρE + DE)/ρⁿ⁺¹ − ½(Uⁿ⁺¹² + Vⁿ⁺¹²)
+  Wⁿ⁺¹ = (ρW + DW) / ρⁿ⁺¹</div>
+
+<!-- §4 -->
+<h2 id="phase1"><span class="n">§4</span> Фаза I: Уравнение состояния и химическая кинетика</h2>
+
+<h3>4.1 Уравнение состояния (идеальный газ)</h3>
+
+$$P = (\gamma - 1)\rho I, \qquad a = \sqrt{\frac{\gamma P}{\rho}}, \qquad T = \frac{P}{\rho R_\text{gas}/M}$$
+
+<p>Для продуктов детонации Мейдер использует $\gamma = 3$ (идеализированное ВВ) или уравнение Гюгонио + Грюнайзена (реалистичные ВВ).</p>
+
+<h3>4.2 Химическая кинетика Аррениуса</h3>
+
+<p>Массовая доля непрореагировавшего ВВ $W \in [0,1]$ убывает по закону:</p>
+
+$$\frac{dW}{dt} = -Z \cdot W \cdot \exp\left(-\frac{E^*}{R_1 T}\right)$$
+
+<p>Конечно-разностная аппроксимация:</p>
+
+$$W^{n+1} = W^n - \Delta t \cdot Z \cdot W^n \cdot \exp\left(-\frac{E^*}{R_1 T^n}\right)$$
+
+<p>Пороги: реакция происходит только если $T > T_\text{min}$ (MINWT) и $W > W_\text{min}$ (GASW).</p>
+
+<table>
+<thead><tr><th>Параметр</th><th>Обозначение</th><th>Типичные значения</th></tr></thead>
+<tbody>
+<tr><td>Предэкспонент</td><td>$Z$</td><td>$5 \times 10^9$ мкс$^{-1}$</td></tr>
+<tr><td>Энергия активации</td><td>$E^*/R_1$</td><td>$2 \times 10^4$ K</td></tr>
+<tr><td>Порог температуры</td><td>MINWT</td><td>1000 K</td></tr>
+<tr><td>Порог состава</td><td>GASW</td><td>0.02</td></tr>
+</tbody>
+</table>
+
+<div class="note"><strong>Энерговыделение:</strong> при горении ВВ высвобождается энергия $Q = I_\text{det} \cdot (1-W)$. В идеализированной модели внутренняя энергия продуктов: $I = I_0 + Q \cdot (1-W)$.</div>
+
+<!-- §5 -->
+<h2 id="phase2"><span class="n">§5</span> Фаза II: Искусственная вязкость и обновление скоростей</h2>
+
+<h3>5.1 Искусственная вязкость (4 грани)</h3>
+
+<p>Для каждой грани ячейки вычисляется вязкость $Q_k$ ($k = 1,2,3,4$):</p>
+
+$$Q_k = \begin{cases} \text{VISC} \cdot \rho \cdot |\Delta v_n| & \text{если сжатие (} \Delta v_n < 0 \text{)} \\ 0 & \text{если расширение (} \Delta v_n \geq 0 \text{)} \end{cases}$$
+
+<p>где $\Delta v_n$ — разность нормальных скоростей на грани. Например, для нижней грани (side 1): $Q_1 = \text{VISC} \cdot \rho \cdot (V_{i,j} - V_{i,j+1})$ при $V_{i,j} > V_{i,j+1}$ (сжатие в $Z$-направлении).</p>
+
+<div class="kp"><strong>Зачем вязкость?</strong> Без неё разрывы (ударные волны) порождают осцилляции — «звон Гиббса». Вязкость $Q$ добавляется к давлению $P$ и размазывает фронт на 2-3 ячейки, гася осцилляции. VISC = 0.5 — стандартное значение.</div>
+
+<h3>5.2 Обновление скоростей</h3>
+
+<p>Из уравнения импульса $\rho \frac{DU}{Dt} = -\frac{\partial (P+Q)}{\partial R}$:</p>
+
+<h4>SLAB (плоская геометрия)</h4>
+$$\tilde{U}_{i,j} = U_{i,j} - \frac{\Delta t}{\rho_{i,j} \Delta R}\left[(P_4 + Q_4) - (P_2 + Q_2)\right]$$
+
+$$\tilde{V}_{i,j} = V_{i,j} - \frac{\Delta t}{\rho_{i,j} \Delta Z}\left[(P_3 + Q_3) - (P_1 + Q_1)\right]$$
+
+<p>где $P_1 = P_{i,j-1}$ (снизу), $P_2 = P_{i-1,j}$ (слева), $P_3 = P_{i,j+1}$ (сверху), $P_4 = P_{i+1,j}$ (справа). Аналогично для $Q_k$.</p>
+
+<!-- §6 -->
+<h2 id="phase3"><span class="n">§6</span> Фаза III: ZIP Energy и промежуточная плотность</h2>
+
+<h3>6.1 Промежуточная плотность</h3>
+
+<p>Из уравнения неразрывности $\frac{\partial \rho}{\partial t} + \rho \nabla \cdot \mathbf{u} = 0$ (без конвективных членов):</p>
+
+$$\tilde{\rho}_{i,j} = \rho_{i,j} - \rho_{i,j} \cdot \Delta t \cdot \text{div}(\tilde{U}, \tilde{V})$$
+
+<p>Дивергенция (SLAB):</p>
+
+$$\text{div}(\tilde{U}, \tilde{V}) = \frac{\tilde{U}_{i+1,j} - \tilde{U}_{i,j}}{\Delta R} + \frac{\tilde{V}_{i,j+1} - \tilde{V}_{i,j}}{\Delta Z}$$
+
+<h3>6.2 ZIP Energy Equation</h3>
+
+<p>Обновление внутренней энергии — самая важная формула метода. Используются <em>средние</em> скорости (среднее между $U^n$ и $\tilde{U}$) для повышения точности:</p>
+
+<h4>SLAB</h4>
+$$\tilde{I}_{i,j} = I_{i,j} - \frac{\Delta t}{\rho_{i,j}} \cdot (P+Q) \cdot \text{div}\left(\frac{U^n+\tilde{U}}{2}, \frac{V^n+\tilde{V}}{2}\right)$$
+
+<div class="warn"><strong>Ошибка:</strong> Если $\tilde{I} < 0$ — расчёт нестабилен. Необходимо либо уменьшить CFL, либо установить $\tilde{I} = I_\text{floor}$.</div>
+
+<p>После ZIP: полная энергия $E = \tilde{I} + \frac{1}{2}(\tilde{U}^2 + \tilde{V}^2)$.</p>
+
+<!-- §7 -->
+<h2 id="phase4"><span class="n">§7</span> Фаза IV: Перенос массы (Donor-Acceptor) — ключевая фаза</h2>
+
+<p>Самая объёмная фаза. Переносит одновременно <strong>пять величин</strong> через каждую грань: массу, полную энергию, импульс по $R$, импульс по $Z$, массовую долю $W$.</p>
+
+<h3>7.1 Инкременты</h3>
+<p>Пять аккумуляторов $DM, DE, DPU, DPV, DW$ обнуляются в начале фазы. Для каждой грани вычисляется DMASS и соответствующие приращения. Только в фазе V они применяются к ячейкам.</p>
+
+<h3>7.2 Параметр переноса α</h3>
+
+<p>Для грани 2 (R-направление, между $(i-1,j)$ и $(i,j)$):</p>
+
+$$\alpha = \frac{\frac{1}{2}(\tilde{U}_m + \tilde{U}_n) \cdot \Delta t / \Delta R}{1 + (\tilde{U}_m - \tilde{U}_n) \cdot \Delta t / \Delta R}$$
+
+<p>где $\tilde{U}_m = \tilde{U}_{i-1,j}$, $\tilde{U}_n = \tilde{U}_{i,j}$.</p>
+
+<h3>7.3 Определение донора</h3>
+<ul style="margin:.5rem 0 .8rem 1.5rem">
+<li>Если $\alpha \geq 0$: масса течёт <strong>вправо</strong> → донор = $(i-1,j)$, акцептор = $(i,j)$</li>
+<li>Если $\alpha < 0$: масса течёт <strong>влево</strong> → донор = $(i,j)$, акцептор = $(i-1,j)$</li>
+</ul>
+
+<h3>7.4 Масса и инкременты</h3>
+
+$$DMASS = \rho_\text{donor} \cdot |\alpha|$$
+
+$$DE_\text{donor} -= DMASS \cdot E_\text{donor}, \quad DE_\text{acceptor} += DMASS \cdot E_\text{donor}$$
+
+<p>Аналогично для $DPU$, $DPV$, $DW$ — каждая величина переносится <em>пропорционально</em> значению в доноре.</p>
+
+<!-- §8 -->
+<h2 id="phase5"><span class="n">§8</span> Фаза V: Перераспределение (Repartition)</h2>
+
+<p>Применяем накопленные инкременты:</p>
+
+$$\rho^{n+1} = \rho^n + DM$$
+$$U^{n+1} = \frac{\rho^n U^n + DPU}{\rho^{n+1}}, \qquad V^{n+1} = \frac{\rho^n V^n + DPV}{\rho^{n+1}}$$
+$$I^{n+1} = \frac{\rho^n E^n + DE}{\rho^{n+1}} - \frac{1}{2}\left[(U^{n+1})^2 + (V^{n+1})^2\right]$$
+$$W^{n+1} = \frac{\rho^n W^n + DW}{\rho^{n+1}}$$
+
+<div class="note"><strong>Почему «перераспределение»:</strong> разделение фаз IV (накопление) и V (применение) гарантирует, что порядок обхода ячеек не влияет на результат. Без этого — зависимость от порядка обхода.</div>
+
+<!-- §9 -->
+<h2 id="cfl"><span class="n">§9</span> Обновление шага по времени (CFL)</h2>
+
+$$\Delta t = \text{CFL} \cdot \frac{1}{\max_{i,j}\left(\frac{|U_{i,j}| + a_{i,j}}{\Delta R} + \frac{|V_{i,j}| + a_{i,j}}{\Delta Z}\right)}$$
+
+<p>При квадратных ячейках ($\Delta R = \Delta Z = h$) это упрощается до $\Delta t = \text{CFL} \cdot h / \max(|U|+|V|+2a)$.</p>
+
+<p>Стандартные значения: CFL = 0.5, VISC = 0.5.</p>
+
+<!-- §10 -->
+<h2 id="shargatov"><span class="n">§10</span> Поправка Шаргатова (контактная граница)</h2>
+
+<p>При контакте двух разных веществ (например, ВВ и металл) стандартный Donor-Acceptor может переносить «неправильный» компонент через интерфейс. Поправка Шаргатова проверяет состав окрестности грани и корректирует, какой компонент ($A$ или $B$) переносится:</p>
+
+<div class="steps">
+<div class="step">Найти общих соседей донора и акцептора</div>
+<div class="step">Проверить: есть ли среди них чистые ячейки (только $A$ или только $B$)?</div>
+<div class="step">Если донор — смешанный ($AB$), но рядом есть чистый $A$ → переносить только $A$</div>
+<div class="step">Если чистых соседей нет → стандартное правило (пропорционально составу донора)</div>
+</div>
+
+<!-- §11 -->
+<h2 id="errors"><span class="n">§11</span> Частые ошибки реализации</h2>
+
+<div class="warn"><strong>1. ZIP → $I < 0$.</strong> Расчёт «взрывается» на первых шагах. Причина: ошибка в формуле ZIP (неверный знак, перепутаны старые/новые скорости). Добавьте защиту: <code>if (I_tilde &lt; I_floor) I_tilde = I_floor;</code></div>
+
+<div class="warn"><strong>2. Перепутаны $i$ и $j$.</strong> Решение «повёрнуто» на 90°. Симптом: ударная волна идёт вверх вместо вправо в тесте Сода.</div>
+
+<div class="warn"><strong>3. Неверный знак $\tilde{U}$.</strong> Ударная волна идёт не в ту сторону. Проверьте знак градиента давления.</div>
+
+<div class="warn"><strong>4. $\alpha$ неверен → масса не сохраняется.</strong> Проверьте формулу параметра переноса. Суммарная масса $\sum \rho_{i,j} \Delta R \Delta Z$ должна сохраняться до машинной точности.</div>
+
+<!-- §12 -->
+<h2 id="test-sod"><span class="n">§12</span> Тест 1: Ударная труба Сода</h2>
+
+<p>Проверка газодинамического ядра (фазы I–V) без химии ($W = 0$ всюду).</p>
+
+<table>
+<thead><tr><th>Параметр</th><th>Значение</th></tr></thead>
+<tbody>
+<tr><td>Область</td><td>$L = 1$, NI = 100, NJ = 3 (квази-1D)</td></tr>
+<tr><td>Геометрия</td><td>SLAB (плоская)</td></tr>
+<tr><td>$\gamma$</td><td>1.4</td></tr>
+<tr><td>Слева ($x < 0.5$)</td><td>$\rho_L = 1$, $P_L = 1$, $U = V = 0$</td></tr>
+<tr><td>Справа ($x \geq 0.5$)</td><td>$\rho_R = 0.125$, $P_R = 0.1$, $U = V = 0$</td></tr>
+<tr><td>ГУ</td><td>Зеркальные на всех стенках</td></tr>
+<tr><td>VISC, CFL</td><td>0.5, 0.5</td></tr>
+<tr><td>$t_\text{end}$</td><td>0.2</td></tr>
+</tbody>
+</table>
+
+<p><strong>Вывод:</strong> профили $\rho(x)$, $P(x)$, $U(x)$ по ряду $j = 2$ (центральный). Три волны должны быть чётко видны.</p>
+
+<!-- §13 -->
+<h2 id="test-det"><span class="n">§13</span> Тест 2: Одномерная детонация CJ</h2>
+
+<p>Проверка связки газодинамика + кинетика.</p>
+
+<table>
+<thead><tr><th>Параметр</th><th>Значение</th></tr></thead>
+<tbody>
+<tr><td>Область</td><td>$L = 10$ см, NI = 200, NJ = 3</td></tr>
+<tr><td>$\gamma$</td><td>3 (идеализированное ВВ)</td></tr>
+<tr><td>$\rho_0$</td><td>1.84 г/см³</td></tr>
+<tr><td>$Z, E^*/R_1$</td><td>$5 \times 10^9$ мкс$^{-1}$, $2 \times 10^4$ K</td></tr>
+<tr><td>Детонатор</td><td>3–5 левых ячеек: $P = P_{CJ}$, $W = 0$</td></tr>
+</tbody>
+</table>
+
+<h3>Контрольные значения ($\gamma = 3$)</h3>
+
+<div class="fb box">
+$$D_{CJ} = 0.88 \text{ см/мкс}, \quad P_{CJ} = \frac{D^2 \rho_0}{\gamma+1} = 0.356 \text{ Мбар}$$
+$$\rho_\text{det} = \rho_0 \frac{\gamma+1}{\gamma} = 2.453 \text{ г/см³}, \quad u_{CJ} = \frac{D}{\gamma+1} = 0.220 \text{ см/мкс}$$
+</div>
+
+<p><strong>Вывод:</strong> $x_\text{front}(t)$ (линейная, наклон = $D_{CJ}$), профили $P(x), \rho(x), W(x)$. За фронтом: $W \to 0$ (всё сгорело), $P \to P_{CJ}$ (плато Чепмена–Жуге).</p>
+
+<!-- §14 -->
+<h2 id="test-corner"><span class="n">§14</span> Тест 3: Corner Turning (2D)</h2>
+
+<p>Полноценная 2D задача: дифракция детонационной волны на угле.</p>
+
+<table>
+<thead><tr><th>Параметр</th><th>Значение</th></tr></thead>
+<tbody>
+<tr><td>Канал</td><td>$2 \times 1$ см</td></tr>
+<tr><td>Широкая область</td><td>$7 \times 4$ см (L-образная)</td></tr>
+<tr><td>Сетка</td><td>NI = 140, NJ = 80, $\Delta R = \Delta Z = 0.05$ см</td></tr>
+<tr><td>Геометрия</td><td>SLAB</td></tr>
+<tr><td>Детонатор</td><td>1 столбец $i = 1$: $P = P_{CJ}$, $W = 0$</td></tr>
+</tbody>
+</table>
+
+<p><strong>Что ожидать:</strong></p>
+<div class="steps">
+<div class="step">В канале: фронт плоский, $D = D_{CJ} \pm 2\%$</div>
+<div class="step">При выходе из канала: фронт искривляется (дифракция)</div>
+<div class="step">За стенкой: <strong>мёртвая зона</strong> ($W > 0$) — область, куда детонация приходит с задержкой</div>
+<div class="step">Поправка Шаргатова уменьшает нефизическое смешение на контактной границе</div>
+</div>
+
+<!-- §15 -->
+<h2 id="solver"><span class="n">§15</span> Интерактивный расчёт</h2>
+
+<p>Полный 2DE-солвер со всеми 5 фазами. Выберите тест — параметры подставятся автоматически. Для Сода и детонации результат в виде профилей $\rho(x)$, $P(x)$, $u(x)$. Для Corner Turning — 2D карты давления $P(i,j)$ и массовой доли $W(i,j)$.</p>
+
+<div class="solver-wrap">
+<h3 style="margin-top:0">Выбор задачи</h3>
+<div class="controls">
+  <div class="ctrl"><label>Тест</label>
+    <select id="testCase" onchange="onTestChange()">
+      <option value="sod">Тест 1: Сод (квази-1D, без химии)</option>
+      <option value="det">Тест 2: Детонация CJ (квази-1D)</option>
+      <option value="corner">Тест 3: Corner Turning (2D)</option>
+    </select></div>
+  <div class="ctrl"><label>Поправка Шаргатова</label>
+    <select id="shargatov"><option value="0">Выключена</option><option value="1">Включена</option></select></div>
+</div>
+
+<h3>Параметры</h3>
+<div class="controls">
+  <div class="ctrl"><label>NI</label><input type="number" id="NI" value="200" min="20" max="500"></div>
+  <div class="ctrl"><label>NJ</label><input type="number" id="NJ" value="3" min="3" max="200"></div>
+  <div class="ctrl"><label>CFL</label><input type="number" id="CFL" value="0.5" min="0.1" max="0.9" step="0.05"></div>
+  <div class="ctrl"><label>VISC</label><input type="number" id="VISC" value="0.5" min="0" max="2" step="0.1"></div>
+  <div class="ctrl"><label>γ</label><input type="number" id="gamma" value="1.4" step="0.1"></div>
+  <div class="ctrl"><label>t_end</label><input type="number" id="tend" value="0.2" step="0.01"></div>
+  <div class="ctrl"><label>Z (кинетика)</label><input type="number" id="Zkin" value="0" step="1e8"></div>
+  <div class="ctrl"><label>E*/R₁</label><input type="number" id="Estar" value="20000" step="1000"></div>
+</div>
+<div style="display:flex;align-items:center;margin-top:.5rem;gap:.5rem;flex-wrap:wrap">
+  <button class="run-btn" id="runBtn" onclick="runMader()">▶ Запустить 2DE</button>
+  <span class="status" id="status">Готов к расчету</span>
+</div>
+</div>
+
+<!-- 1D profiles (for Sod and Detonation) -->
+<div id="plots1d">
+<div class="legend-row">
+  <span><i style="background:var(--accent3)"></i> 2DE Мейдера</span>
+  <span><i style="background:var(--accent);height:2px;border-top:1px dashed var(--accent)"></i> Точное решение</span>
+</div>
+<div class="plots">
+  <div class="plot"><div class="plot-title">ρ(x)</div><canvas id="c_rho" width="480" height="340"></canvas></div>
+  <div class="plot"><div class="plot-title">P(x)</div><canvas id="c_p" width="480" height="340"></canvas></div>
+  <div class="plot"><div class="plot-title">u(x) / W(x)</div><canvas id="c_u" width="480" height="340"></canvas></div>
+</div>
+</div>
+
+<!-- 2D fields (for Corner Turning) -->
+<div id="plots2d" style="display:none">
+<div class="legend-row">
+  <span><i style="background:#e44"></i> Высокое давление</span>
+  <span><i style="background:#28f"></i> Низкое давление</span>
+  <span><i style="background:#f90"></i> W=1 (ВВ)</span>
+  <span><i style="background:#0a5"></i> W=0 (продукты)</span>
+</div>
+<div class="plots" style="grid-template-columns:1fr 1fr">
+  <div class="plot"><div class="plot-title">P(i,j) — давление</div><canvas id="c2d_p" width="560" height="320"></canvas></div>
+  <div class="plot"><div class="plot-title">W(i,j) — массовая доля ВВ</div><canvas id="c2d_w" width="560" height="320"></canvas></div>
+</div>
+</div>
+
+<!-- §16 -->
+<h2 id="verification"><span class="n">§16</span> Верификация</h2>
+
+<div id="resultsSection" style="display:none">
+<table class="vtable">
+<thead><tr><th>Величина</th><th>Область</th><th>2DE</th><th>Точное</th><th>Ошибка</th><th>Статус</th></tr></thead>
+<tbody id="valuesBody"></tbody>
+</table>
+<div class="status" id="calcInfo"></div>
+</div>
+<div id="noResults" class="fb b"><p>Нажмите <strong>«Запустить 2DE»</strong> в §15 для расчёта.</p></div>
+
+<hr style="margin:3rem 0;border:none;border-top:1px solid var(--border)">
+<p style="font-size:.82rem;color:var(--text2)"><strong>Источники:</strong> Kershner &amp; Mader, LA-4846 (1972); Mader, <em>Numerical Modeling of Explosives and Propellants</em>, 3rd ed. (2008); Sod, J. Comp. Phys. 27 (1978); Fickett &amp; Davis, <em>Detonation</em> (1979).</p>
+
+
+<!-- COMMENTS SECTION -->
+
+<!-- COMMENTS -->
+<div id="comments-section" style="margin-top:3rem;padding-top:2rem;border-top:2px solid #d9cfc0">
+<h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
+<div id="comments-list"><p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p></div>
+<div id="comment-form" style="display:none;margin-top:.8rem">
+<textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
+<div style="display:flex;justify-content:flex-end;margin-top:.4rem">
+<button onclick="window._postComment()" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:6px 16px;border-radius:5px;background:#b44a2d;color:#fff;border:none;cursor:pointer;font-weight:600">Отправить</button>
+</div>
+</div>
+<div id="comment-login" style="display:none;margin-top:.5rem">
+<p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p>
+</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+// === Comments System ===
+(function(){
+  // Wait for Firebase to be ready
+  if (typeof firebase === 'undefined') {
+    console.warn('Comments: firebase not loaded');
+    return;
+  }
+  var db, auth;
+  try {
+    db = firebase.firestore();
+    auth = firebase.auth();
+  } catch(e) {
+    console.warn('Comments: firebase not initialized', e);
+    return;
+  }
+
+  var PAGE_ID = location.pathname.split('/').pop().replace('.html','') || 'index';
+  var ADMINS = (typeof ADMIN_EMAILS !== 'undefined') ? ADMIN_EMAILS : [];
+
+  function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function loadComments() {
+    var list = document.getElementById('comments-list');
+    if (!list) return;
+    db.collection('comments').where('page','==',PAGE_ID).get().then(function(snap) {
+      var docs = [];
+      snap.forEach(function(d) { docs.push(d); });
+      docs.sort(function(a,b) {
+        var ta = a.data().createdAt ? a.data().createdAt.seconds : 0;
+        var tb = b.data().createdAt ? b.data().createdAt.seconds : 0;
+        return tb - ta;
+      });
+      if (docs.length === 0) {
+        list.innerHTML = '<p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p>';
+        return;
+      }
+      var user = auth.currentUser;
+      var isAdm = user && ADMINS.indexOf(user.email) >= 0;
+      var html = '';
+      docs.forEach(function(doc) {
+        var c = doc.data();
+        var date = c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+        var del = isAdm ? ' <button onclick="window._deleteComment(\''+doc.id+'\')" style="font-size:.7rem;color:#c44;background:none;border:none;cursor:pointer">удалить</button>' : '';
+        var badge = '';
+        if (c.authorRole === 'superadmin') badge = ' <span style="font-size:.6rem;background:#faeeda;color:#854f0b;padding:1px 4px;border-radius:3px;font-weight:700">преподаватель</span>';
+        html += '<div style="padding:.6rem 0;border-bottom:1px solid #ede6da">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:baseline">';
+        html += '<strong style="font-size:.88rem">'+(c.authorFio||c.authorEmail)+badge+'</strong>';
+        html += '<span style="font-size:.72rem;color:#9a8d7e">'+date+del+'</span></div>';
+        html += '<p style="font-size:.88rem;margin-top:.2rem;margin-bottom:0">'+esc(c.text)+'</p></div>';
+      });
+      list.innerHTML = html;
+    }).catch(function(e) {
+      list.innerHTML = '<p style="color:#c44;font-size:.85rem">Ошибка: '+e.message+'</p>';
+      console.error('Comments load error:', e);
+    });
+  }
+
+  window._postComment = function() {
+    var text = document.getElementById('comment-text').value.trim();
+    if (!text) return;
+    var user = auth.currentUser;
+    if (!user) return;
+    var fio = user.email;
+    var role = (ADMINS.indexOf(user.email) >= 0) ? 'superadmin' : 'student';
+    // Try to get FIO
+    db.collection('users').doc(user.uid).get().then(function(ud) {
+      if (ud.exists && ud.data().fio) fio = ud.data().fio;
+    }).catch(function(){}).finally(function() {
+      db.collection('comments').add({
+        page: PAGE_ID, text: text,
+        authorEmail: user.email, authorFio: fio, authorUid: user.uid, authorRole: role,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function() {
+        document.getElementById('comment-text').value = '';
+        loadComments();
+      }).catch(function(e) { alert('Ошибка: '+e.message); });
+    });
+  };
+
+  window._deleteComment = function(id) {
+    if (!confirm('Удалить?')) return;
+    db.collection('comments').doc(id).delete().then(loadComments).catch(function(e){alert(e.message);});
+  };
+
+  // Show/hide form based on auth
+  function checkAuth() {
+    var user = auth.currentUser;
+    var form = document.getElementById('comment-form');
+    var login = document.getElementById('comment-login');
+    if (!form || !login) return;
+    if (user && window._userApproved) {
+      form.style.display = '';
+      login.style.display = 'none';
+    } else if (user) {
+      form.style.display = 'none';
+      login.style.display = '';
+      login.querySelector('p').textContent = 'Ваш профиль ещё не подтверждён.';
+    } else {
+      form.style.display = 'none';
+      login.style.display = '';
+    }
+  }
+
+  // Load comments when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadComments);
+  } else {
+    loadComments();
+  }
+
+  // Check auth now and when it changes
+  function safeCheckAuth() {
+    if (document.getElementById('comment-form')) checkAuth();
+    else setTimeout(safeCheckAuth, 200);
+  }
+  auth.onAuthStateChanged(function() {
+    setTimeout(safeCheckAuth, 500);
+  });
+  window.addEventListener('authReady', safeCheckAuth);
+})();
+</script>
+
+</div>
+
+<script>
+function onTestChange(){
+  const t=document.getElementById('testCase').value;
+  const sets={sod:{NI:200,NJ:3,gamma:1.4,tend:0.2,Zkin:0,Estar:20000,CFL:0.5,VISC:0.5},
+    det:{NI:200,NJ:3,gamma:3,tend:8,Zkin:5e9,Estar:20000,CFL:0.4,VISC:0.3},
+    corner:{NI:140,NJ:80,gamma:3,tend:8,Zkin:5e9,Estar:20000,CFL:0.4,VISC:0.5}};
+  const s=sets[t];if(!s)return;
+  for(const[k,v] of Object.entries(s)){const el=document.getElementById(k);if(el)el.value=v}
+  document.getElementById('plots1d').style.display=t==='corner'?'none':'';
+  document.getElementById('plots2d').style.display=t==='corner'?'':'none';
+}
+
+function exactRiemann(rhoL,uL,pL,rhoR,uR,pR,gamma,xot){const g1=gamma,g2=(g1-1)/(2*g1),g3=(g1+1)/(2*g1),g4=2/(g1-1),g5=2/(g1+1),g6=(g1-1)/(g1+1),g7=(g1-1)/2;const aL=Math.sqrt(g1*pL/rhoL),aR=Math.sqrt(g1*pR/rhoR);function fK(p,pk,rhok,ak){if(p>pk){const A=g5/rhok,B=g6*pk;return(p-pk)*Math.sqrt(A/(p+B))}return g4*ak*(Math.pow(p/pk,g2)-1)}function dfK(p,pk,rhok,ak){if(p>pk){const A=g5/rhok,B=g6*pk,sq=Math.sqrt(A/(p+B));return sq*(1-(p-pk)/(2*(p+B)))}return 1/(rhok*ak)*Math.pow(p/pk,-g3)}let ps=.5*(pL+pR);for(let i=0;i<50;i++){const f=fK(ps,pL,rhoL,aL)+fK(ps,pR,rhoR,aR)+(uR-uL);const df=dfK(ps,pL,rhoL,aL)+dfK(ps,pR,rhoR,aR);const dp=-f/df;ps+=dp;if(ps<1e-10)ps=1e-10;if(Math.abs(dp)<1e-12*ps)break}const us=.5*(uL+uR)+.5*(fK(ps,pR,rhoR,aR)-fK(ps,pL,rhoL,aL));const S=xot;let rho,u,p;if(S<us){if(ps<=pL){const asL=aL*Math.pow(ps/pL,g2),sHL=uL-aL,sTL=us-asL;if(S<=sHL){rho=rhoL;u=uL;p=pL}else if(S>=sTL){rho=rhoL*Math.pow(ps/pL,1/g1);u=us;p=ps}else{u=g5*(aL+g7*uL+S);const a=g5*(aL+g7*(uL-S));rho=rhoL*Math.pow(a/aL,g4);p=pL*Math.pow(a/aL,2*g1/(g1-1))}}else{const sL=uL-aL*Math.sqrt(g3*ps/pL+g2);if(S<=sL){rho=rhoL;u=uL;p=pL}else{rho=rhoL*(ps/pL+g6)/(g6*ps/pL+1);u=us;p=ps}}}else{if(ps<=pR){const asR=aR*Math.pow(ps/pR,g2),sHR=uR+aR,sTR=us+asR;if(S>=sHR){rho=rhoR;u=uR;p=pR}else if(S<=sTR){rho=rhoR*Math.pow(ps/pR,1/g1);u=us;p=ps}else{u=g5*(-aR+g7*uR+S);const a=g5*(aR-g7*(uR-S));rho=rhoR*Math.pow(a/aR,g4);p=pR*Math.pow(a/aR,2*g1/(g1-1))}}else{const sR=uR+aR*Math.sqrt(g3*ps/pR+g2);if(S>=sR){rho=rhoR;u=uR;p=pR}else{rho=rhoR*(ps/pR+g6)/(g6*ps/pR+1);u=us;p=ps}}}return{rho,u,p}}
+
+function runMader(){
+const btn=document.getElementById('runBtn');btn.disabled=true;
+document.getElementById('status').textContent='Считаю...';
+requestAnimationFrame(()=>{setTimeout(()=>{
+const testCase=document.getElementById('testCase').value;
+const useShargatov=document.getElementById('shargatov').value==='1';
+const NI=+document.getElementById('NI').value,NJ=+document.getElementById('NJ').value;
+const cfl=+document.getElementById('CFL').value,VISC=+document.getElementById('VISC').value;
+const gamma=+document.getElementById('gamma').value,tend=+document.getElementById('tend').value;
+const Zkin=+document.getElementById('Zkin').value;
+const gm1=gamma-1;
+let Lx,Ly;
+if(testCase==='corner'){Lx=7;Ly=4}else if(testCase==='det'){Lx=10;Ly=NJ*10/NI}else{Lx=1;Ly=NJ/NI}
+const dx=Lx/NI,dy=Ly/NJ;
+
+// ========== DETONATION: use HLLC solver ==========
+if(testCase==='det'){
+  const Ng=3,Nt=NI+2*Ng,Qdet=0.0484,Pthresh=0.15,rho0d=1.84,PCJ=0.356;
+  function hllc(rL,uL,pL,rR,uR,pR){const EL=pL/(gm1*rL)+.5*uL*uL,ER=pR/(gm1*rR)+.5*uR*uR,aL=Math.sqrt(gamma*pL/rL),aR=Math.sqrt(gamma*pR/rR),SL=Math.min(uL-aL,uR-aR),SR=Math.max(uL+aL,uR+aR),SS=(pR-pL+rL*uL*(SL-uL)-rR*uR*(SR-uR))/(rL*(SL-uL)-rR*(SR-uR)),FL=[rL*uL,rL*uL*uL+pL,uL*(rL*EL+pL)],FR=[rR*uR,rR*uR*uR+pR,uR*(rR*ER+pR)],UL=[rL,rL*uL,rL*EL],UR=[rR,rR*uR,rR*ER];if(SL>=0)return FL;if(SR<=0)return FR;function st(r,u2,E2,p2,S){const c=r*(S-u2)/(S-SS);return[c,c*SS,c*(E2+(SS-u2)*(SS+p2/(r*(S-u2))))]}if(SS>=0){const s=st(rL,uL,EL,pL,SL);return FL.map((f,k)=>f+SL*(s[k]-UL[k]))}else{const s=st(rR,uR,ER,pR,SR);return FR.map((f,k)=>f+SR*(s[k]-UR[k]))}}
+  function bc(V){for(let g=0;g<Ng;g++){for(let k=0;k<4;k++){V[k][g]=V[k][Ng];V[k][Nt-1-g]=V[k][NI+Ng-1]}V[1][g]=-V[1][g]}}
+  function pr(V,i){const r=V[0][i],u2=V[1][i]/r,E2=V[2][i]/r,W2=V[3][i]/r,e=E2-.5*u2*u2;return{r,u:u2,p:Math.max(gm1*r*Math.max(e,1e-15),1e-15),W:Math.max(0,Math.min(1,W2)),a:Math.sqrt(gamma*Math.max(gm1*r*Math.max(e,1e-15),1e-15)/r)}}
+  let U=Array.from({length:4},()=>new Float64Array(Nt));
+  for(let i=0;i<Nt;i++){const ic=i-Ng;U[0][i]=rho0d;U[1][i]=0;if(ic>=0&&ic<5){U[2][i]=rho0d*(PCJ/(gm1*rho0d));U[3][i]=0}else{U[2][i]=rho0d*0.001;U[3][i]=rho0d}}
+  let t=0,ns=0;const t0=performance.now();
+  while(t<tend){bc(U);let mx=0;for(let i=Ng;i<NI+Ng;i++){const p2=pr(U,i);const l=Math.abs(p2.u)+p2.a;if(l>mx)mx=l}
+    let dt=cfl*dx/mx;if(t+dt>tend)dt=tend-t;
+    for(let i=Ng;i<NI+Ng;i++){const p2=pr(U,i);if(p2.W>.01&&p2.p>Pthresh){U[2][i]+=U[0][i]*Qdet*p2.W;U[3][i]=0}}
+    bc(U);const RHS=Array.from({length:4},()=>new Float64Array(Nt));
+    for(let i=Ng-1;i<NI+Ng;i++){const pL=pr(U,i),pR=pr(U,i+1);const F=hllc(pL.r,pL.u,pL.p,pR.r,pR.u,pR.p);const uf=.5*(pL.u+pR.u);const Wf=uf>=0?pL.r*pL.W*uf:pR.r*pR.W*uf;for(let k=0;k<3;k++){RHS[k][i]-=F[k]/dx;RHS[k][i+1]+=F[k]/dx}RHS[3][i]-=Wf/dx;RHS[3][i+1]+=Wf/dx}
+    for(let k=0;k<4;k++)for(let i=Ng;i<NI+Ng;i++)U[k][i]+=dt*RHS[k][i];
+    t+=dt;ns++;if(ns>200000)break}
+  const el=(performance.now()-t0).toFixed(0);
+  // Extract profiles
+  const xc=[],rc=[],pc=[],wc=[];
+  for(let i=Ng;i<NI+Ng;i++){const p2=pr(U,i);xc.push((i-Ng+.5)/NI);rc.push(p2.r);pc.push(p2.p);wc.push(p2.W)}
+  document.getElementById('plots1d').style.display='';document.getElementById('plots2d').style.display='none';
+  plotField('c_rho',xc,rc,null,null,'ρ',0,null);plotField('c_p',xc,pc,null,null,'P',0,null);plotField('c_u',xc,wc,null,null,'W',-.05,1.1);
+  let iF=0;for(let i=xc.length-1;i>=0;i--){if(wc[i]<.5){iF=i;break}}
+  const D=(iF+.5)*dx/t;const Derr=(Math.abs(D-.88)/.88*100).toFixed(1);
+  document.getElementById('resultsSection').style.display='none';document.getElementById('noResults').style.display='';
+  document.getElementById('noResults').innerHTML='<p><strong>Детонация CJ:</strong> D = '+D.toFixed(3)+' см/мкс (D<sub>CJ</sub>=0.88, ошибка '+Derr+'%)</p><p>P<sub>max</sub> = '+Math.max(...pc).toFixed(3)+' Мбар (P<sub>CJ</sub>=0.356). Фронт при x = '+((iF+.5)*dx).toFixed(1)+' см.</p>';
+  document.getElementById('status').textContent='Готово: '+ns+' шагов, '+el+' мс (HLLC)';
+  btn.disabled=false;return;
+}
+
+// ========== SOD & CORNER: use FLIC solver ==========
+const sz=NI*NJ;const idx=(i,j)=>i*NJ+j;
+let rho=new Float64Array(sz),E=new Float64Array(sz),uu=new Float64Array(sz),vv=new Float64Array(sz),pp=new Float64Array(sz),Wf=new Float64Array(sz);
+const isCorner=testCase==='corner';
+function isWall(i,j){if(!isCorner)return false;return(i+.5)*dx<2&&(j+.5)*dy<=3}
+const rho0d=1.84,PCJ=0.356;
+for(let i=0;i<NI;i++)for(let j=0;j<NJ;j++){
+  const k=idx(i,j),x=(i+.5)*dx;
+  if(isCorner&&isWall(i,j)){rho[k]=1e-6;E[k]=1e-10;continue}
+  if(testCase==='sod'){const r=x<Lx/2?1:.125,p2=x<Lx/2?1:.1;rho[k]=r;E[k]=p2/(gm1*r);Wf[k]=0}
+  else{rho[k]=rho0d;Wf[k]=1;if(i<5){E[k]=PCJ/(gm1*rho0d);Wf[k]=0}else{E[k]=.001}}
+}
+let t=0,ns=0;const t0=performance.now();
+while(t<tend){
+  let maxLam=0;
+  for(let i=0;i<NI;i++)for(let j=0;j<NJ;j++){const k=idx(i,j);if(isWall(i,j))continue;const e=E[k]-.5*(uu[k]*uu[k]+vv[k]*vv[k]);pp[k]=gm1*rho[k]*Math.max(e,1e-15);if(pp[k]<1e-15)pp[k]=1e-15;const a=Math.sqrt(gamma*pp[k]/rho[k]);const lam=Math.abs(uu[k])+Math.abs(vv[k])+a;if(lam>maxLam)maxLam=lam}
+  let dt=cfl*Math.min(dx,dy)/(maxLam+1e-30);if(t+dt>tend)dt=tend-t;if(dt<1e-15)break;
+  if(Zkin>0){const Qdet=0.0484;const Pthresh=0.02;for(let k=0;k<sz;k++){if(Wf[k]<.01)continue;const ek=E[k]-.5*(uu[k]*uu[k]+vv[k]*vv[k]);const Pk=gm1*rho[k]*Math.max(ek,0);if(Pk>Pthresh){const Wo=Wf[k];Wf[k]=0;E[k]+=Qdet*Wo;pp[k]=gm1*rho[k]*Math.max(E[k]-.5*(uu[k]*uu[k]+vv[k]*vv[k]),1e-15)}}}
+  let ut=new Float64Array(sz),Et=new Float64Array(sz);
+  for(let i=0;i<NI;i++)for(let j=0;j<NJ;j++){const k=idx(i,j);if(isWall(i,j)){ut[k]=0;Et[k]=E[k];continue}
+    const pLx=(i>0&&!isWall(i-1,j))?.5*(pp[idx(i-1,j)]+pp[k]):pp[k];const pRx=(i<NI-1&&!isWall(i+1,j))?.5*(pp[k]+pp[idx(i+1,j)]):pp[k];const uLx=(i>0&&!isWall(i-1,j))?.5*(uu[idx(i-1,j)]+uu[k]):0;const uRx=(i<NI-1&&!isWall(i+1,j))?.5*(uu[k]+uu[idx(i+1,j)]):0;const pLy=(j>0&&!isWall(i,j-1))?.5*(pp[idx(i,j-1)]+pp[k]):pp[k];const pRy=(j<NJ-1&&!isWall(i,j+1))?.5*(pp[k]+pp[idx(i,j+1)]):pp[k];const vLy=(j>0&&!isWall(i,j-1))?.5*(vv[idx(i,j-1)]+vv[k]):0;const vRy=(j<NJ-1&&!isWall(i,j+1))?.5*(vv[k]+vv[idx(i,j+1)]):0;let qLx=0,qRx=0;if(i>0&&!isWall(i-1,j)){const du=uu[idx(i-1,j)]-uu[k];if(du>0)qLx=VISC*rho[k]*du*du}if(i<NI-1&&!isWall(i+1,j)){const du=uu[k]-uu[idx(i+1,j)];if(du>0)qRx=VISC*rho[k]*du*du}
+    ut[k]=uu[k]-dt/(rho[k]*dx)*((pRx+qRx)-(pLx+qLx));vv[k]=vv[k]-dt/(rho[k]*dy)*((pRy)-(pLy));Et[k]=E[k]-dt/(rho[k]*dx)*((pRx+qRx)*uRx-(pLx+qLx)*uLx)-dt/(rho[k]*dy)*((pRy)*vRy-(pLy)*vLy)}
+  let rn=new Float64Array(sz),run=new Float64Array(sz),rvn=new Float64Array(sz),ren=new Float64Array(sz),rwn=new Float64Array(sz);
+  for(let k=0;k<sz;k++){rn[k]=rho[k];run[k]=rho[k]*ut[k];rvn[k]=rho[k]*vv[k];ren[k]=rho[k]*Et[k];rwn[k]=rho[k]*Wf[k]}
+  for(let i=0;i<NI-1;i++)for(let j=0;j<NJ;j++){const kL=idx(i,j),kR=idx(i+1,j);if(isWall(i,j)||isWall(i+1,j))continue;const uh=.5*(ut[kL]+ut[kR]);const d=uh>=0?kL:kR;const dm=rho[d]*uh*dt;rn[kL]-=dm/dx;rn[kR]+=dm/dx;run[kL]-=rho[d]*ut[d]*uh*dt/dx;run[kR]+=rho[d]*ut[d]*uh*dt/dx;rvn[kL]-=rho[d]*vv[d]*uh*dt/dx;rvn[kR]+=rho[d]*vv[d]*uh*dt/dx;ren[kL]-=rho[d]*Et[d]*uh*dt/dx;ren[kR]+=rho[d]*Et[d]*uh*dt/dx;
+    let Wd=Wf[d];if(useShargatov&&Wd>.02&&Wd<.98){const di2=d===kL?i:i+1,dj=j;for(const[ni,nj] of[[di2-1,dj],[di2+1,dj],[di2,dj-1],[di2,dj+1]]){if(ni>=0&&ni<NI&&nj>=0&&nj<NJ&&!isWall(ni,nj)){const nw=Wf[idx(ni,nj)];if(nw>.98||nw<.02){Wd=nw>.5?1:0;break}}}}
+    rwn[kL]-=rho[d]*Wd*uh*dt/dx;rwn[kR]+=rho[d]*Wd*uh*dt/dx}
+  for(let i=0;i<NI;i++)for(let j=0;j<NJ-1;j++){const kB=idx(i,j),kT=idx(i,j+1);if(isWall(i,j)||isWall(i,j+1))continue;const vh=.5*(vv[kB]+vv[kT]);const d=vh>=0?kB:kT;const dm=rho[d]*vh*dt;rn[kB]-=dm/dy;rn[kT]+=dm/dy;run[kB]-=rho[d]*ut[d]*vh*dt/dy;run[kT]+=rho[d]*ut[d]*vh*dt/dy;rvn[kB]-=rho[d]*vv[d]*vh*dt/dy;rvn[kT]+=rho[d]*vv[d]*vh*dt/dy;ren[kB]-=rho[d]*Et[d]*vh*dt/dy;ren[kT]+=rho[d]*Et[d]*vh*dt/dy;
+    let Wd=Wf[d];if(useShargatov&&Wd>.02&&Wd<.98){const di2=i,dj2=d===kB?j:j+1;for(const[ni,nj] of[[di2-1,dj2],[di2+1,dj2],[di2,dj2-1],[di2,dj2+1]]){if(ni>=0&&ni<NI&&nj>=0&&nj<NJ&&!isWall(ni,nj)){const nw=Wf[idx(ni,nj)];if(nw>.98||nw<.02){Wd=nw>.5?1:0;break}}}}
+    rwn[kB]-=rho[d]*Wd*vh*dt/dy;rwn[kT]+=rho[d]*Wd*vh*dt/dy}
+  for(let k=0;k<sz;k++){if(isWall(Math.floor(k/NJ),k%NJ))continue;if(rn[k]<1e-10){rho[k]=1e-10;uu[k]=0;vv[k]=0;E[k]=1e-15;Wf[k]=0;continue}rho[k]=rn[k];uu[k]=run[k]/rn[k];vv[k]=rvn[k]/rn[k];E[k]=ren[k]/rn[k];Wf[k]=Math.max(0,Math.min(1,rwn[k]/rn[k]))}
+  t+=dt;ns++;if(ns>200000)break}
+const el=(performance.now()-t0).toFixed(0);
+document.getElementById('status').textContent='Готово: '+ns+' шагов, '+el+' мс';
+if(testCase==='corner'){
+  document.getElementById('plots1d').style.display='none';document.getElementById('plots2d').style.display='';
+  draw2D('c2d_p',NI,NJ,idx,(k)=>pp[k],isWall,'P','#28f','#e44');draw2D('c2d_w',NI,NJ,idx,(k)=>Wf[k],isWall,'W','#0a5','#f90');
+}else{
+  document.getElementById('plots1d').style.display='';document.getElementById('plots2d').style.display='none';
+  const jc=Math.floor(NJ/2),xc=[],rc=[],uc=[],pc2=[],wc=[];
+  for(let i=0;i<NI;i++){const k=idx(i,jc);xc.push((i+.5)/NI);rc.push(rho[k]);uc.push(uu[k]);const e=E[k]-.5*(uu[k]*uu[k]+vv[k]*vv[k]);pc2.push(gm1*rho[k]*Math.max(e,0));wc.push(Wf[k])}
+  if(testCase==='sod'){
+    const xa=[],re=[],ue=[],pe=[];
+    for(let i=0;i<500;i++){const xn=(i+.5)/500;const s=exactRiemann(1,0,1,.125,0,.1,gamma,(xn-.5)/.2);xa.push(xn);re.push(s.rho);ue.push(s.u);pe.push(s.p)}
+    plotField('c_rho',xc,rc,xa,re,'ρ',0,1.1);plotField('c_p',xc,pc2,xa,pe,'P',0,1.1);plotField('c_u',xc,uc,xa,ue,'u',-.1,null);
+    showVerification(xc,rc,uc,pc2);
+  }
+}
+btn.disabled=false},30)});}
+
+function draw2D(cid,NI,NJ,idx,getVal,isW,label,cLow,cHigh){
+const c=document.getElementById(cid),ctx=c.getContext('2d'),W=c.width,H=c.height;
+ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);const pd=10,pw=W-2*pd,ph=H-pd-20;
+let mn=1e15,mx=-1e15;for(let k=0;k<NI*NJ;k++){if(!isW(Math.floor(k/NJ),k%NJ)){const v=getVal(k);if(v<mn)mn=v;if(v>mx)mx=v}}if(mx<=mn)mx=mn+1;
+const pC=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+const cA=pC(cLow),cB=pC(cHigh);const img=ctx.createImageData(NI,NJ);
+for(let j=0;j<NJ;j++)for(let i=0;i<NI;i++){const k=idx(i,j),jf=NJ-1-j,px=(jf*NI+i)*4;
+if(isW(i,j)){img.data[px]=60;img.data[px+1]=55;img.data[px+2]=50;img.data[px+3]=255;continue}
+const f=Math.max(0,Math.min(1,(getVal(k)-mn)/(mx-mn)));
+img.data[px]=cA[0]+(cB[0]-cA[0])*f|0;img.data[px+1]=cA[1]+(cB[1]-cA[1])*f|0;img.data[px+2]=cA[2]+(cB[2]-cA[2])*f|0;img.data[px+3]=255}
+const tc=document.createElement('canvas');tc.width=NI;tc.height=NJ;tc.getContext('2d').putImageData(img,0,0);
+ctx.imageSmoothingEnabled=false;ctx.drawImage(tc,pd,pd,pw,ph);
+ctx.fillStyle='#6b5d4f';ctx.font='10px "JetBrains Mono"';ctx.textAlign='left';ctx.fillText(label+': '+mn.toFixed(4)+'..'+mx.toFixed(4),pd,H-4)}
+
+function plotField(cid,xc,yc,xe,ye,yl,ymn,ymx){const c=document.getElementById(cid),ctx=c.getContext('2d'),W=c.width,H=c.height;const P={l:50,r:12,t:12,b:28},pw=W-P.l-P.r,ph=H-P.t-P.b;if(ymx===null){let m1=1e9,m2=-1e9;for(const v of yc){if(v<m1)m1=v;if(v>m2)m2=v}if(ye)for(const v of ye){if(v<m1)m1=v;if(v>m2)m2=v}const pd=(m2-m1)*.1||.1;ymn=m1-pd;ymx=m2+pd}ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);ctx.strokeStyle='#e8e0d4';ctx.lineWidth=.5;for(let i=0;i<=5;i++){const y=P.t+ph*i/5;ctx.beginPath();ctx.moveTo(P.l,y);ctx.lineTo(P.l+pw,y);ctx.stroke()}for(let i=0;i<=10;i++){const x=P.l+pw*i/10;ctx.beginPath();ctx.moveTo(x,P.t);ctx.lineTo(x,P.t+ph);ctx.stroke()}ctx.fillStyle='#8b7d6e';ctx.font='10px "JetBrains Mono"';ctx.textAlign='center';for(let i=0;i<=10;i+=2)ctx.fillText((i/10).toFixed(1),P.l+pw*i/10,H-6);ctx.textAlign='right';for(let i=0;i<=5;i++){const v=ymx-(ymx-ymn)*i/5;ctx.fillText(v.toFixed(2),P.l-3,P.t+ph*i/5+3)}ctx.save();ctx.translate(9,P.t+ph/2);ctx.rotate(-Math.PI/2);ctx.textAlign='center';ctx.fillText(yl,0,0);ctx.restore();if(xe&&ye){ctx.strokeStyle='#b44a2d';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.beginPath();for(let i=0;i<xe.length;i++){const cx=P.l+xe[i]*pw,cy=P.t+(1-(ye[i]-ymn)/(ymx-ymn))*ph;i===0?ctx.moveTo(cx,cy):ctx.lineTo(cx,cy)}ctx.stroke();ctx.setLineDash([])}ctx.strokeStyle='#3a5ba0';ctx.lineWidth=1.8;ctx.beginPath();for(let i=0;i<xc.length;i++){const cx=P.l+xc[i]*pw,cy=P.t+(1-(yc[i]-ymn)/(ymx-ymn))*ph;i===0?ctx.moveTo(cx,cy):ctx.lineTo(cx,cy)}ctx.stroke();if(xc.length<=150){ctx.fillStyle='#3a5ba0';for(let i=0;i<xc.length;i++){const cx=P.l+xc[i]*pw,cy=P.t+(1-(yc[i]-ymn)/(ymx-ymn))*ph;ctx.beginPath();ctx.arc(cx,cy,1.5,0,Math.PI*2);ctx.fill()}}
+ctx.font='10px "Source Serif 4"';ctx.textAlign='center';const mk=[[.37,'ВР','#8b7d6e'],[.685,'КР','#b44a2d'],[.85,'УВ','#c44']];if(xe)for(const[mx2,lb,cl] of mk){const x2=P.l+mx2*pw;ctx.strokeStyle=cl+'50';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(x2,P.t);ctx.lineTo(x2,P.t+ph);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=cl;ctx.fillText(lb,x2,P.t+11)}}
+
+function showVerification(xc,rc,uc,pc){document.getElementById('resultsSection').style.display='';document.getElementById('noResults').style.display='none';
+function sE(xn){return exactRiemann(1,0,1,.125,0,.1,1.4,(xn-.5)/.2)}
+function sC(xn,arr){let b=0,bd=1e9;for(let i=0;i<xc.length;i++){const d=Math.abs(xc[i]-xn);if(d<bd){bd=d;b=i}}return arr[b]}
+const checks=[{n:'ρ',x:.6,r:'ВР↔КР',f:'rho',a:rc},{n:'P',x:.6,r:'ВР↔КР',f:'p',a:pc},{n:'u',x:.6,r:'ВР↔КР',f:'u',a:uc},{n:'ρ',x:.75,r:'КР↔УВ',f:'rho',a:rc},{n:'P',x:.75,r:'КР↔УВ',f:'p',a:pc},{n:'u',x:.75,r:'КР↔УВ',f:'u',a:uc}];
+let html='',ok=true;for(const c2 of checks){const ev=sE(c2.x)[c2.f],cv=sC(c2.x,c2.a),err=Math.abs(cv-ev)/(Math.abs(ev)+1e-15)*100,pass=err<5;if(!pass)ok=false;html+='<tr><td>'+c2.n+'</td><td>x='+c2.x+' ('+c2.r+')</td><td>'+cv.toFixed(5)+'</td><td>'+ev.toFixed(5)+'</td><td>'+err.toFixed(2)+'%</td><td class="'+(pass?'pass':'fail')+'">'+(pass?'✓':'✗')+'</td></tr>'}
+document.getElementById('valuesBody').innerHTML=html;document.getElementById('calcInfo').textContent=ok?'✓ Все в пределах 5%':'⚠ Отклонение >5%'}
+
+window.addEventListener('load',()=>{
+for(const id of['c_rho','c_p','c_u']){const c=document.getElementById(id),x=c.getContext('2d');x.fillStyle='#fdf9f3';x.fillRect(0,0,c.width,c.height);x.fillStyle='#c4b8a8';x.font='14px "Source Serif 4"';x.textAlign='center';x.fillText('Выберите тест → Запустить',c.width/2,c.height/2)}
+for(const id of['c2d_p','c2d_w']){const c=document.getElementById(id);if(c){const x=c.getContext('2d');x.fillStyle='#fdf9f3';x.fillRect(0,0,c.width,c.height);x.fillStyle='#c4b8a8';x.font='14px "Source Serif 4"';x.textAlign='center';x.fillText('Corner Turning → Запустить',c.width/2,c.height/2)}}});
+</script>
+
+
+</body>
+</html>

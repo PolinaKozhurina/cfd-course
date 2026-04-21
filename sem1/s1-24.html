@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>§24. Метод Годунова–Колгана–Родионова</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
+.wrap{max-width:760px;margin:0 auto;padding:2rem 1.5rem 4rem}
+.lecture-tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;padding:.2rem .5rem;border-radius:3px;display:inline-block;margin-bottom:.5rem;background:#e6f1fb;color:#3a5ba0}
+.lecture-num{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);margin-bottom:.3rem}
+h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;line-height:1.15;margin-bottom:1.5rem;color:var(--text)}
+h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--accent);margin:2rem 0 .8rem;padding-top:.5rem;border-top:1px solid var(--border)}
+h3{font-family:'Source Serif 4',serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:1.5rem 0 .5rem}
+p{margin-bottom:1rem;text-align:justify;hyphens:auto}
+.equation{margin:1.5rem 0;text-align:center;overflow-x:auto}
+.definition{background:var(--bg2);border-left:3px solid var(--accent2);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
+.theorem{background:#fdf6ee;border-left:3px solid var(--accent);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
+.theorem .th-title{font-family:'Playfair Display',serif;font-weight:700;color:var(--accent);margin-bottom:.3rem}
+.remark{background:#f0f7f4;border-left:3px solid var(--accent2);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:.92rem}
+code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:.1rem .3rem;border-radius:3px}
+.lecture-nav{display:flex;justify-content:space-between;gap:1rem;margin-top:3rem;padding-top:1.5rem;border-top:2px solid var(--border);flex-wrap:wrap}
+.lecture-nav a{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);text-decoration:none;padding:.5rem .8rem;border:1px solid var(--border);border-radius:6px;transition:all .15s;max-width:48%}
+.lecture-nav a:hover{border-color:var(--accent);background:rgba(180,74,45,.05)}
+.nav-prev{text-align:left}
+.nav-next{text-align:right;margin-left:auto}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<div class="wrap">
+<span class="lecture-tag">Высокий порядок</span>
+<div class="lecture-num">§24 · Семестр 1</div>
+<h1>Метод Годунова–Колгана–Родионова. Антидиффузионная коррекция численного потока. Повышение</h1>
+
+<p>Метод Годунова–Колгана–Родионова. Антидиффузионная коррекция численного потока. Повышение
+разрешающей способности при сохранении монотонности</p>
+
+<p>Мотивация: почему требуется антидиффузионная коррекция. Схема Годунова первого порядка обладает высоким запасом устойчивости и монотонности, однако характеризуется значительной численной диффузией: разрывы и контактные поверхности существенно размазываются. Метод Годунова–
+Колгана уменьшает диффузию за счёт линейной реконструкции внутри ячейки и тем самым повышает порядок точности на гладких решениях, но вблизи
+разрывов может порождать осцилляции, то есть теряет монотонность.
+Метод Годунова–Колгана–Родионова строится как комбинация двух потоков: монотонного (низкого порядка) и более точного (высокого порядка),
+причём вклад потока высокого порядка вводится в виде антидиффузионной</p>
+
+<p>поправки, которая автоматически подавляется там, где она приводит к возникновению новых экстремумов. В результате достигается повышение разрешающей способности при сохранении монотонности.</p>
+
+<p>Консервативная схема и два потока. Рассмотрим одномерный закон
+сохранения (для простоты скалярный случай)</p>
+
+<p>\partial u \partial f (u)
++
+=0
+\partial t
+\partial x</p>
+
+<p>и консервативную разностную схему</p>
+
+<p>un+1
+= uni −
+i</p>
+
+<p>)︁
+∆t (︁
+𝐹i+ 12 − 𝐹i− 12 .
+∆x</p>
+
+<p>Пусть заданы два численных потока на грани xi+ 1 :</p>
+
+<p>L
+ 𝐹i+
+1 — монотонный (низкого порядка), например поток схемы Годуно2</p>
+
+<p>ва первого порядка или другой заведомо монотонный поток;</p>
+
+<p>𝐻
+ 𝐹i+
+1 — поток повышенного порядка, например поток, получаемый ме2</p>
+
+<p>тодом Годунова–Колгана на основе линейной реконструкции в ячейках.
+Тогда естественно ввести антидиффузионный поток</p>
+
+<p>𝐻
+L
+𝐴i+ 12 = 𝐹i+
+1 − 𝐹
+i+ 1 .</p>
+
+<p>Использование потока</p>
+
+<p>𝐹 𝐻 эквивалентно добавлению антидиффузии к мо-</p>
+
+<p>нотонной схеме, однако без ограничения 𝐴i+ 1 вблизи разрывов неизбежны</p>
+
+<p>Идея ограничения антидиффузии. Метод строится так, чтобы итоговый поток имел вид</p>
+
+<p>L
+𝐹i+ 21 = 𝐹i+
+1 + \thetai+ 1 𝐴i+ 1 ,
+2</p>
+
+<p>0 \le \thetai+ 12 \le 1,</p>
+
+<p>где коэффициент \thetai+ 1 выбирается автоматически на основе локальных кри2</p>
+
+<p>териев монотонности. При \thetai+ 1</p>
+
+<p>= 0 получаем чисто монотонную схему, при</p>
+
+<p>\thetai+ 21 = 1 — схему повышенного порядка.</p>
+
+<p>Базовое (низкопорядковое) предсказание. Сначала выполняется шаг
+по времени только с монотонным потоком 𝐹</p>
+
+<p>∆t
+un+1,L
+= uni −
+i</p>
+
+<p>∆x</p>
+
+<p>(︁</p>
+
+<p>L</p>
+
+<p>:</p>
+
+<p>L
+L
+𝐹i+
+1 − 𝐹
+i− 12</p>
+
+<p>)︁</p>
+
+<p>.</p>
+
+<p>Это промежуточное решение служит опорной точкой, относительно которой
+разрешается вводить антидиффузию.</p>
+
+<p>Локальные допустимые границы без появления новых экстремумов. Чтобы не создавать новых локальных экстремумов, для каждой ячейки
+задаются верхняя и нижняя допустимые границы, построенные по соседним
+значениям на слое n:</p>
+
+<p>umax
+= max{uni−1 , uni , uni+1 },
+i</p>
+
+<p>umin
+= min{uni−1 , uni , uni+1 }.
+i
+n+1,L</p>
+
+<p>Тогда допустимые приращения относительно ui</p>
+
+<p>max
+𝑄+
+− un+1,L
+,
+i = ui
+i
++</p>
+
+<p>Здесь 𝑄i</p>
+
+<p>равны</p>
+
+<p>min
+𝑄−
+− un+1,L
+.
+i = ui
+i</p>
+
+<p>\ge 0 и 𝑄−
+i \le 0 задают, какую «положительную» и «отрицательную»
+n+1,L</p>
+
+<p>коррекцию можно добавить к ui</p>
+
+<p>, не выходя за локальные границы.</p>
+
+<p>Разделение антидиффузионных потоков по знаку. Антидиффузионный поток через грань влияет на две соседние ячейки противоположно.
+Удобно вводить «входящие» и «исходящие» вклады в ячейку
+грани i +</p>
+
+<p>i. Вклад от</p>
+
+<p>2 в ячейку i равен</p>
+
+<p>а от грани i −</p>
+
+<p>−</p>
+
+<p>∆t
+\theta 1𝐴 1,
+∆x i+ 2 i+ 2</p>
+
+<p>+</p>
+
+<p>∆t
+\theta 1𝐴 1.
+∆x i− 2 i− 2</p>
+
+<p>2 равен</p>
+
+<p>До введения ограничителей рассматривают суммарные возможные положительные и отрицательные вклады антидиффузии в ячейку i:</p>
+
+<p>∆t
+𝑃i+ =</p>
+
+<p>)︁
+max(0, 𝐴i− 12 ) + max(0, −𝐴i+ 12 ) ,
+∆x
+)︁
+∆t (︁
+−
+𝑃i =
+min(0, 𝐴i− 21 ) + min(0, −𝐴i+ 12 ) .
+∆x</p>
+
+<p>+</p>
+
+<p>Здесь 𝑃i</p>
+
+<p>(︁</p>
+
+<div class="equation">\[(§24.7) \tag{24.8}\]</div>
+
+<p>\ge 0 соответствует суммарной тенденции увеличить ui , а 𝑃i− \le 0 —</p>
+
+<p>уменьшить ui .</p>
+
+<p>Коэффициенты допустимости коррекции в ячейке. Определим коэффициенты, ограничивающие положительную и отрицательную коррекции</p>
+
+<p>в ячейке:</p>
+
+<p>⎧
+(︂
+− )︂
+𝑄
+⎪
+i
+⎪
+, 𝑃i− &lt; 0,
+⎨ min 1, −
+𝑃i
+𝑅i− =
+⎪
+⎪
+⎩ 1,
+𝑃i− = 0.</p>
+
+<p>⎧
+(︂
++ )︂
+𝑄
+⎪
+i
+⎪
+, 𝑃i+ &gt; 0,
+⎨ min 1, +
+𝑃i
+𝑅i+ =
+⎪
+⎪
+⎩ 1,
+𝑃i+ = 0,</p>
+
+<p>(§24.9)
+Эти величины показывают, какую долю потенциальной антидиффузионной
+коррекции можно ввести в ячейку, не выходя за пределы (§24.5).</p>
+
+<p>Ограничитель на грани и окончательный поток. Коэффициент \thetai+ 12
+выбирается так, чтобы одновременно удовлетворялись ограничения в обеих
+соседних ячейках i и i + 1. Стандартный выбор имеет вид</p>
+
+<p>⎧
+(︀ + − )︀
+⎪
+⎪
+min
+𝑅i , 𝑅i+1 , 𝐴i+ 21 &gt; 0,
+⎪
+⎪
+⎪
+⎪
+⎨
+(︀
+)︀
++
+\thetai+ 21 = min 𝑅i− , 𝑅i+1
+, 𝐴i+ 12 &lt; 0,
+⎪
+⎪
+⎪
+⎪
+⎪
+⎪
+⎩ 1,
+𝐴i+ 12 = 0.</p>
+
+<p>После вычисления \thetai+ 1 итоговый поток задаётся формулой (§24.3), а обнов2</p>
+
+<p>ление решения выполняется по (§24.1).</p>
+
+<p>Свойства метода. Построение потока в форме (§24.3) с ограничителем
+(§24.10) сохраняет консервативность схемы, поскольку корректировка осуществляется путём добавления ограниченных потоков на гранях. При \thetai+ 1 ≡</p>
+
+<p>0 метод сводится к монотонной схеме низкого порядка, а при \thetai+ 12 ≡ 1 — к схеме повышенного порядка. В гладких областях антидиффузионная поправка,
+как правило, не подавляется, и достигается повышение разрешающей способности, тогда как вблизи разрывов ограничитель подавляет антидиффузию,
+предотвращая осцилляции.</p>
+
+<p>Расширение на системы законов сохранения. Для систем законов
+сохранения величины ui и потоки 𝐹i+ 1 становятся векторными. Практически</p>
+
+<p>ограничение антидиффузии может выполняться покомпонентно для консервативных переменных, либо в характеристическом пространстве. При этом
+для обеспечения согласованного ограничения обычно выбирают единый ко83</p>
+
+<p>эффициент \thetai+ 1 как минимальный по компонентам, что предотвращает на2</p>
+
+<p>рушение баланса между уравнениями. В задачах газовой динамики дополнительно контролируется физическая допустимость состояния (например, положительность \rho и p), что может требовать дополнительного ограничения
+коррекции.</p>
+
+<div class="lecture-nav"><a href="s1-23.html" class="nav-prev">← §23. Метод Годунова–Колгана</a><a href="s1-25.html" class="nav-next">§25. ENO-схемы →</a></div>
+</div>
+
+<!-- Comments -->
+<div style="max-width:760px;margin:0 auto;padding:0 1.5rem 2rem">
+<div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">
+<h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
+<div id="comments-list"><p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p></div>
+<div id="comment-form" style="display:none;margin-top:.8rem">
+<textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
+<button onclick="window._postComment()" style="margin-top:.4rem;background:#b44a2d;color:#fff;border:none;padding:6px 18px;border-radius:5px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer">Отправить</button>
+</div>
+<div id="comment-login">
+<p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p>
+</div>
+</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+// === Comments System ===
+(function(){
+  if (typeof firebase === 'undefined') { console.warn('Comments: firebase not loaded'); return; }
+  var db, auth;
+  try { db = firebase.firestore(); auth = firebase.auth(); }
+  catch(e) { console.warn('Comments: firebase not initialized', e); return; }
+
+  var PAGE_ID = location.pathname.split('/').pop().replace('.html','') || 'index';
+  var ADMINS = (typeof ADMIN_EMAILS !== 'undefined') ? ADMIN_EMAILS : [];
+
+  function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function loadComments() {
+    var list = document.getElementById('comments-list');
+    if (!list) return;
+    db.collection('comments').where('page','==',PAGE_ID).get().then(function(snap) {
+      var docs = [];
+      snap.forEach(function(d) { docs.push(d); });
+      docs.sort(function(a,b) {
+        var ta = a.data().createdAt ? a.data().createdAt.seconds : 0;
+        var tb = b.data().createdAt ? b.data().createdAt.seconds : 0;
+        return tb - ta;
+      });
+      if (docs.length === 0) {
+        list.innerHTML = '<p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p>';
+        return;
+      }
+      var user = auth.currentUser;
+      var isAdm = user && ADMINS.indexOf(user.email) >= 0;
+      var html = '';
+      docs.forEach(function(doc) {
+        var c = doc.data();
+        var date = c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+        var del = isAdm ? ' <button onclick="window._deleteComment(\''+doc.id+'\')" style="font-size:.7rem;color:#c44;background:none;border:none;cursor:pointer">удалить</button>' : '';
+        var badge = '';
+        if (c.authorRole === 'superadmin') badge = ' <span style="font-size:.6rem;background:#faeeda;color:#854f0b;padding:1px 4px;border-radius:3px;font-weight:700">преподаватель</span>';
+        html += '<div style="padding:.6rem 0;border-bottom:1px solid #ede6da">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:baseline">';
+        html += '<strong style="font-size:.88rem">'+(c.authorFio||c.authorEmail)+badge+'</strong>';
+        html += '<span style="font-size:.72rem;color:#9a8d7e">'+date+del+'</span></div>';
+        html += '<p style="font-size:.88rem;margin-top:.2rem;margin-bottom:0">'+esc(c.text)+'</p></div>';
+      });
+      list.innerHTML = html;
+    }).catch(function(e) {
+      list.innerHTML = '<p style="color:#c44;font-size:.85rem">Ошибка: '+e.message+'</p>';
+    });
+  }
+
+  window._postComment = function() {
+    var text = document.getElementById('comment-text').value.trim();
+    if (!text) return;
+    var user = auth.currentUser;
+    if (!user) return;
+    var fio = user.email;
+    var role = (ADMINS.indexOf(user.email) >= 0) ? 'superadmin' : 'student';
+    db.collection('users').doc(user.uid).get().then(function(ud) {
+      if (ud.exists && ud.data().fio) fio = ud.data().fio;
+    }).catch(function(){}).finally(function() {
+      db.collection('comments').add({
+        page: PAGE_ID, text: text,
+        authorEmail: user.email, authorFio: fio, authorUid: user.uid, authorRole: role,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function() {
+        document.getElementById('comment-text').value = '';
+        loadComments();
+      }).catch(function(e) { alert('Ошибка: '+e.message); });
+    });
+  };
+
+  window._deleteComment = function(id) {
+    if (!confirm('Удалить?')) return;
+    db.collection('comments').doc(id).delete().then(loadComments).catch(function(e){alert(e.message);});
+  };
+
+  var _checkAuthRetries = 0;
+  function checkAuth() {
+    var user = auth.currentUser;
+    var form = document.getElementById('comment-form');
+    var login = document.getElementById('comment-login');
+    if (!form || !login) return;
+    if (user && window._userApproved) {
+      form.style.display = '';
+      login.style.display = 'none';
+      _checkAuthRetries = 0;
+    } else if (user && typeof window._userApproved === 'undefined' && _checkAuthRetries < 15) {
+      _checkAuthRetries++;
+      setTimeout(checkAuth, 400);
+    } else if (user) {
+      form.style.display = 'none';
+      login.style.display = '';
+      login.querySelector('p').textContent = 'Ваш профиль ещё не подтверждён.';
+      _checkAuthRetries = 0;
+    } else {
+      form.style.display = 'none';
+      login.style.display = '';
+      _checkAuthRetries = 0;
+    }
+  }
+
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', loadComments); }
+  else { loadComments(); }
+
+  function safeCheckAuth() {
+    if (document.getElementById('comment-form')) checkAuth();
+    else setTimeout(safeCheckAuth, 200);
+  }
+  auth.onAuthStateChanged(function() { setTimeout(safeCheckAuth, 500); });
+  window.addEventListener('authReady', safeCheckAuth);
+})();
+</script>
+</body>
+</html>

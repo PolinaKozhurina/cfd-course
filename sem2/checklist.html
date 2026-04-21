@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Зачёт — Чек-лист проверки заданий</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap');
+:root{--bg:#faf8f4;--surface:#f5f0e8;--surface2:#ede6da;--border:#d9cfc0;--text:#2c2419;--text2:#6b5d4f;--accent:#b44a2d;--accent2:#1a6b5a;--green:#1a6b5a;--red:#c44;--orange:#854f0b;--cyan:#3a5ba0;--pink:#b44a2d}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Source Serif 4',Georgia,serif;background:var(--bg);color:var(--text);text-align:justify;line-height:1.6;padding:2rem;max-width:1400px;margin:0 auto}
+h1{font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:900;color:var(--accent);margin-bottom:.5rem}
+h2{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--accent);margin:2.5rem 0 1rem;padding-bottom:.5rem;border-bottom:2px solid var(--border)}
+h3{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;color:var(--cyan);margin:1.5rem 0 .75rem}
+h4{font-size:1rem;font-weight:600;color:var(--orange);margin:1rem 0 .5rem}
+.subtitle{color:var(--text2);font-size:1.1rem;margin-bottom:2rem}
+.block{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin:1.5rem 0;overflow-x:auto}
+.block-header{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem}
+.block-num{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:900;font-size:.9rem;width:2rem;height:2rem;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+table{width:100%;border-collapse:collapse;margin:.75rem 0;font-size:.83rem;table-layout:auto}
+th{background:var(--surface);color:var(--accent);font-weight:700;text-align:left;padding:8px 10px;border:1px solid var(--border)}
+td{padding:6px 10px;border:1px solid var(--border);vertical-align:top;word-wrap:break-word;overflow-wrap:break-word}
+tr:hover td{background:rgba(180,74,45,.05)}
+.check-cell{text-align:center;width:32px;min-width:32px}
+input[type="checkbox"]{width:18px;height:18px;accent-color:#1a6b5a;cursor:pointer}
+.how{color:var(--orange);font-size:.8rem}
+.file{color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:.78rem;background:var(--surface);padding:1px 5px;border-radius:3px;white-space:normal;word-break:break-all}
+.tag{color:var(--pink);font-family:'JetBrains Mono',monospace;font-size:.78rem;background:rgba(180,74,45,.12);padding:1px 6px;border-radius:3px;white-space:normal;border:1px solid rgba(180,74,45,.25)}
+.ref-values{background:var(--surface);border-left:3px solid var(--accent);padding:1rem;margin:1rem 0;border-radius:0 8px 8px 0;font-family:'JetBrains Mono',monospace;font-size:.82rem;white-space:pre-wrap}
+.warning{background:#fde8e8;border-left:3px solid var(--red);padding:.75rem 1rem;margin:.75rem 0;border-radius:0 8px 8px 0;font-size:.9rem}
+.tip{background:#e8f4f0;border-left:3px solid var(--green);padding:.75rem 1rem;margin:.75rem 0;border-radius:0 8px 8px 0;font-size:.9rem}
+.folder-tree{background:var(--surface);padding:1rem 1.5rem;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:.76rem;line-height:1.7;white-space:pre;overflow-x:auto;margin:1rem 0}
+.plot-container{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin:1rem 0}
+.plot-box{background:#fff;border-radius:8px;padding:.75rem;border:1px solid var(--border)}
+.plot-title{font-size:.82rem;font-weight:700;color:var(--cyan);margin-bottom:.5rem;text-align:center}
+canvas{width:100%;height:auto;border-radius:4px}
+.group-input{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin:1rem 0}
+.group-input label{color:var(--text2);font-size:.85rem;display:block;margin-bottom:.25rem}
+.group-input input[type="text"]{width:100%;background:#fff;border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:inherit;font-size:.9rem}
+.section-divider{height:1px;background:var(--border);margin:3rem 0;border:none}
+.marker-rule{background:#fdf6ee;border:1px solid rgba(180,74,45,.25);border-radius:8px;padding:1rem;margin:1rem 0}
+.marker-rule code{background:rgba(180,74,45,.15);padding:2px 6px;border-radius:3px;font-size:.82rem;color:var(--pink)}
+@media print{body{background:#fff;color:#000;padding:.5rem;font-size:9pt}.block{border:1px solid #ccc;break-inside:avoid}th{background:#eee;color:#000}td{border:1px solid #ccc}h1{color:#b44a2d}h2{color:#b44a2d}h3{color:#1a6b5a}canvas{max-height:170px}.how{color:#b45309}.file{color:#0e7490;background:#e8f4f0}.tag{color:#b44a2d;background:#fde8e8;border-color:#f9a8d4}}
+h1,h2,h3,h4,th,td,.plot-title,.ref-values,.folder-tree{text-align:unset}
+th{text-align:left}
+.check-cell{text-align:center}
+</style>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},svg:{fontCache:'global'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+<h1>ЗАЧЁТ — Разностные схемы и параллельная реализация</h1>
+<p class="subtitle">Полный чек-лист проверки · 21 апреля 2026 · Работа в группах</p>
+
+<div class="block">
+  <h3>Информация о группе</h3>
+  <div class="group-input">
+    <div><label>Номер группы</label><input type="text" placeholder="Группа №"></div>
+    <div><label>Участники</label><input type="text" placeholder="ФИО 1, ФИО 2, ..."></div>
+    <div><label>Проверяющий / Дата</label><input type="text" placeholder=""></div>
+  </div>
+</div>
+
+<!-- ===================== LEGEND ===================== -->
+<div class="block">
+<h3>Обозначения в таблицах</h3>
+<table>
+<tr><td style="width:120px"><span class="file">файл.png</span></td><td>Файл, который должен лежать в папке <b>до зачёта</b></td></tr>
+<tr><td><span class="tag">CHECK: TAG</span></td><td>Маркер в коде — студент ставит <b>заранее</b>, проверяющий ищет через Ctrl+F</td></tr>
+<tr><td><span class="how">оранжевый текст</span></td><td>Инструкция: что именно сделать или что должно быть видно</td></tr>
+</table>
+</div>
+
+<!-- ===================== MARKER SYSTEM ===================== -->
+<div class="marker-rule">
+<h3>Система маркеров в коде (для студентов)</h3>
+<p style="margin:.5rem 0">Перед зачётом расставьте в коде комментарии-маркеры вида:</p>
+<pre style="background:#fff;padding:.75rem;border-radius:6px;margin:.5rem 0;font-size:.82rem;color:var(--text)">
+<span style="color:var(--text2)">// CHECK: FLIC_LAGRANGE — начало лагранжева этапа</span>
+void lagrange_step(double* rho, double* u, double* E, ...) {
+    <span style="color:var(--text2)">// давление на границах</span>
+    double p_half = 0.5 * (p[i] + p[i+1]);
+    ...
+}
+
+<span style="color:var(--text2)">// CHECK: HLLC_SOLVER — HLLC солвер Римана</span>
+Vec4 hllc_flux(Vec4 UL, Vec4 UR, ...) {
+    ...
+}
+
+<span style="color:var(--text2)">// CHECK: CFL_2D — условие CFL для 2D</span>
+dt = cfl / (lam_x/dx + lam_y/dy);
+</pre>
+<p style="margin:.5rem 0"><b>Правило:</b> один маркер <code>// CHECK: ИМЯ</code> на каждый пункт проверки. Проверяющий открывает файл → Ctrl+F → вводит маркер → сразу видит нужный код.</p>
+<p style="margin:.5rem 0;color:var(--text2)">Полный список маркеров — в таблицах ниже (колонка «Маркер в коде»).</p>
+</div>
+
+<!-- ===================== FOLDER STRUCTURE ===================== -->
+<h2>Структура папки сдачи</h2>
+<div class="tip"><b>Код общий</b> на группу — в <span class="file">src/</span>. Результаты — в <span class="file">results/</span>. Всё должно быть готово <b>до зачёта</b>.</div>
+
+<div class="folder-tree">group_NN/
+├── src/                             ← ОБЩИЙ КОД (один на группу)
+│   ├── euler_common/                ← EOS, HLLC, реконструкция, CFL
+│   ├── flic/
+│   ├── godunov/
+│   ├── mader_2de/
+│   ├── simple_piso_pimple/
+│   ├── unstructured/
+│   ├── mpi_parallel/
+│   └── Makefile
+├── results/                         ← КАРТИНКИ + ЧИСЛА (готовы до зачёта)
+│   ├── 01_sod_flic/        sod_rho.png  sod_p.png  sod_u.png  values.txt
+│   ├── 02_sod_godunov/     sod_rho_exact.png  sod_p_exact.png  sod_u_exact.png
+│   ├── 03_godunov_2d/      extruded_1d.png  conservation.txt  convergence.png
+│   ├── 04_mader_sod/       sod_rho.png  sod_p.png  sod_u.png  values.txt
+│   ├── 04_mader_det/       front_xt.png  profiles_P_rho_W.png  values.txt
+│   ├── 04_mader_corner/    pressure_t1..t3.png  W_map.png  arrival_time.png
+│   ├── 05_cavity/          u_y_ghia.png  v_x_ghia.png  streamlines.png  ghia_table.txt
+│   ├── 06_taylor_green/    error_vs_dt.png  decay.png
+│   ├── 07_step/            u_field.png  streamlines.png  xr.txt
+│   ├── 08_woodward/        density.png  mesh.png
+│   ├── 09_naca/            mach_field.png  cp.png  aero.txt
+│   ├── 10_cylinder/        cp_theta.png  cd.txt
+│   └── 11_mpi/             decomposition.png  speedup.png  verification.txt
+└── README.md               ← ФИО, кто что делал</div>
+
+<hr class="section-divider">
+
+<!-- ===================== BLOCK 1: FLIC ===================== -->
+
+<div class="block">
+<div class="block-header"><div class="block-num">1</div><h3 style="margin:0">FLIC — ударная труба Сода</h3></div>
+
+<table>
+<tr><th>#</th><th>Пункт</th><th>Результат</th><th>Маркер в коде</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
+<tr><td>1</td><td>Лагранжев этап</td><td>Давление на гранях $p_{i+1/2}$, промежуточные скорость $\tilde{u}$ и энергия $\tilde{E}$</td><td><span class="tag">CHECK: FLIC_LAGRANGE</span></td><td><span class="how">Поставить маркер перед функцией лагранжева шага.</span> Проверяющий находит по Ctrl+F и видит: вычисление давления на границах $p_{i\pm1/2}$, обновление скорости $\tilde{u}$ и энергии $\tilde{E}$</td><td class="check-cell"><input type="checkbox" id="chk_1"></td></tr>
+<tr><td>2</td><td>Эйлеров этап</td><td>Апвинд-выбор донорной ячейки, потоки массы $\Delta M$ через грани</td><td><span class="tag">CHECK: FLIC_EULER</span></td><td><span class="how">Поставить маркер перед блоком эйлерова переноса.</span> В коде должно быть видно: выбор донорской ячейки (if $u>0$ → берём $\rho$ слева), вычисление потоков $\Delta M$ через границы</td><td class="check-cell"><input type="checkbox" id="chk_2"></td></tr>
+<tr><td>3</td><td>Консервативность</td><td>Обновление $\rho$, $\rho u$, $\rho E$ через разность потоков (телескопичность)</td><td><span class="tag">CHECK: FLIC_CONSERV</span></td><td><span class="how">Поставить маркер перед обновлением консервативных переменных:</span> $\rho^{n+1} = \rho^n - \Delta M/\Delta x$ (аналогично для $\rho u$ и $\rho E$)</td><td class="check-cell"><input type="checkbox" id="chk_3"></td></tr>
+<tr><td>4</td><td>CFL</td><td>Шаг по времени $\Delta t = \text{CFL} \cdot \Delta x / \max(|u|+a)$</td><td><span class="tag">CHECK: FLIC_CFL</span></td><td><span class="how">Поставить маркер перед вычислением шага по времени.</span> В файле <span class="file">values.txt</span> указать типичное значение $\Delta t$ и CFL-число</td><td class="check-cell"><input type="checkbox" id="chk_4"></td></tr>
+<tr><td>5</td><td><b>Графики</b> ρ, P, u</td><td>Видны все три волны: разрежение, контактный разрыв, ударная</td><td>—</td><td><span class="file">results/01_sod_flic/sod_rho.png</span>, <span class="file">sod_p.png</span>, <span class="file">sod_u.png</span><br><span class="how">На графике:</span> подписи осей, отметки ВР/КР/УВ</td><td class="check-cell"><input type="checkbox" id="chk_5"></td></tr>
+<tr><td>6</td><td>Контрольные числа</td><td>Отклонение от точного решения $\leq 5\%$ в контрольных точках</td><td>—</td><td><span class="file">results/01_sod_flic/values.txt</span>:<br><code style="font-size:.72rem">x=0.60: rho=0.4263 p=0.3031 u=0.9274</code><br><code style="font-size:.72rem">x=0.75: rho=0.2656 p=0.3031 u=0.9274</code></td><td class="check-cell"><input type="checkbox" id="chk_6"></td></tr>
+</table>
+
+<h4>Задание: Ударная труба Сода методом FLIC</h4>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Постановка задачи.</strong> Труба $x \in [0, 1]$ с мембраной при $x = 0.5$. Слева — газ с высокой плотностью и давлением, справа — с низкой. В момент $t = 0$ мембрана разрывается. Задача Римана: найти поля $\rho(x)$, $P(x)$, $u(x)$ при $t = 0.2$.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Начальные данные (тест Сода):</strong> $\rho_L = 1$, $P_L = 1$, $u_L = 0$ (слева); $\rho_R = 0.125$, $P_R = 0.1$, $u_R = 0$ (справа). Газ идеальный, $\gamma = 1.4$.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Параметры расчёта:</strong> $N = 200$ ячеек, CFL = 0.9, граничные условия — отражающие (зеркальные).</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Какие графики построить:</strong> три отдельных графика — $\rho(x)$, $P(x)$, $u(x)$. На каждом подписать оси. Вертикальными пунктирами отметить положения трёх волн: ВР (волна разрежения), КР (контактный разрыв), УВ (ударная волна).</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Определения величин.</strong> $\rho$ — плотность (кг/м³); $P$ — давление (Па); $u$ — скорость (м/с); ВР — веер волн разрежения (плавный переход, 1-волна); КР — контактный разрыв (скачок $\rho$, но $P$ и $u$ непрерывны, 2-волна); УВ — ударная волна (скачок всех величин, 3-волна).</p>
+
+<h4>Ожидаемые поля — тест Сода, t = 0.2</h4>
+<div class="plot-container">
+  <div class="plot-box"><div class="plot-title">ρ(x)</div><svg id="svg_sod_rho" viewBox="0 0 420 250" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="420" height="250" fill="#fdf9f3" rx="4"/>
+<line x1="48" y1="12.0" x2="408" y2="12.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="54.0" x2="408" y2="54.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="96.0" x2="408" y2="96.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="138.0" x2="408" y2="138.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="180.0" x2="408" y2="180.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="222.0" x2="408" y2="222.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48.0" y1="12" x2="48.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="84.0" y1="12" x2="84.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="120.0" y1="12" x2="120.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="156.0" y1="12" x2="156.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="192.0" y1="12" x2="192.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="228.0" y1="12" x2="228.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="264.0" y1="12" x2="264.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="300.0" y1="12" x2="300.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="336.0" y1="12" x2="336.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="372.0" y1="12" x2="372.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="408.0" y1="12" x2="408.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<text x="48.0" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.0</text>
+<text x="120.0" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.2</text>
+<text x="192.0" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.4</text>
+<text x="264.0" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.6</text>
+<text x="336.0" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.8</text>
+<text x="408.0" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">1.0</text>
+<text x="228.0" y="248" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">x</text>
+<text x="44" y="15.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">1.1</text>
+<text x="44" y="57.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.9</text>
+<text x="44" y="99.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.7</text>
+<text x="44" y="141.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.4</text>
+<text x="44" y="183.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.2</text>
+<text x="44" y="225.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.0</text>
+<text x="8" y="117.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle" transform="rotate(-90 8 117.0)">ρ</text>
+<path d="M48.0,31.1 L49.8,31.1 L51.6,31.1 L53.4,31.1 L55.2,31.1 L57.0,31.1 L58.8,31.1 L60.6,31.1 L62.4,31.1 L64.2,31.1 L66.0,31.1 L67.8,31.1 L69.6,31.1 L71.4,31.1 L73.2,31.1 L75.0,31.1 L76.8,31.1 L78.6,31.1 L80.4,31.1 L82.2,31.1 L84.0,31.1 L85.8,31.1 L87.6,31.1 L89.4,31.1 L91.2,31.1 L93.0,31.1 L94.8,31.1 L96.6,31.1 L98.4,31.1 L100.2,31.1 L102.0,31.1 L103.8,31.1 L105.6,31.1 L107.4,31.1 L109.2,31.1 L111.0,31.1 L112.8,31.1 L114.6,31.1 L116.4,31.1 L118.2,31.1 L120.0,31.1 L121.8,31.1 L123.6,31.1 L125.4,31.1 L127.2,31.1 L129.0,31.1 L130.8,31.1 L132.6,31.1 L134.4,31.1 L136.2,31.1 L138.0,31.1 L139.8,31.1 L141.6,31.1 L143.4,31.9 L145.2,34.4 L147.0,36.8 L148.8,39.3 L150.6,41.8 L152.4,44.2 L154.2,46.7 L156.0,49.2 L157.8,51.6 L159.6,54.1 L161.4,56.5 L163.2,59.0 L165.0,61.5 L166.8,63.9 L168.6,66.4 L170.4,68.8 L172.2,71.3 L174.0,73.8 L175.8,76.2 L177.6,78.7 L179.4,81.2 L181.2,83.6 L183.0,86.1 L184.8,88.5 L186.6,91.0 L188.4,93.5 L190.2,95.9 L192.0,98.4 L193.8,100.8 L195.6,103.3 L197.4,105.8 L199.2,108.2 L201.0,110.7 L202.8,113.1 L204.6,115.6 L206.4,118.1 L208.2,120.5 L210.0,123.0 L211.8,125.5 L213.6,127.9 L215.4,130.4 L217.2,132.8 L219.0,135.3 L220.8,137.8 L222.6,140.2 L224.4,140.6 L226.2,140.6 L228.0,140.6 L229.8,140.6 L231.6,140.6 L233.4,140.6 L235.2,140.6 L237.0,140.6 L238.8,140.6 L240.6,140.6 L242.4,140.6 L244.2,140.6 L246.0,140.6 L247.8,140.6 L249.6,140.6 L251.4,140.6 L253.2,140.6 L255.0,140.6 L256.8,140.6 L258.6,140.6 L260.4,140.6 L262.2,140.6 L264.0,140.6 L265.8,140.6 L267.6,140.6 L269.4,140.6 L271.2,140.6 L273.0,140.6 L274.8,140.6 L276.6,140.6 L278.4,140.6 L280.2,140.6 L282.0,140.6 L283.8,140.6 L285.6,140.6 L287.4,140.6 L289.2,140.6 L291.0,140.6 L292.8,140.6 L294.6,140.6 L296.4,171.3 L298.2,171.3 L300.0,171.3 L301.8,171.3 L303.6,171.3 L305.4,171.3 L307.2,171.3 L309.0,171.3 L310.8,171.3 L312.6,171.3 L314.4,171.3 L316.2,171.3 L318.0,171.3 L319.8,171.3 L321.6,171.3 L323.4,171.3 L325.2,171.3 L327.0,171.3 L328.8,171.3 L330.6,171.3 L332.4,171.3 L334.2,171.3 L336.0,171.3 L337.8,171.3 L339.6,171.3 L341.4,171.3 L343.2,171.3 L345.0,171.3 L346.8,171.3 L348.6,171.3 L350.4,171.3 L352.2,171.3 L354.0,171.3 L355.8,198.1 L357.6,198.1 L359.4,198.1 L361.2,198.1 L363.0,198.1 L364.8,198.1 L366.6,198.1 L368.4,198.1 L370.2,198.1 L372.0,198.1 L373.8,198.1 L375.6,198.1 L377.4,198.1 L379.2,198.1 L381.0,198.1 L382.8,198.1 L384.6,198.1 L386.4,198.1 L388.2,198.1 L390.0,198.1 L391.8,198.1 L393.6,198.1 L395.4,198.1 L397.2,198.1 L399.0,198.1 L400.8,198.1 L402.6,198.1 L404.4,198.1 L406.2,198.1 L408.0,198.1" fill="none" stroke="#3a5ba0" stroke-width="2.5"/>
+<line x1="181.2" y1="12" x2="181.2" y2="222" stroke="#9a8d7e40" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="181.2" y="23" font-family="Source Serif 4,serif" font-size="9" fill="#9a8d7e" text-anchor="middle">ВР</text>
+<line x1="294.6" y1="12" x2="294.6" y2="222" stroke="#854f0b40" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="294.6" y="23" font-family="Source Serif 4,serif" font-size="9" fill="#854f0b" text-anchor="middle">КР</text>
+<line x1="354.0" y1="12" x2="354.0" y2="222" stroke="#b44a2d40" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="354.0" y="23" font-family="Source Serif 4,serif" font-size="9" fill="#b44a2d" text-anchor="middle">УВ</text>
+</svg></div>
+  <div class="plot-box"><div class="plot-title">P(x)</div><svg id="svg_sod_p" viewBox="0 0 420 250" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="420" height="250" fill="#fdf9f3" rx="4"/>
+<line x1="48" y1="12.0" x2="408" y2="12.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="54.0" x2="408" y2="54.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="96.0" x2="408" y2="96.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="138.0" x2="408" y2="138.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="180.0" x2="408" y2="180.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="222.0" x2="408" y2="222.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48.0" y1="12" x2="48.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="84.0" y1="12" x2="84.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="120.0" y1="12" x2="120.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="156.0" y1="12" x2="156.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="192.0" y1="12" x2="192.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="228.0" y1="12" x2="228.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="264.0" y1="12" x2="264.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="300.0" y1="12" x2="300.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="336.0" y1="12" x2="336.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="372.0" y1="12" x2="372.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="408.0" y1="12" x2="408.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<text x="48.0" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.0</text>
+<text x="120.0" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.2</text>
+<text x="192.0" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.4</text>
+<text x="264.0" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.6</text>
+<text x="336.0" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.8</text>
+<text x="408.0" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">1.0</text>
+<text x="228.0" y="248" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">x</text>
+<text x="44" y="15.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">1.1</text>
+<text x="44" y="57.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.9</text>
+<text x="44" y="99.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.7</text>
+<text x="44" y="141.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.4</text>
+<text x="44" y="183.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.2</text>
+<text x="44" y="225.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.0</text>
+<text x="8" y="117.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle" transform="rotate(-90 8 117.0)">P</text>
+<path d="M48.0,31.1 L49.8,31.1 L51.6,31.1 L53.4,31.1 L55.2,31.1 L57.0,31.1 L58.8,31.1 L60.6,31.1 L62.4,31.1 L64.2,31.1 L66.0,31.1 L67.8,31.1 L69.6,31.1 L71.4,31.1 L73.2,31.1 L75.0,31.1 L76.8,31.1 L78.6,31.1 L80.4,31.1 L82.2,31.1 L84.0,31.1 L85.8,31.1 L87.6,31.1 L89.4,31.1 L91.2,31.1 L93.0,31.1 L94.8,31.1 L96.6,31.1 L98.4,31.1 L100.2,31.1 L102.0,31.1 L103.8,31.1 L105.6,31.1 L107.4,31.1 L109.2,31.1 L111.0,31.1 L112.8,31.1 L114.6,31.1 L116.4,31.1 L118.2,31.1 L120.0,31.1 L121.8,31.1 L123.6,31.1 L125.4,31.1 L127.2,31.1 L129.0,31.1 L130.8,31.1 L132.6,31.1 L134.4,31.1 L136.2,31.1 L138.0,31.1 L139.8,31.1 L141.6,31.1 L143.4,32.1 L145.2,35.1 L147.0,38.1 L148.8,41.1 L150.6,44.1 L152.4,47.1 L154.2,50.0 L156.0,53.0 L157.8,56.0 L159.6,59.0 L161.4,62.0 L163.2,65.0 L165.0,68.0 L166.8,71.0 L168.6,74.0 L170.4,77.0 L172.2,79.9 L174.0,82.9 L175.8,85.9 L177.6,88.9 L179.4,91.9 L181.2,94.9 L183.0,97.9 L184.8,100.9 L186.6,103.9 L188.4,106.8 L190.2,109.8 L192.0,112.8 L193.8,115.8 L195.6,118.8 L197.4,121.8 L199.2,124.8 L201.0,127.8 L202.8,130.8 L204.6,133.8 L206.4,136.7 L208.2,139.7 L210.0,142.7 L211.8,145.7 L213.6,148.7 L215.4,151.7 L217.2,154.7 L219.0,157.7 L220.8,160.7 L222.6,163.7 L224.4,164.1 L226.2,164.1 L228.0,164.1 L229.8,164.1 L231.6,164.1 L233.4,164.1 L235.2,164.1 L237.0,164.1 L238.8,164.1 L240.6,164.1 L242.4,164.1 L244.2,164.1 L246.0,164.1 L247.8,164.1 L249.6,164.1 L251.4,164.1 L253.2,164.1 L255.0,164.1 L256.8,164.1 L258.6,164.1 L260.4,164.1 L262.2,164.1 L264.0,164.1 L265.8,164.1 L267.6,164.1 L269.4,164.1 L271.2,164.1 L273.0,164.1 L274.8,164.1 L276.6,164.1 L278.4,164.1 L280.2,164.1 L282.0,164.1 L283.8,164.1 L285.6,164.1 L287.4,164.1 L289.2,164.1 L291.0,164.1 L292.8,164.1 L294.6,164.1 L296.4,164.1 L298.2,164.1 L300.0,164.1 L301.8,164.1 L303.6,164.1 L305.4,164.1 L307.2,164.1 L309.0,164.1 L310.8,164.1 L312.6,164.1 L314.4,164.1 L316.2,164.1 L318.0,164.1 L319.8,164.1 L321.6,164.1 L323.4,164.1 L325.2,164.1 L327.0,164.1 L328.8,164.1 L330.6,164.1 L332.4,164.1 L334.2,164.1 L336.0,164.1 L337.8,164.1 L339.6,164.1 L341.4,164.1 L343.2,164.1 L345.0,164.1 L346.8,164.1 L348.6,164.1 L350.4,164.1 L352.2,164.1 L354.0,164.1 L355.8,202.9 L357.6,202.9 L359.4,202.9 L361.2,202.9 L363.0,202.9 L364.8,202.9 L366.6,202.9 L368.4,202.9 L370.2,202.9 L372.0,202.9 L373.8,202.9 L375.6,202.9 L377.4,202.9 L379.2,202.9 L381.0,202.9 L382.8,202.9 L384.6,202.9 L386.4,202.9 L388.2,202.9 L390.0,202.9 L391.8,202.9 L393.6,202.9 L395.4,202.9 L397.2,202.9 L399.0,202.9 L400.8,202.9 L402.6,202.9 L404.4,202.9 L406.2,202.9 L408.0,202.9" fill="none" stroke="#1a6b5a" stroke-width="2.5"/>
+<line x1="181.2" y1="12" x2="181.2" y2="222" stroke="#9a8d7e40" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="181.2" y="23" font-family="Source Serif 4,serif" font-size="9" fill="#9a8d7e" text-anchor="middle">ВР</text>
+<line x1="294.6" y1="12" x2="294.6" y2="222" stroke="#854f0b40" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="294.6" y="23" font-family="Source Serif 4,serif" font-size="9" fill="#854f0b" text-anchor="middle">КР</text>
+<line x1="354.0" y1="12" x2="354.0" y2="222" stroke="#b44a2d40" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="354.0" y="23" font-family="Source Serif 4,serif" font-size="9" fill="#b44a2d" text-anchor="middle">УВ</text>
+</svg></div>
+  <div class="plot-box"><div class="plot-title">u(x)</div><svg id="svg_sod_u" viewBox="0 0 420 250" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="420" height="250" fill="#fdf9f3" rx="4"/>
+<line x1="48" y1="12.0" x2="408" y2="12.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="54.0" x2="408" y2="54.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="96.0" x2="408" y2="96.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="138.0" x2="408" y2="138.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="180.0" x2="408" y2="180.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="222.0" x2="408" y2="222.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48.0" y1="12" x2="48.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="84.0" y1="12" x2="84.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="120.0" y1="12" x2="120.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="156.0" y1="12" x2="156.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="192.0" y1="12" x2="192.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="228.0" y1="12" x2="228.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="264.0" y1="12" x2="264.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="300.0" y1="12" x2="300.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="336.0" y1="12" x2="336.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="372.0" y1="12" x2="372.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="408.0" y1="12" x2="408.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<text x="48.0" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.0</text>
+<text x="120.0" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.2</text>
+<text x="192.0" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.4</text>
+<text x="264.0" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.6</text>
+<text x="336.0" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.8</text>
+<text x="408.0" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">1.0</text>
+<text x="228.0" y="248" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">x</text>
+<text x="44" y="15.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">1.1</text>
+<text x="44" y="57.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.8</text>
+<text x="44" y="99.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.6</text>
+<text x="44" y="141.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.4</text>
+<text x="44" y="183.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.1</text>
+<text x="44" y="225.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">-0.1</text>
+<text x="8" y="117.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle" transform="rotate(-90 8 117.0)">u</text>
+<path d="M48.0,203.7 L49.8,203.7 L51.6,203.7 L53.4,203.7 L55.2,203.7 L57.0,203.7 L58.8,203.7 L60.6,203.7 L62.4,203.7 L64.2,203.7 L66.0,203.7 L67.8,203.7 L69.6,203.7 L71.4,203.7 L73.2,203.7 L75.0,203.7 L76.8,203.7 L78.6,203.7 L80.4,203.7 L82.2,203.7 L84.0,203.7 L85.8,203.7 L87.6,203.7 L89.4,203.7 L91.2,203.7 L93.0,203.7 L94.8,203.7 L96.6,203.7 L98.4,203.7 L100.2,203.7 L102.0,203.7 L103.8,203.7 L105.6,203.7 L107.4,203.7 L109.2,203.7 L111.0,203.7 L112.8,203.7 L114.6,203.7 L116.4,203.7 L118.2,203.7 L120.0,203.7 L121.8,203.7 L123.6,203.7 L125.4,203.7 L127.2,203.7 L129.0,203.7 L130.8,203.7 L132.6,203.7 L134.4,203.7 L136.2,203.7 L138.0,203.7 L139.8,203.7 L141.6,203.7 L143.4,202.4 L145.2,198.6 L147.0,194.8 L148.8,191.0 L150.6,187.2 L152.4,183.4 L154.2,179.6 L156.0,175.8 L157.8,172.0 L159.6,168.2 L161.4,164.4 L163.2,160.6 L165.0,156.8 L166.8,153.0 L168.6,149.2 L170.4,145.4 L172.2,141.6 L174.0,137.7 L175.8,133.9 L177.6,130.1 L179.4,126.3 L181.2,122.5 L183.0,118.7 L184.8,114.9 L186.6,111.1 L188.4,107.3 L190.2,103.5 L192.0,99.7 L193.8,95.9 L195.6,92.1 L197.4,88.3 L199.2,84.5 L201.0,80.7 L202.8,76.9 L204.6,73.0 L206.4,69.2 L208.2,65.4 L210.0,61.6 L211.8,57.8 L213.6,54.0 L215.4,50.2 L217.2,46.4 L219.0,42.6 L220.8,38.8 L222.6,35.0 L224.4,34.4 L226.2,34.4 L228.0,34.4 L229.8,34.4 L231.6,34.4 L233.4,34.4 L235.2,34.4 L237.0,34.4 L238.8,34.4 L240.6,34.4 L242.4,34.4 L244.2,34.4 L246.0,34.4 L247.8,34.4 L249.6,34.4 L251.4,34.4 L253.2,34.4 L255.0,34.4 L256.8,34.4 L258.6,34.4 L260.4,34.4 L262.2,34.4 L264.0,34.4 L265.8,34.4 L267.6,34.4 L269.4,34.4 L271.2,34.4 L273.0,34.4 L274.8,34.4 L276.6,34.4 L278.4,34.4 L280.2,34.4 L282.0,34.4 L283.8,34.4 L285.6,34.4 L287.4,34.4 L289.2,34.4 L291.0,34.4 L292.8,34.4 L294.6,34.4 L296.4,34.4 L298.2,34.4 L300.0,34.4 L301.8,34.4 L303.6,34.4 L305.4,34.4 L307.2,34.4 L309.0,34.4 L310.8,34.4 L312.6,34.4 L314.4,34.4 L316.2,34.4 L318.0,34.4 L319.8,34.4 L321.6,34.4 L323.4,34.4 L325.2,34.4 L327.0,34.4 L328.8,34.4 L330.6,34.4 L332.4,34.4 L334.2,34.4 L336.0,34.4 L337.8,34.4 L339.6,34.4 L341.4,34.4 L343.2,34.4 L345.0,34.4 L346.8,34.4 L348.6,34.4 L350.4,34.4 L352.2,34.4 L354.0,34.4 L355.8,203.7 L357.6,203.7 L359.4,203.7 L361.2,203.7 L363.0,203.7 L364.8,203.7 L366.6,203.7 L368.4,203.7 L370.2,203.7 L372.0,203.7 L373.8,203.7 L375.6,203.7 L377.4,203.7 L379.2,203.7 L381.0,203.7 L382.8,203.7 L384.6,203.7 L386.4,203.7 L388.2,203.7 L390.0,203.7 L391.8,203.7 L393.6,203.7 L395.4,203.7 L397.2,203.7 L399.0,203.7 L400.8,203.7 L402.6,203.7 L404.4,203.7 L406.2,203.7 L408.0,203.7" fill="none" stroke="#b44a2d" stroke-width="2.5"/>
+<line x1="181.2" y1="12" x2="181.2" y2="222" stroke="#9a8d7e40" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="181.2" y="23" font-family="Source Serif 4,serif" font-size="9" fill="#9a8d7e" text-anchor="middle">ВР</text>
+<line x1="294.6" y1="12" x2="294.6" y2="222" stroke="#854f0b40" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="294.6" y="23" font-family="Source Serif 4,serif" font-size="9" fill="#854f0b" text-anchor="middle">КР</text>
+<line x1="354.0" y1="12" x2="354.0" y2="222" stroke="#b44a2d40" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="354.0" y="23" font-family="Source Serif 4,serif" font-size="9" fill="#b44a2d" text-anchor="middle">УВ</text>
+</svg></div>
+</div>
+<div class="ref-values"><b>Контрольные значения:</b>  ВР→КР: ρ=0.4263 P=0.3031 u=0.9274 | КР→УВ: ρ=0.2656 P=0.3031 u=0.9274 | УВ x≈0.85 КР x≈0.685</div>
+</div>
+
+<!-- ===================== BLOCK 2: GODUNOV 1D ===================== -->
+
+<div class="block">
+<div class="block-header"><div class="block-num">2</div><h3 style="margin:0">Годунов 1D (MUSCL/WENO + HLLC)</h3></div>
+<table>
+<tr><th>#</th><th>Пункт</th><th>Результат</th><th>Маркер</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
+<tr><td>1</td><td>HLLC солвер</td><td>Численные потоки $\hat{F}$ через грани из HLLC-солвера</td><td><span class="tag">CHECK: HLLC_SOLVER</span></td><td><span class="how">Поставить маркер перед функцией HLLC-солвера.</span> В коде должны быть видны: оценки скоростей волн $S_L$, $S_R$, $S^*$ и выбор потока $F^*$ по области</td><td class="check-cell"><input type="checkbox" id="chk_7"></td></tr>
+<tr><td>2</td><td>Реконструкция</td><td>Реконструкция значений на гранях с порядком $\geq 2$ (MUSCL)</td><td><span class="tag">CHECK: RECONSTRUCTION</span></td><td><span class="how">Поставить маркер перед реконструкцией.</span> В коде должны быть: лимитер наклона (minmod или van Leer), вычисление левого и правого значений $q^-$, $q^+$ на гранях ячеек</td><td class="check-cell"><input type="checkbox" id="chk_8"></td></tr>
+<tr><td>3</td><td><b>Графики</b> + точное</td><td>Расчёт и точное решение на одном графике с легендой</td><td>—</td><td><span class="file">results/02_sod_godunov/sod_rho_exact.png</span> и т.д.<br><span class="how">На графике:</span> синяя=расчёт, красный пунктир=точное. Легенда</td><td class="check-cell"><input type="checkbox" id="chk_9"></td></tr>
+</table>
+<p style="color:var(--text2);font-size:.85rem;margin-top:.5rem">Ожидаемые поля — те же, что в задании 1 (тест Сода). Графики должны дополнительно содержать наложение точного решения.</p>
+</div>
+
+<!-- ===================== BLOCK 3: GODUNOV 2D ===================== -->
+
+<div class="block">
+<div class="block-header"><div class="block-num">3</div><h3 style="margin:0">Годунов 2D (unsplit или Strang)</h3></div>
+<table>
+<tr><th>#</th><th>Пункт</th><th>Результат</th><th>Маркер</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
+<tr><td>1</td><td>U=(ρ,ρu,ρv,E)ᵀ</td><td>Вектор $U = (\rho, \rho u, \rho v, \rho E)^T$ и потоки $F$, $G$</td><td><span class="tag">CHECK: STATE_VECTOR_2D</span></td><td><span class="how">Поставить маркер у объявления вектора состояния $U[4][N_x][N_y]$</span> и потоковых функций $F[4]$, $G[4]$ для двумерной задачи</td><td class="check-cell"><input type="checkbox" id="chk_10"></td></tr>
+<tr><td>2</td><td><b>CFL 2D</b></td><td>Двумерное условие CFL: $\Delta t = \text{CFL} / (\lambda_x/\Delta x + \lambda_y/\Delta y)$</td><td><span class="tag">CHECK: CFL_2D</span></td><td><span class="how">Поставить маркер у вычисления CFL.</span> Формула должна быть двумерной: $\Delta t = \text{CFL} / (\lambda_x/\Delta x + \lambda_y/\Delta y)$. Если использована одномерная формула — <b style="color:var(--red)">не зачёт</b></td><td class="check-cell"><input type="checkbox" id="chk_11"></td></tr>
+<tr><td>3</td><td><b>Экструдированный 1D</b></td><td>Профиль $\rho(x)$ из 2D-расчёта совпадает с 1D</td><td>—</td><td><span class="file">results/03_godunov_2d/extruded_1d.png</span>:<br><span class="how">Наложить профиль $\rho(x)$ из 2D-расчёта (срез при $y = \text{const}$) и из 1D-расчёта на одном графике.</span> Кривые должны совпасть с точностью до машинной погрешности</td><td class="check-cell"><input type="checkbox" id="chk_12"></td></tr>
+<tr><td>4</td><td><b>Консервативность</b></td><td>ε &lt; 10⁻¹⁰</td><td>—</td><td><span class="file">results/03_godunov_2d/conservation.txt</span>:<br><code style="font-size:.72rem">t=0.0: mass=1.000000000000 E=2.500000000000</code><br><code style="font-size:.72rem">t=end: mass=1.000000000001 diff=1.2e-14</code></td><td class="check-cell"><input type="checkbox" id="chk_13"></td></tr>
+<tr><td>5</td><td><b>Порядок сходимости</b></td><td>Наклон $\approx 2$ на графике $\log L_1$ vs $\log \Delta x$</td><td>—</td><td><span class="file">results/03_godunov_2d/convergence.png</span>: log-log L1 vs Δx, ≥3 сеток.<br><span class="how">На графике сходимости указать наклон прямой (ожидается $\approx 2$ для MUSCL).</span> Минимум 3 сетки в расчёте</td><td class="check-cell"><input type="checkbox" id="chk_14"></td></tr>
+</table>
+<div class="warning"><b>Типичная ошибка:</b> 1D CFL в 2D → blow-up. Проверяющий ищет <span class="tag">CHECK: CFL_2D</span> и смотрит формулу.</div>
+
+<h4>Задание: порядок пространственной сходимости</h4>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Что такое порядок сходимости.</strong> Если при уменьшении шага сетки $\Delta x$ в 2 раза ошибка $L_1$ уменьшается в $2^p$ раз, то схема имеет порядок $p$. Для MUSCL-реконструкции ожидается $p \approx 2$.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Как измерить.</strong> Запустить тест с изотропным вихрем (isentropic vortex) на сетках $50^2$, $100^2$, $200^2$ (и желательно $400^2$). Для каждой сетки вычислить $L_1 = \frac{1}{N} \sum_i |\rho_i^{num} - \rho_i^{exact}|$. Построить $\log(L_1)$ vs $\log(\Delta x)$ — наклон прямой = порядок.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Какой график построить:</strong> точки ($\Delta x$, $L_1$) в логарифмических осях, соединённые линией. Рядом — пунктирная прямая с наклоном 2 для сравнения. Подписать измеренный наклон числом.</p>
+
+<h4>Ожидаемый график порядка сходимости</h4>
+<div class="plot-container">
+  <div class="plot-box"><div class="plot-title">L1 ошибка vs Δx (log-log), наклон ≈ 2</div><svg id="svg_conv" viewBox="0 0 420 250" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="420" height="250" fill="#fdf9f3" rx="4"/>
+<line x1="50" y1="12.0" x2="408" y2="12.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="50" y1="64.5" x2="408" y2="64.5" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="50" y1="117.0" x2="408" y2="117.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="50" y1="169.5" x2="408" y2="169.5" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="50" y1="222.0" x2="408" y2="222.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="50.0" y1="12" x2="50.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="139.5" y1="12" x2="139.5" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="229.0" y1="12" x2="229.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="318.5" y1="12" x2="318.5" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="408.0" y1="12" x2="408.0" y2="222" stroke="#e8e0d4" stroke-width="0.5"/>
+<text x="79.5" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.025</text>
+<text x="171.1" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.05</text>
+<text x="262.8" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.1</text>
+<text x="354.4" y="236" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.2</text>
+<text x="229.0" y="248" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">Δx</text>
+<text x="46" y="177.3" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">1e-03</text>
+<text x="46" y="86.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">1e-02</text>
+<text x="8" y="117.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle" transform="rotate(-90 8 117.0)">L1</text>
+<path d="M79.5,192.9 L171.1,138.0 L262.8,83.0 L354.4,28.1" fill="none" stroke="#854f0b" stroke-width="2"/>
+<circle cx="79.5" cy="192.9" r="4" fill="#854f0b"/>
+<circle cx="171.1" cy="138.0" r="4" fill="#854f0b"/>
+<circle cx="262.8" cy="83.0" r="4" fill="#854f0b"/>
+<circle cx="354.4" cy="28.1" r="4" fill="#854f0b"/>
+<line x1="282.7" y1="43.5" x2="354.3" y2="127.5" stroke="#9a8d7e" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="329.24" y="64.5" font-family="Source Serif 4,serif" font-size="10" fill="#9a8d7e">slope = 2</text>
+</svg></div>
+</div>
+
+<div class="ref-values"><b>Параметры тестов Годунов 2D:</b>
+Экструдированный 1D: Сод (те же параметры), область [0,1]×[0,0.1], Nx=200, Ny=4, зеркальные ГУ по y
+Консервативность: замкнутая область (все стенки — зеркальные), t=0→t_end, сравнить Σρ, Σρu, ΣE
+Isentropic vortex (порядок сходимости):
+  Фон: ρ∞=1, p∞=1, u∞=1, v∞=0, γ=1.4
+  Вихрь в центре (x₀,y₀)=(5,5), область [0,10]²:
+    δu = −β(y−y₀)/(2π) · e^((1−r²)/2),  δv = β(x−x₀)/(2π) · e^((1−r²)/2)
+    δT = −(γ−1)β²/(8γπ²) · e^(1−r²),  β=5
+  Точное решение: вихрь сдвигается на (u∞·t, v∞·t), форма сохраняется
+  Сетки: 50², 100², 200² (400²) → замерить L1(ρ) при t=10 → наклон ≈ 2 для MUSCL</div>
+</div>
+
+<!-- ===================== BLOCK 4: MADER ===================== -->
+
+<div class="block">
+<div class="block-header"><div class="block-num">4</div><h3 style="margin:0">2DE Мейдера — Код (5 фаз)</h3></div>
+<table>
+<tr><th>#</th><th>Пункт</th><th>Результат</th><th>Маркер</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
+<tr><td>1</td><td>Фаза I: EOS</td><td>Уравнение состояния $P = (\gamma - 1)\rho I$ с защитой $P \geq P_{min}$</td><td><span class="tag">CHECK: MADER_EOS</span></td><td><span class="how">Поставить маркер у уравнения состояния.</span> В коде: вычисление давления $P = (\gamma-1)\rho I$, скорости звука $c$, и защита от отрицательного давления $P \geq P_{min}$</td><td class="check-cell"><input type="checkbox" id="chk_15"></td></tr>
+<tr><td>2</td><td>Фаза II: вязкость</td><td>$Q > 0$ при сжатии, $Q = 0$ при расширении</td><td><span class="tag">CHECK: MADER_VISC</span></td><td><span class="how">Поставить маркер у искусственной вязкости.</span> В коде: проверка на сжатие, вычисление $Q = \text{VISC} \cdot \rho \cdot \Delta V$ (при сжатии) или $Q = 0$ (при расширении)</td><td class="check-cell"><input type="checkbox" id="chk_16"></td></tr>
+<tr><td>3</td><td>Фаза II: скорости</td><td>Промежуточные скорости $\tilde{U}$, $\tilde{V}$ после фазы II</td><td><span class="tag">CHECK: MADER_VELOCITY</span></td><td><span class="how">Поставить маркер у обновления скоростей $\tilde{U}$, $\tilde{V}$.</span> Формулы для геометрии SLAB (плоская симметрия)</td><td class="check-cell"><input type="checkbox" id="chk_17"></td></tr>
+<tr><td>4</td><td>Фаза III: ZIP Energy</td><td>Внутренняя энергия $\tilde{I} \geq 0$ после ZIP-формулы</td><td><span class="tag">CHECK: MADER_ZIP</span></td><td><span class="how">Поставить маркер у ZIP Energy Equation.</span> Должны быть 6 членов для SLAB-геометрии и вычисление промежуточной плотности $\tilde{\rho}$. Проверить: $\tilde{I} \geq 0$</td><td class="check-cell"><input type="checkbox" id="chk_18"></td></tr>
+<tr><td>5</td><td>Фаза IV: Donor-Acceptor</td><td>Масса сохраняется: $\sum \rho \Delta V = \text{const}$</td><td><span class="tag">CHECK: MADER_DONOR</span></td><td><span class="how">Поставить маркер у Donor-Acceptor переноса.</span> В коде: вычисление коэффициента $\alpha$, массы переноса DMASS, инкрементов массы и энергии DM±, DE±</td><td class="check-cell"><input type="checkbox" id="chk_19"></td></tr>
+<tr><td>6</td><td>Фаза V: перераспределение</td><td>Обновление полей $\rho$, $U$, $V$, $I$ из инкрементов</td><td><span class="tag">CHECK: MADER_REPARTITION</span></td><td><span class="how">Поставить маркер у перераспределения (фаза V).</span> Обновление всех полей из инкрементов: $\rho^{n+1} = \rho + DM$, аналогично $U$, $V$, $I$</td><td class="check-cell"><input type="checkbox" id="chk_20"></td></tr>
+<tr><td>7</td><td>Хим. кинетика (Аррениус)</td><td>Скорость выгорания $dW/dt = -Z \cdot W \cdot \exp(-E^*/RT)$</td><td><span class="tag">CHECK: MADER_ARRHENIUS</span></td><td><span class="how">Поставить маркер у кинетики Аррениуса.</span> Формула выгорания: $W \mathrel{-}= \Delta t \cdot Z \cdot W \cdot \exp(-E^*/RT)$. Должны быть пороги MINWT, GASW, VCNT</td><td class="check-cell"><input type="checkbox" id="chk_21"></td></tr>
+</table>
+</div>
+
+<!-- MADER TEST 1: SOD -->
+<div class="block">
+<div class="block-header"><div class="block-num">4a</div><h3 style="margin:0">2DE Мейдера — Тест 1: Ударная труба Сода</h3></div>
+<table>
+<tr><th>#</th><th>Пункт</th><th>Результат</th><th>Параметры</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
+<tr><td>1</td><td>Параметры расчёта</td><td>Квази-одномерный расчёт: NI ячеек по $x$, NJ=3 по $y$</td><td>NI=100, NJ=3, SLAB<br>γ=1.4, VISC=0.5, CFL=0.5<br>зеркальные ГУ, t=0.2</td><td><span class="how">Проверить параметры расчёта в конфиге или main():</span> NI=100, NJ=3, SLAB, $\gamma=1.4$, VISC=0.5, CFL=0.5</td><td class="check-cell"><input type="checkbox" id="chk_22"></td></tr>
+<tr><td>2</td><td><b>Графики</b> ρ(x), P(x), u(x)</td><td>3 волны</td><td>—</td><td><span class="file">results/04_mader_sod/sod_rho.png</span>, <span class="file">sod_p.png</span>, <span class="file">sod_u.png</span><br><span class="how">Графики строятся по центральному ряду $j=2$.</span> На каждом графике подписать положения волн: ВР (волна разрежения), КР (контактный разрыв), УВ (ударная волна)</td><td class="check-cell"><input type="checkbox" id="chk_23"></td></tr>
+<tr><td>3</td><td>Контрольные значения</td><td>≤5% от эталона</td><td>—</td><td><span class="file">results/04_mader_sod/values.txt</span>:<br><code style="font-size:.72rem">x=0.60: rho=0.4263 p=0.3031 u=0.9274</code><br><code style="font-size:.72rem">x=0.75: rho=0.2656 p=0.3031 u=0.9274</code></td><td class="check-cell"><input type="checkbox" id="chk_24"></td></tr>
+<tr><td>4</td><td>УВ размазана</td><td>Ударная волна размазана на 3–5 ячеек (норма для 1-го порядка)</td><td>—</td><td><span class="how">Контактный разрыв размазан на 5–8 ячеек — это нормальное поведение для VISC=0.5.</span> Ударная волна должна быть резче (3–5 ячеек)</td><td class="check-cell"><input type="checkbox" id="chk_25"></td></tr>
+</table>
+<p style="color:var(--text2);font-size:.85rem;margin-top:.5rem">Ожидаемые графики — те же, что в задании 1 (FLIC). Контрольные значения идентичны.</p>
+</div>
+
+<!-- MADER TEST 2: DETONATION -->
+<div class="block">
+<div class="block-header"><div class="block-num">4b</div><h3 style="margin:0">2DE Мейдера — Тест 2: Одномерная детонация CJ</h3></div>
+<table>
+<tr><th>#</th><th>Пункт</th><th>Результат</th><th>Параметры</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
+<tr><td>1</td><td>Параметры расчёта</td><td>Квази-1D</td><td>NI=200, NJ=3, SLAB<br>ρ₀=1.84, γ=3<br>D_CJ=0.88 см/мкс<br>VISC=0.5, CFL=0.5</td><td><span class="how">Проверить параметры кинетики и детонатор:</span> 3–5 левых ячеек инициализированы с $P = P_{CJ}$, $W = 0$ (полностью прореагировавшие)</td><td class="check-cell"><input type="checkbox" id="chk_26"></td></tr>
+<tr><td>2</td><td>Кинетика Аррениуса</td><td>Массовая доля $W$: от 1 (ВВ) до 0 (продукты) в зоне реакции</td><td>Z=5·10⁹ мкс⁻¹<br>E*=2·10⁴ K<br>MINWT=1000K, GASW=0.02</td><td><span class="how">Проверить параметры кинетики Аррениуса:</span> предэкспонента $Z$, энергия активации $E^*$, пороги MINWT и GASW</td><td class="check-cell"><input type="checkbox" id="chk_27"></td></tr>
+<tr><td>3</td><td><b>Скорость фронта</b></td><td>Скорость фронта $D$ совпадает с $D_{CJ}$ с точностью $\pm 2\%$</td><td>D_CJ = 0.88 см/мкс</td><td><span class="file">results/04_mader_det/front_xt.png</span>: <span class="how">график x_front(t).</span> Должен быть линейным. Наклон = D_CJ. <span class="how">На графике сходимости указать наклон прямой (ожидается $\approx 2$ для MUSCL).</span> Минимум 3 сетки в расчёте</td><td class="check-cell"><input type="checkbox" id="chk_28"></td></tr>
+<tr><td>4</td><td><b>Профили P(x), ρ(x), W(x)</b></td><td>Пик давления на фронте, плато $P_{CJ}$ позади, $W$-профиль через зону реакции</td><td>—</td><td><span class="file">results/04_mader_det/profiles_P_rho_W.png</span>:<br><span class="how">Три графика ($P$, $\rho$, $W$) в один момент времени.</span> Давление: пик на фронте, затем плато $P_{CJ}$. Массовая доля $W$: переход от 1 (ВВ) к 0 (продукты) в зоне реакции шириной 5–10 ячеек</td><td class="check-cell"><input type="checkbox" id="chk_29"></td></tr>
+<tr><td>5</td><td>Давление на фронте</td><td>Максимальное давление $P_{max} \approx P_{CJ} = 0.356$ Мбар</td><td>P_CJ = 0.356 Мбар</td><td><span class="file">results/04_mader_det/values.txt</span>:<br><code style="font-size:.72rem">D_computed = 0.878 cm/us (D_CJ=0.880, err=0.23%)</code><br><code style="font-size:.72rem">P_max = 0.361 Mbar (P_CJ=0.356)</code></td><td class="check-cell"><input type="checkbox" id="chk_30"></td></tr>
+<tr><td>6</td><td>Нет осцилляций за фронтом</td><td>Давление за фронтом выходит на плато без осцилляций</td><td>—</td><td><span class="how">Визуальная проверка:</span> за фронтом давление выходит на плато $P_{CJ}$ без осцилляций («звона»)</td><td class="check-cell"><input type="checkbox" id="chk_31"></td></tr>
+</table>
+
+<h4>Задание: одномерная детонация Чепмена–Жуге</h4>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Что такое детонация CJ.</strong> Самоподдерживающаяся волна, состоящая из ударного фронта и зоны химической реакции. Скорость фронта $D_{CJ}$ определяется термодинамикой ВВ. За фронтом: давление выходит на плато $P_{CJ}$, массовая доля ВВ $W$ падает от 1 (непрореагировавшее) до 0 (продукты).</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Определения.</strong> $D_{CJ}$ — скорость детонации Чепмена–Жуге (см/мкс); $P_{CJ} = D^2 \rho_0 / (\gamma + 1)$ — давление CJ (Мбар); $W$ — массовая доля непрореагировавшего ВВ ($W = 1$ → ВВ, $W = 0$ → продукты); зона реакции — область, где $W$ меняется от 1 до 0.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Какие графики построить.</strong> (1) $x_{front}(t)$ — положение фронта во времени: линейная зависимость, наклон = $D_{CJ}$. Подписать наклон. (2) Профили $P(x)$, $\rho(x)$, $W(x)$ в фиксированный момент времени: пик давления на фронте, плато $P_{CJ}$ позади, $W$-профиль через зону реакции.</p>
+
+<h4>Ожидаемые поля — детонация CJ</h4>
+<div class="plot-container">
+  <div class="plot-box"><div class="plot-title">x_front(t) — линейная, наклон = D_CJ</div><svg id="svg_det_front" viewBox="0 0 420 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="420" height="220" fill="#fdf9f3" rx="4"/>
+<line x1="48" y1="12.0" x2="408" y2="12.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="48.0" x2="408" y2="48.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="84.0" x2="408" y2="84.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="120.0" x2="408" y2="120.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="156.0" x2="408" y2="156.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="192.0" x2="408" y2="192.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48.0" y1="12" x2="48.0" y2="192" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="120.0" y1="12" x2="120.0" y2="192" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="192.0" y1="12" x2="192.0" y2="192" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="264.0" y1="12" x2="264.0" y2="192" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="336.0" y1="12" x2="336.0" y2="192" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="408.0" y1="12" x2="408.0" y2="192" stroke="#e8e0d4" stroke-width="0.5"/>
+<text x="48.0" y="206" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0</text>
+<text x="120.0" y="206" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">2</text>
+<text x="192.0" y="206" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">4</text>
+<text x="264.0" y="206" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">6</text>
+<text x="336.0" y="206" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">8</text>
+<text x="408.0" y="206" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">10</text>
+<text x="228.0" y="218" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">t, мкс</text>
+<text x="44" y="15.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">10</text>
+<text x="44" y="51.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">8</text>
+<text x="44" y="87.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">6</text>
+<text x="44" y="123.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">4</text>
+<text x="44" y="159.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">2</text>
+<text x="44" y="195.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0</text>
+<text x="8" y="102.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle" transform="rotate(-90 8 102.0)">x, см</text>
+<line x1="48" y1="192" x2="408" y2="33.6" stroke="#3a5ba0" stroke-width="2.5"/>
+<text x="192.0" y="102.0" font-family="Source Serif 4,serif" font-size="11" fill="#3a5ba0" font-weight="600">D = 0.88 см/мкс</text>
+</svg></div>
+  <div class="plot-box"><div class="plot-title">Профили P(x) и W(x) за фронтом</div><svg id="svg_det_prof" viewBox="0 0 420 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="420" height="220" fill="#fdf9f3" rx="4"/>
+<line x1="48" y1="12.0" x2="408" y2="12.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="48.0" x2="408" y2="48.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="84.0" x2="408" y2="84.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="120.0" x2="408" y2="120.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="156.0" x2="408" y2="156.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="192.0" x2="408" y2="192.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48.0" y1="12" x2="48.0" y2="192" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="120.0" y1="12" x2="120.0" y2="192" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="192.0" y1="12" x2="192.0" y2="192" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="264.0" y1="12" x2="264.0" y2="192" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="336.0" y1="12" x2="336.0" y2="192" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="408.0" y1="12" x2="408.0" y2="192" stroke="#e8e0d4" stroke-width="0.5"/>
+<text x="8" y="102.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle" transform="rotate(-90 8 102.0)">P / W</text>
+<path d="M48.0,143.1 L84.0,143.1 L120.0,143.1 L156.0,131.4 L192.0,102.2 L210.0,77.1 L228.0,46.2 L235.2,30.0 L237.0,30.0" fill="none" stroke="#1a6b5a" stroke-width="2.5"/>
+<path d="M48.0,192.0 L84.0,192.0 L120.0,192.0 L156.0,192.0 L192.0,192.0 L228.0,192.0 L235.2,192.0 L237.0,102.0 L242.4,12.0 L264.0,12.0 L300.0,12.0 L336.0,12.0 L408.0,12.0" fill="none" stroke="#b44a2d" stroke-width="2.5"/>
+<line x1="48" y1="32.2" x2="228.0" y2="32.2" stroke="#9a8d7e" stroke-width="0.8" stroke-dasharray="3 3"/>
+<text x="52" y="28.2" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e">P_CJ = 0.356</text>
+<line x1="52" y1="22" x2="72" y2="22" stroke="#1a6b5a" stroke-width="2.5"/>
+<text x="76" y="25" font-family="Source Serif 4,serif" font-size="9" fill="#1a6b5a">P(x)</text>
+<line x1="52" y1="36" x2="72" y2="36" stroke="#b44a2d" stroke-width="2.5"/>
+<text x="76" y="39" font-family="Source Serif 4,serif" font-size="9" fill="#b44a2d">W(x)</text>
+<text x="102.0" y="186" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="center">← продукты</text>
+<text x="354.0" y="186" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="center">ВВ →</text>
+</svg></div>
+</div>
+<div class="ref-values"><b>Контрольные значения (γ=3, идеализированное ВВ):</b>
+ρ₀ = 1.84 г/см³   D_CJ = 0.88 см/мкс   P_CJ = D²ρ₀/(γ+1) = 0.356 Мбар
+ρ_det = ρ₀(γ+1)/γ = 2.453 г/см³         u_CJ = D/(γ+1) = 0.220 см/мкс
+E_det = P_CJ / (ρ₀(γ−1)) = 0.097 Мбар·см³/г
+За фронтом: P → P_CJ (плато Чепмена–Жуге), W → 0</div>
+</div>
+
+<!-- MADER TEST 3: CORNER TURNING -->
+<div class="block">
+<div class="block-header"><div class="block-num">4c</div><h3 style="margin:0">2DE Мейдера — Тест 3: Corner Turning 2D</h3></div>
+<table>
+<tr><th>#</th><th>Пункт</th><th>Результат</th><th>Параметры</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
+<tr><td>1</td><td>Геометрия</td><td>L-образный канал: 2×1 см → область 7×4 см</td><td>Канал: 2×1 см<br>Область: 7×4 см<br>NI=140, NJ=80<br>ΔR=ΔZ=0.05 см, SLAB</td><td><span class="how">Проверить геометрию и сетку.</span> Канал 2×1 см, область 7×4 см, NI=140, NJ=80. Детонатор: 1 столбец $i=1$ с $P=P_{CJ}$, $W=0$</td><td class="check-cell"><input type="checkbox" id="chk_32"></td></tr>
+<tr><td>2</td><td>В канале D = D_CJ</td><td>Скорость фронта в канале = $D_{CJ} \pm 2\%$</td><td>—</td><td><span class="how">До выхода из канала фронт детонации должен быть плоским, а его скорость — равна $D_{CJ} \pm 2\%$</span></td><td class="check-cell"><input type="checkbox" id="chk_33"></td></tr>
+<tr><td>3</td><td><b>Карта давления</b></td><td>Фронт искривляется после выхода из канала (дифракция)</td><td>—</td><td><span class="file">results/04_mader_corner/pressure_t1.png</span>, <span class="file">pressure_t2.png</span>, <span class="file">pressure_t3.png</span>:<br><span class="how">Три карты давления в разные моменты:</span> (1) фронт внутри канала; (2) момент выхода из канала; (3) после дифракции — криволинейный фронт</td><td class="check-cell"><input type="checkbox" id="chk_34"></td></tr>
+<tr><td>4</td><td><b>Карта W(i,j)</b></td><td>Область $W > 0$ за внутренним углом (непрореагировавшее ВВ)</td><td>—</td><td><span class="file">results/04_mader_corner/W_map.png</span>:<br><span class="how">Карта массовой доли $W(i,j)$: область с $W > 0$ за внутренним углом</span> — это мёртвая зона, куда детонация приходит с задержкой или не приходит вовсе</td><td class="check-cell"><input type="checkbox" id="chk_35"></td></tr>
+<tr><td>5</td><td>Время прихода фронта</td><td>Изолинии $t_{arrival}(i,j) = \text{const}$ — форма фронта</td><td>—</td><td><span class="file">results/04_mader_corner/arrival_time.png</span>: <span class="how">Изолинии времени прихода $t_{arrival}(i,j) = \text{const}$</span> — показывают форму фронта детонации в каждый момент. За углом изолинии должны искривляться</td><td class="check-cell"><input type="checkbox" id="chk_36"></td></tr>
+<tr><td>6</td><td>Устойчивость</td><td>Нет отрицательных $\rho$ и $P$, расчёт устойчив</td><td>—</td><td><span class="how">Проверка устойчивости:</span> в расчёте не должно быть отрицательных плотностей или давлений, код не «взрывается»</td><td class="check-cell"><input type="checkbox" id="chk_37"></td></tr>
+<tr><td>7</td><td>Поправка Шаргатова</td><td>Нет нефизических осцилляций $W$ на контактной границе</td><td><span class="tag">CHECK: SHARGATOV</span></td><td><span class="how">Поставить маркер у поправки Шаргатова (если реализована).</span> С поправкой: нет нефизических осцилляций массовой доли $W$ на контактной границе ВВ–продукты</td><td class="check-cell"><input type="checkbox" id="chk_38"></td></tr>
+</table>
+
+<h4>Задание: дифракция детонационной волны за углом (Corner Turning)</h4>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Постановка.</strong> Детонационная волна распространяется по узкому каналу (2×1 см) и выходит в открытую область (7×4 см). За внутренним углом формируется <em>мёртвая зона</em> — область, куда детонация не доходит (или доходит с задержкой), потому что боковые разгрузки ослабляют фронт.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Определения.</strong> Мёртвая зона — область с $W > 0$ (непрореагировавшее ВВ) после прохождения основного фронта; $t_{arrival}(i,j)$ — момент, когда фронт детонации (определяемый по скачку $P$) достигает ячейки $(i,j)$.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Какие графики построить.</strong> (1) Три карты давления $P(i,j)$ в моменты: до выхода из канала, в момент выхода, после дифракции. (2) Карта $W(i,j)$ после прохождения фронта — мёртвая зона видна как область с $W > 0$. (3) Изолинии $t_{arrival} = \text{const}$ — показывают искривление фронта за углом.</p>
+
+<h4>Ожидаемые поля — Corner Turning</h4>
+<div class="plot-container">
+  <div class="plot-box"><div class="plot-title">Схема геометрии и дифракции</div><svg viewBox="0 0 420 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="420" height="280" fill="#fdf9f3" rx="4"/>
+<!-- Grid area -->
+<rect x="40" y="10" width="350" height="230" fill="#e8f0fa" rx="4"/>
+<!-- Wall block (channel wall) -->
+<rect x="40" y="10" width="100" height="172" fill="#8b7d6e" rx="2"/>
+<!-- Channel (top of wall area) -->
+<rect x="40" y="182" width="100" height="58" fill="#faece7"/>
+<!-- High pressure in channel -->
+<rect x="40" y="182" width="60" height="58" fill="#e8836a" opacity="0.5"/>
+<!-- Pressure gradient in open area -->
+<rect x="140" y="10" width="80" height="230" fill="#faece7" opacity="0.3"/>
+<rect x="140" y="10" width="40" height="230" fill="#faece7" opacity="0.3"/>
+<!-- Detonation front (curved) -->
+<path d="M140 10 Q240 170 390 195" fill="none" stroke="#b44a2d" stroke-width="2.5"/>
+<path d="M140 10 Q240 170 390 195" fill="none" stroke="#fff" stroke-width="4" opacity="0.3"/>
+<!-- Dead zone shading -->
+<rect x="140" y="10" width="70" height="172" fill="#854f0b" opacity="0.12"/>
+<!-- Labels -->
+<text x="85" y="215" font-family="JetBrains Mono,monospace" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">← D</text>
+<text x="85" y="228" font-family="JetBrains Mono,monospace" font-size="8" fill="#fff" text-anchor="middle">канал</text>
+<text x="85" y="100" font-family="JetBrains Mono,monospace" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">стенка</text>
+<text x="280" y="30" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d" text-anchor="middle" font-weight="600">фронт детонации</text>
+<text x="175" y="100" font-family="JetBrains Mono,monospace" font-size="9" fill="#854f0b" text-anchor="middle" font-weight="600">мёртвая</text>
+<text x="175" y="112" font-family="JetBrains Mono,monospace" font-size="9" fill="#854f0b" text-anchor="middle" font-weight="600">зона</text>
+<!-- Dimensions -->
+<text x="215" y="252" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="middle">7 см</text>
+<line x1="40" y1="248" x2="390" y2="248" stroke="#9a8d7e" stroke-width="0.5"/>
+<text x="30" y="130" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="middle" transform="rotate(-90 30 130)">4 см</text>
+<!-- Arrow for detonation direction -->
+<polygon points="55,210 45,205 45,215" fill="#fff"/>
+</svg></div>
+  <div class="plot-box"><div class="plot-title">Ожидаемая карта W — мёртвая зона</div><svg viewBox="0 0 420 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="420" height="280" fill="#fdf9f3" rx="4"/>
+<rect x="40" y="10" width="350" height="230" fill="#e8f4f0" rx="4"/>
+<!-- Wall -->
+<rect x="40" y="10" width="100" height="172" fill="#8b7d6e" rx="2"/>
+<!-- Channel: W=0 (reacted) -->
+<rect x="40" y="182" width="100" height="58" fill="#1a6b5a" opacity="0.4"/>
+<text x="90" y="215" font-family="JetBrains Mono,monospace" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">W=0</text>
+<!-- Reacted zone behind front -->
+<rect x="140" y="120" width="120" height="120" fill="#1a6b5a" opacity="0.25" rx="4"/>
+<text x="200" y="195" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a" text-anchor="middle">W=0</text>
+<!-- Dead zone: W≈1 behind wall corner -->
+<rect x="140" y="14" width="80" height="100" fill="#b44a2d" opacity="0.2" rx="4"/>
+<text x="180" y="55" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle" font-weight="700">W ≈ 1</text>
+<text x="180" y="70" font-family="JetBrains Mono,monospace" font-size="9" fill="#b44a2d" text-anchor="middle">мёртвая зона</text>
+<!-- Unreacted ahead of front -->
+<rect x="290" y="14" width="96" height="222" fill="#f5a623" opacity="0.12" rx="4"/>
+<text x="338" y="130" font-family="JetBrains Mono,monospace" font-size="10" fill="#854f0b" text-anchor="middle">W=1</text>
+<text x="338" y="144" font-family="JetBrains Mono,monospace" font-size="8" fill="#854f0b" text-anchor="middle">(ВВ)</text>
+<!-- Curved front -->
+<path d="M140 14 Q230 160 390 190" fill="none" stroke="#2c2419" stroke-width="1.5" stroke-dasharray="6 3"/>
+<text x="300" y="165" font-family="Source Serif 4,serif" font-size="9" fill="#2c2419" font-style="italic">фронт</text>
+<!-- Arrow pointing to dead zone -->
+<line x1="180" y1="80" x2="180" y2="108" stroke="#c44" stroke-width="1.5" marker-end="url(#arrowW)"/>
+<defs><marker id="arrowW" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10" fill="#c44"/></marker></defs>
+<!-- Legend -->
+<rect x="42" y="250" width="12" height="12" fill="#1a6b5a" opacity="0.5" rx="2"/>
+<text x="58" y="261" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419">W=0 (прореагировало)</text>
+<rect x="220" y="250" width="12" height="12" fill="#b44a2d" opacity="0.4" rx="2"/>
+<text x="236" y="261" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419">W≈1 (не прореагировало)</text>
+</svg></div>
+</div>
+<div class="ref-values"><b>Критерии Corner Turning:</b>
+1. В канале: фронт плоский, D = D_CJ ± 2%
+2. После угла: фронт криволинейный (дифракция)
+3. Мёртвая зона: W > 0 за стенкой (видна как непрореагировавшая область)
+4. Сравнение: качественно совпадает с рис. 6.3 книги Мейдера</div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ===================== BLOCK 5: CAVITY ===================== -->
+
+<div class="block">
+<div class="block-header"><div class="block-num">5</div><h3 style="margin:0">Каверна (lid-driven cavity), Re=100, 41×41</h3></div>
+<table>
+<tr><th>#</th><th>Пункт</th><th>Результат</th><th>Маркер</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
+<tr><td>1</td><td>Код компилируется</td><td>Код компилируется без ошибок</td><td>—</td><td><span class="how">Продемонстрировать компиляцию:</span> <code>cd src/simple_piso_pimple && make</code> — должно скомпилироваться без ошибок</td><td class="check-cell"><input type="checkbox" id="chk_39"></td></tr>
+<tr><td>2</td><td>Staggered сетка</td><td>Скорости $u$, $v$ на гранях, давление $p$ в центрах ячеек</td><td><span class="tag">CHECK: STAGGERED_GRID</span></td><td><span class="how">Поставить маркер у объявления массивов разнесённой сетки:</span> <code>u[NX+1][NY]</code>, <code>v[NX][NY+1]</code>, <code>p[NX][NY]</code> — скорости на гранях, давление в центрах</td><td class="check-cell"><input type="checkbox" id="chk_40"></td></tr>
+<tr><td>3</td><td>Предиктор u*</td><td>Конвекция + диффузия + $\nabla p$ + под-релаксация (§4 лекции)</td><td><span class="tag">CHECK: PREDICTOR_U</span></td><td><span class="how">Поставить маркер перед предиктором $u^*$.</span> В коде: интерполяция скоростей на грани, конвективный и диффузионный члены, градиент давления, под-релаксация</td><td class="check-cell"><input type="checkbox" id="chk_41"></td></tr>
+<tr><td>4</td><td>Предиктор v*</td><td>Аналогично предиктору $u^*$, но для $v^*$</td><td><span class="tag">CHECK: PREDICTOR_V</span></td><td><span class="how">Поставить маркер перед предиктором $v^*$ — аналогично $u^*$</span></td><td class="check-cell"><input type="checkbox" id="chk_42"></td></tr>
+<tr><td>5</td><td>Пуассон p'</td><td>Правая часть $b' = -\text{div}(u^*)$, итерации SOR</td><td><span class="tag">CHECK: POISSON</span></td><td><span class="how">Поставить маркер перед решением уравнения Пуассона для $p'$.</span> В коде: коэффициенты $a_E, a_W, a_N, a_S$, правая часть $b' = -\text{div}(u^*)$, итерации SOR, фиксация $p'(0,0) = 0$</td><td class="check-cell"><input type="checkbox" id="chk_43"></td></tr>
+<tr><td>6</td><td>Коррекция</td><td>Коррекция: $p \mathrel{+}= \alpha_p \cdot p'$, обновление $u$, $v$</td><td><span class="tag">CHECK: CORRECTION</span></td><td><span class="how">Поставить маркер перед коррекцией.</span> Обновление: $p \mathrel{+}= \alpha_p \cdot p'$, корректировка $u$ и $v$ по градиенту $p'$</td><td class="check-cell"><input type="checkbox" id="chk_44"></td></tr>
+<tr><td>7</td><td><b>SIMPLE</b></td><td>&lt;5000 итер.</td><td><span class="tag">CHECK: SIMPLE_LOOP</span></td><td><span class="how">Поставить маркер у главного цикла SIMPLE.</span> Параметры: $\alpha_u = 0.7$, $\alpha_p = 0.3$, сходимость за $< 5000$ итераций<br><span class="file">results/05_cavity/residuals.png</span>: max|Δu| падает до 10⁻⁶</td><td class="check-cell"><input type="checkbox" id="chk_45"></td></tr>
+<tr><td>8</td><td><b>PISO</b></td><td>Профили $u(y)$, $v(x)$ совпадают с данными Ghia $\pm 5\%$</td><td><span class="tag">CHECK: PISO_LOOP</span></td><td><span class="how">Поставить маркер у цикла PISO.</span> Параметры: $\Delta t = 0.01$, расчёт до $T = 15$, 2 коррекции давления на каждом шаге</td><td class="check-cell"><input type="checkbox" id="chk_46"></td></tr>
+<tr><td>9</td><td><b>PIMPLE</b></td><td>Ghia OK</td><td><span class="tag">CHECK: PIMPLE_LOOP</span></td><td><span class="how">Поставить маркер у цикла PIMPLE.</span> Параметры: $\Delta t = 0.05$, 3 внешних итерации, 1 коррекция давления</td><td class="check-cell"><input type="checkbox" id="chk_47"></td></tr>
+<tr><td>10</td><td><b>u(y) + Ghia</b></td><td>≤5%</td><td>—</td><td><span class="file">results/05_cavity/u_y_ghia.png</span>:<br><span class="how">График $u(y)$ при $x = 0.5$:</span> синяя линия — расчёт, красные кружки — данные Ghia. Оси: горизонтальная — $u$, вертикальная — $y$</td><td class="check-cell"><input type="checkbox" id="chk_48"></td></tr>
+<tr><td>11</td><td><b>v(x) + Ghia</b></td><td>≤5%</td><td>—</td><td><span class="file">results/05_cavity/v_x_ghia.png</span>: аналогично</td><td class="check-cell"><input type="checkbox" id="chk_49"></td></tr>
+<tr><td>12</td><td><b>Линии тока</b></td><td>Один основной вихрь + два вторичных в нижних углах</td><td>—</td><td><span class="file">results/05_cavity/streamlines.png</span>: контурная карта ψ или streamplot<br><span class="how">Контурная карта функции тока $\psi$ или streamplot.</span> Должны быть видны: основной вихрь в центре и два маленьких вторичных вихря в нижних углах</td><td class="check-cell"><input type="checkbox" id="chk_50"></td></tr>
+<tr><td>13</td><td>Таблица Ghia</td><td>Таблица: $y$, $u_{calc}$, $u_{Ghia}$, ошибка %</td><td>—</td><td><span class="file">results/05_cavity/ghia_table.txt</span>:<br><code style="font-size:.72rem">y=0.9766 u_calc=0.8395 u_ghia=0.8412 err=0.20%</code></td><td class="check-cell"><input type="checkbox" id="chk_51"></td></tr>
+</table>
+
+<h4>Задание: течение в каверне с движущейся крышкой (lid-driven cavity)</h4>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Постановка.</strong> Квадратная полость $[0,1]^2$. Верхняя стенка движется вправо со скоростью $u = 1$, остальные стенки неподвижные (no-slip). Течение вязкое, несжимаемое, стационарное при $Re = 100$.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Определения.</strong> $Re = UL/\nu$ — число Рейнольдса ($U = 1$ — скорость крышки, $L = 1$ — сторона каверны, $\nu$ — кинематическая вязкость); стационарное решение — когда невязка $\max|\Delta u|$ между итерациями падает ниже $10^{-6}$.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Какие графики построить.</strong> (1) Профиль $u(y)$ при $x = 0.5$ — горизонтальная компонента скорости вдоль вертикальной линии через центр. Наложить данные Ghia et al. (1982) красными точками. (2) Аналогично $v(x)$ при $y = 0.5$. (3) Карта линий тока (streamlines) — должны быть видны: один основной вихрь в центре и два маленьких вторичных вихря в нижних углах.</p>
+
+<h4>Ожидаемые поля — каверна Re=100</h4>
+<div class="plot-container">
+  <div class="plot-box"><div class="plot-title">u(y) на x=0.5 + данные Ghia</div><svg id="svg_cavity_u" viewBox="0 0 420 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="420" height="300" fill="#fdf9f3" rx="4"/>
+<line x1="48" y1="12.0" x2="408" y2="12.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="64.0" x2="408" y2="64.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="116.0" x2="408" y2="116.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="168.0" x2="408" y2="168.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="220.0" x2="408" y2="220.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="272.0" x2="408" y2="272.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48.0" y1="12" x2="48.0" y2="272" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="108.0" y1="12" x2="108.0" y2="272" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="168.0" y1="12" x2="168.0" y2="272" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="228.0" y1="12" x2="228.0" y2="272" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="288.0" y1="12" x2="288.0" y2="272" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="348.0" y1="12" x2="348.0" y2="272" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="408.0" y1="12" x2="408.0" y2="272" stroke="#e8e0d4" stroke-width="0.5"/>
+<text x="48.0" y="286" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">-0.4</text>
+<text x="108.0" y="286" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">-0.2</text>
+<text x="168.0" y="286" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.1</text>
+<text x="228.0" y="286" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.3</text>
+<text x="288.0" y="286" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.6</text>
+<text x="348.0" y="286" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.8</text>
+<text x="408.0" y="286" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">1.1</text>
+<text x="228.0" y="298" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">u</text>
+<text x="44" y="15.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">1.0</text>
+<text x="44" y="67.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.8</text>
+<text x="44" y="119.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.6</text>
+<text x="44" y="171.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.4</text>
+<text x="44" y="223.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.2</text>
+<text x="44" y="275.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.0</text>
+<text x="8" y="142.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle" transform="rotate(-90 8 142.0)">y</text>
+<path d="M384.0,12.0 L345.9,18.1 L333.3,20.1 L308.9,24.2 L199.6,50.6 L144.8,81.1 L111.3,111.5 L94.6,142.0 L93.4,154.2 L106.4,198.9 L119.6,227.3 L144.0,272.0" fill="none" stroke="#3a5ba0" stroke-width="2"/>
+<circle cx="384.0" cy="12.0" r="4" fill="#b44a2d"/>
+<circle cx="345.9" cy="18.1" r="4" fill="#b44a2d"/>
+<circle cx="333.3" cy="20.1" r="4" fill="#b44a2d"/>
+<circle cx="308.9" cy="24.2" r="4" fill="#b44a2d"/>
+<circle cx="199.6" cy="50.6" r="4" fill="#b44a2d"/>
+<circle cx="144.8" cy="81.1" r="4" fill="#b44a2d"/>
+<circle cx="111.3" cy="111.5" r="4" fill="#b44a2d"/>
+<circle cx="94.6" cy="142.0" r="4" fill="#b44a2d"/>
+<circle cx="93.4" cy="154.2" r="4" fill="#b44a2d"/>
+<circle cx="106.4" cy="198.9" r="4" fill="#b44a2d"/>
+<circle cx="119.6" cy="227.3" r="4" fill="#b44a2d"/>
+<circle cx="144.0" cy="272.0" r="4" fill="#b44a2d"/>
+<circle cx="338" cy="26" r="3" fill="#b44a2d"/>
+<text x="346" y="29" font-family="Source Serif 4,serif" font-size="9" fill="#b44a2d">Ghia</text>
+<line x1="334" y1="40" x2="350" y2="40" stroke="#3a5ba0" stroke-width="2"/>
+<text x="354" y="43" font-family="Source Serif 4,serif" font-size="9" fill="#3a5ba0">расчёт</text>
+</svg></div>
+  <div class="plot-box"><div class="plot-title">Линии тока (структура)</div><svg viewBox="0 0 420 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="420" height="300" fill="#fdf9f3" rx="4"/>
+<!-- Cavity box -->
+<rect x="60" y="20" width="260" height="260" fill="#fff" stroke="#2c2419" stroke-width="2"/>
+<!-- Moving lid (red) -->
+<line x1="60" y1="20" x2="320" y2="20" stroke="#b44a2d" stroke-width="4"/>
+<text x="190" y="14" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d" text-anchor="middle" font-weight="700">u = 1  →</text>
+<!-- Main vortex - concentric ellipses -->
+<ellipse cx="200" cy="130" rx="30" ry="25" fill="none" stroke="#3a5ba0" stroke-width="1" opacity="0.3"/>
+<ellipse cx="200" cy="130" rx="55" ry="45" fill="none" stroke="#3a5ba0" stroke-width="1" opacity="0.4"/>
+<ellipse cx="200" cy="130" rx="80" ry="65" fill="none" stroke="#3a5ba0" stroke-width="1.2" opacity="0.5"/>
+<ellipse cx="200" cy="130" rx="105" ry="85" fill="none" stroke="#3a5ba0" stroke-width="1.2" opacity="0.5"/>
+<ellipse cx="200" cy="130" rx="125" ry="105" fill="none" stroke="#3a5ba0" stroke-width="1" opacity="0.3"/>
+<circle cx="200" cy="130" r="4" fill="#3a5ba0"/>
+<text x="200" y="170" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a5ba0" text-anchor="middle">основной вихрь</text>
+<!-- Bottom-left secondary vortex -->
+<ellipse cx="80" cy="262" rx="12" ry="10" fill="none" stroke="#1a6b5a" stroke-width="1"/>
+<ellipse cx="80" cy="262" rx="6" ry="5" fill="none" stroke="#1a6b5a" stroke-width="0.8"/>
+<circle cx="80" cy="262" r="2" fill="#1a6b5a"/>
+<text x="80" y="248" font-family="JetBrains Mono,monospace" font-size="8" fill="#1a6b5a" text-anchor="middle">2°</text>
+<!-- Bottom-right secondary vortex -->
+<ellipse cx="302" cy="262" rx="10" ry="8" fill="none" stroke="#1a6b5a" stroke-width="1"/>
+<ellipse cx="302" cy="262" rx="5" ry="4" fill="none" stroke="#1a6b5a" stroke-width="0.8"/>
+<circle cx="302" cy="262" r="2" fill="#1a6b5a"/>
+<text x="302" y="248" font-family="JetBrains Mono,monospace" font-size="8" fill="#1a6b5a" text-anchor="middle">2°</text>
+<!-- Re label -->
+<text x="190" y="294" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">Re = 100</text>
+</svg></div>
+</div>
+<div class="ref-values"><b>Ghia Re=100 u(y) на x=0.5:</b>
+y=1.00→u=1.000  y=0.977→u=0.841  y=0.969→u=0.789  y=0.953→u=0.687
+y=0.852→u=0.232  y=0.734→u=0.003  y=0.617→u=−0.136  y=0.500→u=−0.206
+y=0.453→u=−0.211  y=0.281→u=−0.157  y=0.172→u=−0.102  y=0.000→u=0.000
+
+<b>Ghia Re=100 v(x) на y=0.5:</b>
+x=1.00→v=0.000   x=0.969→v=−0.217  x=0.961→v=−0.332  x=0.953→v=−0.373
+x=0.852→v=−0.232  x=0.734→v=−0.152  x=0.617→v=0.058   x=0.500→v=0.180
+x=0.453→v=0.172   x=0.281→v=0.175   x=0.172→v=0.162   x=0.000→v=0.000
+
+<b>Параметры каверны:</b>
+Область: [0,1]×[0,1]    Re = 100    Сетка: 41×41 (staggered)
+Крышка: u=1, v=0 (y=1). Остальные стенки: u=v=0
+Начальные условия: u=v=p=0 всюду
+Невязка массы в стационаре: ~10⁻¹⁴ (SIMPLE), ~10⁻¹⁸ (PISO/PIMPLE)</div>
+</div>
+
+<!-- ===================== BLOCK 6: TAYLOR-GREEN ===================== -->
+
+<div class="block">
+<div class="block-header"><div class="block-num">6</div><h3 style="margin:0">Тейлор–Грин (временная точность)</h3></div>
+<table>
+<tr><th>#</th><th>Пункт</th><th>Результат</th><th>Маркер</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
+<tr><td>1</td><td>Нач. условия</td><td>$u = -\cos\pi x \sin\pi y$, $v = \sin\pi x \cos\pi y$ — 4 вихря</td><td><span class="tag">CHECK: TG_INIT</span></td><td><span class="how">Поставить маркер у начальных условий:</span> $u = -\cos(\pi x)\sin(\pi y)$, $v = \sin(\pi x)\cos(\pi y)$</td><td class="check-cell"><input type="checkbox" id="chk_52"></td></tr>
+<tr><td>2</td><td>ГУ Дирихле (точное)</td><td>Точное решение $\times e^{-2\pi^2 \nu t}$ на границах</td><td><span class="tag">CHECK: TG_BC</span></td><td><span class="how">Поставить маркер у граничных условий Дирихле:</span> значения на границе берутся из точного решения $\times e^{-2\pi^2 \nu t}$</td><td class="check-cell"><input type="checkbox" id="chk_53"></td></tr>
+<tr><td>3</td><td><b>Ошибка vs Δt</b></td><td>Наклон $\approx 1$ на графике $\log L_2$ vs $\log \Delta t$</td><td>—</td><td><span class="file">results/06_taylor_green/error_vs_dt.png</span>: <span class="how">График в логарифмических осях: ошибка $L_2$ vs $\Delta t$.</span> Минимум 4 значения $\Delta t$. Нанести прямую с наклоном 1 для сравнения. Подписать измеренный наклон</td><td class="check-cell"><input type="checkbox" id="chk_54"></td></tr>
+<tr><td>4</td><td>Затухание</td><td>Затухание $\max|u|/\max|u_0| = e^{-2\pi^2 \nu t}$</td><td>—</td><td><span class="file">results/06_taylor_green/decay.png</span>: max|u|(t) vs аналитика. <span class="how">График затухания $\max|u|(t) / \max|u_0|$:</span> расчётная кривая и аналитическая $e^{-2\pi^2 \nu t}$ должны совпасть</td><td class="check-cell"><input type="checkbox" id="chk_55"></td></tr>
+</table>
+
+<h4>Задание: вихрь Тейлора–Грина (проверка временной точности)</h4>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Постановка.</strong> Четыре контр-вращающихся вихря в области $[0,1]^2$ с начальными условиями $u = -\cos(\pi x)\sin(\pi y)$, $v = \sin(\pi x)\cos(\pi y)$. Точное решение: вихри экспоненциально затухают, $u(t) = u(0) \cdot e^{-2\pi^2 \nu t}$. Граничные условия Дирихле из точного решения.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Зачем этот тест.</strong> Если пространственная ошибка мала (точные ГУ), то ошибка определяется временной дискретизацией. Уменьшая $\Delta t$ и измеряя $L_2$-ошибку, определяем порядок по времени: наклон $\log(L_2)$ vs $\log(\Delta t)$ ≈ 1 для Эйлера, ≈ 2 для Кранка–Николсона.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Какие графики построить.</strong> (1) Поле $|u|$ при $t = 0$ — цветная карта с 4 вихрями и стрелками скоростей. (2) Затухание $\max|u|/\max|u_0|$ vs $t$ — наложить расчётную кривую и аналитическую $e^{-2\pi^2 \nu t}$. Кривые должны совпасть. (3) Ошибка $L_2$ vs $\Delta t$ в лог-лог осях (минимум 4 точки), с прямой наклона 1.</p>
+
+<h4>Ожидаемые поля — Тейлор–Грин</h4>
+<div class="plot-container">
+  <div class="plot-box"><div class="plot-title">Поле |u| при t=0</div><svg viewBox="0 0 420 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="420" height="280" fill="#fdf9f3" rx="4"/>
+<rect x="60" y="10" width="240" height="240" fill="#3a5570" stroke="#2c2419" stroke-width="1.5" rx="4"/>
+<!-- Quadrant coloring to show |u| pattern -->
+<!-- Top-left: high |u| -->
+<rect x="60" y="10" width="120" height="120" fill="#5a8ab0" opacity="0.6"/>
+<!-- Top-right: high |u| -->
+<rect x="180" y="10" width="120" height="120" fill="#5a8ab0" opacity="0.6"/>
+<!-- Bottom-left: high |u| -->
+<rect x="60" y="130" width="120" height="120" fill="#5a8ab0" opacity="0.6"/>
+<!-- Bottom-right: high |u| -->
+<rect x="180" y="130" width="120" height="120" fill="#5a8ab0" opacity="0.6"/>
+<!-- Centers (low |u|) -->
+<circle cx="120" cy="70" r="35" fill="#6b9bc4" opacity="0.5"/>
+<circle cx="240" cy="70" r="35" fill="#6b9bc4" opacity="0.5"/>
+<circle cx="120" cy="190" r="35" fill="#6b9bc4" opacity="0.5"/>
+<circle cx="240" cy="190" r="35" fill="#6b9bc4" opacity="0.5"/>
+<!-- Corners (high |u|) -->
+<circle cx="60" cy="10" r="25" fill="#8bc0e0" opacity="0.4"/>
+<circle cx="180" cy="10" r="25" fill="#8bc0e0" opacity="0.4"/>
+<circle cx="300" cy="10" r="25" fill="#8bc0e0" opacity="0.4"/>
+<circle cx="180" cy="130" r="30" fill="#8bc0e0" opacity="0.4"/>
+<circle cx="60" cy="130" r="25" fill="#8bc0e0" opacity="0.4"/>
+<circle cx="300" cy="130" r="25" fill="#8bc0e0" opacity="0.4"/>
+<!-- Rotation symbols -->
+<text x="120" y="75" font-size="18" fill="rgba(255,255,255,0.8)" text-anchor="middle" font-weight="700">↻</text>
+<text x="240" y="75" font-size="18" fill="rgba(255,255,255,0.8)" text-anchor="middle" font-weight="700">↺</text>
+<text x="120" y="195" font-size="18" fill="rgba(255,255,255,0.8)" text-anchor="middle" font-weight="700">↺</text>
+<text x="240" y="195" font-size="18" fill="rgba(255,255,255,0.8)" text-anchor="middle" font-weight="700">↻</text>
+<!-- Caption -->
+<text x="180" y="266" font-family="Source Serif 4,serif" font-size="10" fill="#2c2419" text-anchor="middle">|u| при t = 0 — 4 контр-вращающихся вихря</text>
+<!-- Color bar -->
+<defs><linearGradient id="cb" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8bc0e0"/><stop offset="100%" stop-color="#3a5570"/></linearGradient></defs>
+<rect x="320" y="10" width="12" height="240" fill="url(#cb)" rx="2"/>
+<text x="340" y="20" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e">1.0</text>
+<text x="340" y="132" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e">0.5</text>
+<text x="340" y="252" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e">0.0</text>
+<text x="370" y="132" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" transform="rotate(90 370 132)">|u|</text>
+</svg></div>
+  <div class="plot-box"><div class="plot-title">Затухание max|u|/max|u₀| vs t</div><svg id="svg_tg_decay" viewBox="0 0 420 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="420" height="280" fill="#fdf9f3" rx="4"/>
+<line x1="55" y1="12.0" x2="408" y2="12.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="55" y1="60.0" x2="408" y2="60.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="55" y1="108.0" x2="408" y2="108.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="55" y1="156.0" x2="408" y2="156.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="55" y1="204.0" x2="408" y2="204.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="55" y1="252.0" x2="408" y2="252.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="55.0" y1="12" x2="55.0" y2="252" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="125.6" y1="12" x2="125.6" y2="252" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="196.2" y1="12" x2="196.2" y2="252" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="266.8" y1="12" x2="266.8" y2="252" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="337.4" y1="12" x2="337.4" y2="252" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="408.0" y1="12" x2="408.0" y2="252" stroke="#e8e0d4" stroke-width="0.5"/>
+<text x="55.0" y="266" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0</text>
+<text x="125.6" y="266" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">2</text>
+<text x="196.2" y="266" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">4</text>
+<text x="266.8" y="266" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">6</text>
+<text x="337.4" y="266" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">8</text>
+<text x="408.0" y="266" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">10</text>
+<text x="231.5" y="278" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">t</text>
+<text x="51" y="15.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">1.0</text>
+<text x="51" y="63.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.8</text>
+<text x="51" y="111.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.6</text>
+<text x="51" y="159.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.4</text>
+<text x="51" y="207.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.2</text>
+<text x="51" y="255.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.0</text>
+<text x="8" y="132.0" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="middle" transform="rotate(-90 8 132.0)">max|u|/max|u₀|</text>
+<path d="M55.0,12.0 L72.7,34.6 L90.3,55.0 L107.9,73.5 L125.6,90.3 L143.2,105.5 L160.9,119.3 L178.6,131.7 L196.2,143.0 L213.8,153.3 L231.5,162.6 L249.2,171.0 L266.8,178.6 L284.5,185.5 L302.1,191.7 L319.8,197.4 L337.4,202.5 L355.1,207.2 L372.7,211.4 L390.3,215.2 L408.0,218.7" fill="none" stroke="#1a6b5a" stroke-width="2"/>
+<path d="M55.0,12.0 L72.7,34.2 L90.3,55.6 L107.9,73.0 L125.6,90.5 L143.2,105.5 L160.9,119.0 L178.6,132.1 L196.2,142.7 L213.8,153.4 L231.5,162.6 L249.2,170.8 L266.8,178.8 L284.5,185.3 L302.1,191.8 L319.8,197.4 L337.4,202.4 L355.1,207.3 L372.7,211.3 L390.3,215.2 L408.0,218.7" fill="none" stroke="#3a5ba0" stroke-width="2" stroke-dasharray="5 3"/>
+<line x1="59" y1="237" x2="79" y2="237" stroke="#1a6b5a" stroke-width="2"/>
+<text x="83" y="240" font-family="Source Serif 4,serif" font-size="9" fill="#1a6b5a">e^(−2π²νt)</text>
+<line x1="59" y1="249" x2="79" y2="249" stroke="#3a5ba0" stroke-width="2" stroke-dasharray="5 3"/>
+<text x="83" y="41" font-family="Source Serif 4,serif" font-size="9" fill="#3a5ba0">расчёт</text>
+</svg></div>
+</div>
+
+<div class="ref-values"><b>Параметры Тейлор–Грин:</b>
+Область: [0,1]×[0,1]    ν = 0.01 (Re=100)    Сетка: 41×41
+Нач. условия:  u = −cos(πx)sin(πy),  v = sin(πx)cos(πy),  p = −¼(cos2πx + cos2πy)
+Точное решение: u(t) = u(0)·e^(−2π²νt),  v(t) = v(0)·e^(−2π²νt),  p(t) = p(0)·e^(−4π²νt)
+ГУ: Дирихле из точного решения на всех 4 границах
+Проверка Δt: запустить с Δt = 0.1, 0.05, 0.025, 0.0125 → log(L2) vs log(Δt) → наклон ≈ 1
+При t=1.0, ν=0.01: амплитуда ≈ e^(−2·9.87·0.01·1) = e^(−0.197) ≈ 0.821 от начальной</div>
+</div>
+
+<!-- ===================== BLOCK 7: STEP ===================== -->
+
+<div class="block">
+<div class="block-header"><div class="block-num">7</div><h3 style="margin:0">Обратная ступенька (backward-facing step)</h3></div>
+<table>
+<tr><th>#</th><th>Пункт</th><th>Результат</th><th>Маркер</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
+<tr><td>1</td><td>Блокированные ячейки</td><td>Ячейки ступеньки заблокированы: $u = v = 0$</td><td><span class="tag">CHECK: STEP_BLOCK</span></td><td><span class="how">Поставить маркер у блокировки ячеек ступеньки:</span> <code>if (x < ls && y < h) → u = v = 0</code></td><td class="check-cell"><input type="checkbox" id="chk_56"></td></tr>
+<tr><td>2</td><td>Вход Пуазейль</td><td>Профиль Пуазейля: $u(y) = 6U_{avg}(y-h)(H-y)/(H-h)^2$</td><td><span class="tag">CHECK: STEP_INLET</span></td><td><span class="how">Поставить маркер у профиля Пуазейля на входе:</span> $u_{in}(y) = 6 U_{avg} (y-h)(H-y) / (H-h)^2$</td><td class="check-cell"><input type="checkbox" id="chk_57"></td></tr>
+<tr><td>3</td><td><b>Рециркуляция</b></td><td>u&lt;0 за ступ.</td><td>—</td><td><span class="file">results/07_step/streamlines.png</span>: <span class="how">На карте линий тока должна быть видна зона рециркуляции</span> (обратный ток $u < 0$) сразу за ступенькой</td><td class="check-cell"><input type="checkbox" id="chk_58"></td></tr>
+<tr><td>4</td><td><b>xr/h</b></td><td>$x_r/h \approx 3.0$ при $Re = 100$ (Armaly)</td><td>—</td><td><span class="file">results/07_step/xr.txt</span>:<br><code style="font-size:.72rem">Re=100 xr=1.50 xr/h=3.00 (Armaly: 3.0)</code><br><code style="font-size:.72rem">Re=200 xr=2.50 xr/h=5.00 (Armaly: 5.0)</code></td><td class="check-cell"><input type="checkbox" id="chk_59"></td></tr>
+</table>
+
+<h4>Задание: обратная ступенька (backward-facing step)</h4>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Постановка.</strong> Канал с резким расширением (ступенькой). Жидкость входит слева с параболическим профилем Пуазейля и отрывается от нижней стенки за ступенькой, образуя зону рециркуляции (обратного тока). Длина рециркуляции $x_r$ зависит от числа Рейнольдса.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Определения.</strong> $h$ — высота ступеньки; $x_r$ — расстояние от ступеньки до точки, где $u$ на нижней стенке меняет знак с отрицательного на положительный; $x_r/h$ — безразмерная длина рециркуляции; степень расширения $ER = H/(H-h) = 2$ (для данной задачи).</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Какие графики построить.</strong> (1) Карта линий тока — должна быть видна зона обратного тока (рециркуляция) сразу за ступенькой. (2) График $x_r/h$ vs $Re$ — эталонные значения Armaly et al. (1983): $Re=100 \to x_r/h \approx 3.0$; $Re=200 \to 5.0$; $Re=400 \to 8.2$; $Re=800 \to 14.0$.</p>
+
+<h4>Ожидаемые поля — ступенька</h4>
+<div class="plot-container">
+  <div class="plot-box"><div class="plot-title">Схема течения</div><svg viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="500" height="220" fill="#fdf9f3" rx="4"/>
+<!-- Channel fill -->
+<path d="M20 20 L480 20 L480 170 L100 170 L100 100 L20 100 Z" fill="#e8f0fa"/>
+<!-- Step block -->
+<rect x="20" y="100" width="80" height="70" fill="#8b7d6e" rx="2"/>
+<!-- Recirculation zone -->
+<path d="M100 170 L220 170 Q180 120 100 100 Z" fill="#c44" opacity="0.1"/>
+<!-- Walls -->
+<path d="M20 20 L480 20" fill="none" stroke="#2c2419" stroke-width="2"/>
+<path d="M100 170 L480 170" fill="none" stroke="#2c2419" stroke-width="2"/>
+<path d="M20 100 L100 100 L100 170" fill="none" stroke="#2c2419" stroke-width="2"/>
+<path d="M20 20 L20 100" fill="none" stroke="#2c2419" stroke-width="2"/>
+<!-- Inlet arrows (parabolic) -->
+<line x1="8" y1="40" x2="28" y2="40" stroke="#3a5ba0" stroke-width="1.5" marker-end="url(#arrS)"/>
+<line x1="5" y1="55" x2="32" y2="55" stroke="#3a5ba0" stroke-width="1.5" marker-end="url(#arrS)"/>
+<line x1="4" y1="70" x2="35" y2="70" stroke="#3a5ba0" stroke-width="1.5" marker-end="url(#arrS)"/>
+<line x1="5" y1="85" x2="32" y2="85" stroke="#3a5ba0" stroke-width="1.5" marker-end="url(#arrS)"/>
+<defs><marker id="arrS" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,2 L8,5 L0,8" fill="#3a5ba0"/></marker></defs>
+<!-- Recirculation arrow -->
+<path d="M110 165 Q190 120 105 105" fill="none" stroke="#c44" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrR)"/>
+<defs><marker id="arrR" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,2 L8,5 L0,8" fill="#c44"/></marker></defs>
+<!-- xr marker -->
+<line x1="220" y1="170" x2="220" y2="190" stroke="#854f0b" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="220" y="205" font-family="JetBrains Mono,monospace" font-size="10" fill="#854f0b" text-anchor="middle" font-weight="700">xr</text>
+<!-- Labels -->
+<text x="155" y="145" font-family="JetBrains Mono,monospace" font-size="10" fill="#c44" text-anchor="middle" font-weight="600">u &lt; 0</text>
+<text x="155" y="158" font-family="JetBrains Mono,monospace" font-size="8" fill="#c44" text-anchor="middle">рециркуляция</text>
+<text x="10" y="118" font-family="Source Serif 4,serif" font-size="9" fill="#3a5ba0" font-style="italic">Пуазейль</text>
+<text x="55" y="140" font-family="JetBrains Mono,monospace" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">h</text>
+</svg></div>
+  <div class="plot-box"><div class="plot-title">xr/h vs Re (Armaly)</div><svg id="svg_step_xr" viewBox="0 0 420 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="420" height="220" fill="#fdf9f3" rx="4"/>
+<line x1="48" y1="12.0" x2="408" y2="12.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="57.0" x2="408" y2="57.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="102.0" x2="408" y2="102.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="147.0" x2="408" y2="147.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="192.0" x2="408" y2="192.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48.0" y1="12" x2="48.0" y2="192" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="138.0" y1="12" x2="138.0" y2="192" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="228.0" y1="12" x2="228.0" y2="192" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="318.0" y1="12" x2="318.0" y2="192" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="408.0" y1="12" x2="408.0" y2="192" stroke="#e8e0d4" stroke-width="0.5"/>
+<text x="48.0" y="206" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0</text>
+<text x="128.0" y="206" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">200</text>
+<text x="208.0" y="206" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">400</text>
+<text x="288.0" y="206" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">600</text>
+<text x="368.0" y="206" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">800</text>
+<text x="228.0" y="218" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">Re</text>
+<text x="44" y="195.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0</text>
+<text x="44" y="150.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">4</text>
+<text x="44" y="105.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">8</text>
+<text x="44" y="60.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">12</text>
+<text x="44" y="15.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">16</text>
+<text x="8" y="102.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle" transform="rotate(-90 8 102.0)">xr/h</text>
+<path d="M88.0,158.2 L128.0,135.8 L208.0,99.8 L368.0,34.5" fill="none" stroke="#854f0b" stroke-width="2"/>
+<circle cx="88.0" cy="158.2" r="4" fill="#854f0b"/>
+<text x="94.0" y="161.2" font-family="JetBrains Mono,monospace" font-size="8" fill="#2c2419">3</text>
+<circle cx="128.0" cy="135.8" r="4" fill="#854f0b"/>
+<text x="134.0" y="138.8" font-family="JetBrains Mono,monospace" font-size="8" fill="#2c2419">5</text>
+<circle cx="208.0" cy="99.8" r="4" fill="#854f0b"/>
+<text x="214.0" y="88.8" font-family="JetBrains Mono,monospace" font-size="8" fill="#2c2419">8.2</text>
+<circle cx="368.0" cy="34.5" r="4" fill="#854f0b"/>
+<text x="374.0" y="37.5" font-family="JetBrains Mono,monospace" font-size="8" fill="#2c2419">14</text>
+</svg></div>
+</div>
+<div class="ref-values"><b>Параметры обратной ступеньки:</b>
+Область: [0, 30h]×[0, 2h],  h = 0.5,  ступенька: [0, 5h]×[0, h]
+Степень расширения: H/(H−h) = 2:1
+Вход: профиль Пуазейля u(y) = 6·U_avg·(y−h)(H−y)/(H−h)²
+Выход: ∂u/∂x = 0, ∂v/∂x = 0, p = 0
+Сетка: 300×40 (мелкая вдоль канала)
+Метод: SIMPLE (стационарный) или PIMPLE (Δt=0.01)
+<b>Эталонные значения xr/h (Armaly et al., 1983):</b>
+  Re = 100  →  xr/h ≈ 3.0        Re = 400  →  xr/h ≈ 8.2
+  Re = 200  →  xr/h ≈ 5.0        Re = 800  →  xr/h ≈ 14.0 (+ вторичный вихрь на верхней стенке)
+<b>Как определять xr:</b> точка на нижней стенке (y=0), где u меняет знак с − на +: u(xr, y→0⁺) = 0</div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ===================== BLOCK 8: UNSTRUCTURED ===================== -->
+
+<div class="block">
+<div class="block-header"><div class="block-num">8</div><h3 style="margin:0">КОМ на неструктурированных сетках</h3></div>
+<table>
+<tr><th>#</th><th>Пункт</th><th>Результат</th><th>Маркер</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
+<tr><td>1</td><td>Структуры данных</td><td>Структуры данных: узел, грань (left/right), ячейка</td><td><span class="tag">CHECK: MESH_STRUCTS</span></td><td><span class="how">Поставить маркер у определения структур данных</span> <code>struct Node</code>, <code>struct Face</code>, <code>struct Cell</code> в файле mesh.hpp</td><td class="check-cell"><input type="checkbox" id="chk_60"></td></tr>
+<tr><td>2</td><td>build_faces+geometry</td><td>Площади ячеек, нормали граней, центроиды</td><td><span class="tag">CHECK: BUILD_FACES</span></td><td><span class="how">Поставить маркер у функций</span> <code>build_faces()</code> (построение граней из узлов) и <code>cell_geometry()</code> (площади, центроиды)</td><td class="check-cell"><input type="checkbox" id="chk_61"></td></tr>
+<tr><td>3</td><td>HLLC+Годунов+Колган</td><td>Годунов (1-й порядок) + Колган (2-й, линейная + minmod)</td><td><span class="tag">CHECK: UNSTRUCT_SCHEMES</span></td><td><span class="how">Поставить маркер у вычисления невязок:</span> 1-й порядок (Годунов — постоянная реконструкция) и 2-й порядок (Колган — линейная + лимитер minmod)</td><td class="check-cell"><input type="checkbox" id="chk_62"></td></tr>
+<tr><td>4</td><td>ГУ: Wall, Farfield</td><td>Wall = зеркало скорости; Farfield = характер. солвер Римана</td><td><span class="tag">CHECK: GHOST_STATE</span></td><td><span class="how">Поставить маркер у функции <code>ghost_state()</code>:</span> стенка Wall — зеркальное отражение скорости; дальнее поле Farfield — характеристический солвер Римана</td><td class="check-cell"><input type="checkbox" id="chk_63"></td></tr>
+<tr><td>5</td><td>VTK-вывод</td><td>VTK-файл открывается в ParaView, сетка видна</td><td>—</td><td><span class="file">results/08_woodward/mesh.png</span>: <span class="how">Скриншот неструктурированной сетки из ParaView</span> — должна быть видна структура ячеек, сгущение к телу</td><td class="check-cell"><input type="checkbox" id="chk_64"></td></tr>
+<tr><td>6</td><td><b>Вудворд</b> (M=3)</td><td>Видны: падающая УВ, отражённая, маховский стержень, тройная точка</td><td>—</td><td><span class="file">results/08_woodward/density.png</span>: ≥30 контуров ρ<br><span class="how">На карте плотности (≥30 контуров) должны быть видны:</span> падающая ударная волна, отражённая волна, маховский стержень у нижней стенки, тройная точка Маха</td><td class="check-cell"><input type="checkbox" id="chk_65"></td></tr>
+<tr><td>7</td><td><b>NACA 0012</b></td><td>Карта $M$, распределение $C_p(x/c)$, значения $C_d$, $C_l$</td><td>—</td><td><span class="file">results/09_naca/mach_field.png</span> + <span class="file">cp.png</span> + <span class="file">aero.txt</span>:<br><code style="font-size:.72rem">M=0.8 alpha=1.25 Cd=0.023 Cl=0.35</code></td><td class="check-cell"><input type="checkbox" id="chk_66"></td></tr>
+<tr><td>8</td><td><b>Цилиндр</b></td><td>Распределение $C_p(\theta)$ по поверхности, $C_d$</td><td>—</td><td><span class="file">results/10_cylinder/cp_theta.png</span> + <span class="file">cd.txt</span></td><td class="check-cell"><input type="checkbox" id="chk_67"></td></tr>
+</table>
+
+<h4>Задание: ступенька Вудворда–Колеллы (M=3)</h4>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Постановка.</strong> Сверхзвуковой поток ($M = 3$) набегает на ступеньку высотой 0.2 в канале $[0,3] \times [0,1]$. Образуются сложные структуры: падающая ударная волна, отражённая волна, маховский стержень (нормальный скачок у нижней стенки), тройная точка Маха и контактный разрыв.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Какой график построить.</strong> Контурная карта плотности $\rho$ с ≥ 30 изолиниями. На ней должны быть видны все перечисленные элементы. Дополнительно: скриншот сетки из ParaView.</p>
+
+<h4>Ожидаемое поле — Вудворд M=3</h4>
+<div class="plot-container">
+  <div class="plot-box"><div class="plot-title">Картина плотности (схема)</div><svg viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="500" height="220" fill="#fdf9f3" rx="4"/>
+<!-- Flow region -->
+<rect x="20" y="15" width="460" height="160" fill="#e8f0fa" rx="4"/>
+<!-- Step -->
+<rect x="110" y="140" width="370" height="35" fill="#8b7d6e" rx="2"/>
+<!-- Compressed region behind incident shock -->
+<path d="M20 15 L170 15 L150 140 L110 140 L110 175 L20 175 Z" fill="#c44" opacity="0.08"/>
+<!-- Walls -->
+<line x1="20" y1="15" x2="480" y2="15" stroke="#2c2419" stroke-width="2"/>
+<path d="M20 175 L110 175 L110 140 L480 140" fill="none" stroke="#2c2419" stroke-width="2"/>
+<line x1="20" y1="15" x2="20" y2="175" stroke="#2c2419" stroke-width="1"/>
+<!-- Incident shock -->
+<line x1="220" y1="15" x2="170" y2="140" stroke="#c44" stroke-width="2.5"/>
+<!-- Reflected shock -->
+<path d="M170 140 Q230 85 310 15" fill="none" stroke="#3a5ba0" stroke-width="2" stroke-dasharray="6 3"/>
+<!-- Mach stem -->
+<line x1="170" y1="140" x2="135" y2="140" stroke="#b44a2d" stroke-width="3.5"/>
+<!-- Contact discontinuity -->
+<path d="M170 140 Q220 100 270 65" fill="none" stroke="#1a6b5a" stroke-width="1.5" stroke-dasharray="4 4"/>
+<!-- Triple point -->
+<circle cx="170" cy="140" r="5" fill="#b44a2d"/>
+<!-- Labels -->
+<text x="50" y="100" font-family="JetBrains Mono,monospace" font-size="10" fill="#2c2419" text-anchor="middle" font-weight="600">M=3 →</text>
+<text x="240" y="30" font-family="JetBrains Mono,monospace" font-size="9" fill="#c44" text-anchor="middle">падающая УВ</text>
+<text x="310" y="62" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a5ba0" text-anchor="middle">отражённая</text>
+<text x="230" y="130" font-family="JetBrains Mono,monospace" font-size="9" fill="#b44a2d" text-anchor="middle" font-weight="600">тройная точка</text>
+<text x="145" y="158" font-family="JetBrains Mono,monospace" font-size="8" fill="#b44a2d" text-anchor="middle" font-weight="700">маховский стержень</text>
+<text x="270" y="88" font-family="JetBrains Mono,monospace" font-size="9" fill="#1a6b5a" text-anchor="middle">контакт</text>
+<!-- Step label -->
+<text x="310" y="165" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="middle">ступенька h=0.2</text>
+<!-- Axis -->
+<text x="250" y="198" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="middle">x: 0 → 3</text>
+</svg></div>
+</div>
+<div class="ref-values"><b>Параметры теста Вудворда–Колеллы:</b>
+Область: [0, 3]×[0, 1], ступенька высотой 0.2 при x=0.6
+Начальные условия: M=3, γ=1.4, ρ=1.4, p=1, u=3, v=0
+ГУ: Inflow (слева), Outflow (справа), Wall (верх, низ, ступенька)
+Сетка: ≥ 2000 ячеек (Делоне или декартова)
+<b>Что должно быть видно:</b> падающая УВ от ступеньки, отражённая УВ, маховский стержень (вертикальная УВ у нижней стенки), контактный разрыв, тройная точка Маха</div>
+
+<h4>Задания: обтекание NACA 0012 и цилиндра</h4>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>NACA 0012</strong> — симметричный профиль крыла толщиной 12%. При $M = 0.8$, $\alpha = 1.25°$ на верхней поверхности возникает скачок уплотнения (transonic shock). <strong>Что построить:</strong> (1) карта числа Маха вокруг профиля; (2) распределение $C_p(x/c)$ — верхняя (со скачком) и нижняя поверхности; (3) значения $C_d$ (сопротивление) и $C_l$ (подъёмная сила).</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Цилиндр.</strong> Обтекание при $M = 0.3$–$0.5$. <strong>Что построить:</strong> распределение $C_p(\theta)$ по поверхности ($\theta = 0°$ — лоб, $\theta = 90°$ — бок). Сравнить с потенциальным обтеканием: $C_p = 1 - 4\sin^2\theta$.</p>
+
+<p style="font-size:.88rem;margin-bottom:.6rem"><strong>Определения.</strong> $C_p = (P - P_\infty) / (\frac{1}{2} \rho_\infty U_\infty^2)$ — коэффициент давления; $C_d$ — коэффициент сопротивления (drag); $C_l$ — коэффициент подъёмной силы (lift); $x/c$ — безразмерная координата вдоль хорды профиля.</p>
+
+<h4>Ожидаемые графики — NACA и цилиндр</h4>
+<div class="plot-container">
+  <div class="plot-box"><div class="plot-title">Cp(x/c) — NACA 0012, M=0.8</div><svg id="svg_naca_cp" viewBox="0 0 420 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="420" height="260" fill="#fdf9f3" rx="4"/>
+<line x1="48" y1="12.0" x2="408" y2="12.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="48.7" x2="408" y2="48.7" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="85.3" x2="408" y2="85.3" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="122.0" x2="408" y2="122.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="158.7" x2="408" y2="158.7" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="195.3" x2="408" y2="195.3" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="232.0" x2="408" y2="232.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48.0" y1="12" x2="48.0" y2="232" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="120.0" y1="12" x2="120.0" y2="232" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="192.0" y1="12" x2="192.0" y2="232" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="264.0" y1="12" x2="264.0" y2="232" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="336.0" y1="12" x2="336.0" y2="232" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="408.0" y1="12" x2="408.0" y2="232" stroke="#e8e0d4" stroke-width="0.5"/>
+<text x="48.0" y="246" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.0</text>
+<text x="120.0" y="246" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.2</text>
+<text x="192.0" y="246" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.4</text>
+<text x="264.0" y="246" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.6</text>
+<text x="336.0" y="246" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0.8</text>
+<text x="408.0" y="246" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">1.0</text>
+<text x="228.0" y="258" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">x/c</text>
+<text x="44" y="15.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">1.5</text>
+<text x="44" y="51.7" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">1.0</text>
+<text x="44" y="88.3" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.5</text>
+<text x="44" y="125.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.0</text>
+<text x="44" y="161.7" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">-0.5</text>
+<text x="44" y="198.3" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">-1.0</text>
+<text x="44" y="235.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">-1.5</text>
+<text x="8" y="122.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle" transform="rotate(-90 8 122.0)">−Cp</text>
+<path d="M48.0,122.0 L51.6,122.0 L55.2,61.1 L58.8,60.0 L62.4,58.9 L66.0,57.8 L69.6,56.7 L73.2,55.6 L76.8,54.5 L80.4,53.4 L84.0,52.3 L87.6,51.2 L91.2,50.1 L94.8,49.0 L98.4,47.9 L102.0,46.8 L105.6,45.7 L109.2,44.6 L112.8,43.5 L116.4,42.4 L120.0,41.3 L123.6,40.2 L127.2,39.1 L130.8,38.0 L134.4,36.9 L138.0,35.8 L141.6,34.7 L145.2,33.6 L148.8,32.5 L152.4,31.4 L156.0,30.3 L159.6,29.2 L163.2,28.1 L166.8,27.0 L170.4,25.9 L174.0,24.8 L177.6,68.8 L181.2,112.8 L184.8,112.9 L188.4,113.1 L192.0,113.2 L195.6,113.3 L199.2,113.5 L202.8,113.6 L206.4,113.8 L210.0,113.9 L213.6,114.1 L217.2,114.2 L220.8,114.4 L224.4,114.5 L228.0,114.7 L231.6,114.8 L235.2,115.0 L238.8,115.1 L242.4,115.3 L246.0,115.4 L249.6,115.5 L253.2,115.7 L256.8,115.8 L260.4,116.0 L264.0,116.1 L267.6,116.3 L271.2,116.4 L274.8,116.6 L278.4,116.7 L282.0,116.9 L285.6,117.0 L289.2,117.2 L292.8,117.3 L296.4,117.5 L300.0,117.6 L303.6,117.7 L307.2,117.9 L310.8,118.0 L314.4,118.2 L318.0,118.3 L321.6,118.5 L325.2,118.6 L328.8,118.8 L332.4,118.9 L336.0,119.1 L339.6,119.2 L343.2,119.4 L346.8,119.5 L350.4,119.7 L354.0,119.8 L357.6,119.9 L361.2,120.1 L364.8,120.2 L368.4,120.4 L372.0,120.5 L375.6,120.7 L379.2,120.8 L382.8,121.0 L386.4,121.1 L390.0,121.3 L393.6,121.4 L397.2,121.6 L400.8,121.7 L404.4,121.9 L408.0,122.0" fill="none" stroke="#b44a2d" stroke-width="2"/>
+<path d="M48.0,122.0 L51.6,122.0 L55.2,100.6 L58.8,100.9 L62.4,101.2 L66.0,101.5 L69.6,101.8 L73.2,102.1 L76.8,102.3 L80.4,102.6 L84.0,102.9 L87.6,103.2 L91.2,103.5 L94.8,103.8 L98.4,104.1 L102.0,104.4 L105.6,104.7 L109.2,105.0 L112.8,105.3 L116.4,105.6 L120.0,105.9 L123.6,106.2 L127.2,106.5 L130.8,106.7 L134.4,107.0 L138.0,107.3 L141.6,107.6 L145.2,107.9 L148.8,108.2 L152.4,108.5 L156.0,108.8 L159.6,109.1 L163.2,109.4 L166.8,109.7 L170.4,110.0 L174.0,110.3 L177.6,110.6 L181.2,110.9 L184.8,111.1 L188.4,111.4 L192.0,111.7 L195.6,112.0 L199.2,112.3 L202.8,112.6 L206.4,112.9 L210.0,113.2 L213.6,113.5 L217.2,113.8 L220.8,114.1 L224.4,114.4 L228.0,114.7 L231.6,115.0 L235.2,115.3 L238.8,115.5 L242.4,115.8 L246.0,116.1 L249.6,116.4 L253.2,116.7 L256.8,117.0 L260.4,117.3 L264.0,117.6 L267.6,117.9 L271.2,118.2 L274.8,118.5 L278.4,118.8 L282.0,119.1 L285.6,119.4 L289.2,119.7 L292.8,119.9 L296.4,120.2 L300.0,120.5 L303.6,120.8 L307.2,121.1 L310.8,121.4 L314.4,121.7 L318.0,122.0 L321.6,122.3 L325.2,122.6 L328.8,122.9 L332.4,123.2 L336.0,123.5 L339.6,123.8 L343.2,124.1 L346.8,124.3 L350.4,124.6 L354.0,124.9 L357.6,125.2 L361.2,125.5 L364.8,125.8 L368.4,126.1 L372.0,126.4 L375.6,126.7 L379.2,127.0 L382.8,127.3 L386.4,127.6 L390.0,127.9 L393.6,128.2 L397.2,128.5 L400.8,128.7 L404.4,129.0 L408.0,129.3" fill="none" stroke="#3a5ba0" stroke-width="2"/>
+<line x1="310" y1="195" x2="330" y2="195" stroke="#b44a2d" stroke-width="2"/>
+<text x="334" y="198" font-family="Source Serif 4,serif" font-size="9" fill="#b44a2d">верхняя</text>
+<line x1="310" y1="209" x2="330" y2="209" stroke="#3a5ba0" stroke-width="2"/>
+<text x="334" y="212" font-family="Source Serif 4,serif" font-size="9" fill="#3a5ba0">нижняя</text>
+<text x="192.0" y="38.4" font-family="JetBrains Mono,monospace" font-size="8" fill="#854f0b" font-weight="700">скачок</text>
+</svg></div>
+  <div class="plot-box"><div class="plot-title">Cp(θ) — цилиндр</div><svg id="svg_cyl_cp" viewBox="0 0 420 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="420" height="260" fill="#fdf9f3" rx="4"/>
+<line x1="48" y1="12.0" x2="408" y2="12.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="48.7" x2="408" y2="48.7" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="85.3" x2="408" y2="85.3" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="122.0" x2="408" y2="122.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="158.7" x2="408" y2="158.7" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="195.3" x2="408" y2="195.3" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="232.0" x2="408" y2="232.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48.0" y1="12" x2="48.0" y2="232" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="108.0" y1="12" x2="108.0" y2="232" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="168.0" y1="12" x2="168.0" y2="232" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="228.0" y1="12" x2="228.0" y2="232" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="288.0" y1="12" x2="288.0" y2="232" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="348.0" y1="12" x2="348.0" y2="232" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="408.0" y1="12" x2="408.0" y2="232" stroke="#e8e0d4" stroke-width="0.5"/>
+<text x="48.0" y="246" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">0°</text>
+<text x="108.0" y="246" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">30°</text>
+<text x="168.0" y="246" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">60°</text>
+<text x="228.0" y="246" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">90°</text>
+<text x="288.0" y="246" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">120°</text>
+<text x="348.0" y="246" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">150°</text>
+<text x="408.0" y="246" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">180°</text>
+<text x="228.0" y="258" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">θ</text>
+<text x="44" y="15.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">1.5</text>
+<text x="44" y="37.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">1.0</text>
+<text x="44" y="81.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0.0</text>
+<text x="44" y="125.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">-1.0</text>
+<text x="44" y="169.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">-2.0</text>
+<text x="44" y="213.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">-3.0</text>
+<text x="8" y="122.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle" transform="rotate(-90 8 122.0)">Cp</text>
+<line x1="48" y1="78.0" x2="408" y2="78.0" stroke="#d9cfc0" stroke-width="0.8"/>
+<path d="M48.0,34.0 L50.0,34.1 L52.0,34.2 L54.0,34.5 L56.0,34.9 L58.0,35.3 L60.0,35.9 L62.0,36.6 L64.0,37.4 L66.0,38.3 L68.0,39.3 L70.0,40.4 L72.0,41.6 L74.0,42.9 L76.0,44.3 L78.0,45.8 L80.0,47.4 L82.0,49.0 L84.0,50.8 L86.0,52.7 L88.0,54.6 L90.0,56.6 L92.0,58.7 L94.0,60.9 L96.0,63.1 L98.0,65.4 L100.0,67.8 L102.0,70.3 L104.0,72.8 L106.0,75.4 L108.0,78.0 L110.0,80.7 L112.0,83.4 L114.0,86.2 L116.0,89.0 L118.0,91.9 L120.0,94.8 L122.0,97.7 L124.0,100.7 L126.0,103.7 L128.0,106.7 L130.0,109.8 L132.0,112.8 L134.0,115.9 L136.0,118.9 L138.0,122.0 L140.0,125.1 L142.0,128.1 L144.0,131.2 L146.0,134.2 L148.0,137.3 L150.0,140.3 L152.0,143.3 L154.0,146.3 L156.0,149.2 L158.0,152.1 L160.0,155.0 L162.0,157.8 L164.0,160.6 L166.0,163.3 L168.0,166.0 L170.0,168.6 L172.0,171.2 L174.0,173.7 L176.0,176.2 L178.0,178.6 L180.0,180.9 L182.0,183.1 L184.0,185.3 L186.0,187.4 L188.0,189.4 L190.0,191.3 L192.0,193.2 L194.0,195.0 L196.0,196.6 L198.0,198.2 L200.0,199.7 L202.0,201.1 L204.0,202.4 L206.0,203.6 L208.0,204.7 L210.0,205.7 L212.0,206.6 L214.0,207.4 L216.0,208.1 L218.0,208.7 L220.0,209.1 L222.0,209.5 L224.0,209.8 L226.0,209.9 L228.0,210.0 L230.0,209.9 L232.0,209.8 L234.0,209.5 L236.0,209.1 L238.0,208.7 L240.0,208.1 L242.0,207.4 L244.0,206.6 L246.0,205.7 L248.0,204.7 L250.0,203.6 L252.0,202.4 L254.0,201.1 L256.0,199.7 L258.0,198.2 L260.0,196.6 L262.0,195.0 L264.0,193.2 L266.0,191.3 L268.0,189.4 L270.0,187.4 L272.0,185.3 L274.0,183.1 L276.0,180.9 L278.0,178.6 L280.0,176.2 L282.0,173.7 L284.0,171.2 L286.0,168.6 L288.0,166.0 L290.0,163.3 L292.0,160.6 L294.0,157.8 L296.0,155.0 L298.0,152.1 L300.0,149.2 L302.0,146.3 L304.0,143.3 L306.0,140.3 L308.0,137.3 L310.0,134.2 L312.0,131.2 L314.0,128.1 L316.0,125.1 L318.0,122.0 L320.0,118.9 L322.0,115.9 L324.0,112.8 L326.0,109.8 L328.0,106.7 L330.0,103.7 L332.0,100.7 L334.0,97.7 L336.0,94.8 L338.0,91.9 L340.0,89.0 L342.0,86.2 L344.0,83.4 L346.0,80.7 L348.0,78.0 L350.0,75.4 L352.0,72.8 L354.0,70.3 L356.0,67.8 L358.0,65.4 L360.0,63.1 L362.0,60.9 L364.0,58.7 L366.0,56.6 L368.0,54.6 L370.0,52.7 L372.0,50.8 L374.0,49.0 L376.0,47.4 L378.0,45.8 L380.0,44.3 L382.0,42.9 L384.0,41.6 L386.0,40.4 L388.0,39.3 L390.0,38.3 L392.0,37.4 L394.0,36.6 L396.0,35.9 L398.0,35.3 L400.0,34.9 L402.0,34.5 L404.0,34.2 L406.0,34.1 L408.0,34.0" fill="none" stroke="#9a8d7e" stroke-width="1" stroke-dasharray="4 4"/>
+<path d="M48.0,34.0 L50.0,34.1 L52.0,34.2 L54.0,34.5 L56.0,34.9 L58.0,35.3 L60.0,35.9 L62.0,36.6 L64.0,37.4 L66.0,38.3 L68.0,39.3 L70.0,40.4 L72.0,41.6 L74.0,42.9 L76.0,44.3 L78.0,45.8 L80.0,47.4 L82.0,49.0 L84.0,50.8 L86.0,52.7 L88.0,54.6 L90.0,56.6 L92.0,58.7 L94.0,60.9 L96.0,63.1 L98.0,65.4 L100.0,67.8 L102.0,70.3 L104.0,72.8 L106.0,75.4 L108.0,78.0 L110.0,80.7 L112.0,83.4 L114.0,86.2 L116.0,89.0 L118.0,91.9 L120.0,94.8 L122.0,97.7 L124.0,100.7 L126.0,103.7 L128.0,106.7 L130.0,109.8 L132.0,112.8 L134.0,115.9 L136.0,118.9 L138.0,122.0 L140.0,125.1 L142.0,128.1 L144.0,131.2 L146.0,134.2 L148.0,137.3 L150.0,140.3 L152.0,143.3 L154.0,146.3 L156.0,149.2 L158.0,152.1 L160.0,155.0 L162.0,157.8 L164.0,160.6 L166.0,163.3 L168.0,166.0 L170.0,168.6 L172.0,171.2 L174.0,173.7 L176.0,176.2 L178.0,178.6 L180.0,180.9 L182.0,183.1 L184.0,185.3 L186.0,187.4 L188.0,189.4 L190.0,191.3 L192.0,193.2 L194.0,195.0 L196.0,196.6 L198.0,198.2 L200.0,199.7 L202.0,201.1 L204.0,202.4 L206.0,203.6 L208.0,204.7 L210.0,205.7 L212.0,206.6 L214.0,207.4 L216.0,208.1 L218.0,208.7 L220.0,209.1 L222.0,209.5 L224.0,209.8 L226.0,209.9 L228.0,210.0 L230.0,209.9 L232.0,209.8 L234.0,209.5 L236.0,209.1 L238.0,208.7 L240.0,208.1 L242.0,207.4 L244.0,206.6 L246.0,205.7 L248.0,204.7 L250.0,203.6 L252.0,202.4 L254.0,201.1 L256.0,199.7 L258.0,198.2 L260.0,196.6 L262.0,195.0 L264.0,193.2 L266.0,191.3 L268.0,189.4 L270.0,187.4 L272.0,185.3 L274.0,183.1 L276.0,180.9 L278.0,178.6 L280.0,176.2 L282.0,173.7 L284.0,171.2 L286.0,168.6 L288.0,166.0 L290.0,142.7 L292.0,141.3 L294.0,139.9 L296.0,138.5 L298.0,137.0 L300.0,135.6 L302.0,134.1 L304.0,132.6 L306.0,131.1 L308.0,129.6 L310.0,128.1 L312.0,126.6 L314.0,125.1 L316.0,123.5 L318.0,122.0 L320.0,120.5 L322.0,118.9 L324.0,117.4 L326.0,115.9 L328.0,114.4 L330.0,112.9 L332.0,111.4 L334.0,109.9 L336.0,108.4 L338.0,107.0 L340.0,105.5 L342.0,104.1 L344.0,102.7 L346.0,101.3 L348.0,100.0 L350.0,98.7 L352.0,97.4 L354.0,96.1 L356.0,94.9 L358.0,93.7 L360.0,92.6 L362.0,91.4 L364.0,90.3 L366.0,89.3 L368.0,88.3 L370.0,87.3 L372.0,86.4 L374.0,85.5 L376.0,84.7 L378.0,83.9 L380.0,83.2 L382.0,82.5 L384.0,81.8 L386.0,81.2 L388.0,80.7 L390.0,80.2 L392.0,79.7 L394.0,79.3 L396.0,79.0 L398.0,78.7 L400.0,78.4 L402.0,78.2 L404.0,78.1 L406.0,78.0 L408.0,78.0" fill="none" stroke="#3a5ba0" stroke-width="2"/>
+<text x="56" y="30.0" font-family="JetBrains Mono,monospace" font-size="8" fill="#854f0b" transform="translate(10,-10)">Cp=1</text>
+<line x1="280" y1="22" x2="300" y2="22" stroke="#3a5ba0" stroke-width="2"/>
+<text x="304" y="252" font-family="Source Serif 4,serif" font-size="9" fill="#3a5ba0">расчёт</text>
+<line x1="280" y1="36" x2="300" y2="36" stroke="#9a8d7e" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="304" y="39" font-family="Source Serif 4,serif" font-size="9" fill="#9a8d7e">потенциальное</text>
+</svg></div>
+</div>
+
+<div class="ref-values"><b>Параметры теста NACA 0012:</b>
+Профиль: NACA 0012 (толщина 12%)
+M∞ = 0.8,  α = 1.25°,  γ = 1.4
+ГУ: Farfield (внешняя граница, r ≈ 20 хорд), Wall (профиль)
+Сетка: O-сетка, ≥ 5000 ячеек, сгущение на кромках
+<b>Ожидаемые значения (ориентировочно):</b>
+  Cd ≈ 0.02–0.03 (волновое сопротивление)
+  Cl ≈ 0.3–0.4 (подъёмная сила)
+  Скачок давления на верхней поверхности при x/c ≈ 0.3–0.5
+  Cp на нижней поверхности — плавный, без скачков</div>
+
+<div class="ref-values"><b>Параметры теста цилиндра:</b>
+Цилиндр радиуса R=1, центр (0,0)
+M∞ = 0.3–0.5,  α = 0°,  γ = 1.4
+ГУ: Farfield (r ≈ 15R), Wall (поверхность цилиндра)
+Сетка: Делоне, ≥ 3000 ячеек, сгущение к телу
+<b>Ожидаемые значения:</b>
+  Cp(θ=0°) ≈ 1.0 (точка торможения, лоб)
+  Cp(θ=90°) < 0 (минимум давления, бок)
+  Cd: зависит от M∞. При M=0.3 → Cd ≈ 0 (потенциальное обтекание, парадокс Даламбера)
+  Симметрия: Cp(θ) = Cp(−θ) при α=0</div>
+</div>
+
+<!-- ===================== BLOCK 9: MPI ===================== -->
+
+<div class="block">
+<div class="block-header"><div class="block-num">9</div><h3 style="margin:0">MPI-параллелизация</h3></div>
+<table>
+<tr><th>#</th><th>Пункт</th><th>Результат</th><th>Маркер</th><th>📋 Что подготовить</th><th class="check-cell">✓</th></tr>
+<tr><td>1</td><td>Декомпозиция</td><td>Декомпозиция одним из методов: RCB, BFS или METIS</td><td><span class="tag">CHECK: DECOMPOSITION</span></td><td><span class="how">Поставить маркер у алгоритма декомпозиции области (RCB, BFS или METIS).</span><br><span class="file">results/11_mpi/decomposition.png</span>: цветная карта part[i]</td><td class="check-cell"><input type="checkbox" id="chk_68"></td></tr>
+<tr><td>2</td><td>Halo exchange</td><td>Неблокирующий обмен: <code>MPI_Isend</code> / <code>MPI_Irecv</code></td><td><span class="tag">CHECK: HALO_EXCHANGE</span></td><td><span class="how">Поставить маркер у halo-обмена:</span> сборка буферов отправки, вызовы <code>MPI_Isend</code> / <code>MPI_Irecv</code>, распаковка. Студент должен объяснить, какие именно данные обмениваются</td><td class="check-cell"><input type="checkbox" id="chk_69"></td></tr>
+<tr><td>3</td><td>par = seq</td><td>Параллельный результат = последовательный (до маш. точности)</td><td>—</td><td><span class="file">results/11_mpi/verification.txt</span>:<br><code style="font-size:.72rem">max|rho_par-rho_seq| = 2.3e-15</code><br><code style="font-size:.72rem">max|u_par-u_seq|     = 1.1e-14</code></td><td class="check-cell"><input type="checkbox" id="chk_70"></td></tr>
+<tr><td>4</td><td>Ускорение</td><td>$S(N) = T_1/T_N$ vs $N$ + линия идеального ускорения</td><td>—</td><td><span class="file">results/11_mpi/speedup.png</span>: T₁/T_N vs N + линия идеала<br><span class="file">speedup.txt</span>: <code style="font-size:.72rem">N=1 T=10.2s  N=4 T=3.1s</code></td><td class="check-cell"><input type="checkbox" id="chk_71"></td></tr>
+</table>
+
+<div class="ref-values"><b>Параметры MPI-теста:</b>
+Задача: любая из неструктурированных (Вудворд, цилиндр или NACA)
+Сетка: ≥ 5000 ячеек (чтобы параллелизация имела смысл)
+Декомпозиция: RCB (рекурсивная координатная бисекция) или METIS
+<b>Что показать:</b>
+  1. Визуализация разбиения: каждый раздел — свой цвет
+  2. Верификация: параллельный = последовательный
+  3. Графики ускорения и эффективности</div>
+</div>
+
+<div class="ref-plots" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0">
+  <div class="plot-box"><div class="plot-title">Ускорение S(N) = T₁/T_N</div><svg id="svg_mpi_speedup" viewBox="0 0 420 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="420" height="280" fill="#fdf9f3" rx="4"/>
+<line x1="48" y1="12.0" x2="408" y2="12.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="72.0" x2="408" y2="72.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="132.0" x2="408" y2="132.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="192.0" x2="408" y2="192.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="252.0" x2="408" y2="252.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48.0" y1="12" x2="48.0" y2="252" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="168.0" y1="12" x2="168.0" y2="252" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="288.0" y1="12" x2="288.0" y2="252" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="408.0" y1="12" x2="408.0" y2="252" stroke="#e8e0d4" stroke-width="0.5"/>
+<text x="48.0" y="266" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">1</text>
+<text x="168.0" y="266" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">2</text>
+<text x="288.0" y="266" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">4</text>
+<text x="408.0" y="266" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">8</text>
+<text x="228.0" y="278" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">N (процессов)</text>
+<text x="44" y="255.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0</text>
+<text x="44" y="195.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">2</text>
+<text x="44" y="135.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">4</text>
+<text x="44" y="75.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">6</text>
+<text x="44" y="15.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">8</text>
+<text x="8" y="132.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle" transform="rotate(-90 8 132.0)">S(N)</text>
+<path d="M48.0,222.0 L168.0,192.0 L288.0,132.0 L408.0,12.0" fill="none" stroke="#9a8d7e" stroke-width="1" stroke-dasharray="4 4"/>
+<path d="M48.0,222.0 L168.0,196.5 L288.0,150.0 L408.0,78.0" fill="none" stroke="#1a6b5a" stroke-width="2.5"/>
+<circle cx="48.0" cy="222.0" r="4" fill="#1a6b5a"/>
+<circle cx="168.0" cy="196.5" r="4" fill="#1a6b5a"/>
+<circle cx="288.0" cy="150.0" r="4" fill="#1a6b5a"/>
+<circle cx="408.0" cy="78.0" r="4" fill="#1a6b5a"/>
+<path d="M48.0,222.0 L168.0,204.0 L288.0,168.0 L408.0,126.0" fill="none" stroke="#b44a2d" stroke-width="2" stroke-dasharray="5 3"/>
+<circle cx="48.0" cy="222.0" r="4" fill="#b44a2d"/>
+<circle cx="168.0" cy="204.0" r="4" fill="#b44a2d"/>
+<circle cx="288.0" cy="168.0" r="4" fill="#b44a2d"/>
+<circle cx="408.0" cy="126.0" r="4" fill="#b44a2d"/>
+<text x="52" y="25" font-family="Source Serif 4,serif" font-size="9" fill="#9a8d7e">--- идеал S=N</text>
+<text x="52" y="38" font-family="Source Serif 4,serif" font-size="9" fill="#1a6b5a">── хорошее</text>
+<text x="52" y="51" font-family="Source Serif 4,serif" font-size="9" fill="#b44a2d">╌╌ слабое</text>
+</svg></div>
+  <div class="plot-box"><div class="plot-title">Эффективность E(N) = S(N)/N</div><svg id="svg_mpi_eff" viewBox="0 0 420 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<rect width="420" height="280" fill="#fdf9f3" rx="4"/>
+<line x1="48" y1="12.0" x2="408" y2="12.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="60.0" x2="408" y2="60.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="108.0" x2="408" y2="108.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="156.0" x2="408" y2="156.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="204.0" x2="408" y2="204.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48" y1="252.0" x2="408" y2="252.0" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="48.0" y1="12" x2="48.0" y2="252" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="168.0" y1="12" x2="168.0" y2="252" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="288.0" y1="12" x2="288.0" y2="252" stroke="#e8e0d4" stroke-width="0.5"/>
+<line x1="408.0" y1="12" x2="408.0" y2="252" stroke="#e8e0d4" stroke-width="0.5"/>
+<text x="48.0" y="266" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">1</text>
+<text x="168.0" y="266" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">2</text>
+<text x="288.0" y="266" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">4</text>
+<text x="408.0" y="266" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">8</text>
+<text x="228.0" y="278" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">N (процессов)</text>
+<text x="44" y="15.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">100%</text>
+<text x="44" y="63.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">80%</text>
+<text x="44" y="111.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">60%</text>
+<text x="44" y="159.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">40%</text>
+<text x="44" y="207.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">20%</text>
+<text x="44" y="255.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="end">0%</text>
+<text x="8" y="132.0" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle" transform="rotate(-90 8 132.0)">E(N) = S/N</text>
+<line x1="48" y1="12" x2="408" y2="12" stroke="#9a8d7e" stroke-width="0.5" stroke-dasharray="4 4"/>
+<rect x="48" y="128.0" width="360" height="8" fill="#b44a2d" opacity="0.08"/>
+<text x="408" y="126.0" font-family="JetBrains Mono,monospace" font-size="8" fill="#b44a2d" text-anchor="end">50%</text>
+<path d="M48.0,12.0 L168.0,30.0 L288.0,48.0 L408.0,78.0" fill="none" stroke="#1a6b5a" stroke-width="2.5"/>
+<circle cx="48.0" cy="12.0" r="4" fill="#1a6b5a"/>
+<text x="48.0" y="-6.0" font-family="JetBrains Mono,monospace" font-size="8" fill="#1a6b5a" text-anchor="center">100%</text>
+<circle cx="168.0" cy="30.0" r="4" fill="#1a6b5a"/>
+<text x="168.0" y="12.0" font-family="JetBrains Mono,monospace" font-size="8" fill="#1a6b5a" text-anchor="center">92%</text>
+<circle cx="288.0" cy="48.0" r="4" fill="#1a6b5a"/>
+<text x="288.0" y="30.0" font-family="JetBrains Mono,monospace" font-size="8" fill="#1a6b5a" text-anchor="center">85%</text>
+<circle cx="408.0" cy="78.0" r="4" fill="#1a6b5a"/>
+<text x="408.0" y="60.0" font-family="JetBrains Mono,monospace" font-size="8" fill="#1a6b5a" text-anchor="center">72%</text>
+<path d="M48.0,12.0 L168.0,60.0 L288.0,84.0 L408.0,126.0" fill="none" stroke="#b44a2d" stroke-width="2" stroke-dasharray="5 3"/>
+<circle cx="48.0" cy="12.0" r="4" fill="#b44a2d"/>
+<circle cx="168.0" cy="60.0" r="4" fill="#b44a2d"/>
+<circle cx="288.0" cy="84.0" r="4" fill="#b44a2d"/>
+<circle cx="408.0" cy="126.0" r="4" fill="#b44a2d"/>
+<text x="52" y="236" font-family="Source Serif 4,serif" font-size="9" fill="#1a6b5a">── хорошо</text>
+<text x="52" y="249" font-family="Source Serif 4,serif" font-size="9" fill="#b44a2d">╌╌ допустимо</text>
+</svg></div>
+</div>
+
+
+<hr class="section-divider">
+
+<!-- ===================== ERRORS ===================== -->
+<h2>Частые ошибки (для проверяющего)</h2>
+<div class="block" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+  <div>
+    <h4>FLIC</h4>
+    <ul style="padding-left:1.2rem;font-size:.85rem;color:var(--text2)">
+      <li>Этапы не разделены → <span class="how">Проверить через Ctrl+F: маркеры LAGRANGE и EULER стоят в разных функциях (этапы разделены)?</span></li>
+      <li>uⁿ⁺¹ вместо ũ при переносе</li>
+      <li>2D: Δt вместо Δt/2 (Strang)</li>
+    </ul>
+    <h4>Годунов 2D</h4>
+    <ul style="padding-left:1.2rem;font-size:.85rem;color:var(--text2)">
+      <li>1D CFL → <span class="how">Найти через Ctrl+F маркер «CFL_2D» и убедиться, что формула двумерная</span></li>
+      <li>Неверный знак G → экструдированный 1D не совпадает</li>
+    </ul>
+  </div>
+  <div>
+    <h4>2DE Мейдера</h4>
+    <ul style="padding-left:1.2rem;font-size:.85rem;color:var(--text2)">
+      <li>ZIP → I&lt;0 → расчёт взрывается</li>
+      <li>Перепутаны i и j → повёрнуто на 90°</li>
+    </ul>
+    <h4>SIMPLE/PISO/PIMPLE</h4>
+    <ul style="padding-left:1.2rem;font-size:.85rem;color:var(--text2)">
+      <li>Знак b' в Пуассоне → <span class="how">Типичный симптом: после 1-й итерации $\max|u^*| \approx 10^{10}$ — значит знак $b'$ в Пуассоне неверный</span></li>
+      <li>Забыта p'(0,0)=0 → давление дрейфует</li>
+      <li>PISO без временного члена = SIMPLE</li>
+    </ul>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<h2>Полный список маркеров (для студентов — скопировать в код)</h2>
+<div class="ref-values">// CHECK: FLIC_LAGRANGE      — лагранжев этап FLIC
+// CHECK: FLIC_EULER         — эйлеров этап FLIC (перенос)
+// CHECK: FLIC_CONSERV       — консервативное обновление ρ, ρu, ρE
+// CHECK: FLIC_CFL           — условие CFL (FLIC)
+// CHECK: HLLC_SOLVER        — HLLC солвер Римана
+// CHECK: RECONSTRUCTION     — MUSCL/WENO реконструкция
+// CHECK: STATE_VECTOR_2D    — вектор U[4] и потоки F, G в 2D
+// CHECK: CFL_2D             — условие CFL для 2D (НЕ 1D!)
+// CHECK: MADER_EOS          — уравнение состояния (Мейдер)
+// CHECK: MADER_VISC         — искусственная вязкость Q1–Q4
+// CHECK: MADER_VELOCITY     — обновление скоростей Ũ, Ṽ
+// CHECK: MADER_ZIP          — ZIP Energy Equation
+// CHECK: MADER_DONOR        — Donor-Acceptor перенос
+// CHECK: MADER_REPARTITION  — перераспределение (фаза V)
+// CHECK: MADER_ARRHENIUS    — химическая кинетика
+// CHECK: STAGGERED_GRID     — разнесённая сетка u/v/p
+// CHECK: PREDICTOR_U        — предиктор u*
+// CHECK: PREDICTOR_V        — предиктор v*
+// CHECK: POISSON            — уравнение Пуассона для p'
+// CHECK: CORRECTION         — коррекция p, u, v
+// CHECK: SIMPLE_LOOP        — главный цикл SIMPLE
+// CHECK: PISO_LOOP          — главный цикл PISO
+// CHECK: PIMPLE_LOOP        — главный цикл PIMPLE
+// CHECK: TG_INIT            — нач. условия Тейлор–Грин
+// CHECK: TG_BC              — ГУ Дирихле (точное решение)
+// CHECK: STEP_BLOCK         — блокированные ячейки ступеньки
+// CHECK: STEP_INLET         — профиль Пуазейля на входе
+// CHECK: MESH_STRUCTS       — структуры Node, Face, Cell
+// CHECK: BUILD_FACES        — построение граней
+// CHECK: UNSTRUCT_SCHEMES   — невязки Годунова/Колгана
+// CHECK: GHOST_STATE        — ghost_state() для ГУ
+// CHECK: DECOMPOSITION      — декомпозиция области (MPI)
+// CHECK: HALO_EXCHANGE      — halo-обмен MPI
+// CHECK: SHARGATOV          — поправка Шаргатова (контактная граница)</div>
+
+<p style="text-align:center;color:var(--text2);margin-top:3rem;font-size:.85rem">Курс: Разностные схемы и параллельная реализация · Зачёт 21 апреля 2026</p>
+
+
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/checklist-sync.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>§1. Основные понятия разностной схемы</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8;--sidebar-bg:#2b2520;--sidebar-text:#d9cfc0}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
+
+/* Sidebar */
+.sidebar{position:fixed;left:0;top:38px;bottom:0;width:240px;background:var(--sidebar-bg);color:var(--sidebar-text);padding:1.5rem 1rem;overflow-y:auto;z-index:100;border-right:3px solid var(--accent);font-size:.8rem}
+.sidebar h2{font-family:'Playfair Display',serif;font-size:.85rem;font-weight:700;color:#fff;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.03em}
+.sidebar .g{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--accent);margin:.7rem 0 .15rem;text-transform:uppercase;letter-spacing:.08em}
+.sidebar a{display:block;color:var(--sidebar-text);text-decoration:none;font-size:.76rem;line-height:1.35;padding:.15rem 0 .15rem .5rem;border-left:2px solid transparent;transition:all .15s}
+.sidebar a:hover{color:#fff;border-left-color:var(--accent);background:rgba(180,74,45,.08)}
+.sidebar .sep{height:1px;background:rgba(255,255,255,.07);margin:.4rem 0}
+
+/* Main content */
+.main{margin-left:240px;padding:2rem 2.5rem 4rem}
+.main-inner{max-width:960px}
+
+.lecture-tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;padding:.2rem .5rem;border-radius:3px;display:inline-block;margin-bottom:.5rem;background:#f3e8f9;color:#7b3fa0}
+.lecture-num{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);margin-bottom:.3rem}
+h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;line-height:1.15;margin-bottom:1.5rem;color:var(--text)}
+h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--accent);margin:2rem 0 .8rem;padding-top:.5rem;border-top:1px solid var(--border)}
+h3{font-family:'Source Serif 4',serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:1.5rem 0 .5rem}
+p{margin-bottom:1rem;text-align:justify;hyphens:auto}
+.eq{margin:1.5rem 0;text-align:center;overflow-x:auto}
+.definition{background:var(--bg2);border-left:3px solid var(--accent2);padding:1rem 1.2rem;border-radius:0 6px 6px 0;margin:1.2rem 0}
+.definition strong{color:var(--accent2)}
+.figure{margin:1.5rem auto;text-align:center}
+.figure svg{max-width:100%;height:auto}
+.figure .caption{font-size:.82rem;color:var(--text2);margin-top:.5rem;font-style:italic}
+.lecture-nav{display:flex;justify-content:space-between;gap:1rem;margin-top:3rem;padding-top:1.5rem;border-top:2px solid var(--border);flex-wrap:wrap}
+.lecture-nav a{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);text-decoration:none;padding:.5rem .8rem;border:1px solid var(--border);border-radius:6px;transition:all .15s;max-width:48%}
+.lecture-nav a:hover{border-color:var(--accent);background:rgba(180,74,45,.05)}
+.nav-next{margin-left:auto}
+
+@media(max-width:1000px){.sidebar{display:none}.main{margin-left:0;padding:1.5rem}}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<!-- ===================== SIDEBAR ===================== -->
+<nav class="sidebar">
+  <h2>§1 Основные понятия</h2>
+  <div class="g">Содержание</div>
+  <a href="#grid">Сеточные функции</a>
+  <a href="#fd-scheme">Конечно-разностная схема</a>
+  <a href="#uniform">Равномерная сетка</a>
+  <a href="#types">Типы сеток</a>
+  <a href="#norms">Сеточные нормы</a>
+  <a href="#defs">Определения</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="s1-02.html">→ §2 Аппроксимация</a>
+</nav>
+
+<!-- ===================== MAIN ===================== -->
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag">Основы</span>
+<div class="lecture-num">§1 · Семестр 1</div>
+<h1>Основные понятия разностной схемы. Шаблон схемы. Разностный оператор и&nbsp;его свойства</h1>
+
+<!-- §1.1 -->
+<h2 id="grid">Сеточные функции и расчётная сетка</h2>
+
+<p>Для начала введём понятие сеточных функций. Рассмотрим линейное гиперболическое дифференциальное уравнение в частных производных вида</p>
+
+<div class="eq">\[
+\frac{\partial u}{\partial t} + a\,\frac{\partial u}{\partial x} = 0, \qquad -\infty < x < \infty,
+\tag{1.1}
+\]</div>
+
+<p>где \(x\) — пространственная координата, \(t\) — время, \(a = \mathrm{const}\). Дальше по курсу будем называть (1.1) <em>уравнением переноса</em>.</p>
+
+<p>Предположим, что нам надо решить уравнение (1.1). Для обеспечения единственности его решения мы должны задать функцию \(u(x,t)\) в некоторый момент \(t = t_0\). Обычно выбирается значение \(t_0 = 0\). Итак, предположим, что при \(t=0\) задана функция</p>
+
+<div class="eq">\[
+u(x, 0) = u_0(x), \qquad -\infty < x < \infty.
+\tag{1.2}
+\]</div>
+
+<p>Математическая задача (1.1)–(1.2) называется <em>задачей с начальными данными</em>, или <em>задачей Коши</em>.</p>
+
+<!-- §1.2 -->
+<h2 id="fd-scheme">Конечно-разностная схема</h2>
+
+<p>Теперь рассмотрим вопрос о построении конечно-разностной схемы для численного решения задачи Коши. В случае аналитического решения уравнения в частных производных его решение находится в области непрерывного изменения переменных \(x\) и \(t\). В отличие от аналитического случая, приближённое решение уравнения в частных производных по методу конечных разностей определяется только в некоторых дискретных точках плоскости \((x, t)\).</p>
+
+<p>Введём на оси \(x\) бесконечное множество точек</p>
+
+<div class="eq">\[
+\{0,\;\pm h,\;\pm 2h,\;\ldots\},
+\tag{1.3}
+\]</div>
+
+<p>где \(h\) — некоторая заданная положительная величина. Это множество точек называется <em>расчётной сеткой</em> на оси \(x\), или <em>пространственной сеткой</em> (потому что \(x\) — пространственная переменная). Точки \(x_i = ih\), \(i = 0, \pm 1, \pm 2, \ldots\) из множества (1.3) называются <em>узлами</em> пространственной сетки. Величина \(h\) называется <em>шагом</em> пространственной сетки.</p>
+
+<p>Предположим, что численное решение уравнения (1.1) должно быть определено в конечном временном промежутке \(0 \le t \le T\), где \(T\) — заданная величина, \(0 < T < \infty\). Аналогично множеству (1.3) мы можем определить сетку на оси \(t\):</p>
+
+<div class="eq">\[
+0 = t_0 < t_1 < t_2 < \ldots < t_{N-1} < t_N = T.
+\tag{1.4}
+\]</div>
+
+<!-- §1.3 -->
+<h2 id="uniform">Равномерная сетка</h2>
+
+<p>Сетки (1.3)–(1.4) называются <em>равномерными</em>, если выполняются следующие условия:</p>
+
+<div class="eq">\[
+x_i = ih, \quad i = 0, \pm 1, \pm 2, \ldots\,; \qquad t_n = n\tau, \quad n = 0, \ldots, N.
+\tag{1.5}
+\]</div>
+
+<p>Величина \(\tau = T/N\) называется <em>временным шагом</em>.</p>
+
+<p>Введём теперь равномерную сетку \(G_h\) в плоскости \((x, t)\) как множество точек пересечения прямых линий. Функция \(u_i^n = u(x_i, t_n)\), которая определена в узлах сетки \(G_h\), называется <em>сеточной функцией</em>.</p>
+
+<!-- SVG: Расчётная сетка -->
+<div class="figure">
+<svg viewBox="0 0 560 320" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+  <defs><marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2c2419"/></marker></defs>
+  <!-- Grid lines -->
+  <g stroke="#d9cfc0" stroke-width="0.5">
+    <line x1="80" y1="40" x2="80" y2="260"/><line x1="140" y1="40" x2="140" y2="260"/>
+    <line x1="200" y1="40" x2="200" y2="260"/><line x1="260" y1="40" x2="260" y2="260"/>
+    <line x1="320" y1="40" x2="320" y2="260"/><line x1="380" y1="40" x2="380" y2="260"/>
+    <line x1="440" y1="40" x2="440" y2="260"/>
+    <line x1="60" y1="260" x2="460" y2="260"/><line x1="60" y1="200" x2="460" y2="200"/>
+    <line x1="60" y1="140" x2="460" y2="140"/><line x1="60" y1="80" x2="460" y2="80"/>
+  </g>
+  <!-- Axes -->
+  <line x1="50" y1="280" x2="500" y2="280" stroke="#2c2419" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="50" y1="280" x2="50" y2="20" stroke="#2c2419" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="510" y="285" font-family="Source Serif 4,serif" font-size="14" font-style="italic" fill="#2c2419">x</text>
+  <text x="42" y="14" font-family="Source Serif 4,serif" font-size="14" font-style="italic" fill="#2c2419">t</text>
+  <!-- Grid nodes -->
+  <g fill="#b44a2d">
+    <circle cx="80" cy="260" r="3.5"/><circle cx="140" cy="260" r="3.5"/><circle cx="200" cy="260" r="3.5"/>
+    <circle cx="260" cy="260" r="3.5"/><circle cx="320" cy="260" r="3.5"/><circle cx="380" cy="260" r="3.5"/><circle cx="440" cy="260" r="3.5"/>
+    <circle cx="80" cy="200" r="3.5"/><circle cx="140" cy="200" r="3.5"/><circle cx="200" cy="200" r="3.5"/>
+    <circle cx="260" cy="200" r="3.5"/><circle cx="320" cy="200" r="3.5"/><circle cx="380" cy="200" r="3.5"/><circle cx="440" cy="200" r="3.5"/>
+    <circle cx="80" cy="140" r="3.5"/><circle cx="140" cy="140" r="3.5"/><circle cx="200" cy="140" r="3.5"/>
+    <circle cx="260" cy="140" r="3.5"/><circle cx="320" cy="140" r="3.5"/><circle cx="380" cy="140" r="3.5"/><circle cx="440" cy="140" r="3.5"/>
+    <circle cx="80" cy="80" r="3.5"/><circle cx="140" cy="80" r="3.5"/><circle cx="200" cy="80" r="3.5"/>
+    <circle cx="260" cy="80" r="3.5"/><circle cx="320" cy="80" r="3.5"/><circle cx="380" cy="80" r="3.5"/><circle cx="440" cy="80" r="3.5"/>
+  </g>
+  <!-- Labels -->
+  <text x="200" y="298" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">x<tspan font-size="7" dy="3">i−1</tspan></text>
+  <text x="260" y="298" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d" text-anchor="middle" font-weight="700">x<tspan font-size="7" dy="3">i</tspan></text>
+  <text x="320" y="298" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">x<tspan font-size="7" dy="3">i+1</tspan></text>
+  <text x="32" y="264" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="end">t<tspan font-size="7" dy="2">n</tspan></text>
+  <text x="32" y="204" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="end">t<tspan font-size="7" dy="2">n+1</tspan></text>
+  <text x="32" y="144" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="end">t<tspan font-size="7" dy="2">n+2</tspan></text>
+  <!-- h and τ -->
+  <line x1="260" y1="272" x2="320" y2="272" stroke="#1a6b5a" stroke-width="1.5"/>
+  <line x1="260" y1="269" x2="260" y2="275" stroke="#1a6b5a" stroke-width="1.5"/>
+  <line x1="320" y1="269" x2="320" y2="275" stroke="#1a6b5a" stroke-width="1.5"/>
+  <text x="290" y="283" font-family="Source Serif 4,serif" font-size="12" fill="#1a6b5a" text-anchor="middle" font-style="italic">h</text>
+  <line x1="458" y1="260" x2="458" y2="200" stroke="#1a6b5a" stroke-width="1.5"/>
+  <line x1="455" y1="260" x2="461" y2="260" stroke="#1a6b5a" stroke-width="1.5"/>
+  <line x1="455" y1="200" x2="461" y2="200" stroke="#1a6b5a" stroke-width="1.5"/>
+  <text x="472" y="234" font-family="Source Serif 4,serif" font-size="12" fill="#1a6b5a" font-style="italic">τ</text>
+  <!-- Highlighted node -->
+  <circle cx="260" cy="200" r="6" fill="none" stroke="#b44a2d" stroke-width="2"/>
+  <text x="270" y="193" font-family="Source Serif 4,serif" font-size="11" fill="#b44a2d" font-style="italic">u</text>
+</svg>
+<div class="caption">Равномерная расчётная сетка \(G_h\) с шагом \(h\) по пространству и \(\tau\) по времени.</div>
+</div>
+
+<!-- §1.4 -->
+<h2 id="types">Типы расчётных сеток</h2>
+
+<p>Назовём расчётную сетку <em>структурированной</em> (или регулярной), если она взаимно однозначно отображается на прямоугольную сетку в единичном кубе с сохранением порядка узлов сетки. Структурированные сетки могут быть равномерными (постоянный шаг сетки) и неравномерными. Также структурированные сетки можно разделить на декартовы, то есть прямоугольные, и криволинейные. Все остальные сетки назовём <em>неструктурированными</em>.</p>
+
+<!-- §1.5 -->
+<h2 id="norms">Сеточные нормы</h2>
+
+<p>Так как далее будут введены различные операторы, то необходимо определиться с понятием нормы в заданном нами дискретном пространстве. Рассмотрим некоторые варианты сеточных норм.</p>
+
+<h3>1. Сеточный аналог равномерной нормы</h3>
+
+<div class="eq">\[
+\|u\|_C = \max_{x \in G} |u(x)|,
+\tag{1.6}
+\]</div>
+
+<p>где \(G\) — замкнутая ограниченная область, имеет вид</p>
+
+<div class="eq">\[
+\|u_h\| = \max_{x \in G_h} |u_h(x)|.
+\tag{1.7}
+\]</div>
+
+<h3>2. Сеточные аналоги нормы \(L_2\)</h3>
+
+<div class="eq">\[
+\|u\|_{L_2} = \left(\int_0^1 u^2(x)\,dx\right)^{1/2}
+\tag{1.8}
+\]</div>
+
+<p>в пространстве \(L_2\) определяются с помощью интегральных сумм и имеют вид:</p>
+
+<div class="eq">\[
+\|u_h\| = \sqrt{\sum_{i=1}^{N} u_h^2(x)\,h\,}, \qquad
+\|u_h\| = \sqrt{\sum_{i=0}^{N-1} u_h^2(x)\,h\,}.
+\tag{1.9}
+\]</div>
+
+<!-- §1.6 -->
+<h2 id="defs">Основные определения</h2>
+
+<p>Завершим введение и первую тему последними определениями, которые понадобятся в будущем.</p>
+
+<div class="definition">
+<strong>Определение 1.</strong> <em>Разностная схема</em> — это совокупность разностных уравнений для определения значений сеточной функции внутри расчётной области, дополненная соответствующими начальными и граничными условиями для этой сеточной функции.
+</div>
+
+<div class="definition">
+<strong>Определение 2.</strong> <em>Шаблон схемы</em> представляет из себя конфигурацию расчётных узлов в области интегрирования, используемых на каждом элементарном шаге вычислений.
+</div>
+
+<!-- SVG: Примеры шаблонов — исправленный «крест» -->
+<div class="figure">
+<svg viewBox="0 0 600 180" xmlns="http://www.w3.org/2000/svg" style="max-width:560px">
+  <!-- Stencil 1: явная трёхточечная -->
+  <g transform="translate(30,10)">
+    <text x="60" y="8" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">Явный шаблон</text>
+    <circle cx="60" cy="40" r="5" fill="#b44a2d"/>
+    <circle cx="20" cy="110" r="5" fill="#6b5d4f"/>
+    <circle cx="60" cy="110" r="5" fill="#6b5d4f"/>
+    <circle cx="100" cy="110" r="5" fill="#6b5d4f"/>
+    <line x1="60" y1="45" x2="20" y2="105" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <line x1="60" y1="45" x2="60" y2="105" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <line x1="60" y1="45" x2="100" y2="105" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <text x="8" y="132" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">i−1</text>
+    <text x="60" y="132" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">i</text>
+    <text x="108" y="132" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">i+1</text>
+    <text x="80" y="37" font-family="JetBrains Mono,monospace" font-size="8" fill="#b44a2d">n+1</text>
+    <text x="116" y="113" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b5d4f">n</text>
+  </g>
+  <!-- Stencil 2: неявный -->
+  <g transform="translate(210,10)">
+    <text x="60" y="8" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">Неявный шаблон</text>
+    <circle cx="20" cy="40" r="5" fill="#b44a2d"/>
+    <circle cx="60" cy="40" r="5" fill="#b44a2d"/>
+    <circle cx="100" cy="40" r="5" fill="#b44a2d"/>
+    <circle cx="60" cy="110" r="5" fill="#6b5d4f"/>
+    <line x1="20" y1="45" x2="60" y2="105" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <line x1="60" y1="45" x2="60" y2="105" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <line x1="100" y1="45" x2="60" y2="105" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <line x1="20" y1="40" x2="100" y2="40" stroke="#b44a2d" stroke-width="1"/>
+    <text x="8" y="132" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">i−1</text>
+    <text x="60" y="132" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">i</text>
+    <text x="108" y="132" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">i+1</text>
+    <text x="116" y="37" font-family="JetBrains Mono,monospace" font-size="8" fill="#b44a2d">n+1</text>
+    <text x="76" y="113" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b5d4f">n</text>
+  </g>
+  <!-- Stencil 3: «крест» — 3 time levels, i-1/i/i+1 at level n, i at n-1 and n+1 -->
+  <g transform="translate(410,10)">
+    <text x="60" y="8" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">«Крест»</text>
+    <!-- n+1: only (i) -->
+    <circle cx="60" cy="35" r="5" fill="#b44a2d"/>
+    <!-- n: (i-1), (i), (i+1) -->
+    <circle cx="20" cy="75" r="5" fill="#6b5d4f"/>
+    <circle cx="60" cy="75" r="5" fill="#6b5d4f"/>
+    <circle cx="100" cy="75" r="5" fill="#6b5d4f"/>
+    <!-- n-1: only (i) -->
+    <circle cx="60" cy="115" r="5" fill="#6b5d4f"/>
+    <!-- Lines forming the cross shape -->
+    <line x1="60" y1="40" x2="60" y2="70" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <line x1="20" y1="75" x2="100" y2="75" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <line x1="60" y1="80" x2="60" y2="110" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <!-- Labels -->
+    <text x="8" y="150" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">i−1</text>
+    <text x="60" y="150" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">i</text>
+    <text x="108" y="150" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">i+1</text>
+    <text x="76" y="32" font-family="JetBrains Mono,monospace" font-size="8" fill="#b44a2d">n+1</text>
+    <text x="116" y="78" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b5d4f">n</text>
+    <text x="76" y="128" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b5d4f">n−1</text>
+  </g>
+</svg>
+<div class="caption">Примеры шаблонов: явный трёхточечный (уголок), неявный трёхточечный и «крест» (три временных слоя).</div>
+</div>
+
+<div class="lecture-nav">
+<span></span>
+<a href="s1-02.html" class="nav-next">§2. Аппроксимация, устойчивость, сходимость →</a>
+</div>
+</div><!-- /main-inner -->
+</div><!-- /main -->
+
+<!-- Comments -->
+<div style="margin-left:240px;max-width:960px;padding:0 2.5rem 2rem">
+<div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">
+<h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
+<div id="comments-list"><p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p></div>
+<div id="comment-form" style="display:none;margin-top:.8rem">
+<textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
+<button onclick="window._postComment()" style="margin-top:.4rem;background:#b44a2d;color:#fff;border:none;padding:6px 18px;border-radius:5px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer">Отправить</button>
+</div>
+<div id="comment-login">
+<p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p>
+</div>
+</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+(function(){
+  if (typeof firebase === 'undefined') return;
+  var db, auth;
+  try { db = firebase.firestore(); auth = firebase.auth(); } catch(e) { return; }
+  var PAGE_ID = location.pathname.split('/').pop().replace('.html','') || 'index';
+  var ADMINS = (typeof ADMIN_EMAILS !== 'undefined') ? ADMIN_EMAILS : [];
+  function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function loadComments() {
+    var list = document.getElementById('comments-list'); if (!list) return;
+    db.collection('comments').where('page','==',PAGE_ID).get().then(function(snap) {
+      var docs = []; snap.forEach(function(d) { docs.push(d); });
+      docs.sort(function(a,b) { return (b.data().createdAt?b.data().createdAt.seconds:0) - (a.data().createdAt?a.data().createdAt.seconds:0); });
+      if (!docs.length) { list.innerHTML = '<p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p>'; return; }
+      var user = auth.currentUser, isAdm = user && ADMINS.indexOf(user.email) >= 0, html = '';
+      docs.forEach(function(doc) {
+        var c = doc.data(), date = c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+        var del = isAdm ? ' <button onclick="window._deleteComment(\''+doc.id+'\')" style="font-size:.7rem;color:#c44;background:none;border:none;cursor:pointer">удалить</button>' : '';
+        var badge = c.authorRole === 'superadmin' ? ' <span style="font-size:.6rem;background:#faeeda;color:#854f0b;padding:1px 4px;border-radius:3px;font-weight:700">преподаватель</span>' : '';
+        html += '<div style="padding:.6rem 0;border-bottom:1px solid #ede6da"><div style="display:flex;justify-content:space-between;align-items:baseline"><strong style="font-size:.88rem">'+(c.authorFio||c.authorEmail)+badge+'</strong><span style="font-size:.72rem;color:#9a8d7e">'+date+del+'</span></div><p style="font-size:.88rem;margin-top:.2rem;margin-bottom:0">'+esc(c.text)+'</p></div>';
+      });
+      list.innerHTML = html;
+    }).catch(function(e) { list.innerHTML = '<p style="color:#c44;font-size:.85rem">Ошибка: '+e.message+'</p>'; });
+  }
+  window._postComment = function() {
+    var text = document.getElementById('comment-text').value.trim(); if (!text) return;
+    var user = auth.currentUser; if (!user) return;
+    var fio = user.email, role = ADMINS.indexOf(user.email) >= 0 ? 'superadmin' : 'student';
+    db.collection('users').doc(user.uid).get().then(function(ud) { if (ud.exists && ud.data().fio) fio = ud.data().fio; }).catch(function(){}).finally(function() {
+      db.collection('comments').add({ page: PAGE_ID, text: text, authorEmail: user.email, authorFio: fio, authorUid: user.uid, authorRole: role, createdAt: firebase.firestore.FieldValue.serverTimestamp() }).then(function() { document.getElementById('comment-text').value = ''; loadComments(); }).catch(function(e) { alert('Ошибка: '+e.message); });
+    });
+  };
+  window._deleteComment = function(id) { if (!confirm('Удалить?')) return; db.collection('comments').doc(id).delete().then(loadComments).catch(function(e){alert(e.message);}); };
+  var _r = 0;
+  function checkAuth() {
+    var user = auth.currentUser, form = document.getElementById('comment-form'), login = document.getElementById('comment-login');
+    if (!form || !login) return;
+    if (user && window._userApproved) { form.style.display = ''; login.style.display = 'none'; _r = 0; }
+    else if (user && typeof window._userApproved === 'undefined' && _r < 15) { _r++; setTimeout(checkAuth, 400); }
+    else if (user) { form.style.display = 'none'; login.style.display = ''; login.querySelector('p').textContent = 'Ваш профиль ещё не подтверждён.'; _r = 0; }
+    else { form.style.display = 'none'; login.style.display = ''; _r = 0; }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadComments); else loadComments();
+  function safeCheck() { if (document.getElementById('comment-form')) checkAuth(); else setTimeout(safeCheck, 200); }
+  auth.onAuthStateChanged(function() { setTimeout(safeCheck, 500); });
+  window.addEventListener('authReady', safeCheck);
+})();
+</script>
+</body>
+</html>

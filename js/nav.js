@@ -1,14 +1,10 @@
 // ============================================================
 // Unified Navigation — CFD Courses
 // ============================================================
-// Подключение: <script src="js/nav.js"></script> после <body>
-// ============================================================
-
 (function() {
   "use strict";
 
-  // --- Course / Navigation Structure ---
-  // Edit this object to add new courses, semesters, lectures
+  // All hrefs relative to site root
   var NAV = {
     brand: { label: "CFD", href: "index.html" },
     courses: [
@@ -17,103 +13,72 @@
         label: "Разностные схемы",
         semester: "Весна 2026",
         sections: [
-          {
-            title: "Газодинамика",
-            tag: "gas",
-            items: [
-              { href: "flic.html", label: "FLIC" },
-              { href: "godunov.html", label: "Годунов + HLLC" },
-              { href: "mader.html", label: "2DE Мейдера" }
-            ]
-          },
-          {
-            title: "Несжимаемые",
-            tag: "inc",
-            items: [
-              { href: "pimple.html", label: "SIMPLE / PISO / PIMPLE" }
-            ]
-          },
-          {
-            title: "Сетки и параллелизм",
-            tag: "mesh",
-            items: [
-              { href: "mesh.html", label: "Построение сеток" },
-              { href: "unstruct.html", label: "КОМ неструкт." },
-              { href: "mpi.html", label: "MPI декомпозиция" }
-            ]
-          }
+          { title: "Газодинамика", items: [
+              { href: "sem2/flic.html", label: "FLIC" },
+              { href: "sem2/godunov.html", label: "Годунов + HLLC" },
+              { href: "sem2/mader.html", label: "2DE Мейдера" }
+          ]},
+          { title: "Несжимаемые", items: [
+              { href: "sem2/pimple.html", label: "SIMPLE / PISO / PIMPLE" }
+          ]},
+          { title: "Сетки и параллелизм", items: [
+              { href: "sem2/mesh.html", label: "Построение сеток" },
+              { href: "sem2/unstruct.html", label: "КОМ неструкт." },
+              { href: "sem2/mpi.html", label: "MPI декомпозиция" }
+          ]}
         ],
         extras: [
-          { href: "checklist.html", label: "Зачёт" },
-          { href: "assignments.html", label: "Задания" }
+          { href: "sem2/checklist.html", label: "Зачёт" },
+          { href: "sem2/assignments.html", label: "Задания" }
         ]
-      }
-      // === Добавляйте новые курсы здесь ===
-      ,{
+      },
+      {
         id: "sem1",
         label: "Теория разн. схем",
         semester: "Осень 2025",
         sections: [
-          {
-            title: "Основы",
-            items: [
-              { href: "s1-01.html", label: "§1 Основные понятия" },
-              { href: "s1-02.html", label: "§2 Аппроксимация" },
-              { href: "s1-03.html", label: "§3 Теорема Лакса" },
-              { href: "s1-04.html", label: "§4 Дифф. приближение" },
-              { href: "s1-05.html", label: "§5 Устойчивость" },
-              { href: "s1-06.html", label: "§6 Дисперсия" }
-            ]
-          },
-          {
-            title: "Свойства схем",
-            items: [
-              { href: "s1-07.html", label: "§7 Неопр. коэффициенты" },
-              { href: "s1-08.html", label: "§8 Монотонность" },
-              { href: "s1-09.html", label: "§9 Теорема Годунова" },
-              { href: "s1-10.html", label: "§10 TVD" },
-              { href: "s1-11.html", label: "§11 Полож. коэфф." }
-            ]
-          },
-          {
-            title: "Газодинамика",
-            items: [
-              { href: "s1-12.html", label: "§12 Лагранж" },
-              { href: "s1-13.html", label: "§13 Схема «крест»" },
-              { href: "s1-14.html", label: "§14 Устойчивость «крест»" },
-              { href: "s1-15.html", label: "§15 Метод Годунова" }
-            ]
-          },
-          {
-            title: "Задача Римана",
-            items: [
-              { href: "s1-16.html", label: "§16 Точная задача" },
-              { href: "s1-17.html", label: "§17 Точный решатель" },
-              { href: "s1-18.html", label: "§18 Классификация" },
-              { href: "s1-19.html", label: "§19 Метод Рое" },
-              { href: "s1-20.html", label: "§20 Метод Ошера" },
-              { href: "s1-21.html", label: "§21 HLL" },
-              { href: "s1-22.html", label: "§22 HLLC" }
-            ]
-          },
-          {
-            title: "Высокий порядок",
-            items: [
-              { href: "s1-23.html", label: "§23 Колган" },
-              { href: "s1-24.html", label: "§24 Колган–Родионов" },
-              { href: "s1-25.html", label: "§25 ENO" },
-              { href: "s1-26.html", label: "§26 WENO" },
-              { href: "s1-27.html", label: "§27 МакКормак" }
-            ]
-          },
-          {
-            title: "Стабилизация",
-            items: [
-              { href: "s1-28.html", label: "§28 Диффузия" },
-              { href: "s1-29.html", label: "§29 Иск. вязкость" },
-              { href: "s1-30.html", label: "§30 Иск. вязкость II" }
-            ]
-          }
+          { title: "Основы", items: [
+              { href: "sem1/s1-01.html", label: "§1 Основные понятия" },
+              { href: "sem1/s1-02.html", label: "§2 Аппроксимация" },
+              { href: "sem1/s1-03.html", label: "§3 Теорема Лакса" },
+              { href: "sem1/s1-04.html", label: "§4 Дифф. приближение" },
+              { href: "sem1/s1-05.html", label: "§5 Устойчивость" },
+              { href: "sem1/s1-06.html", label: "§6 Дисперсия" }
+          ]},
+          { title: "Свойства схем", items: [
+              { href: "sem1/s1-07.html", label: "§7 Неопр. коэффициенты" },
+              { href: "sem1/s1-08.html", label: "§8 Монотонность" },
+              { href: "sem1/s1-09.html", label: "§9 Теорема Годунова" },
+              { href: "sem1/s1-10.html", label: "§10 TVD" },
+              { href: "sem1/s1-11.html", label: "§11 Полож. коэфф." }
+          ]},
+          { title: "Газодинамика", items: [
+              { href: "sem1/s1-12.html", label: "§12 Лагранж" },
+              { href: "sem1/s1-13.html", label: "§13 Схема «крест»" },
+              { href: "sem1/s1-14.html", label: "§14 Устойчивость «крест»" },
+              { href: "sem1/s1-15.html", label: "§15 Метод Годунова" }
+          ]},
+          { title: "Задача Римана", items: [
+              { href: "sem1/s1-16.html", label: "§16 Точная задача" },
+              { href: "sem1/s1-17.html", label: "§17 Точный решатель" },
+              { href: "sem1/s1-18.html", label: "§18 Классификация" },
+              { href: "sem1/s1-19.html", label: "§19 Метод Рое" },
+              { href: "sem1/s1-20.html", label: "§20 Метод Ошера" },
+              { href: "sem1/s1-21.html", label: "§21 HLL" },
+              { href: "sem1/s1-22.html", label: "§22 HLLC" }
+          ]},
+          { title: "Высокий порядок", items: [
+              { href: "sem1/s1-23.html", label: "§23 Колган" },
+              { href: "sem1/s1-24.html", label: "§24 Колган–Родионов" },
+              { href: "sem1/s1-25.html", label: "§25 ENO" },
+              { href: "sem1/s1-26.html", label: "§26 WENO" },
+              { href: "sem1/s1-27.html", label: "§27 МакКормак" }
+          ]},
+          { title: "Стабилизация", items: [
+              { href: "sem1/s1-28.html", label: "§28 Диффузия" },
+              { href: "sem1/s1-29.html", label: "§29 Иск. вязкость" },
+              { href: "sem1/s1-30.html", label: "§30 Иск. вязкость II" }
+          ]}
         ]
       }
     ],
@@ -122,7 +87,17 @@
     ]
   };
 
-  var currentPage = location.pathname.split("/").pop() || "index.html";
+  // Auto-detect subfolder and compute prefix
+  var loc = location.pathname;
+  var prefix = '';
+  if (loc.indexOf('/sem1/') >= 0 || loc.indexOf('/sem2/') >= 0) prefix = '../';
+  // Build currentPageFull = "sem1/s1-01.html" or "index.html"
+  var parts = loc.split('/');
+  var fileName = parts.pop() || 'index.html';
+  var folder = parts.pop() || '';
+  var currentPageFull = (folder === 'sem1' || folder === 'sem2') ? folder + '/' + fileName : fileName;
+
+  function p(href) { return prefix + href; }
 
   // --- Inject CSS ---
   var css = document.createElement("style");
@@ -149,9 +124,6 @@
     '#cfd-nav .nav-link{color:#6b5d4f;text-decoration:none;padding:4px 8px;border-radius:4px;transition:all .15s;white-space:nowrap}',
     '#cfd-nav .nav-link:hover{background:#ede6da;color:#2c2419}',
     '#cfd-nav .nav-link.active{background:#b44a2d;color:#fff}',
-    '#cfd-nav .nav-spacer{flex:1}',
-    '#cfd-nav .nav-auth{margin-left:auto}',
-    // Mobile: hamburger
     '#cfd-nav .nav-hamburger{display:none;background:none;border:none;cursor:pointer;padding:4px;color:#6b5d4f}',
     '#cfd-nav .nav-hamburger svg{display:block}',
     '@media(max-width:720px){',
@@ -160,10 +132,7 @@
     '  #cfd-nav .nav-hamburger{display:block}',
     '  #cfd-nav .nav-dropdown-btn{width:100%;justify-content:space-between}',
     '  #cfd-nav .nav-panel{position:static;box-shadow:none;border:none;border-radius:0;padding:0 0 0 12px;background:transparent}',
-    '  #cfd-nav .nav-panel .section-title{padding-left:8px}',
-    '  #cfd-nav .nav-panel a{padding-left:8px}',
     '  #cfd-nav .nav-link{display:block;padding:6px 8px}',
-    '  #cfd-nav .nav-auth{margin-left:0;margin-top:4px}',
     '}'
   ].join("\n");
   document.head.appendChild(css);
@@ -171,88 +140,67 @@
   // --- Build HTML ---
   var nav = document.createElement("div");
   nav.id = "cfd-nav";
-
   var inner = '<div class="nav-inner">';
-  inner += '<a href="' + NAV.brand.href + '" class="nav-brand">' + NAV.brand.label + '</a>';
-  
-  // Hamburger
+  inner += '<a href="' + p(NAV.brand.href) + '" class="nav-brand">' + NAV.brand.label + '</a>';
   inner += '<button class="nav-hamburger" onclick="window._cfdNavToggleMobile()" aria-label="Меню"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h12M3 9h12M3 13h12"/></svg></button>';
-
   inner += '<div class="nav-items">';
 
-  // Course dropdowns
   NAV.courses.forEach(function(course, ci) {
     var hasActive = false;
     course.sections.forEach(function(s) {
-      s.items.forEach(function(it) { if (it.href === currentPage) hasActive = true; });
+      s.items.forEach(function(it) { if (it.href === currentPageFull) hasActive = true; });
     });
-    if (course.extras) course.extras.forEach(function(it) { if (it.href === currentPage) hasActive = true; });
+    if (course.extras) course.extras.forEach(function(it) { if (it.href === currentPageFull) hasActive = true; });
 
     inner += '<div class="nav-dropdown" data-dd="' + ci + '">';
     inner += '<button class="nav-dropdown-btn' + (hasActive ? ' has-active' : '') + '" onclick="window._cfdNavToggle(' + ci + ')">';
     inner += course.label + ' <span class="arrow">▾</span></button>';
     inner += '<div class="nav-panel" id="cfd-panel-' + ci + '">';
     inner += '<div class="sem-badge">' + course.semester + '</div>';
-    
+
     course.sections.forEach(function(sec) {
       inner += '<div class="section-title">' + sec.title + '</div>';
       sec.items.forEach(function(it) {
-        inner += '<a href="' + it.href + '"' + (it.href === currentPage ? ' class="active"' : '') + '>' + it.label + '</a>';
+        inner += '<a href="' + p(it.href) + '"' + (it.href === currentPageFull ? ' class="active"' : '') + '>' + it.label + '</a>';
       });
     });
-
     if (course.extras && course.extras.length > 0) {
       inner += '<div class="section-title">Контроль</div>';
       course.extras.forEach(function(it) {
-        inner += '<a href="' + it.href + '"' + (it.href === currentPage ? ' class="active"' : '') + '>' + it.label + '</a>';
+        inner += '<a href="' + p(it.href) + '"' + (it.href === currentPageFull ? ' class="active"' : '') + '>' + it.label + '</a>';
       });
     }
-
     inner += '</div></div>';
   });
 
-  // Utility links (Профиль etc.)
   NAV.utils.forEach(function(it) {
-    inner += '<a href="' + it.href + '" class="nav-link' + (it.href === currentPage ? ' active' : '') + '">' + it.label + '</a>';
+    inner += '<a href="' + p(it.href) + '" class="nav-link' + (it.href === currentPageFull ? ' active' : '') + '">' + it.label + '</a>';
   });
 
-  inner += '</div>'; // .nav-items
-  inner += '</div>'; // .nav-inner
-
+  inner += '</div></div>';
   nav.innerHTML = inner;
 
-  // Insert nav at start of body
   document.body.insertBefore(nav, document.body.firstChild);
   document.body.style.paddingTop = "38px";
 
   // --- Dropdown logic ---
   var openDD = null;
-
   window._cfdNavToggle = function(idx) {
     var panel = document.getElementById("cfd-panel-" + idx);
     var btn = panel.parentElement.querySelector(".nav-dropdown-btn");
     if (openDD === idx) {
-      panel.classList.remove("show");
-      btn.classList.remove("open");
-      openDD = null;
+      panel.classList.remove("show"); btn.classList.remove("open"); openDD = null;
     } else {
-      // Close any open
       if (openDD !== null) {
         var old = document.getElementById("cfd-panel-" + openDD);
         if (old) { old.classList.remove("show"); old.parentElement.querySelector(".nav-dropdown-btn").classList.remove("open"); }
       }
-      panel.classList.add("show");
-      btn.classList.add("open");
-      openDD = idx;
+      panel.classList.add("show"); btn.classList.add("open"); openDD = idx;
     }
   };
-
   window._cfdNavToggleMobile = function() {
-    var items = document.querySelector("#cfd-nav .nav-items");
-    items.classList.toggle("mobile-open");
+    document.querySelector("#cfd-nav .nav-items").classList.toggle("mobile-open");
   };
-
-  // Close dropdown on outside click
   document.addEventListener("click", function(e) {
     if (openDD !== null && !e.target.closest(".nav-dropdown")) {
       var panel = document.getElementById("cfd-panel-" + openDD);
@@ -260,5 +208,4 @@
       openDD = null;
     }
   });
-
 })();

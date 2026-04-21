@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Неструктурированные сетки</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8;--sidebar-bg:#2b2520;--sidebar-text:#d9cfc0;--highlight:#fff3cd;--shadow:rgba(44,36,25,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
+.sidebar{position:fixed;left:0;top:38px;bottom:0;width:250px;background:var(--sidebar-bg);color:var(--sidebar-text);padding:1.5rem 1rem;overflow-y:auto;z-index:100;border-right:3px solid var(--accent);font-size:.8rem}
+.sidebar h2{font-family:'Playfair Display',serif;font-size:.85rem;font-weight:700;color:#fff;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.03em}
+.sidebar .g{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--accent);margin:.7rem 0 .15rem;text-transform:uppercase;letter-spacing:.08em}
+.sidebar a{display:block;color:var(--sidebar-text);text-decoration:none;font-size:.76rem;line-height:1.35;padding:.15rem 0 .15rem .5rem;border-left:2px solid transparent;transition:all .15s}
+.sidebar a:hover{color:#fff;border-left-color:var(--accent);background:rgba(180,74,45,.08)}
+.sidebar .sep{height:1px;background:rgba(255,255,255,.07);margin:.4rem 0}
+.wrap{margin-left:250px;max-width:860px;margin-right:auto;padding:2.5rem 3rem 5rem}
+h1{font-family:'Playfair Display',serif;font-size:2.3rem;font-weight:900;line-height:1.12;margin-bottom:.5rem}
+.sub{font-size:1rem;color:var(--text2);font-style:italic;max-width:600px;margin-bottom:1.5rem}
+.nav{display:none}
+.nav a{padding:8px 14px;border-radius:20px;background:#f5f0e8;color:#b44a2d;text-decoration:none;font:600 13px/1 sans-serif}
+.nav a:hover{background:#b44a2d;color:#fff}
+section{margin-bottom:56px;scroll-margin-top:40px}
+.stit{font-family:'Playfair Display',serif;font-size:1.65rem;font-weight:900;border-bottom:2px solid var(--border);padding-bottom:8px;margin:2.5rem 0 .8rem;display:flex;align-items:center;gap:12px}
+.sn{background:var(--accent);color:#fff;width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;flex-shrink:0}
+h3{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;color:var(--accent);margin:1.5rem 0 .5rem}
+h3.bl{color:var(--accent)}h3.pu{color:#7c3aed}h3.gr{color:var(--accent2)}h3.or{color:#854f0b}h3.rd{color:#c44}
+p{margin-bottom:.8rem;text-align:justify}
+.fm{background:var(--bg2);border-left:4px solid var(--accent);padding:.85rem 1.1rem;margin:1rem 0;border-radius:0 6px 6px 0;font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.6;color:var(--text);overflow-x:auto}
+.fm .nt{font-size:14px;margin-top:4px}.fm .ok{color:#16a34a}.fm .bad{color:#dc2626}
+.br{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.bt{padding:10px 16px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:600;transition:all .2s}
+.bt.on{color:#fff;background:var(--accent)}.bt:not(.on){background:#ede6da;color:#2c2419}
+svg{display:block;margin:0 auto}
+.sd{font-size:15px;color:#2c2419;margin-bottom:12px;background:#fefce8;padding:12px 16px;border-radius:8px;border:1px solid #fde68a;line-height:1.6;white-space:pre-line}
+.road{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin:1rem 0;border-radius:6px;overflow:hidden;border:1px solid var(--border)}
+.rc{padding:20px}.rc:nth-child(1){background:#f5f0e8}.rc:nth-child(2){background:#f0fdf4}.rc:nth-child(3){background:#fefce8}
+.rt{font:700 11px/1 'Helvetica Neue',sans-serif;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.rt .nm{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px}
+.rc h4{font:700 15px/1.3 'Helvetica Neue',sans-serif;margin-bottom:6px}
+.rc ul{font-size:14px;padding-left:18px;margin:0;color:#475569;line-height:1.7}
+@media(max-width:700px){.road{grid-template-columns:1fr}}@media(max-width:1000px){.sidebar{display:none}.wrap{margin-left:0;padding:1.5rem}}
+.idea{border-radius:6px;padding:1rem 1.2rem;margin:1rem 0;border:1px solid #b8d9cf;background:#e8f4f0}
+.idea h4{font:800 17px/1.3 'Helvetica Neue',sans-serif;color:#4f46e5;margin-bottom:8px}
+.idea p{font-size:16px;margin:0;line-height:1.7}
+.idea.pt{background:linear-gradient(135deg,#f5f3ff,#f5f0e8);border-color:#c4b5fd}.idea.pt h4{color:#7c3aed}
+.idea.gt{background:linear-gradient(135deg,#ecfdf5,#fefce8);border-color:#86efac}.idea.gt h4{color:#16a34a}
+.idea.ot{background:linear-gradient(135deg,#fff7ed,#fefce8);border-color:#fdba74}.idea.ot h4{color:#ea580c}
+.sl{counter-reset:stp;margin:16px 0 24px}
+.sp{display:flex;gap:16px;margin-bottom:16px;align-items:flex-start}
+.sp::before{counter-increment:stp;content:counter(stp);flex-shrink:0;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.72rem;color:#fff}
+.sp.b::before{background:var(--accent)}.sp.p::before{background:var(--accent3)}.sp.g::before{background:var(--accent2)}.sp.o::before{background:#854f0b}.sp.r::before{background:#c44}
+.sp>div{padding-top:6px;font-size:16px;line-height:1.6}
+.qg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.qc{border-radius:12px;padding:16px;text-align:center}
+.qc h4{margin-top:8px;font-size:15px}.qc p{font-size:13px;color:#6b5d4f}
+.tl{background:#faf8f4;border-radius:12px;padding:20px;margin-top:24px;font-size:15px;color:#6b5d4f}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0 12px;font-size:13px;color:#475569}
+.legend span{display:inline-flex;align-items:center;gap:4px}
+.legend i{width:14px;height:14px;border-radius:3px;display:inline-block}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+<nav class="sidebar">
+  <h2>Неструктурированные сетки</h2>
+  <div class="g">Методы</div>
+  <a href="#s1">§1 Триангуляция Делоне</a>
+  <a href="#s2">§2 Наступающий фронт</a>
+  <a href="#s3">§3 Quadtree / Octree</a>
+  <a href="#s4">§4 Упаковка сфер</a>
+  <div class="sep"></div>
+  <div class="g">Качество</div>
+  <a href="#s5">§5 Критерии качества</a>
+  <div class="sep"></div>
+  <div class="g">Практика</div>
+  <a href="#s6">§6 Задание: NACA 0012</a>
+</nav>
+
+<style id="theme-override">
+body{background:#faf8f4 !important;color:#2c2419 !important}
+.nav a{background:#f5f0e8 !important;color:#b44a2d !important;font-family:'JetBrains Mono',monospace !important;border-radius:4px !important}
+.nav a:hover{background:#b44a2d !important;color:#fff !important}
+.sn{background:#b44a2d !important}
+h3.bl,h3.pu,h3.gr,h3.or,h3.rd{color:#b44a2d !important}
+h3.pu{color:#1a6b5a !important}
+h3.gr{color:#1a6b5a !important}
+.fm{background:#f5f0e8 !important;border-left-color:#b44a2d !important;color:#2c2419 !important}
+.sub{color:#6b5d4f !important}
+h1,h2{color:#2c2419 !important}
+</style>
+
+
+<div id="root">
+<!-- COMMENTS SECTION -->
+
+<script type="text/babel">
+var useState = React.useState;
+
+/* ============================================================
+   POINT GENERATION: How to distribute N points in a domain
+   ============================================================ */
+function PointGeneration() {
+  var [method, setMethod] = useState(0);
+  var W=460, H=360;
+  var bx=30, by=30, bw=400, bh=300; // boundary rect
+
+  function makeGrid(nx, ny) {
+    var pts = [];
+    for(var i=0; i<=nx; i++) for(var j=0; j<=ny; j++) {
+      pts.push([bx + bw*i/nx, by + bh*j/ny]);
+    }
+    return pts;
+  }
+
+  function makeRandom(n, seed) {
+    var pts = [];
+    var x = seed;
+    for(var i=0; i<n; i++) {
+      x = Math.sin(x*9137.137)*10000; var rx = x - Math.floor(x);
+      x = Math.sin(x*9137.137)*10000; var ry = x - Math.floor(x);
+      pts.push([bx + 10 + rx*(bw-20), by + 10 + ry*(bh-20)]);
+    }
+    // Add boundary corners and midpoints
+    pts.push([bx,by],[bx+bw,by],[bx,by+bh],[bx+bw,by+bh]);
+    pts.push([bx+bw/2,by],[bx+bw/2,by+bh],[bx,by+bh/2],[bx+bw,by+bh/2]);
+    return pts;
+  }
+
+  function makeSizeFunc(n) {
+    // Dense near top-left "object", sparse far away
+    var pts = [];
+    var cx2=120, cy2=120; // "object" center
+    var x = 42;
+    for(var i=0; i<n; i++) {
+      x = Math.sin(x*7919.137)*10000; var rx = x - Math.floor(x);
+      x = Math.sin(x*7919.137)*10000; var ry = x - Math.floor(x);
+      var px = bx + 10 + rx*(bw-20);
+      var py = by + 10 + ry*(bh-20);
+      // Accept/reject based on distance to object
+      var dist = Math.sqrt((px-cx2)*(px-cx2)+(py-cy2)*(py-cy2));
+      var hLocal = 15 + dist * 0.6; // size function
+      // Filter: keep if "fits" local size
+      x = Math.sin(x*3141.59)*10000; var rr = x - Math.floor(x);
+      if(rr < 30/hLocal) pts.push([px, py]);
+    }
+    pts.push([bx,by],[bx+bw,by],[bx,by+bh],[bx+bw,by+bh]);
+    return pts;
+  }
+
+  function makeBoundaryRefine() {
+    var pts = [];
+    // Dense on boundary
+    for(var i=0; i<20; i++) { pts.push([bx + bw*i/19, by]); pts.push([bx + bw*i/19, by+bh]); }
+    for(var i=1; i<15; i++) { pts.push([bx, by + bh*i/14]); pts.push([bx+bw, by + bh*i/14]); }
+    // Sparse interior
+    for(var i=1; i<6; i++) for(var j=1; j<5; j++) {
+      pts.push([bx + bw*i/6, by + bh*j/5]);
+    }
+    return pts;
+  }
+
+  var methods = [
+    {name: "\u0420\u0435\u0433\u0443\u043B\u044F\u0440\u043D\u0430\u044F \u0441\u0435\u0442\u043A\u0430", color:"#b44a2d",
+     desc: "Точки на пересечениях равномерной решётки. Просто, но не адаптивно \u2014 везде одинаковая густота. Количество: задаёте nx \u00D7 ny (например, 8\u00D78 = 64 точки).",
+     pts: makeGrid(8, 6)},
+    {name: "\u0421\u043B\u0443\u0447\u0430\u0439\u043D\u044B\u0435", color:"#ea580c",
+     desc: "Точки разбрасываются случайно (генератор случайных чисел). Быстро, но неравномерно \u2014 где-то густо, где-то пусто. Обязательно добавляем точки на границу! Количество: задаёте N напрямую.",
+     pts: makeRandom(50, 42)},
+    {name: "\u041F\u043E \u0444\u0443\u043D\u043A\u0446\u0438\u0438 h(x)", color:"#16a34a",
+     desc: "Густота зависит от расстояния до объекта: h(x) = h_min + (h_max\u2212h_min)\u00B7(r/R)^\u03B1. Вблизи объекта (верхний левый угол) \u2014 густо, далеко \u2014 редко. Именно так делают для CFD. Количество: определяется функцией h(x).",
+     pts: makeSizeFunc(300)},
+    {name: "\u0413\u0443\u0441\u0442\u043E \u043D\u0430 \u0433\u0440\u0430\u043D\u0438\u0446\u0435", color:"#7c3aed",
+     desc: "Много точек на контуре области (важно для FEM), меньше внутри. Граница задаётся плотно \u2014 потом Делоне заполнит внутренность. Количество: N_граница + N_внутри.",
+     pts: makeBoundaryRefine()}
+  ];
+
+  var m = methods[method];
+
+  return React.createElement("div", null,
+    React.createElement("div", {className:"br"},
+      methods.map(function(mt, i) {
+        return React.createElement("button", {
+          key:i, className:"bt"+(method===i?" on":""),
+          style: method===i ? {background:mt.color} : {},
+          onClick: function(){setMethod(i);}
+        }, mt.name);
+      })
+    ),
+    React.createElement("div", {className:"sd"}, m.desc),
+    React.createElement("svg", {viewBox:"0 0 "+W+" "+H, style:{width:"100%",maxWidth:550,background:"#faf8f4",borderRadius:12}},
+      // Boundary
+      React.createElement("rect", {x:bx, y:by, width:bw, height:bh, fill:"none", stroke:m.color, strokeWidth:"2.5", rx:"3"}),
+      // "Object" for size function method
+      method===2 ? React.createElement("g", null,
+        React.createElement("circle", {cx:120, cy:120, r:25, fill:m.color, fillOpacity:"0.15", stroke:m.color, strokeWidth:"2"}),
+        React.createElement("text", {x:120, y:125, textAnchor:"middle", fontSize:"11", fill:m.color, fontWeight:"bold"}, "\u043E\u0431\u044A\u0435\u043A\u0442")
+      ) : null,
+      // Points
+      m.pts.map(function(p, i) {
+        return React.createElement("circle", {key:i, cx:p[0], cy:p[1], r:3, fill:m.color, stroke:"#fff", strokeWidth:0.8});
+      }),
+      // Count
+      React.createElement("text", {x:W/2, y:H-5, textAnchor:"middle", fontSize:"13", fill:"#6b5d4f"}, m.pts.length + " \u0442\u043E\u0447\u0435\u043A")
+    )
+  );
+}
+
+/* ============================================================
+   DELAUNAY: Proper interactive with circumcircles
+   ============================================================ */
+function DelaunayInteractive() {
+  var [step, setStep] = useState(0);
+
+  // Supertriangle: clearly covers ALL points
+  var S0 = [0, 0];
+  var S1 = [540, 0];
+  var S2 = [270, 480];
+
+  // BOUNDARY points (define the real rectangle domain)
+  var B0 = [90, 80];   // top-left corner
+  var B1 = [450, 80];  // top-right
+  var B2 = [450, 380]; // bottom-right
+  var B3 = [90, 380];  // bottom-left
+
+  // INTERIOR points
+  var P1 = [190, 150];
+  var P2 = [370, 140];
+  var P3 = [320, 310];
+  var P4 = [160, 270];
+
+  // New point to insert (also interior)
+  var Pnew = [270, 215];
+
+  // Triangulation with boundary+interior (before Pnew)
+  // 0=S0,1=S1,2=S2, 3=B0,4=B1,5=B2,6=B3, 7=P1,8=P2,9=P3,10=P4
+  var allPts = [S0, S1, S2, B0, B1, B2, B3, P1, P2, P3, P4];
+  var tris = [
+    [7, 8, 9],   // T0: P1-P2-P3
+    [7, 9, 10],  // T1: P1-P3-P4
+    [3, 7, 4],   // T2: B0-P1-B1
+    [4, 8, 5],   // T3: B1-P2-B2
+    [5, 9, 6],   // T4: B2-P3-B3
+    [6, 10, 3],  // T5: B3-P4-B0
+    [4, 7, 8],   // T6: B1-P1-P2
+    [5, 8, 9],   // T7: B2-P2-P3
+    [6, 9, 10],  // T8: B3-P3-P4 (duplicate)
+    [3, 10, 7],  // T9: B0-P4-P1
+    [0, 3, 6],   // T10: super
+    [0, 1, 3],   // T11: super
+    [1, 4, 5],   // T12: super
+    [2, 5, 6],   // T13: super
+    [1, 3, 4],   // T14: super
+    [1, 2, 5],   // T15: super
+    [0, 2, 6],   // T16: super
+  ];
+
+  // Final triangles inside rectangle (B0-B3 + P1-P4 + Pnew)
+  var finalTris = [
+    [B0,P1,B1],[B1,P1,P2],[B1,P2,B2],[B2,P2,P3],
+    [B2,P3,B3],[B3,P3,P4],[B3,P4,B0],[B0,P4,P1],
+    [P1,P2,Pnew],[P2,P3,Pnew],[P3,P4,Pnew],[P4,P1,Pnew]
+  ];
+
+  // Circumcenter calculation
+  function circumcircle(A, B, C) {
+    var ax=A[0],ay=A[1],bx=B[0],by=B[1],cx=C[0],cy=C[1];
+    var D = 2*(ax*(by-cy)+bx*(cy-ay)+cx*(ay-by));
+    if(Math.abs(D)<1e-10) return {x:0,y:0,r:9999};
+    var a2=ax*ax+ay*ay, b2=bx*bx+by*by, c2=cx*cx+cy*cy;
+    var ux=(a2*(by-cy)+b2*(cy-ay)+c2*(ay-by))/D;
+    var uy=(a2*(cx-bx)+b2*(ax-cx)+c2*(bx-ax))/D;
+    var r=Math.sqrt((ax-ux)*(ax-ux)+(ay-uy)*(ay-uy));
+    return {x:ux, y:uy, r:r};
+  }
+
+  // Which triangles are "bad" (Pnew inside circumcircle)?
+  function isBad(triIdx) {
+    var t = tris[triIdx];
+    var cc = circumcircle(allPts[t[0]], allPts[t[1]], allPts[t[2]]);
+    var dx = Pnew[0]-cc.x, dy = Pnew[1]-cc.y;
+    return Math.sqrt(dx*dx+dy*dy) < cc.r;
+  }
+
+  var badIndices = [];
+  for(var i=0; i<tris.length; i++) {
+    if(isBad(i)) badIndices.push(i);
+  }
+
+  var vx=0, vy=0, vw=540, vh=480;
+
+  // Edges of current triangulation
+  function triEdges(triList) {
+    var edges = [];
+    for(var i=0; i<triList.length; i++) {
+      var t = tris[triList[i]];
+      edges.push([t[0],t[1]]);
+      edges.push([t[1],t[2]]);
+      edges.push([t[0],t[2]]);
+    }
+    return edges;
+  }
+
+  // Cavity boundary: edges that belong to exactly one bad triangle
+  function cavityBoundary() {
+    var edgeCount = {};
+    for(var bi=0; bi<badIndices.length; bi++) {
+      var t = tris[badIndices[bi]];
+      var ee = [[t[0],t[1]],[t[1],t[2]],[t[0],t[2]]];
+      for(var j=0; j<ee.length; j++) {
+        var key = Math.min(ee[j][0],ee[j][1])+"-"+Math.max(ee[j][0],ee[j][1]);
+        edgeCount[key] = (edgeCount[key]||0)+1;
+      }
+    }
+    var boundary = [];
+    for(var k in edgeCount) {
+      if(edgeCount[k]===1) {
+        var parts = k.split("-");
+        boundary.push([parseInt(parts[0]), parseInt(parts[1])]);
+      }
+    }
+    return boundary;
+  }
+
+  var goodIndices = [];
+  for(var i=0; i<tris.length; i++) {
+    if(badIndices.indexOf(i)===-1) goodIndices.push(i);
+  }
+
+  var titles = [
+    "\u2460 Точки",
+    "\u2461 Супер-\u25B3",
+    "\u2462 P1",
+    "\u2463 P1\u2013P4",
+    "\u2464 InCircle",
+    "\u2465 Полость",
+    "\u2466 Новые \u25B3",
+    "\u2467 Обрезка"
+  ];
+
+  var descriptions = [
+    "ТОЧКИ ГОТОВЫ. \u25A0 Граничные (B0\u2013B3) задают форму области. \u25CF Внутренние (P1\u2013P5) заполняют объём. Всего N=9 точек. Алгоритм соединит их \u25B3 наилучшим образом.",
+    "ДЕЙСТВИЕ: Строим супертреугольник.\n\u2022 Формула: cx=(x_min+x_max)/2, cy=(y_min+y_max)/2, d=max(x_max\u2212x_min, y_max\u2212y_min).\n\u2022 Вершины: S0=(cx\u22122d, cy\u2212d), S1=(cx+2d, cy\u2212d), S2=(cx, cy+2d).\n\u2022 Результат: 1 треугольник S0-S1-S2, покрывающий все точки. Это временные «леса».",
+    "ДЕЙСТВИЕ: Вставляем P1.\n\u2022 В сетке 1 треугольник (супер-\u25B3). P1 попадает внутрь.\n\u2022 Формула: InCircle(S0,S1,S2,P1) \u2014 вычисляем det M. det < 0 \u2192 P1 внутри окружности \u2192 супер-\u25B3 «плохой».\n\u2022 Удаляем его. Полость = вся область.\n\u2022 Соединяем P1 с S0, S1, S2 \u2192 3 новых \u25B3.\n\u2022 Результат: 3 треугольника.",
+    "ДЕЙСТВИЕ: Вставляем P2, P3, P4 по очереди. Каждый раз:\n\u2022 Формула InCircle(A,B,C,Pi): det M = |...(3\u00D73 матрица)...|\n\u2022 det < 0 \u2192 \u25B3 плохой. Удалить. Соединить Pi с границей полости.\n\u2022 Результат: сетка растёт. Теперь берём P5 (красная).",
+    "ДЕЙСТВИЕ: InCircle-тест для P5.\n\u2022 Для КАЖДОГО \u25B3(A,B,C) вычисляем:\n  det M = |(Ax\u2212Px)(Ay\u2212Py)(Ax\u2212Px)\u00B2+(Ay\u2212Py)\u00B2|... (3\u00D73)\n\u2022 det < 0 \u2192 P5 внутри описанной окружности \u2192 \u25B3 «плохой» (красный).\n\u2022 det > 0 \u2192 P5 вне \u2192 \u25B3 ОК.\n\u2022 Результат: нашли 2 плохих \u25B3.",
+    "ДЕЙСТВИЕ: Удаляем плохие \u25B3.\n\u2022 Жёлтая зона = объединение удалённых \u25B3 = «полость».\n\u2022 Граница полости = рёбра, принадлежащие ровно ОДНОМУ плохому \u25B3 (оранжевые).\n\u2022 Формула: ребро e \u2208 boundary, если count(e в плохих \u25B3) = 1.",
+    "ДЕЙСТВИЕ: Соединяем P5 с вершинами границы полости.\n\u2022 Для каждой вершины V на оранжевой границе: создать ребро P5\u2014V.\n\u2022 Каждая пара соседних рёбер + P5 \u2192 новый \u25B3 (зелёный).\n\u2022 Проверка: новые \u25B3 автоматически удовлетворяют Делоне.\n\u2022 Результат: P5 вставлена. Все точки обработаны!",
+    "ДЕЙСТВИЕ: Удаляем супертреугольник.\n\u2022 Удалить S0, S1, S2 и ВСЕ \u25B3, имеющие хотя бы одну вершину S.\n\u2022 Остаётся сетка ТОЛЬКО внутри прямоугольника B0\u2013B3.\n\u2022 \u25B3 заполняют всю область без дыр.\n\u2022 Результат: финальная \u25B3-сетка Делоне. Область может быть любой формы."
+  ];
+
+  var cols = ["#94a3b8","#b44a2d","#16a34a","#475569","#dc2626","#ea580c","#16a34a","#2c2419"];
+
+  // Render inner points only (skip supertri vertices for clarity on most steps)
+  var innerPts = [3,4,5,6,7,8,9,10]; // B0..B3 + P1..P4
+  var boundaryPts = [3,4,5,6]; // B0..B3
+  var interiorPts = [7,8,9,10]; // P1..P4
+
+  return React.createElement("div", null,
+    React.createElement("div", {className:"br"},
+      titles.map(function(t,i) {
+        return React.createElement("button", {
+          key:i, className:"bt"+(step===i?" on":""),
+          style: step===i?{background:cols[i]}:{},
+          onClick: function(){setStep(i);}
+        }, t);
+      })
+    ),
+    React.createElement("div", {className:"sd"}, descriptions[step]),
+    step>=4 ? React.createElement("div", {className:"legend"},
+      step>=4 ? React.createElement("span", null, React.createElement("i",{style:{background:"#fecaca",border:"1px solid #dc2626"}}), " \u00ABПлохой\u00BB \u25B3") : null,
+      step>=5 ? React.createElement("span", null, React.createElement("i",{style:{background:"#fef3c7",border:"1px solid #ea580c"}}), " Полость") : null,
+      step>=6 ? React.createElement("span", null, React.createElement("i",{style:{background:"#dcfce7",border:"1px solid #16a34a"}}), " Новые \u25B3") : null
+    ) : null,
+    React.createElement("svg", {viewBox:"-10 -10 560 500", style:{width:"100%",maxWidth:680,background:"#faf8f4",borderRadius:12}},
+
+      // Step 0: Points with boundary highlighted
+      step===0 ? React.createElement("g", null,
+        // Rectangle boundary
+        React.createElement("rect", {x:B0[0], y:B0[1], width:B1[0]-B0[0], height:B3[1]-B0[1], fill:"none", stroke:"#b44a2d", strokeWidth:"2.5", strokeDasharray:"8,4", rx:"3"}),
+        React.createElement("text", {x:270, y:B0[1]-8, textAnchor:"middle", fontSize:"13", fill:"#b44a2d", fontWeight:"bold"}, "\u0413\u0440\u0430\u043D\u0438\u0446\u0430 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 (\u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A)"),
+        // Boundary points = blue squares
+        boundaryPts.map(function(idx) {
+          return React.createElement("rect", {key:"b"+idx, x:allPts[idx][0]-7, y:allPts[idx][1]-7, width:14, height:14, fill:"#b44a2d", stroke:"#fff", strokeWidth:2, rx:2});
+        }),
+        React.createElement("text", {x:B0[0]-5, y:B0[1]+22, fontSize:"11", fill:"#b44a2d", fontWeight:"bold"}, "B0"),
+        React.createElement("text", {x:B1[0]-15, y:B1[1]+22, fontSize:"11", fill:"#b44a2d", fontWeight:"bold"}, "B1"),
+        React.createElement("text", {x:B2[0]-15, y:B2[1]-10, fontSize:"11", fill:"#b44a2d", fontWeight:"bold"}, "B2"),
+        React.createElement("text", {x:B3[0]-5, y:B3[1]-10, fontSize:"11", fill:"#b44a2d", fontWeight:"bold"}, "B3"),
+        // Interior points = orange circles
+        interiorPts.map(function(idx) {
+          return React.createElement("circle", {key:"i"+idx, cx:allPts[idx][0], cy:allPts[idx][1], r:8, fill:"#ea580c", stroke:"#fff", strokeWidth:2});
+        }),
+        React.createElement("circle", {cx:Pnew[0], cy:Pnew[1], r:8, fill:"#ea580c", stroke:"#fff", strokeWidth:2}),
+        React.createElement("text", {x:P1[0]+12, y:P1[1]-8, fontSize:"13", fill:"#ea580c", fontWeight:"bold"}, "P1"),
+        React.createElement("text", {x:P2[0]+12, y:P2[1]-8, fontSize:"13", fill:"#ea580c", fontWeight:"bold"}, "P2"),
+        React.createElement("text", {x:P3[0]+12, y:P3[1]-8, fontSize:"13", fill:"#ea580c", fontWeight:"bold"}, "P3"),
+        React.createElement("text", {x:P4[0]+12, y:P4[1]-8, fontSize:"13", fill:"#ea580c", fontWeight:"bold"}, "P4"),
+        React.createElement("text", {x:Pnew[0]+12, y:Pnew[1]-8, fontSize:"13", fill:"#ea580c", fontWeight:"bold"}, "P5"),
+        // Legend
+        React.createElement("text", {x:270, y:430, textAnchor:"middle", fontSize:"14", fill:"#6b5d4f", fontWeight:"bold"}, "\u25A0 \u0413\u0440\u0430\u043D\u0438\u0447\u043D\u044B\u0435 (B0\u2013B3) + \u25CF \u0412\u043D\u0443\u0442\u0440\u0435\u043D\u043D\u0438\u0435 (P1\u2013P5)"),
+        React.createElement("text", {x:270, y:452, textAnchor:"middle", fontSize:"13", fill:"#94a3b8"}, "\u0413\u0440\u0430\u043D\u0438\u0447\u043D\u044B\u0435 \u0437\u0430\u0434\u0430\u044E\u0442 \u0444\u043E\u0440\u043C\u0443 \u043E\u0431\u043B\u0430\u0441\u0442\u0438!")
+      ) : null,
+
+      // Step 1: Supertriangle covering everything
+      step===1 ? React.createElement("g", null,
+        React.createElement("polygon", {points: S0[0]+","+S0[1]+" "+S1[0]+","+S1[1]+" "+S2[0]+","+S2[1], fill:"#dbeafe", fillOpacity:"0.3", stroke:"#b44a2d", strokeWidth:"3", strokeDasharray:"10,5"}),
+        // Real boundary inside (faded)
+        React.createElement("rect", {x:B0[0], y:B0[1], width:B1[0]-B0[0], height:B3[1]-B0[1], fill:"none", stroke:"#93c5fd", strokeWidth:"1.5", strokeDasharray:"4,3", rx:"3"}),
+        React.createElement("circle", {cx:S0[0], cy:S0[1], r:7, fill:"#b44a2d", stroke:"#fff", strokeWidth:2}),
+        React.createElement("text", {x:S0[0]+10, y:S0[1]+20, fontSize:"13", fill:"#b44a2d", fontWeight:"bold"}, "S0"),
+        React.createElement("circle", {cx:S1[0], cy:S1[1], r:7, fill:"#b44a2d", stroke:"#fff", strokeWidth:2}),
+        React.createElement("text", {x:S1[0]-30, y:S1[1]+20, fontSize:"13", fill:"#b44a2d", fontWeight:"bold"}, "S1"),
+        React.createElement("circle", {cx:S2[0], cy:S2[1], r:7, fill:"#b44a2d", stroke:"#fff", strokeWidth:2}),
+        React.createElement("text", {x:S2[0]+12, y:S2[1]+5, fontSize:"13", fill:"#b44a2d", fontWeight:"bold"}, "S2"),
+        innerPts.map(function(idx) { return React.createElement("circle", {key:idx, cx:allPts[idx][0], cy:allPts[idx][1], r:5, fill:"#94a3b8", stroke:"#fff", strokeWidth:1}); }),
+        React.createElement("circle", {cx:Pnew[0], cy:Pnew[1], r:5, fill:"#94a3b8", stroke:"#fff", strokeWidth:1}),
+        React.createElement("text", {x:270, y:220, textAnchor:"middle", fontSize:"16", fill:"#b44a2d", fontWeight:"bold"}, "\u0421\u0423\u041F\u0415\u0420\u0422\u0420\u0415\u0423\u0413\u041E\u041B\u042C\u041D\u0418\u041A"),
+        React.createElement("text", {x:270, y:242, textAnchor:"middle", fontSize:"13", fill:"#6b5d4f"}, "\u0412\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0439. \u041D\u0415 \u0444\u043E\u0440\u043C\u0430 \u043E\u0431\u043B\u0430\u0441\u0442\u0438!")
+      ) : null,
+
+      // Step 2: P1 inserted into supertriangle -> 3 triangles
+      step===2 ? React.createElement("g", null,
+        // Supertriangle outline
+        React.createElement("polygon", {points: S0[0]+","+S0[1]+" "+S1[0]+","+S1[1]+" "+S2[0]+","+S2[1], fill:"none", stroke:"#cbd5e1", strokeWidth:"1.5", strokeDasharray:"6,4"}),
+        // 3 new triangles from P1 to S0,S1,S2
+        React.createElement("polygon", {points:S0[0]+","+S0[1]+" "+S1[0]+","+S1[1]+" "+P1[0]+","+P1[1], fill:"#dcfce7", fillOpacity:"0.3", stroke:"#16a34a", strokeWidth:"2"}),
+        React.createElement("polygon", {points:S1[0]+","+S1[1]+" "+S2[0]+","+S2[1]+" "+P1[0]+","+P1[1], fill:"#dcfce7", fillOpacity:"0.3", stroke:"#16a34a", strokeWidth:"2"}),
+        React.createElement("polygon", {points:S0[0]+","+S0[1]+" "+S2[0]+","+S2[1]+" "+P1[0]+","+P1[1], fill:"#dcfce7", fillOpacity:"0.3", stroke:"#16a34a", strokeWidth:"2"}),
+        // S vertices
+        [0,1,2].map(function(idx){return React.createElement("circle",{key:"s"+idx,cx:allPts[idx][0],cy:allPts[idx][1],r:5,fill:"#94a3b8",stroke:"#fff",strokeWidth:1.5});}),
+        // P1 - the inserted point
+        React.createElement("circle", {cx:P1[0], cy:P1[1], r:9, fill:"#16a34a", stroke:"#fff", strokeWidth:2}),
+        React.createElement("text", {x:P1[0]+14, y:P1[1]-8, fontSize:"15", fill:"#16a34a", fontWeight:"bold"}, "P1 \u2713"),
+        // Other points waiting
+        [4,5,6].map(function(idx){return React.createElement("circle",{key:"w"+idx,cx:allPts[idx][0],cy:allPts[idx][1],r:5,fill:"#ea580c",fillOpacity:"0.4",stroke:"#fff",strokeWidth:1});}),
+        React.createElement("circle",{cx:Pnew[0],cy:Pnew[1],r:5,fill:"#ea580c",fillOpacity:"0.4",stroke:"#fff",strokeWidth:1}),
+        // Labels
+        React.createElement("text", {x:270, y:60, textAnchor:"middle", fontSize:"14", fill:"#16a34a", fontWeight:"bold"}, "P1 \u2192 S0,S1,S2 = 3 \u043D\u043E\u0432\u044B\u0445 \u25B3"),
+        React.createElement("text", {x:350, y:400, textAnchor:"middle", fontSize:"13", fill:"#94a3b8"}, "\u041E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0435 \u0442\u043E\u0447\u043A\u0438 \u0436\u0434\u0443\u0442 \u0432\u0441\u0442\u0430\u0432\u043A\u0438...")
+      ) : null,
+
+      // Steps 3-6: Show full triangulation with P5
+      step >= 3 ? React.createElement("g", null,
+        React.createElement("polygon", {points:S0[0]+","+S0[1]+" "+S1[0]+","+S1[1]+" "+S2[0]+","+S2[1], fill:"none", stroke:"#cbd5e1", strokeWidth:"1.5", strokeDasharray:"6,4"}),
+        (step<=4 ? Array.from({length:tris.length},function(_,i){return i;}) : goodIndices).map(function(ti) {
+          var t=tris[ti]; var A=allPts[t[0]],B=allPts[t[1]],C=allPts[t[2]];
+          var isBd=badIndices.indexOf(ti)!==-1;
+          var pts=A[0]+","+A[1]+" "+B[0]+","+B[1]+" "+C[0]+","+C[1];
+          var hasSV=t[0]<3||t[1]<3||t[2]<3; var ec=hasSV?"#cbd5e1":"#93c5fd";
+          if(step===4&&isBd) return React.createElement("polygon",{key:ti,points:pts,fill:"#fecaca",fillOpacity:"0.7",stroke:"#dc2626",strokeWidth:"2.5"});
+          return React.createElement("polygon",{key:ti,points:pts,fill:"none",stroke:ec,strokeWidth:"1.2"});
+        }),
+        step===4?badIndices.map(function(ti){var t=tris[ti];var cc=circumcircle(allPts[t[0]],allPts[t[1]],allPts[t[2]]);if(cc.r>500)return null;
+          return React.createElement("g",{key:"cc"+ti},React.createElement("circle",{cx:cc.x,cy:cc.y,r:cc.r,fill:"none",stroke:"#dc2626",strokeWidth:"1.8",strokeDasharray:"5,3",opacity:"0.7"}),React.createElement("text",{x:cc.x+8,y:cc.y-8,fontSize:"12",fill:"#dc2626",fontWeight:"bold"},"P5 \u0432\u043D\u0443\u0442\u0440\u0438!"));}):null,
+        step===5?badIndices.map(function(ti){var t=tris[ti];var A=allPts[t[0]],B=allPts[t[1]],C=allPts[t[2]];
+          return React.createElement("polygon",{key:"cv"+ti,points:A[0]+","+A[1]+" "+B[0]+","+B[1]+" "+C[0]+","+C[1],fill:"#fef3c7",fillOpacity:"0.8",stroke:"none"});}):null,
+        step===5?cavityBoundary().map(function(e,i){var A=allPts[e[0]],B=allPts[e[1]];
+          return React.createElement("line",{key:"cb"+i,x1:A[0],y1:A[1],x2:B[0],y2:B[1],stroke:"#ea580c",strokeWidth:"3.5"});}):null,
+        step===5?React.createElement("text",{x:260,y:270,textAnchor:"middle",fontSize:"16",fill:"#ea580c",fontWeight:"bold"},"\u041F\u043E\u043B\u043E\u0441\u0442\u044C = \u0443\u0434\u0430\u043B\u0451\u043D\u043D\u044B\u0435 \u25B3"):null,
+        step===6?React.createElement("g",null,
+          badIndices.map(function(ti){var t=tris[ti];var A=allPts[t[0]],B=allPts[t[1]],C=allPts[t[2]];
+            return React.createElement("polygon",{key:"cv2"+ti,points:A[0]+","+A[1]+" "+B[0]+","+B[1]+" "+C[0]+","+C[1],fill:"#dcfce7",fillOpacity:"0.4",stroke:"none"});}),
+          (function(){var bv={};cavityBoundary().forEach(function(e){bv[e[0]]=true;bv[e[1]]=true;});
+            return Object.keys(bv).map(function(v,i){var pt=allPts[parseInt(v)];
+              return React.createElement("line",{key:"ne"+i,x1:Pnew[0],y1:Pnew[1],x2:pt[0],y2:pt[1],stroke:"#16a34a",strokeWidth:"2.5"});});})(),
+          cavityBoundary().map(function(e,i){var A=allPts[e[0]],B=allPts[e[1]];
+            return React.createElement("line",{key:"cb2"+i,x1:A[0],y1:A[1],x2:B[0],y2:B[1],stroke:"#16a34a",strokeWidth:"2"});})
+        ):null,
+        innerPts.map(function(idx){return React.createElement("circle",{key:"p"+idx,cx:allPts[idx][0],cy:allPts[idx][1],r:6,fill:"#b44a2d",stroke:"#fff",strokeWidth:2});}),
+        step<=6 ? [0,1,2].map(function(idx){return React.createElement("circle",{key:"s"+idx,cx:allPts[idx][0],cy:allPts[idx][1],r:5,fill:"#94a3b8",stroke:"#fff",strokeWidth:1.5});}) : null,
+        React.createElement("g",null,
+          React.createElement("circle",{cx:Pnew[0],cy:Pnew[1],r:9,fill:step===6?"#16a34a":"#dc2626",stroke:"#fff",strokeWidth:2}),
+          React.createElement("text",{x:Pnew[0]+14,y:Pnew[1]-10,fontSize:"16",fontWeight:"bold",fill:step===6?"#16a34a":"#dc2626"},"P5"+(step===6?" \u2713":"")))
+      ) : null,
+
+      // Step 7: Final - remove supertriangle, show real boundary
+      step===7 ? React.createElement("g", null,
+        // Filled triangles covering the entire rectangle
+        finalTris.map(function(t,i){
+          var pts=t[0][0]+","+t[0][1]+" "+t[1][0]+","+t[1][1]+" "+t[2][0]+","+t[2][1];
+          var colors=["#f5f0e8","#f0fdf4","#fefce8","#fdf2f8","#f5f3ff","#ecfdf5","#fff7ed","#faf8f4","#f5f0e8","#f0fdf4","#fefce8","#fdf2f8","#f5f3ff","#ecfdf5"];
+          return React.createElement("polygon",{key:"ft"+i, points:pts, fill:colors[i%14], stroke:"#93c5fd", strokeWidth:"1.8"});
+        }),
+        // Rectangle boundary on top (bold)
+        React.createElement("rect", {x:B0[0], y:B0[1], width:B1[0]-B0[0], height:B3[1]-B0[1], fill:"none", stroke:"#b44a2d", strokeWidth:"3", rx:"3"}),
+        React.createElement("text", {x:270, y:B0[1]-8, textAnchor:"middle", fontSize:"14", fill:"#b44a2d", fontWeight:"bold"}, "\u0413\u0440\u0430\u043D\u0438\u0446\u0430 \u043E\u0431\u043B\u0430\u0441\u0442\u0438"),
+        // Crossed out supertriangle (faded)
+        React.createElement("polygon", {points:S0[0]+","+S0[1]+" "+S1[0]+","+S1[1]+" "+S2[0]+","+S2[1], fill:"none", stroke:"#fca5a5", strokeWidth:"1", strokeDasharray:"4,4", opacity:"0.3"}),
+        React.createElement("line",{x1:S0[0]+5,y1:S0[1]+2,x2:S0[0]+25,y2:S0[1]+22,stroke:"#dc2626",strokeWidth:"2"}),
+        React.createElement("line",{x1:S0[0]+25,y1:S0[1]+2,x2:S0[0]+5,y2:S0[1]+22,stroke:"#dc2626",strokeWidth:"2"}),
+        React.createElement("text", {x:S0[0]+30, y:S0[1]+18, fontSize:"11", fill:"#dc2626"}, "\u0443\u0434\u0430\u043B\u0451\u043D"),
+        // Boundary points (blue squares)
+        boundaryPts.map(function(idx){return React.createElement("rect",{key:"fb"+idx,x:allPts[idx][0]-6,y:allPts[idx][1]-6,width:12,height:12,fill:"#b44a2d",stroke:"#fff",strokeWidth:2,rx:2});}),
+        // Interior points (blue circles)
+        interiorPts.map(function(idx){return React.createElement("circle",{key:"fp"+idx,cx:allPts[idx][0],cy:allPts[idx][1],r:6,fill:"#b44a2d",stroke:"#fff",strokeWidth:2});}),
+        React.createElement("circle",{cx:Pnew[0],cy:Pnew[1],r:6,fill:"#b44a2d",stroke:"#fff",strokeWidth:2}),
+        // Labels
+        React.createElement("text", {x:270, y:425, textAnchor:"middle", fontSize:"16", fill:"#16a34a", fontWeight:"bold"}, "\u2713 \u0422\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0430\u044F \u0441\u0435\u0442\u043A\u0430 \u0437\u0430\u043F\u043E\u043B\u043D\u044F\u0435\u0442 \u0412\u0421\u042E \u043E\u0431\u043B\u0430\u0441\u0442\u044C"),
+        React.createElement("text", {x:270, y:448, textAnchor:"middle", fontSize:"13", fill:"#6b5d4f"}, "\u041E\u0431\u043B\u0430\u0441\u0442\u044C = \u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A. \u041C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043A\u0440\u0443\u0433, \u043F\u0440\u043E\u0444\u0438\u043B\u044C \u2014 \u043B\u044E\u0431\u0430\u044F \u0444\u043E\u0440\u043C\u0430"),
+        React.createElement("text", {x:270, y:468, textAnchor:"middle", fontSize:"13", fill:"#6b5d4f"}, "\u0421\u0443\u043F\u0435\u0440-\u25B3 \u0443\u0434\u0430\u043B\u0451\u043D. \u0422\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438 \u043F\u043E\u043A\u0440\u044B\u0432\u0430\u044E\u0442 \u0432\u0441\u0451 \u0431\u0435\u0437 \u0434\u044B\u0440!")
+      ) : null
+    )
+  );
+}
+
+/* ============================================================
+   OTHER COMPONENTS (Advancing Front, Quadtree, Sphere, Airfoil)
+   ============================================================ */
+function AF(){
+  var[step,setStep]=useState(0);
+
+  // Rectangle boundary with nodes
+  var bx=40,by=40,bw=380,bh=320;
+  // Boundary nodes (clockwise)
+  var bNodes=[];
+  var nTop=8,nSide=6;
+  for(var i=0;i<=nTop;i++) bNodes.push([bx+bw*i/nTop, by]);
+  for(var i=1;i<=nSide;i++) bNodes.push([bx+bw, by+bh*i/nSide]);
+  for(var i=nTop-1;i>=0;i--) bNodes.push([bx+bw*i/nTop, by+bh]);
+  for(var i=nSide-1;i>=1;i--) bNodes.push([bx, by+bh*i/nSide]);
+  var nB=bNodes.length;
+
+  // Edges of front as pairs of indices
+  var frontEdges=[];
+  for(var i=0;i<nB;i++) frontEdges.push([i,(i+1)%nB]);
+
+  // For step 3-4: pick shortest edge (edge 0: top-left)
+  var eIdx=2; // pick an edge on top
+  var eA=bNodes[eIdx], eB=bNodes[(eIdx+1)%nB];
+  // Midpoint
+  var mx=(eA[0]+eB[0])/2, my=(eA[1]+eB[1])/2;
+  // Edge vector
+  var ex=eB[0]-eA[0], ey=eB[1]-eA[1];
+  var eLen=Math.sqrt(ex*ex+ey*ey);
+  // Normal (inward = downward for top edge)
+  var nx=-ey/eLen, ny=ex/eLen;
+  // Make sure inward
+  var cxR=bx+bw/2, cyR=by+bh/2;
+  if(nx*(cxR-mx)+ny*(cyR-my)<0){nx=-nx;ny=-ny;}
+  // h = ideal height for equilateral
+  var hIdeal=eLen*Math.sqrt(3)/2;
+  var Pideal=[mx+hIdeal*nx, my+hIdeal*ny];
+
+  // Center of the domain
+  var ccx=bx+bw/2, ccy=by+bh/2;
+
+  // PROPER mesh: grid of points, each quad -> 2 triangles
+  // This is what advancing front actually produces on a rectangle
+  var nx=9, ny=7;  // grid divisions
+  var gridPts=[];
+  for(var j=0;j<=ny;j++) for(var i=0;i<=nx;i++) {
+    gridPts.push([bx + bw*i/nx, by + bh*j/ny]);
+  }
+  // Build triangles: each cell (i,j)-(i+1,j)-(i+1,j+1)-(i,j+1) -> 2 triangles
+  var gridTris=[];
+  for(var j=0;j<ny;j++) for(var i=0;i<nx;i++) {
+    var p00=gridPts[j*(nx+1)+i];
+    var p10=gridPts[j*(nx+1)+i+1];
+    var p01=gridPts[(j+1)*(nx+1)+i];
+    var p11=gridPts[(j+1)*(nx+1)+i+1];
+    // Alternate diagonal direction for nicer look
+    if((i+j)%2===0) {
+      gridTris.push([p00,p10,p11]);
+      gridTris.push([p00,p11,p01]);
+    } else {
+      gridTris.push([p00,p10,p01]);
+      gridTris.push([p10,p11,p01]);
+    }
+  }
+  // Partial mesh: first 2 rows from top and bottom, 2 columns from left and right
+  var partialTris=[];
+  for(var j=0;j<ny;j++) for(var i=0;i<nx;i++) {
+    if(j<2 || j>=ny-2 || i<2 || i>=nx-2) {
+      var p00=gridPts[j*(nx+1)+i];
+      var p10=gridPts[j*(nx+1)+i+1];
+      var p01=gridPts[(j+1)*(nx+1)+i];
+      var p11=gridPts[(j+1)*(nx+1)+i+1];
+      if((i+j)%2===0) {
+        partialTris.push([p00,p10,p11]);
+        partialTris.push([p00,p11,p01]);
+      } else {
+        partialTris.push([p00,p10,p01]);
+        partialTris.push([p10,p11,p01]);
+      }
+    }
+  }
+  // Inner front for partial: the rectangle at row=2..ny-2, col=2..nx-2
+  var innerFrontPts=[];
+  for(var i=2;i<=nx-2;i++) innerFrontPts.push(gridPts[2*(nx+1)+i]); // top
+  for(var j=3;j<=ny-3;j++) innerFrontPts.push(gridPts[j*(nx+1)+(nx-2)]); // right
+  for(var i=nx-2;i>=2;i--) innerFrontPts.push(gridPts[(ny-2)*(nx+1)+i]); // bottom
+  for(var j=ny-3;j>=3;j--) innerFrontPts.push(gridPts[j*(nx+1)+2]); // left
+
+  var titles=[
+    "\u2460 Граница",
+    "\u2461 Фронт F",
+    "\u2462 Ребро e",
+    "\u2463 Нормаль+P",
+    "\u2464 Новый \u25B3",
+    "\u2465 Обновл. F",
+    "\u2466 N итераций",
+    "\u2467 Готово"
+  ];
+  var descs=[
+    "ДАНО: граница области, разбитая на рёбра с узлами. Задана функция размера h(x).\n\u2022 Вход: список рёбер {e\u2081,...,e_M}, функция h(x).\n\u2022 Пока ничего не построено \u2014 только граница.",
+    "ДЕЙСТВИЕ: Инициализация фронта.\n\u2022 Формула: F := {e\u2081, e\u2082, ..., e_M} (все граничные рёбра).\n\u2022 Фронт F = граница заполненного. Сейчас F = вся граница.\n\u2022 Внутри \u2014 пусто, \u25B3 нет.",
+    "ДЕЙСТВИЕ: Выбор ребра.\n\u2022 Формула: e* = arg min_{e \u2208 F} |e| (самое короткое ребро на фронте).\n\u2022 e* = [A, B], длина L = |B \u2212 A| = \u221A((Bx\u2212Ax)\u00B2+(By\u2212Ay)\u00B2).\n\u2022 Почему короткое? Сначала закрываем узкие участки \u2192 лучше качество.",
+    "ДЕЙСТВИЕ: Вычислить идеальную точку P.\n\u2022 Формула середины: mid = (A + B) / 2.\n\u2022 Формула нормали: edge = B \u2212 A, n = (\u2212edge_y, edge_x), n\u0302 = n/|n|.\n\u2022 Формула высоты: h = L\u00B7\u221A3/2 \u2248 0.866\u00B7L (для равностороннего \u25B3).\n\u2022 Формула точки: P = mid + h \u00B7 n\u0302.\n\u2022 Проверка: если \u2203 узел Q: |Q\u2212P| < \u03B4\u00B7h (\u03B4\u22480.6), то P := Q.",
+    "ДЕЙСТВИЕ: Создать треугольник.\n\u2022 Новый \u25B3(A, B, P).\n\u2022 Площадь: S = 0.5\u00B7|det[B\u2212A, P\u2212A]| = 0.5\u00B7|(Bx\u2212Ax)(Py\u2212Ay)\u2212(By\u2212Ay)(Px\u2212Ax)|.\n\u2022 Проверка: S > 0 (не вырожден), углы > 10\u00B0.\n\u2022 Результат: первый элемент сетки!",
+    "ДЕЙСТВИЕ: Обновить фронт.\n\u2022 Формула: F := F \u2212 {AB} \u222A {AP, BP}.\n\u2022 Ребро AB удаляется (теперь внутреннее).\n\u2022 Рёбра AP и BP добавляются (новая граница).\n\u2022 Особый случай: если AP или BP уже есть в F \u2192 удалить оба (ребро стало внутренним).\n\u2022 Результат: фронт сжался на 1 шаг.",
+    "ДЕЙСТВИЕ: Повторяем шаги 3\u20136 многократно.\n\u2022 На каждой итерации: e* \u2192 mid \u2192 n\u0302 \u2192 P \u2192 \u25B3 \u2192 F := F\u2212{e}\u222A{AP,BP}.\n\u2022 Количество итераций \u2248 N_\u25B3 (число элементов в сетке).\n\u2022 Фронт постепенно сжимается к центру.\n\u2022 Видно: внешние 2 слоя уже построены.",
+    "ДЕЙСТВИЕ: Фронт пуст \u2192 стоп.\n\u2022 Условие остановки: F = \u2205 (не осталось рёбер на фронте).\n\u2022 Результат: ВСЯ область заполнена \u25B3.\n\u2022 Качество у границы отличное (строили от неё!).\n\u2022 Итого: 126 \u25B3, каждый построен формулой P = mid(e) + h\u00B7n\u0302."
+  ];
+  var cols=["#475569","#dc2626","#ea580c","#7c3aed","#16a34a","#b44a2d","#b44a2d","#16a34a"];
+
+  return React.createElement("div",null,
+    React.createElement("div",{className:"br"},
+      titles.map(function(t,i){
+        return React.createElement("button",{key:i,className:"bt"+(step===i?" on":""),style:step===i?{background:cols[i]}:{},onClick:function(){setStep(i);}},t);
+      })
+    ),
+    React.createElement("div",{className:"sd"},descs[step]),
+
+    React.createElement("svg",{viewBox:"0 0 460 400",style:{width:"100%",maxWidth:580,background:"#faf8f4",borderRadius:12}},
+      React.createElement("defs",null,
+        React.createElement("marker",{id:"ap2",viewBox:"0 0 10 10",refX:8,refY:5,markerWidth:6,markerHeight:6,orient:"auto"},React.createElement("path",{d:"M0 0L10 5L0 10z",fill:"#7c3aed"}))
+      ),
+
+      // Step 0: Just boundary with nodes
+      step===0?React.createElement("g",null,
+        React.createElement("rect",{x:bx,y:by,width:bw,height:bh,fill:"#f5f0e8",fillOpacity:"0.3",stroke:"#475569",strokeWidth:"2.5",rx:"3"}),
+        bNodes.map(function(p,i){return React.createElement("circle",{key:i,cx:p[0],cy:p[1],r:4,fill:"#475569",stroke:"#fff",strokeWidth:1});}),
+        React.createElement("text",{x:bx+bw/2,y:by+bh/2-5,textAnchor:"middle",fontSize:"15",fill:"#475569",fontWeight:"bold"},"Граница с узлами"),
+        React.createElement("text",{x:bx+bw/2,y:by+bh/2+15,textAnchor:"middle",fontSize:"13",fill:"#94a3b8"},"Внутри пусто")
+      ):null,
+
+      // Step 1: Front = boundary edges (red)
+      step===1?React.createElement("g",null,
+        React.createElement("rect",{x:bx,y:by,width:bw,height:bh,fill:"#f5f0e8",fillOpacity:"0.15",stroke:"none"}),
+        frontEdges.map(function(e,i){var A=bNodes[e[0]],B=bNodes[e[1]];
+          return React.createElement("line",{key:i,x1:A[0],y1:A[1],x2:B[0],y2:B[1],stroke:"#dc2626",strokeWidth:2.5});}),
+        bNodes.map(function(p,i){return React.createElement("circle",{key:i,cx:p[0],cy:p[1],r:4,fill:"#dc2626",stroke:"#fff",strokeWidth:1});}),
+        React.createElement("text",{x:bx+bw/2,y:by+bh/2-5,textAnchor:"middle",fontSize:"16",fill:"#dc2626",fontWeight:"bold"},"Фронт F = граничные рёбра"),
+        React.createElement("text",{x:bx+bw/2,y:by+bh/2+15,textAnchor:"middle",fontSize:"13",fill:"#94a3b8"},"Всё внутри ещё пусто")
+      ):null,
+
+      // Step 2: Highlight shortest edge
+      step===2?React.createElement("g",null,
+        frontEdges.map(function(e,i){var A=bNodes[e[0]],B=bNodes[e[1]];
+          var isActive=i===eIdx;
+          return React.createElement("line",{key:i,x1:A[0],y1:A[1],x2:B[0],y2:B[1],stroke:isActive?"#ea580c":"#dc2626",strokeWidth:isActive?5:2});}),
+        bNodes.map(function(p,i){return React.createElement("circle",{key:i,cx:p[0],cy:p[1],r:4,fill:"#dc2626",stroke:"#fff",strokeWidth:1});}),
+        React.createElement("circle",{cx:eA[0],cy:eA[1],r:7,fill:"#ea580c",stroke:"#fff",strokeWidth:2}),
+        React.createElement("text",{x:eA[0]-15,y:eA[1]-10,fontSize:"14",fill:"#ea580c",fontWeight:"bold"},"A"),
+        React.createElement("circle",{cx:eB[0],cy:eB[1],r:7,fill:"#ea580c",stroke:"#fff",strokeWidth:2}),
+        React.createElement("text",{x:eB[0]+8,y:eB[1]-10,fontSize:"14",fill:"#ea580c",fontWeight:"bold"},"B"),
+        React.createElement("text",{x:mx,y:my-12,textAnchor:"middle",fontSize:"13",fill:"#ea580c",fontWeight:"bold"},"e (самое короткое)"),
+        React.createElement("text",{x:mx,y:by+bh+25,textAnchor:"middle",fontSize:"13",fill:"#6b5d4f"},"L = |B \u2212 A| = "+Math.round(eLen)+" px")
+      ):null,
+
+      // Step 3: Normal and ideal point P
+      step===3?React.createElement("g",null,
+        frontEdges.map(function(e,i){var A=bNodes[e[0]],B=bNodes[e[1]];
+          return React.createElement("line",{key:i,x1:A[0],y1:A[1],x2:B[0],y2:B[1],stroke:i===eIdx?"#ea580c":"#fca5a5",strokeWidth:i===eIdx?4:1.5});}),
+        bNodes.map(function(p,i){return React.createElement("circle",{key:i,cx:p[0],cy:p[1],r:3,fill:"#dc2626",stroke:"#fff",strokeWidth:1});}),
+        // Midpoint
+        React.createElement("circle",{cx:mx,cy:my,r:5,fill:"#7c3aed",stroke:"#fff",strokeWidth:1.5}),
+        React.createElement("text",{x:mx+8,y:my-8,fontSize:"12",fill:"#7c3aed",fontWeight:"bold"},"mid(e)"),
+        // Normal arrow
+        React.createElement("line",{x1:mx,y1:my,x2:Pideal[0],y2:Pideal[1],stroke:"#7c3aed",strokeWidth:2.5,markerEnd:"url(#ap2)"}),
+        React.createElement("text",{x:(mx+Pideal[0])/2+12,y:(my+Pideal[1])/2,fontSize:"14",fill:"#7c3aed",fontWeight:"bold"},"h\u00B7n\u0302"),
+        // Ideal point
+        React.createElement("circle",{cx:Pideal[0],cy:Pideal[1],r:8,fill:"#16a34a",stroke:"#fff",strokeWidth:2}),
+        React.createElement("text",{x:Pideal[0]+12,y:Pideal[1]-5,fontSize:"15",fill:"#16a34a",fontWeight:"bold"},"P"),
+        // Labels
+        React.createElement("circle",{cx:eA[0],cy:eA[1],r:6,fill:"#ea580c",stroke:"#fff",strokeWidth:2}),
+        React.createElement("text",{x:eA[0]-15,y:eA[1]-8,fontSize:"13",fill:"#ea580c",fontWeight:"bold"},"A"),
+        React.createElement("circle",{cx:eB[0],cy:eB[1],r:6,fill:"#ea580c",stroke:"#fff",strokeWidth:2}),
+        React.createElement("text",{x:eB[0]+8,y:eB[1]-8,fontSize:"13",fill:"#ea580c",fontWeight:"bold"},"B"),
+        React.createElement("text",{x:bx+bw/2,y:by+bh+25,textAnchor:"middle",fontSize:"13",fill:"#6b5d4f"},"P = mid(e) + h\u00B7n\u0302,  h = L\u00B7\u221A3/2 = "+Math.round(hIdeal))
+      ):null,
+
+      // Step 4: New triangle ABP
+      step===4?React.createElement("g",null,
+        frontEdges.map(function(e,i){var A=bNodes[e[0]],B=bNodes[e[1]];
+          return React.createElement("line",{key:i,x1:A[0],y1:A[1],x2:B[0],y2:B[1],stroke:i===eIdx?"#ea580c":"#fca5a5",strokeWidth:i===eIdx?3:1.5});}),
+        bNodes.map(function(p,i){return React.createElement("circle",{key:i,cx:p[0],cy:p[1],r:3,fill:"#dc2626"});}),
+        // Triangle ABP
+        React.createElement("polygon",{points:eA[0]+","+eA[1]+" "+eB[0]+","+eB[1]+" "+Pideal[0]+","+Pideal[1],fill:"#dcfce7",fillOpacity:"0.6",stroke:"#16a34a",strokeWidth:"2.5"}),
+        React.createElement("circle",{cx:Pideal[0],cy:Pideal[1],r:7,fill:"#16a34a",stroke:"#fff",strokeWidth:2}),
+        React.createElement("text",{x:Pideal[0]+10,y:Pideal[1]-5,fontSize:"14",fill:"#16a34a",fontWeight:"bold"},"P"),
+        React.createElement("circle",{cx:eA[0],cy:eA[1],r:6,fill:"#ea580c",stroke:"#fff",strokeWidth:2}),
+        React.createElement("text",{x:eA[0]-15,y:eA[1]-8,fontSize:"13",fill:"#ea580c",fontWeight:"bold"},"A"),
+        React.createElement("circle",{cx:eB[0],cy:eB[1],r:6,fill:"#ea580c",stroke:"#fff",strokeWidth:2}),
+        React.createElement("text",{x:eB[0]+8,y:eB[1]-8,fontSize:"13",fill:"#ea580c",fontWeight:"bold"},"B"),
+        React.createElement("text",{x:(eA[0]+eB[0]+Pideal[0])/3,y:(eA[1]+eB[1]+Pideal[1])/3+5,textAnchor:"middle",fontSize:"15",fill:"#16a34a",fontWeight:"bold"},"\u25B3 ABP")
+      ):null,
+
+      // Step 5: Updated front
+      step===5?React.createElement("g",null,
+        frontEdges.map(function(e,i){var A=bNodes[e[0]],B=bNodes[e[1]];
+          if(i===eIdx) return React.createElement("line",{key:i,x1:A[0],y1:A[1],x2:B[0],y2:B[1],stroke:"#fca5a5",strokeWidth:2,strokeDasharray:"4,4"}); // deleted
+          return React.createElement("line",{key:i,x1:A[0],y1:A[1],x2:B[0],y2:B[1],stroke:"#dc2626",strokeWidth:2});}),
+        // New front edges AP and BP
+        React.createElement("line",{x1:eA[0],y1:eA[1],x2:Pideal[0],y2:Pideal[1],stroke:"#b44a2d",strokeWidth:3}),
+        React.createElement("line",{x1:eB[0],y1:eB[1],x2:Pideal[0],y2:Pideal[1],stroke:"#b44a2d",strokeWidth:3}),
+        // Triangle (faded)
+        React.createElement("polygon",{points:eA[0]+","+eA[1]+" "+eB[0]+","+eB[1]+" "+Pideal[0]+","+Pideal[1],fill:"#dcfce7",fillOpacity:"0.3",stroke:"#93c5fd",strokeWidth:1}),
+        bNodes.map(function(p,i){return React.createElement("circle",{key:i,cx:p[0],cy:p[1],r:3,fill:"#dc2626"});}),
+        React.createElement("circle",{cx:Pideal[0],cy:Pideal[1],r:6,fill:"#b44a2d",stroke:"#fff",strokeWidth:2}),
+        // Labels
+        React.createElement("text",{x:mx,y:my-10,textAnchor:"middle",fontSize:"12",fill:"#fca5a5",fontWeight:"bold"},"AB удалено"),
+        React.createElement("text",{x:eA[0]-5,y:(eA[1]+Pideal[1])/2,fontSize:"12",fill:"#b44a2d",fontWeight:"bold"},"AP \u2014 новое"),
+        React.createElement("text",{x:eB[0]+5,y:(eB[1]+Pideal[1])/2,fontSize:"12",fill:"#b44a2d",fontWeight:"bold"},"BP \u2014 новое")
+      ):null,
+
+      // Step 6: Partial mesh - outer 2 layers filled, inner front visible
+      step===6?React.createElement("g",null,
+        // Partial triangles (outer ring)
+        partialTris.map(function(t,i){
+          return React.createElement("polygon",{key:"pt"+i,
+            points:t[0][0]+","+t[0][1]+" "+t[1][0]+","+t[1][1]+" "+t[2][0]+","+t[2][1],
+            fill:"#dbeafe",fillOpacity:"0.4",stroke:"#93c5fd",strokeWidth:0.8});
+        }),
+        // Boundary
+        React.createElement("rect",{x:bx,y:by,width:bw,height:bh,fill:"none",stroke:"#6b5d4f",strokeWidth:1.5,rx:3}),
+        // Inner front (red)
+        (function(){
+          var els=[];
+          for(var i=0;i<innerFrontPts.length;i++){
+            var j=(i+1)%innerFrontPts.length;
+            els.push(React.createElement("line",{key:"fl"+i,x1:innerFrontPts[i][0],y1:innerFrontPts[i][1],x2:innerFrontPts[j][0],y2:innerFrontPts[j][1],stroke:"#dc2626",strokeWidth:2.5}));
+          }
+          for(var i=0;i<innerFrontPts.length;i++){
+            els.push(React.createElement("circle",{key:"fn"+i,cx:innerFrontPts[i][0],cy:innerFrontPts[i][1],r:3.5,fill:"#dc2626"}));
+          }
+          return els;
+        })(),
+        // Grid nodes in filled area
+        gridPts.map(function(p,i){return React.createElement("circle",{key:"gn"+i,cx:p[0],cy:p[1],r:2,fill:"#b44a2d"});}),
+        React.createElement("text",{x:ccx,y:ccy,textAnchor:"middle",fontSize:"14",fill:"#dc2626",fontWeight:"bold"},"Фронт сжался"),
+        React.createElement("text",{x:ccx,y:ccy+18,textAnchor:"middle",fontSize:"12",fill:"#94a3b8"},"2 слоя заполнены")
+      ):null,
+
+      // Step 7: Complete mesh - all triangles
+      step===7?React.createElement("g",null,
+        gridTris.map(function(t,i){
+          var colors=["#dbeafe","#e0f2fe","#f0fdf4","#fefce8","#f5f0e8"];
+          return React.createElement("polygon",{key:"gt"+i,
+            points:t[0][0]+","+t[0][1]+" "+t[1][0]+","+t[1][1]+" "+t[2][0]+","+t[2][1],
+            fill:colors[i%5],fillOpacity:"0.35",stroke:"#93c5fd",strokeWidth:0.7});
+        }),
+        React.createElement("rect",{x:bx,y:by,width:bw,height:bh,fill:"none",stroke:"#2c2419",strokeWidth:2.5,rx:3}),
+        gridPts.map(function(p,i){return React.createElement("circle",{key:"gn"+i,cx:p[0],cy:p[1],r:2.5,fill:"#b44a2d"});}),
+        React.createElement("text",{x:ccx,y:by+bh+25,textAnchor:"middle",fontSize:"16",fill:"#16a34a",fontWeight:"bold"},"\u2713 Вся область заполнена \u25B3 ("+gridTris.length+" элементов)")
+      ):null
+    )
+  );
+}
+
+function QT(){
+  var[step,setStep]=useState(0);
+  var W=420, H=440;
+  var qcx=200,qcy=200,qcr=80; // circle object
+
+  // Build quadtree cells at each refinement level
+  function buildLevel(maxLvl) {
+    var cells=[];
+    function sub(x,y,s,l){
+      if(l>=maxLvl){cells.push({x:x,y:y,s:s,l:l});return;}
+      var corners=[[x,y],[x+s,y],[x,y+s],[x+s,y+s],[x+s/2,y+s/2]];
+      var dists=corners.map(function(p){return Math.sqrt((p[0]-qcx)*(p[0]-qcx)+(p[1]-qcy)*(p[1]-qcy));});
+      var nearCircle=Math.min.apply(null,dists)<qcr+s*0.6 && Math.max.apply(null,dists)>qcr-s*0.6;
+      if(!nearCircle){cells.push({x:x,y:y,s:s,l:l});return;}
+      var h=s/2;
+      sub(x,y,h,l+1);sub(x+h,y,h,l+1);sub(x,y+h,h,l+1);sub(x+h,y+h,h,l+1);
+    }
+    sub(0,0,400,0);
+    return cells;
+  }
+
+  var cells0=[{x:0,y:0,s:400,l:0}]; // just root
+  var cells1=buildLevel(1); // 4 cells
+  var cells2=buildLevel(2);
+  var cells3=buildLevel(3);
+  var cells4=buildLevel(4);
+  var cellsFinal=buildLevel(5);
+
+  // Convert cells to triangles: each cell -> 2 triangles
+  function cellsToTris(cellList){
+    var tris=[];
+    for(var i=0;i<cellList.length;i++){
+      var c=cellList[i];
+      tris.push([[c.x,c.y],[c.x+c.s,c.y],[c.x+c.s,c.y+c.s]]);
+      tris.push([[c.x,c.y],[c.x+c.s,c.y+c.s],[c.x,c.y+c.s]]);
+    }
+    return tris;
+  }
+
+  var colors=["#f5f0e8","#dbeafe","#bfdbfe","#93c5fd","#60a5fa","#b44a2d"];
+  var theta=[];for(var i=0;i<100;i++)theta.push(i/99*Math.PI*2);
+
+  var titles=[
+    "\u2460 Объект",
+    "\u2461 Корень",
+    "\u2462 Уровень 1",
+    "\u2463 Уровень 2",
+    "\u2464 Уровень 3",
+    "\u2465 Уровень 4",
+    "\u2466 Баланс 2:1",
+    "\u2467 Ячейки\u2192\u25B3"
+  ];
+  var descs=[
+    "ДАНО: область L\u2080\u00D7L\u2080 = 400\u00D7400 и объект (окружность r=80 в центре).\n\u2022 Вход: bounding box, геометрия \u2202\u03A9, параметр h_min.\n\u2022 Цель: мелкие ячейки у объекта, крупные далеко.",
+    "ДЕЙСТВИЕ: Создать корневую ячейку.\n\u2022 Формула: C\u2080 = [0, 0, L\u2080, L\u2080], уровень l=0.\n\u2022 Размер: h(0) = L\u2080/2\u2070 = L\u2080 = 400.\n\u2022 Результат: 1 ячейка = вся область.",
+    "ДЕЙСТВИЕ: Разбиение уровня 1.\n\u2022 Формула: C\u2080 \u2192 4 дочерних: C\u2080\u2080, C\u2080\u2081, C\u2081\u2080, C\u2081\u2081.\n\u2022 Размер: h(1) = L\u2080/2\u00B9 = 200.\n\u2022 Критерий: для каждой C проверить C \u2229 \u2202\u03A9 \u2260 \u2205 (пересекает окружность?).\n\u2022 Те, что пересекают \u2014 пометить для дальнейшего дробления.\n\u2022 Результат: 4 ячейки.",
+    "ДЕЙСТВИЕ: Разбиение уровня 2.\n\u2022 Формула: h(2) = L\u2080/2\u00B2 = 100.\n\u2022 Каждая помеченная ячейка \u2192 4 дочерних.\n\u2022 Критерий: h(C) > h_min И C \u2229 \u2202\u03A9 \u2260 \u2205.\n\u2022 Далёкие ячейки НЕ дробятся \u2014 экономия!",
+    "ДЕЙСТВИЕ: Разбиение уровня 3.\n\u2022 Формула: h(3) = L\u2080/2\u00B3 = 50.\n\u2022 Та же проверка: C \u2229 \u2202\u03A9 \u2260 \u2205?\n\u2022 Ячейки вдали остаются размером 200 или 100.",
+    "ДЕЙСТВИЕ: Разбиение уровня 4.\n\u2022 Формула: h(4) = L\u2080/2\u2074 = 25.\n\u2022 Условие остановки: h(l) \u2264 h_min \u2192 стоп.\n\u2022 У объекта \u2014 ячейки 25\u00D725, далеко \u2014 200\u00D7200.",
+    "ДЕЙСТВИЕ: Балансировка 2:1.\n\u2022 Формула: для соседних C\u2081, C\u2082: |level(C\u2081) \u2212 level(C\u2082)| \u2264 1.\n\u2022 Если > 1 (например, l=1 рядом с l=4) \u2014 додробить крупную.\n\u2022 Зачем: без балансировки \u25B3 на стыке крупных и мелких ячеек будут вытянутыми.\n\u2022 Проход по всем парам соседей, пока все сбалансированы.",
+    "ДЕЙСТВИЕ: Конвертация ячеек \u2192 \u25B3.\n\u2022 Формула: каждая ячейка [x,y,h] \u2192 2\u25B3:\n  \u25B3\u2081 = (x,y)\u2014(x+h,y)\u2014(x+h,y+h)\n  \u25B3\u2082 = (x,y)\u2014(x+h,y+h)\u2014(x,y+h)\n\u2022 Результат: "+cellsFinal.length+" ячеек \u2192 "+(cellsFinal.length*2)+" \u25B3.\n\u2022 Сетка адаптивная: мелко у объекта, крупно вдали."
+  ];
+  var cols=["#475569","#b44a2d","#16a34a","#16a34a","#16a34a","#16a34a","#ea580c","#7c3aed"];
+  var stepCells=[cells0,cells0,cells1,cells2,cells3,cells4,cellsFinal,cellsFinal];
+
+  return React.createElement("div",null,
+    React.createElement("div",{className:"br"},
+      titles.map(function(t,i){
+        return React.createElement("button",{key:i,className:"bt"+(step===i?" on":""),style:step===i?{background:cols[i]}:{},onClick:function(){setStep(i);}},t);
+      })
+    ),
+    React.createElement("div",{className:"sd"},descs[step]),
+    React.createElement("svg",{viewBox:"0 0 "+W+" "+H,style:{width:"100%",maxWidth:520,background:"#faf8f4",borderRadius:12}},
+
+      // Step 0: just the object
+      step===0?React.createElement("g",null,
+        React.createElement("rect",{x:0,y:0,width:400,height:400,fill:"#f5f0e8",stroke:"#475569",strokeWidth:2}),
+        React.createElement("circle",{cx:qcx,cy:qcy,r:qcr,fill:"#dc2626",fillOpacity:"0.1",stroke:"#dc2626",strokeWidth:3}),
+        React.createElement("text",{x:qcx,y:qcy+5,textAnchor:"middle",fontSize:"15",fill:"#dc2626",fontWeight:"bold"},"Объект"),
+        React.createElement("text",{x:200,y:430,textAnchor:"middle",fontSize:"13",fill:"#6b5d4f"},"Область 400\u00D7400 + объект (окружность)")
+      ):null,
+
+      // Steps 1-6: show cells
+      step>=1&&step<=6?React.createElement("g",null,
+        stepCells[step].map(function(c,i){
+          return React.createElement("rect",{key:i,x:c.x,y:c.y,width:c.s,height:c.s,
+            fill:colors[Math.min(c.l,5)],stroke:"#475569",strokeWidth:0.5});
+        }),
+        React.createElement("circle",{cx:qcx,cy:qcy,r:qcr,fill:"none",stroke:"#dc2626",strokeWidth:3}),
+        // Level label
+        React.createElement("text",{x:200,y:425,textAnchor:"middle",fontSize:"13",fill:"#6b5d4f"},
+          stepCells[step].length+" ячеек, h_min = L\u2080/2^"+(step<=1?"0":String(step-1))+" = "+Math.round(400/Math.pow(2,Math.max(0,step-1))))
+      ):null,
+
+      // Step 7: triangulated
+      step===7?React.createElement("g",null,
+        cellsToTris(cellsFinal).map(function(t,i){
+          return React.createElement("polygon",{key:i,
+            points:t[0][0]+","+t[0][1]+" "+t[1][0]+","+t[1][1]+" "+t[2][0]+","+t[2][1],
+            fill:colors[i%6],fillOpacity:"0.3",stroke:"#93c5fd",strokeWidth:0.6});
+        }),
+        React.createElement("circle",{cx:qcx,cy:qcy,r:qcr,fill:"none",stroke:"#dc2626",strokeWidth:3}),
+        React.createElement("text",{x:200,y:425,textAnchor:"middle",fontSize:"14",fill:"#16a34a",fontWeight:"bold"},
+          "\u2713 "+(cellsFinal.length*2)+" \u25B3 \u2014 мелко у объекта, крупно вдали")
+      ):null
+    )
+  );
+}
+
+// Pre-compute sphere packing data ONCE at load time (not on every render!)
+var SP_DATA=(function(){
+  var W=400,H=400,k=0.5,d0=65,radius=32,dtP=0.12,epsP=0.5,totalIter=400,snapEvery=20;
+  function rng(s){var x=s;return function(){x=Math.sin(x*9137.137)*10000;return x-Math.floor(x);};}
+  var rr=rng(42);
+  // 6x6 grid cramped into center so bubbles overlap
+  var init=[];var gs=6;
+  var margin=60;var spacing=(W-2*margin)/(gs-1); // ~56, less than d0=65 => overlap!
+  for(var gy2=0;gy2<gs;gy2++) for(var gx2=0;gx2<gs;gx2++){
+    init.push([margin+gx2*spacing+(rr()-0.5)*20,
+               margin+gy2*spacing+(rr()-0.5)*20]);
+  }
+  var n=gs*gs; // 36 points
+  var snapshots=[init.map(function(p){return[p[0],p[1]];})];
+  var maxForces=[999];
+  var cur=init.map(function(p){return[p[0],p[1]];});
+  for(var it=0;it<totalIter;it++){
+    var mxF2=0;
+    for(var i=0;i<n;i++){
+      var fx=0,fy=0;
+      for(var j=0;j<n;j++){
+        if(i===j)continue;
+        var ddx=cur[i][0]-cur[j][0],ddy=cur[i][1]-cur[j][1];
+        var dist=Math.sqrt(ddx*ddx+ddy*ddy);
+        if(dist<d0&&dist>0.5){var force=k*(d0-dist)/dist;fx+=ddx*force;fy+=ddy*force;}
+      }
+      if(cur[i][0]<radius)fx+=(radius-cur[i][0])*0.8;if(cur[i][0]>W-radius)fx-=(cur[i][0]-(W-radius))*0.8;
+      if(cur[i][1]<radius)fy+=(radius-cur[i][1])*0.8;if(cur[i][1]>H-radius)fy-=(cur[i][1]-(H-radius))*0.8;
+      var fm=Math.sqrt(fx*fx+fy*fy);if(fm>mxF2)mxF2=fm;
+      cur[i][0]=Math.max(10,Math.min(W-10,cur[i][0]+fx*dtP));
+      cur[i][1]=Math.max(10,Math.min(H-10,cur[i][1]+fy*dtP));
+    }
+    if((it+1)%snapEvery===0){snapshots.push(cur.map(function(p){return[p[0],p[1]];}));maxForces.push(mxF2);}
+  }
+  // Bowyer-Watson Delaunay
+  var fp=snapshots[snapshots.length-1];
+  var st0=[-500,-500],st1=[1300,-500],st2=[400,1300];
+  var allP=[st0,st1,st2];for(var i=0;i<n;i++)allP.push(fp[i]);
+  var tris3=[[0,1,2]];
+  for(var pi=3;pi<allP.length;pi++){
+    var P2=allP[pi];var bad2=[];
+    for(var ti=0;ti<tris3.length;ti++){
+      var t=tris3[ti];var A=allP[t[0]],B=allP[t[1]],C=allP[t[2]];
+      var ax2=A[0]-P2[0],ay2=A[1]-P2[1],bx2=B[0]-P2[0],by2=B[1]-P2[1],cx2=C[0]-P2[0],cy2=C[1]-P2[1];
+      var det=ax2*(by2*(cx2*cx2+cy2*cy2)-cy2*(bx2*bx2+by2*by2))
+             -ay2*(bx2*(cx2*cx2+cy2*cy2)-cx2*(bx2*bx2+by2*by2))
+             +(ax2*ax2+ay2*ay2)*(bx2*cy2-by2*cx2);
+      if(det>0)bad2.push(ti);
+    }
+    var edges2=[];
+    for(var bi=0;bi<bad2.length;bi++){
+      var t=tris3[bad2[bi]];var ee=[[t[0],t[1]],[t[1],t[2]],[t[2],t[0]]];
+      for(var ei=0;ei<3;ei++){
+        var shared=false;
+        for(var bj=0;bj<bad2.length;bj++){if(bi===bj)continue;
+          var t2=tris3[bad2[bj]];
+          if((t2[0]===ee[ei][0]||t2[1]===ee[ei][0]||t2[2]===ee[ei][0])&&
+             (t2[0]===ee[ei][1]||t2[1]===ee[ei][1]||t2[2]===ee[ei][1])){shared=true;break;}}
+        if(!shared)edges2.push(ee[ei]);
+      }
+    }
+    bad2.sort(function(a,b){return b-a;});
+    for(var bi=0;bi<bad2.length;bi++)tris3.splice(bad2[bi],1);
+    for(var ei=0;ei<edges2.length;ei++)tris3.push([edges2[ei][0],edges2[ei][1],pi]);
+  }
+  var dt=[];
+  for(var ti=0;ti<tris3.length;ti++){var t=tris3[ti];if(t[0]>=3&&t[1]>=3&&t[2]>=3)dt.push([t[0]-3,t[1]-3,t[2]-3]);}
+  return{W:W,H:H,n:n,k:k,d0:d0,radius:radius,dtP:dtP,epsP:epsP,totalIter:totalIter,snapEvery:snapEvery,
+    snaps:snapshots,forces:maxForces,delTris:dt,finalPts:fp,nSnaps:snapshots.length};
+})();
+
+function SP(){
+  var[step,setStep]=useState(0);
+  var D=SP_DATA;
+  var n=D.n,k=D.k,d0=D.d0,radius=D.radius,dtP=D.dtP,epsP=D.epsP;
+  var totalIter=D.totalIter,snapEvery=D.snapEvery,nSnaps=D.nSnaps;
+  var snapshots=D.snaps,maxForces=D.forces,delTris=D.delTris,finalPts=D.finalPts;
+  var W=D.W,H=D.H;
+
+  var isD=step>=nSnaps;
+  var si=Math.min(step,nSnaps-1);
+  var pts=snapshots[si];
+  var mxF=maxForces[si];
+  var iteration=si*snapEvery;
+  var converged=si>0&&mxF<epsP;
+  var col=step===0?"#b44a2d":(isD?"#16a34a":(converged?"#16a34a":"#ea580c"));
+
+  function desc(){
+    if(step===0) return "\u041D\u0410\u0427\u0410\u041B\u041E:\n\u2022 N="+n+" \u0442\u043E\u0447\u0435\u043A (5\u00D75 + \u0441\u0434\u0432\u0438\u0433)\n\u2022 r=h/2="+radius+", d\u2080=r\u1D62+r\u2C7C="+d0+"\n\u2022 k="+k+", \u0394t="+dtP+", \u03B5="+epsP+"\n\u2022 \u041F\u0443\u0437\u044B\u0440\u044C\u043A\u0438 \u043F\u0435\u0440\u0435\u043A\u0440\u044B\u0432\u0430\u044E\u0442\u0441\u044F \u2192 \u043E\u0442\u0442\u0430\u043B\u043A\u0438\u0432\u0430\u043D\u0438\u0435";
+    if(isD) return "\u0414\u0415\u041B\u041E\u041D\u0415 (\u0411\u043E\u0443\u044D\u0440-\u0412\u0430\u0442\u0441\u043E\u043D):\n\u2022 "+delTris.length+" \u25B3 \u043F\u043E \u0440\u0430\u0432\u043D\u043E\u043C\u0435\u0440\u043D\u044B\u043C \u0443\u0437\u043B\u0430\u043C\n\u2022 d\u2248d\u2080="+d0+"=h(x)\n\u2022 \u0412\u0441\u0435 \u25B3 \u0445\u043E\u0440\u043E\u0448\u0435\u0439 \u0444\u043E\u0440\u043C\u044B!";
+    if(converged) return "\u0421\u0425\u041E\u0414\u0418\u041C\u041E\u0421\u0422\u042C! \u0418\u0442."+iteration+":\n\u2022 max|F|="+mxF.toFixed(2)+"<\u03B5="+epsP+" \u2713\n\u2022 d\u2248d\u2080="+d0+"\n\u2022 \u25B6 \u2192 \u0414\u0435\u043B\u043E\u043D\u0435";
+    return "\u0418\u0442."+iteration+"/"+totalIter+":\n\u2022 r="+radius+", d\u2080="+d0+"\n\u2022 F="+k+"\u00B7("+d0+"\u2212d)\u00B7e\n\u2022 p\u2190p+"+dtP+"\u00B7\u03A3F\n\u2022 max|F|="+mxF.toFixed(2)+(mxF<epsP?" <\u03B5\u2713":" >\u03B5="+epsP);
+  }
+
+  return React.createElement("div",null,
+    React.createElement("div",{style:{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}},
+      React.createElement("button",{className:"bt on",style:{background:"#475569",color:"#fff",padding:"10px 14px"},onClick:function(){setStep(0);}},"\u23EE"),
+      React.createElement("button",{className:"bt on",style:{background:"#b44a2d",color:"#fff",padding:"10px 14px"},onClick:function(){setStep(Math.max(0,step-1));}},"\u25C0"),
+      React.createElement("button",{className:"bt on",style:{background:"#16a34a",color:"#fff",padding:"10px 20px",fontSize:16},onClick:function(){setStep(Math.min(step+1,nSnaps));}},"\u25B6"),
+      React.createElement("button",{className:"bt on",style:{background:"#7c3aed",color:"#fff",padding:"10px 14px"},onClick:function(){setStep(nSnaps);}},"\u23ED\u23ED \u0414\u0435\u043B\u043E\u043D\u0435")
+    ),
+    React.createElement("div",{style:{display:"flex",alignItems:"center",gap:12,marginBottom:10}},
+      React.createElement("div",{style:{flex:1,height:8,background:"#ede6da",borderRadius:4,overflow:"hidden"}},
+        React.createElement("div",{style:{width:(step/nSnaps*100)+"%",height:"100%",background:col}})
+      ),
+      React.createElement("span",{style:{fontSize:14,fontWeight:700,color:col}},
+        isD?"\u0414\u0435\u043B\u043E\u043D\u0435 \u2713":"\u0418\u0442."+iteration+"/"+totalIter)
+    ),
+    React.createElement("div",{className:"sd"},desc()),
+    React.createElement("svg",{viewBox:"0 0 "+W+" "+(H+25),style:{width:"100%",maxWidth:520,background:isD?"#f0fdf4":"#faf8f4",borderRadius:12}},
+      React.createElement("rect",{x:5,y:5,width:W-10,height:H-10,fill:"none",stroke:col,strokeWidth:2,rx:4}),
+      isD?delTris.map(function(t,i){var A=finalPts[t[0]],B=finalPts[t[1]],C=finalPts[t[2]];
+        return React.createElement("polygon",{key:"dt"+i,points:A[0]+","+A[1]+" "+B[0]+","+B[1]+" "+C[0]+","+C[1],
+          fill:"#dcfce7",fillOpacity:"0.3",stroke:"#16a34a",strokeWidth:1.2});}):null,
+      !isD?pts.map(function(p,i){return React.createElement("circle",{key:"b"+i,
+        cx:p[0],cy:p[1],r:radius,fill:col,fillOpacity:"0.08",stroke:col,strokeWidth:"0.7",strokeOpacity:"0.3"});}):null,
+      pts.map(function(p,i){return React.createElement("circle",{key:"p"+i,cx:p[0],cy:p[1],r:4,fill:col});}),
+      React.createElement("text",{x:W/2,y:H+18,textAnchor:"middle",fontSize:12,fill:"#6b5d4f"},
+        isD?delTris.length+" \u25B3 | N="+n
+        :"N="+n+" r="+radius+" d\u2080="+d0+" max|F|="+(mxF<999?mxF.toFixed(1):"\u221E")+(converged?" \u2713":""))
+    )
+  );
+}
+
+function Airfoil(){
+  var naca=function(x){return 0.6*(0.2969*Math.sqrt(x)-0.126*x-0.3516*x*x+0.2843*x*x*x-0.1015*x*x*x*x);};
+  var pts=[];for(var i=0;i<100;i++){var x=i/99;pts.push({x:50+x*500,yu:150-naca(x)*500,yl:150+naca(x)*500});}
+  var upper=pts.map(function(p){return p.x+","+p.yu;}).join(" ");
+  var lower=pts.slice().reverse().map(function(p){return p.x+","+p.yl;}).join(" ");
+  return React.createElement("svg",{viewBox:"0 0 620 220",style:{width:"100%",maxWidth:700,background:"#faf8f4",borderRadius:12}},
+    React.createElement("defs",null,React.createElement("marker",{id:"aa",viewBox:"0 0 10 10",refX:8,refY:5,markerWidth:6,markerHeight:6,orient:"auto"},React.createElement("path",{d:"M0 0L10 5L0 10z",fill:"#ea580c"}))),
+    [-25,-12,0,12,25].map(function(dy,i){return React.createElement("line",{key:i,x1:5,y1:150+dy,x2:42,y2:150+dy,stroke:"#ea580c",strokeWidth:2,markerEnd:"url(#aa)"});}),
+    React.createElement("text",{x:8,y:115,fontSize:16,fill:"#ea580c",fontWeight:"bold"},"U\u221E"),
+    React.createElement("polygon",{points:upper+" "+lower,fill:"#b44a2d",fillOpacity:"0.2",stroke:"#b44a2d",strokeWidth:"2.5"}),
+    React.createElement("circle",{cx:50,cy:150,r:4,fill:"#dc2626"}),
+    React.createElement("text",{x:20,y:190,fontSize:12,fill:"#dc2626",fontWeight:"bold"},"Передняя кромка"),
+    React.createElement("circle",{cx:550,cy:150,r:4,fill:"#dc2626"}),
+    React.createElement("text",{x:555,y:145,fontSize:12,fill:"#dc2626",fontWeight:"bold"},"Задняя кромка")
+  );
+}
+
+function F(props){return React.createElement("div",{className:"fm"},props.children);}
+
+/* ============================================================
+   MAIN APP
+   ============================================================ */
+function App(){
+  return React.createElement("div",{className:"wrap"},
+    React.createElement("h1",null,"Неструктурированные сетки"),
+    React.createElement("p",{className:"sub"},"Теория \u00B7 Алгоритмы \u00B7 Интерактивные визуализации \u00B7 Задание"),
+    React.createElement("div",{className:"nav"},
+      React.createElement("a",{href:"#s1"},"1. Делоне"),React.createElement("a",{href:"#s2"},"2. Фронт"),
+      React.createElement("a",{href:"#s3"},"3. Quadtree"),React.createElement("a",{href:"#s4"},"4. Сферы"),
+      React.createElement("a",{href:"#s5"},"5. Качество"),React.createElement("a",{href:"#s6"},"6. Задание")
+    ),
+
+    // ===== 1. DELAUNAY =====
+    React.createElement("section",{id:"s1"},
+      React.createElement("div",{className:"stit"},React.createElement("span",{className:"sn"},"1"),"Триангуляция Делоне"),
+      React.createElement("div",{className:"road"},
+        React.createElement("div",{className:"rc"},React.createElement("div",{className:"rt"},React.createElement("span",{className:"nm",style:{background:"#b44a2d"}},"1"),React.createElement("span",{style:{color:"#b44a2d"}},"ДАНО")),React.createElement("h4",null,"Что на входе?"),React.createElement("ul",null,React.createElement("li",null,"Набор точек P: точки на границе тела, точки в поле, узлы из другого генератора \u2014 любой набор координат"))),
+        React.createElement("div",{className:"rc"},React.createElement("div",{className:"rt"},React.createElement("span",{className:"nm",style:{background:"#16a34a"}},"2"),React.createElement("span",{style:{color:"#16a34a"}},"ИДЕЯ")),React.createElement("h4",null,"Что делаем?"),React.createElement("ul",null,React.createElement("li",null,"Соединяем точки \u25B3 так, чтобы ",React.createElement("b",null,"ни одна точка не попала внутрь описанной окружности")," любого \u25B3"))),
+        React.createElement("div",{className:"rc"},React.createElement("div",{className:"rt"},React.createElement("span",{className:"nm",style:{background:"#ea580c"}},"3"),React.createElement("span",{style:{color:"#ea580c"}},"РЕЗУЛЬТАТ")),React.createElement("h4",null,"Что получим?"),React.createElement("ul",null,React.createElement("li",null,"\u25B3-сетка с ",React.createElement("b",null,"максимально \u00ABтолстыми\u00BB")," треугольниками")))
+      ),
+      React.createElement("div",{className:"idea"},
+        React.createElement("h4",null,"\uD83D\uDCA1 Ключевая идея"),
+        React.createElement("p",null,"Среди всех способов соединить точки, Делоне \u2014 наилучшая по форме. Для каждого \u25B3 рисуем описанную окружность \u2014 если внутрь не попала ни одна точка, всё ОК.")
+      ),
+      React.createElement("h3",{className:"bl"},"Пошаговый алгоритм (Боуэр\u2013Ватсон)"),
+      React.createElement("div",{className:"sl"},
+        React.createElement("div",{className:"sp b"},React.createElement("div",null,React.createElement("b",null,"Создать \u00ABсупертреугольник\u00BB")," \u2014 один ОГРОМНЫЙ \u25B3, который гарантированно накрывает все точки. Он нужен как стартовая \u00ABсетка\u00BB из одного элемента, чтобы алгоритму было куда вставлять первую точку. В конце мы его удалим.")),
+        React.createElement("div",{className:"sp b"},React.createElement("div",null,React.createElement("b",null,"Взять очередную точку P")," из набора (просто следующую по порядку).")),
+        React.createElement("div",{className:"sp r"},React.createElement("div",null,React.createElement("b",null,"Для КАЖДОГО \u25B3 в текущей сетке")," построить описанную окружность и проверить: P внутри? Формально: вычислить InCircle(A,B,C,P). Если det < 0, \u25B3 \u00ABплохой\u00BB.")),
+        React.createElement("div",{className:"sp r"},React.createElement("div",null,React.createElement("b",null,"Удалить ВСЕ плохие \u25B3.")," Дыра, которая осталась = \u00ABполость\u00BB. Она ТОЧНО равна объединению удалённых \u25B3. Запомнить рёбра на границе полости (рёбра, принадлежащие ровно одному плохому \u25B3).")),
+        React.createElement("div",{className:"sp g"},React.createElement("div",null,React.createElement("b",null,"Соединить P")," с каждой вершиной на границе полости \u2192 новые \u25B3.")),
+        React.createElement("div",{className:"sp b"},React.createElement("div",null,React.createElement("b",null,"Повторить")," шаги 2\u20135 для каждой точки.")),
+        React.createElement("div",{className:"sp b"},React.createElement("div",null,React.createElement("b",null,"Удалить супертреугольник")," и все \u25B3, имеющие его вершины \u2192 финальная сетка."))
+      ),
+      React.createElement("h3",{className:"bl"},"Формула: InCircle-тест"),
+      React.createElement(F,null,
+        React.createElement("div",null,"det M ="),
+        React.createElement("div",null,"| (Ax\u2212Dx)  (Ay\u2212Dy)  (Ax\u2212Dx)\u00B2+(Ay\u2212Dy)\u00B2 |"),
+        React.createElement("div",null,"| (Bx\u2212Dx)  (By\u2212Dy)  (Bx\u2212Dx)\u00B2+(By\u2212Dy)\u00B2 |"),
+        React.createElement("div",null,"| (Cx\u2212Dx)  (Cy\u2212Dy)  (Cx\u2212Dx)\u00B2+(Cy\u2212Dy)\u00B2 |"),
+        React.createElement("br"),
+        React.createElement("div",{className:"ok"},React.createElement("b",null,"det > 0")," \u2192 D вне окружности \u2713"),
+        React.createElement("div",{className:"bad"},React.createElement("b",null,"det < 0")," \u2192 D внутри \u2717 (\u25B3 плохой)")
+      ),
+      React.createElement("h3",{className:"bl"},"Формула: построение супертреугольника"),
+      React.createElement("p",null,"Супертреугольник должен накрыть ВСЕ точки. Строим его из bounding box:"),
+      React.createElement(F,null,
+        React.createElement("div",null,React.createElement("b",null,"1. Bounding box:")),
+        React.createElement("div",null,"   x_min = min(x\u1D62),  x_max = max(x\u1D62)"),
+        React.createElement("div",null,"   y_min = min(y\u1D62),  y_max = max(y\u1D62)"),
+        React.createElement("br"),
+        React.createElement("div",null,React.createElement("b",null,"2. Центр и размах:")),
+        React.createElement("div",null,"   cx = (x_min + x_max) / 2"),
+        React.createElement("div",null,"   cy = (y_min + y_max) / 2"),
+        React.createElement("div",null,"   d  = max(x_max \u2212 x_min, y_max \u2212 y_min)"),
+        React.createElement("br"),
+        React.createElement("div",null,React.createElement("b",null,"3. Три вершины:")),
+        React.createElement("div",null,"   S0 = (cx \u2212 2d,  cy \u2212 d)     \u2190 левый нижний"),
+        React.createElement("div",null,"   S1 = (cx + 2d,  cy \u2212 d)     \u2190 правый нижний"),
+        React.createElement("div",null,"   S2 = (cx,        cy + 2d)    \u2190 верхний"),
+        React.createElement("br"),
+        React.createElement("div",{className:"nt"},"Множитель 2 даёт запас \u2014 все точки гарантированно внутри"),
+        React.createElement("div",{className:"nt"},"В конце S0, S1, S2 и все рёбра к ним \u2014 УДАЛЯЕМ")
+      ),
+      React.createElement("h3",{className:"bl"},"Шаг 0: Как расставить точки по области?"),
+      React.createElement("p",null,"Прежде чем строить \u25B3 \u2014 нужен набор точек. Есть 4 основных способа (нажмите кнопки):"),
+      React.createElement(PointGeneration),
+      React.createElement(F,null,
+        React.createElement("div",null,React.createElement("b",null,"\u0420\u0435\u0433\u0443\u043B\u044F\u0440\u043D\u0430\u044F:")," N = nx \u00D7 ny (например 10\u00D710 = 100)"),
+        React.createElement("div",null,React.createElement("b",null,"\u0421\u043B\u0443\u0447\u0430\u0439\u043D\u0430\u044F:")," N \u0437\u0430\u0434\u0430\u0451\u0442\u0441\u044F, (x,y) = rand() \u00B7 (W,H)"),
+        React.createElement("div",null,React.createElement("b",null,"\u041F\u043E h(x):")," h(x) = h_min + (h_max\u2212h_min)\u00B7(r/R)^\u03B1, \u03B1\u22481.5\u20132"),
+        React.createElement("div",{className:"nt"},"\u0413\u0434\u0435 r = \u0440\u0430\u0441\u0441\u0442\u043E\u044F\u043D\u0438\u0435 \u0434\u043E \u043E\u0431\u044A\u0435\u043A\u0442\u0430. \u0411\u043B\u0438\u0437\u043A\u043E \u2192 h \u043C\u0430\u043B\u043E \u2192 \u0442\u043E\u0447\u043A\u0438 \u0433\u0443\u0441\u0442\u043E")
+      ),
+
+      React.createElement("h3",{className:"bl"},"Интерактивно: 8 шагов от точек до сетки"),
+      React.createElement("p",null,"Нажимайте кнопки по порядку \u2014 каждый шаг подробно объяснён:"),
+      React.createElement(DelaunayInteractive)
+    ),
+
+    // ===== 2. ADVANCING FRONT =====
+    React.createElement("section",{id:"s2"},
+      React.createElement("div",{className:"stit"},React.createElement("span",{className:"sn",style:{background:"#7c3aed"}},"2"),"Метод наступающего фронта"),
+      React.createElement("div",{className:"road"},
+        React.createElement("div",{className:"rc"},React.createElement("div",{className:"rt"},React.createElement("span",{className:"nm",style:{background:"#7c3aed"}},"1"),React.createElement("span",{style:{color:"#7c3aed"}},"ДАНО")),React.createElement("h4",null,"Что на входе?"),React.createElement("ul",null,React.createElement("li",null,"Граница области, разбитая на рёбра (с узлами)"),React.createElement("li",null,"Функция размера h(x) \u2014 какой размер элементов хотим"))),
+        React.createElement("div",{className:"rc"},React.createElement("div",{className:"rt"},React.createElement("span",{className:"nm",style:{background:"#16a34a"}},"2"),React.createElement("span",{style:{color:"#16a34a"}},"ИДЕЯ")),React.createElement("h4",null,"Что делаем?"),React.createElement("ul",null,React.createElement("li",null,"\u25B3 строятся ",React.createElement("b",null,"от границы внутрь")),React.createElement("li",null,"\u00ABФронт\u00BB (граница заполненного) ",React.createElement("b",null,"сжимается")," к центру"))),
+        React.createElement("div",{className:"rc"},React.createElement("div",{className:"rt"},React.createElement("span",{className:"nm",style:{background:"#ea580c"}},"3"),React.createElement("span",{style:{color:"#ea580c"}},"РЕЗУЛЬТАТ")),React.createElement("h4",null,"Что получим?"),React.createElement("ul",null,React.createElement("li",null,"\u25B3-сетка, заполняющая всю область"),React.createElement("li",null,"Отличное качество ",React.createElement("b",null,"у границы")," (CFD!)")))
+      ),
+      React.createElement("div",{className:"idea pt"},
+        React.createElement("h4",null,"\uD83D\uDCA1 Ключевая идея"),
+        React.createElement("p",null,"Представьте: вы выкладываете плитку на пол, начиная от стен. Берёте участок стены (ребро), отмеряете перпендикуляр внутрь \u2014 кладёте плитку (\u25B3). Стена \u00ABсдвинулась\u00BB внутрь. Повторяете, пока весь пол не покрыт. Не нужны никакие \u00ABсупертреугольники\u00BB \u2014 начинаем сразу с границы!")
+      ),
+
+      React.createElement("h3",{className:"pu"},"Отличие от Делоне"),
+      React.createElement("p",null,"В Делоне нам нужны ВСЕ точки заранее. Здесь точки генерируются ПО ХОДУ \u2014 алгоритм сам решает, куда поставить новый узел (вычисляет идеальную позицию P). Граничные точки заданы заранее, а внутренние создаются автоматически."),
+
+      React.createElement("h3",{className:"pu"},"Пошаговый алгоритм"),
+      React.createElement("div",{className:"sl"},
+        React.createElement("div",{className:"sp p"},React.createElement("div",null,React.createElement("b",null,"Дискретизировать границу:")," разбить контур области на рёбра с узлами. Расстояние между узлами \u2248 h(x) на границе.")),
+        React.createElement("div",{className:"sp p"},React.createElement("div",null,React.createElement("b",null,"Инициализировать фронт F:")," все граничные рёбра \u2192 список фронта. Фронт = текущая граница заполненного.")),
+        React.createElement("div",{className:"sp p"},React.createElement("div",null,React.createElement("b",null,"Выбрать самое короткое ребро e = [A, B]")," на фронте. Почему короткое? Сначала закрываем узкие участки \u2014 иначе потом будут плохие \u25B3.")),
+        React.createElement("div",{className:"sp p"},React.createElement("div",null,React.createElement("b",null,"Вычислить идеальную точку P")," = середина(e) + h \u00B7 нормаль внутрь. Если рядом (\u2264 0.6h) есть существующий узел \u2014 взять его.")),
+        React.createElement("div",{className:"sp p"},React.createElement("div",null,React.createElement("b",null,"Создать \u25B3(A, B, P)."))),
+        React.createElement("div",{className:"sp p"},React.createElement("div",null,React.createElement("b",null,"Обновить фронт:")," ребро AB ",React.createElement("b",null,"удалить")," (оно теперь внутреннее). Рёбра AP и BP ",React.createElement("b",null,"добавить")," (новая граница).")),
+        React.createElement("div",{className:"sp p"},React.createElement("div",null,React.createElement("b",null,"Повторять")," шаги 3\u20136, пока фронт F не пуст.")),
+        React.createElement("div",{className:"sp p"},React.createElement("div",null,React.createElement("b",null,"Готово!")," Вся область заполнена \u25B3 от границы к центру."))
+      ),
+
+      React.createElement("h3",{className:"pu"},"Формула: идеальная точка P"),
+      React.createElement(F,null,
+        React.createElement("div",null,React.createElement("b",null,"P = mid(e) + h(x) \u00B7 n\u0302")),
+        React.createElement("br"),
+        React.createElement("div",null,"mid(e) = (A + B) / 2"),
+        React.createElement("br"),
+        React.createElement("div",null,React.createElement("b",null,"Нормаль:")," edge = B \u2212 A"),
+        React.createElement("div",null,"n = (\u2212edge_y, edge_x)"),
+        React.createElement("div",null,"n\u0302 = n / |n|  (\u0432\u044B\u0431\u0440\u0430\u0442\u044C \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0432\u043D\u0443\u0442\u0440\u044C \u043E\u0431\u043B\u0430\u0441\u0442\u0438)")
+      ),
+
+      React.createElement("h3",{className:"pu"},"Формула: высота для равностороннего \u25B3"),
+      React.createElement(F,null,
+        React.createElement("div",null,React.createElement("b",null,"h = L \u00B7 \u221A3 / 2 \u2248 0.866 \u00B7 L")),
+        React.createElement("div",{className:"nt"},"L = |B \u2212 A| \u2014 длина ребра")
+      ),
+
+      React.createElement("h3",{className:"pu"},"Формула: проверка близости существующего узла"),
+      React.createElement(F,null,
+        React.createElement("div",null,"Если \u2203 узел Q на фронте такой, что:"),
+        React.createElement("div",null,React.createElement("b",null,"|Q \u2212 P| < \u03B4 \u00B7 h(x)")),
+        React.createElement("div",null,"то P := Q (не создаём новый, берём существующий)"),
+        React.createElement("div",{className:"nt"},"\u03B4 \u2248 0.5\u20130.7 (параметр)")
+      ),
+
+      React.createElement("h3",{className:"pu"},"Формула: обновление фронта"),
+      React.createElement(F,null,
+        React.createElement("div",null,"F := F \u2212 {e}          (\u0443\u0434\u0430\u043B\u0438\u0442\u044C \u0441\u0442\u0430\u0440\u043E\u0435 \u0440\u0435\u0431\u0440\u043E AB)"),
+        React.createElement("div",null,"F := F \u222A {AP, BP}  (\u0434\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u043D\u043E\u0432\u044B\u0435)"),
+        React.createElement("div",{className:"nt"},"Если AP или BP уже есть в F (совпало с соседом) \u2014 удалить оба (ребро стало внутренним)")
+      ),
+
+      React.createElement("h3",{className:"pu"},"Интерактивно: 8 шагов от границы до сетки"),
+      React.createElement("p",null,"Нажимайте кнопки по порядку:"),
+      React.createElement(AF)
+    ),
+
+    // ===== 3. QUADTREE =====
+    React.createElement("section",{id:"s3"},
+      React.createElement("div",{className:"stit"},React.createElement("span",{className:"sn",style:{background:"#16a34a"}},"3"),"Quadtree / Octree"),
+      React.createElement("div",{className:"road"},
+        React.createElement("div",{className:"rc"},React.createElement("div",{className:"rt"},React.createElement("span",{className:"nm",style:{background:"#16a34a"}},"1"),React.createElement("span",{style:{color:"#16a34a"}},"ДАНО")),React.createElement("h4",null,"Что на входе?"),React.createElement("ul",null,React.createElement("li",null,"Bounding box (охватывает всю область)"),React.createElement("li",null,"Геометрия (контуры тел)"),React.createElement("li",null,"h_min \u2014 минимальный размер ячейки"))),
+        React.createElement("div",{className:"rc"},React.createElement("div",{className:"rt"},React.createElement("span",{className:"nm",style:{background:"#b44a2d"}},"2"),React.createElement("span",{style:{color:"#b44a2d"}},"ИДЕЯ")),React.createElement("h4",null,"Что делаем?"),React.createElement("ul",null,React.createElement("li",null,"Рекурсивно делим область на ",React.createElement("b",null,"4")," (2D) / ",React.createElement("b",null,"8")," (3D)"),React.createElement("li",null,"У объекта \u2014 мельче, далеко \u2014 крупнее"),React.createElement("li",null,"Потом ячейки \u2192 \u25B3"))),
+        React.createElement("div",{className:"rc"},React.createElement("div",{className:"rt"},React.createElement("span",{className:"nm",style:{background:"#ea580c"}},"3"),React.createElement("span",{style:{color:"#ea580c"}},"РЕЗУЛЬТАТ")),React.createElement("h4",null,"Что получим?"),React.createElement("ul",null,React.createElement("li",null,"Адаптивная \u25B3-сетка: мелко где надо, крупно где можно"),React.createElement("li",null,"Быстро и робастно")))
+      ),
+      React.createElement("div",{className:"idea gt"},
+        React.createElement("h4",null,"\uD83D\uDCA1 Ключевая идея"),
+        React.createElement("p",null,"Возьмите лист бумаги. Разрежьте на 4 части. Те части, что касаются объекта \u2014 разрежьте ещё на 4. И так далее, пока ячейки не станут достаточно мелкими. Далёкие части не трогаем \u2014 экономия. В конце каждую ячейку делим диагональю на 2\u25B3.")
+      ),
+
+      React.createElement("h3",{className:"gr"},"Отличие от Делоне и фронта"),
+      React.createElement("p",null,"В Делоне и фронте мы работаем с ТОЧКАМИ и соединяем их \u25B3. Здесь мы работаем с ЯЧЕЙКАМИ (квадратами) \u2014 рекурсивно дробим пространство. Точки появляются автоматически как вершины ячеек. Не нужны ни супертреугольник, ни фронт."),
+
+      React.createElement("h3",{className:"gr"},"Пошаговый алгоритм"),
+      React.createElement("div",{className:"sl"},
+        React.createElement("div",{className:"sp g"},React.createElement("div",null,React.createElement("b",null,"Корневая ячейка")," = весь bounding box. Одна ячейка уровня 0, размер L\u2080.")),
+        React.createElement("div",{className:"sp g"},React.createElement("div",null,React.createElement("b",null,"Для каждой ячейки C проверить:")," нужно ли дробить? ДА, если: а) размер C > h_min(x), или б) C пересекает границу геометрии.")),
+        React.createElement("div",{className:"sp g"},React.createElement("div",null,React.createElement("b",null,"Если да \u2014 разделить C на 4 дочерних")," (2D) или 8 (3D). Каждая дочерняя \u2014 вдвое меньше.")),
+        React.createElement("div",{className:"sp g"},React.createElement("div",null,React.createElement("b",null,"Повторять")," шаги 2\u20133 для каждой дочерней, пока не остановимся.")),
+        React.createElement("div",{className:"sp g"},React.createElement("div",null,React.createElement("b",null,"Балансировка 2:1:")," для каждой пары соседних ячеек: если уровни отличаются больше чем на 1 \u2014 додробить крупную. Иначе при конвертации в \u25B3 будут плохие элементы.")),
+        React.createElement("div",{className:"sp g"},React.createElement("div",null,React.createElement("b",null,"Каждую ячейку \u2192 2\u25B3")," (провести диагональ). Или 4\u25B3 (из центра к вершинам) для лучшего качества.")),
+        React.createElement("div",{className:"sp g"},React.createElement("div",null,React.createElement("b",null,"Готово!")," \u25B3-сетка с адаптивным разрешением."))
+      ),
+
+      React.createElement("h3",{className:"gr"},"Формула: размер ячейки"),
+      React.createElement(F,null,
+        React.createElement("div",null,React.createElement("b",null,"h(l) = L\u2080 / 2\u02E1")),
+        React.createElement("br"),
+        React.createElement("div",null,"l = 0: h = L\u2080 = 400  (\u043A\u043E\u0440\u0435\u043D\u044C)"),
+        React.createElement("div",null,"l = 1: h = 200"),
+        React.createElement("div",null,"l = 2: h = 100"),
+        React.createElement("div",null,"l = 3: h = 50"),
+        React.createElement("div",null,"l = 4: h = 25"),
+        React.createElement("div",null,"..."),
+        React.createElement("div",{className:"nt"},"Останавливаемся когда h \u2264 h_min")
+      ),
+
+      React.createElement("h3",{className:"gr"},"Формула: критерий разбиения"),
+      React.createElement(F,null,
+        React.createElement("div",null,"Разбить ячейку C, если:"),
+        React.createElement("div",null,React.createElement("b",null,"  h(C) > h_min(x)"),"  \u2014 ячейка слишком большая"),
+        React.createElement("div",null,"  ИЛИ"),
+        React.createElement("div",null,React.createElement("b",null,"  C \u2229 \u2202\u03A9 \u2260 \u2205"),"  \u2014 ячейка пересекает границу объекта")
+      ),
+
+      React.createElement("h3",{className:"gr"},"Формула: балансировка 2:1"),
+      React.createElement(F,null,
+        React.createElement("div",null,"Для соседних ячеек C\u2081 и C\u2082:"),
+        React.createElement("div",null,React.createElement("b",null,"|level(C\u2081) \u2212 level(C\u2082)| \u2264 1")),
+        React.createElement("div",{className:"nt"},"Если > 1 \u2014 додробить крупную до выполнения")
+      ),
+
+      React.createElement("h3",{className:"gr"},"Формула: число ячеек"),
+      React.createElement(F,null,
+        React.createElement("div",null,React.createElement("b",null,"N \u2264 4\u02E1")," (2D) \u2014 максимум при полном разбиении"),
+        React.createElement("div",null,React.createElement("b",null,"N \u2264 8\u02E1")," (3D)"),
+        React.createElement("div",{className:"nt"},"На практике гораздо меньше \u2014 дробятся только ячейки у объекта")
+      ),
+
+      React.createElement("h3",{className:"gr"},"Интерактивно: 8 шагов от bounding box до \u25B3-сетки"),
+      React.createElement("p",null,"Нажимайте кнопки по порядку:"),
+      React.createElement(QT)
+    ),
+
+    // ===== 4. SPHERE PACKING =====
+    React.createElement("section",{id:"s4"},
+      React.createElement("div",{className:"stit"},React.createElement("span",{className:"sn",style:{background:"#ea580c"}},"4"),"Метод упаковки сфер"),
+      React.createElement("div",{className:"road"},
+        React.createElement("div",{className:"rc"},React.createElement("div",{className:"rt"},React.createElement("span",{className:"nm",style:{background:"#ea580c"}},"1"),React.createElement("span",{style:{color:"#ea580c"}},"ДАНО")),React.createElement("h4",null,"Что на входе?"),React.createElement("ul",null,React.createElement("li",null,"Область \u03A9 (прямоугольник, круг...)"),React.createElement("li",null,"Функция размера h(x)"),React.createElement("li",null,"N \u2014 количество точек"))),
+        React.createElement("div",{className:"rc"},React.createElement("div",{className:"rt"},React.createElement("span",{className:"nm",style:{background:"#b44a2d"}},"2"),React.createElement("span",{style:{color:"#b44a2d"}},"ИДЕЯ")),React.createElement("h4",null,"Что делаем?"),React.createElement("ul",null,React.createElement("li",null,"Точки = \u00ABпузырьки\u00BB"),React.createElement("li",null,"Близкие \u2014 ",React.createElement("b",null,"отталкиваются")),React.createElement("li",null,"Итерируем до равновесия"),React.createElement("li",null,"Строим Делоне"))),
+        React.createElement("div",{className:"rc"},React.createElement("div",{className:"rt"},React.createElement("span",{className:"nm",style:{background:"#16a34a"}},"3"),React.createElement("span",{style:{color:"#16a34a"}},"РЕЗУЛЬТАТ")),React.createElement("h4",null,"Что получим?"),React.createElement("ul",null,React.createElement("li",null,"Очень ",React.createElement("b",null,"равномерная")," \u25B3-сетка"),React.createElement("li",null,"Отличное качество элементов")))
+      ),
+      React.createElement("div",{className:"idea ot"},
+        React.createElement("h4",null,"\uD83D\uDCA1 Ключевая идея"),
+        React.createElement("p",null,"Каждый узел \u2014 центр \u00ABпузырька\u00BB с радиусом r = h(x)/2. Если два пузырька перекрываются (расстояние между центрами < сумма радиусов) \u2014 они отталкиваются. Через N итераций пузырьки касаются, но не перекрываются \u2192 расстояние между центрами \u2248 h(x) \u2192 это и есть размер будущего \u25B3.")
+      ),
+
+      React.createElement("h3",{className:"or"},"Отличие от других методов"),
+      React.createElement("p",null,"В Делоне и Quadtree точки фиксированы. Здесь точки ДВИГАЮТСЯ \u2014 алгоритм физически моделирует систему пружин. Это медленнее, но даёт самое высокое качество элементов."),
+
+      React.createElement("h3",{className:"or"},"Пошаговый алгоритм"),
+      React.createElement("div",{className:"sl"},
+        React.createElement("div",{className:"sp o"},React.createElement("div",null,React.createElement("b",null,"Разместить N точек")," случайно в области: p\u1D62 = (rand\u00B7W, rand\u00B7H).")),
+        React.createElement("div",{className:"sp o"},React.createElement("div",null,React.createElement("b",null,"Назначить каждой точке радиус:")," r\u1D62 = h(x\u1D62)/2. Если h = const (равномерная сетка) \u2014 все радиусы одинаковые. Если h(x) переменная \u2014 радиусы разные.")),
+        React.createElement("div",{className:"sp o"},React.createElement("div",null,React.createElement("b",null,"Для каждой пары (i,j):")," вычислить d\u1D62\u2C7C = |p\u1D62 \u2212 p\u2C7C|. Сравнить с d\u2080 = r\u1D62 + r\u2C7C (сумма радиусов). Если d < d\u2080 (перекрытие!) \u2014 вычислить силу F.")),
+        React.createElement("div",{className:"sp o"},React.createElement("div",null,React.createElement("b",null,"Сдвинуть каждую точку:")," p\u1D62 \u2190 p\u1D62 + \u0394t \u00B7 \u03A3\u2C7C F\u1D62\u2C7C.")),
+        React.createElement("div",{className:"sp o"},React.createElement("div",null,React.createElement("b",null,"Проекция:")," если p\u1D62 вышла за границу \u2192 вернуть на \u2202\u03A9.")),
+        React.createElement("div",{className:"sp o"},React.createElement("div",null,React.createElement("b",null,"Проверка:")," max\u1D62|F\u1D62| < \u03B5? Нет \u2192 шаг 3. Да \u2192 все пузырьки касаются (d \u2248 r\u1D62+r\u2C7C), силы \u22480 \u2192 сходимость!")),
+        React.createElement("div",{className:"sp o"},React.createElement("div",null,React.createElement("b",null,"Триангуляция Делоне")," по полученным узлам.")),
+        React.createElement("div",{className:"sp o"},React.createElement("div",null,React.createElement("b",null,"Удалить \u25B3 вне области")," \u2192 финальная сетка."))
+      ),
+
+      React.createElement("h3",{className:"or"},"Формула: радиус пузырька"),
+      React.createElement(F,null,
+        React.createElement("div",null,React.createElement("b",null,"r\u1D62 = h(x\u1D62) / 2")),
+        React.createElement("br"),
+        React.createElement("div",null,"h(x) \u2014 функция желаемого размера элемента в точке x"),
+        React.createElement("div",null,"r\u1D62 \u2014 радиус пузырька в точке i"),
+        React.createElement("br"),
+        React.createElement("div",null,"Если h(x) = const = 50 (равномерная сетка):"),
+        React.createElement("div",null,"  r = 50/2 = 25 для всех пузырьков"),
+        React.createElement("br"),
+        React.createElement("div",null,"Если h(x) переменная (мелко у тела, крупно далеко):"),
+        React.createElement("div",null,"  r\u1D62 маленький у тела \u2192 пузырьки мелкие \u2192 густо"),
+        React.createElement("div",null,"  r\u1D62 большой далеко \u2192 пузырьки крупные \u2192 редко"),
+        React.createElement("br"),
+        React.createElement("div",{className:"nt"},"Радиус определяет ВСЁ: и силы, и расстояния, и густоту сетки")
+      ),
+
+      React.createElement("h3",{className:"or"},"Формула: равновесное расстояние (из радиусов)"),
+      React.createElement(F,null,
+        React.createElement("div",null,React.createElement("b",null,"d\u2080 = r\u1D62 + r\u2C7C = h(x\u1D62)/2 + h(x\u2C7C)/2")),
+        React.createElement("br"),
+        React.createElement("div",null,"Это расстояние, при котором два пузырька КАСАЮТСЯ"),
+        React.createElement("div",null,"Если d\u1D62\u2C7C < d\u2080 \u2192 пузырьки перекрываются \u2192 отталкивание"),
+        React.createElement("div",null,"Если d\u1D62\u2C7C = d\u2080 \u2192 касание \u2192 сила = 0 (равновесие)"),
+        React.createElement("div",null,"Если d\u1D62\u2C7C > d\u2080 \u2192 не взаимодействуют"),
+        React.createElement("br"),
+        React.createElement("div",null,"Пример: h=50 для обеих точек \u2192 d\u2080 = 25+25 = 50"),
+        React.createElement("div",{className:"nt"},"В равновесии узлы на расстоянии d\u2080 \u2248 h(x) \u2014 именно такой размер элемента!")
+      ),
+
+      React.createElement("h3",{className:"or"},"Формула: сила отталкивания"),
+      React.createElement(F,null,
+        React.createElement("div",null,React.createElement("b",null,"F\u1D62\u2C7C = k \u00B7 (d\u2080 \u2212 d\u1D62\u2C7C) \u00B7 (p\u1D62 \u2212 p\u2C7C) / d\u1D62\u2C7C"),"   при d\u1D62\u2C7C < d\u2080"),
+        React.createElement("br"),
+        React.createElement("div",null,"k \u2014 жёсткость пружины (0.1\u20131.0)"),
+        React.createElement("div",null,"d\u2080 = r\u1D62 + r\u2C7C \u2014 сумма радиусов (из h(x))"),
+        React.createElement("div",null,"d\u1D62\u2C7C = |p\u1D62 \u2212 p\u2C7C| \u2014 текущее расстояние"),
+        React.createElement("div",null,"(p\u1D62 \u2212 p\u2C7C)/d\u1D62\u2C7C \u2014 единичный вектор направления"),
+        React.createElement("br"),
+        React.createElement("div",null,"Сила \u223C (d\u2080 \u2212 d): чем сильнее перекрытие, тем сильнее толчок"),
+        React.createElement("div",{className:"nt"},"Если d\u1D62\u2C7C \u2265 d\u2080 \u2192 F = 0 (не перекрываются \u2192 не толкаются)")
+      ),
+
+      React.createElement("h3",{className:"or"},"Формула: обновление позиций"),
+      React.createElement(F,null,
+        React.createElement("div",null,React.createElement("b",null,"p\u1D62\u207F\u207A\u00B9 = p\u1D62\u207F + \u0394t \u00B7 \u03A3\u2C7C F\u1D62\u2C7C")),
+        React.createElement("br"),
+        React.createElement("div",null,"\u0394t \u2014 шаг по времени (0.01\u20130.1, маленький \u2192 стабильно)"),
+        React.createElement("div",null,"\u03A3\u2C7C \u2014 сумма сил от ВСЕХ соседей j"),
+        React.createElement("div",{className:"nt"},"Это явная схема Эйлера. Для стабильности: \u0394t < 2/k")
+      ),
+
+      React.createElement("h3",{className:"or"},"Формула: проекция на границу"),
+      React.createElement(F,null,
+        React.createElement("div",null,"Если p\u1D62 \u2209 \u03A9 (вышла за область):"),
+        React.createElement("div",null,React.createElement("b",null,"p\u1D62 := argmin_{q \u2208 \u2202\u03A9} |p\u1D62 \u2212 q|")),
+        React.createElement("div",{className:"nt"},"Для прямоугольника: просто clip(x, x_min, x_max)")
+      ),
+
+      React.createElement("h3",{className:"or"},"Формула: критерий сходимости"),
+      React.createElement(F,null,
+        React.createElement("div",null,React.createElement("b",null,"max\u1D62 |F\u1D62_total| < \u03B5")),
+        React.createElement("br"),
+        React.createElement("div",null,"\u03B5 \u2014 порог (0.01\u20131.0)"),
+        React.createElement("div",null,"Когда ВСЕ силы малы \u2192 система в равновесии \u2192 стоп"),
+        React.createElement("div",{className:"nt"},"Обычно сходится за 50\u2013500 итераций")
+      ),
+
+      React.createElement("h3",{className:"or"},"Анимация релаксации (с формулами на каждом шаге)"),
+      React.createElement("p",null,"Нажмите \u25B6 и наблюдайте, как точки из хаоса приходят к равновесию. Под визуализацией \u2014 формулы текущей итерации и значение max|F|."),
+      React.createElement(SP)
+    ),
+
+    // ===== 5. QUALITY =====
+    React.createElement("section",{id:"s5"},
+      React.createElement("div",{className:"stit"},React.createElement("span",{className:"sn",style:{background:"#6b5d4f"}},"5"),"Критерии качества"),
+      React.createElement("div",{className:"qg"},
+        [{t:"Хороший \u25B3",s:"AR \u2248 1",pts:"50,10 90,85 10,85",c:"#16a34a",bg:"#f0fdf4"},
+         {t:"Плохой \u25B3",s:"AR >> 1",pts:"5,50 95,50 50,57",c:"#dc2626",bg:"#fef2f2"},
+         {t:"Перекошенный",s:"Skew \u2192 1",pts:"10,80 90,60 85,10 20,30",c:"#ea580c",bg:"#fff7ed"}
+        ].map(function(it,i){return React.createElement("div",{key:i,className:"qc",style:{background:it.bg}},
+          React.createElement("svg",{viewBox:"0 0 100 100",style:{width:"100%",maxWidth:150}},React.createElement("polygon",{points:it.pts,fill:it.c,fillOpacity:"0.15",stroke:it.c,strokeWidth:"2.5"})),
+          React.createElement("h4",{style:{color:it.c}},it.t),React.createElement("p",null,it.s))})
+      ),
+      React.createElement(F,null,
+        React.createElement("div",null,React.createElement("b",null,"AR")," = h_max/h_min (< 5)"),React.createElement("br"),
+        React.createElement("div",null,React.createElement("b",null,"Skewness")," = (\u03B8_max\u2212\u03B8_ideal)/(180\u00B0\u2212\u03B8_ideal) (< 0.85)"),React.createElement("br"),
+        React.createElement("div",null,React.createElement("b",null,"Orthogonality")," = cos(\u2220) (> 0.3)"),React.createElement("br"),
+        React.createElement("div",null,React.createElement("b",null,"Smoothness")," = h_сосед/h_текущ (< 1.5)")
+      )
+    ),
+
+    // ===== 6. TASK =====
+    React.createElement("section",{id:"s6"},
+      React.createElement("div",{className:"stit"},React.createElement("span",{className:"sn",style:{background:"#dc2626"}},"6"),"Задание: NACA 0012"),
+      React.createElement("h3",{className:"rd"},"Формула профиля"),
+      React.createElement(F,null,React.createElement("div",null,React.createElement("b",null,"y(x) = 5t\u00B7[0.2969\u221Ax \u2212 0.1260x \u2212 0.3516x\u00B2 + 0.2843x\u00B3 \u2212 0.1015x\u2074]")),React.createElement("div",{className:"nt"},"t=0.12, x\u2208[0,1], хорда c=1")),
+      React.createElement(Airfoil),
+      React.createElement("h3",{className:"rd"},"Этапы"),
+      React.createElement(F,null,
+        React.createElement("div",null,React.createElement("b",null,"1. Точки:")," x_i = 0.5\u00B7(1\u2212cos(\u03C0\u00B7i/N))"),React.createElement("br"),
+        React.createElement("div",null,React.createElement("b",null,"2. Слои:")," \u0394y_k = \u0394y\u2081\u00B7r^(k\u22121), r=1.15\u20131.30"),React.createElement("br"),
+        React.createElement("div",null,React.createElement("b",null,"3. Размер:")," h(r) = h_min+(h_max\u2212h_min)\u00B7(r/R)^\u03B1"),React.createElement("br"),
+        React.createElement("div",null,React.createElement("b",null,"4. Качество:")," AR<5 | Skew<0.85 | Smooth<1.5")
+      ),
+      React.createElement("h3",{className:"rd"},"Что сдать"),
+      React.createElement("p",null,"1) Визуализация сетки (полная + зум + слои)"),
+      React.createElement("p",null,"2) Гистограммы AR, Skewness"),
+      React.createElement("p",null,"3) Число элементов и узлов"),
+      React.createElement("p",null,"4) Расчёт: Re=10\u2076, \u03B1=0\u00B0\u20135\u00B0; CL, CD vs эксперимент"),
+      React.createElement("div",{className:"tl"},React.createElement("b",null,"Инструменты:")," Gmsh, OpenFOAM, ANSYS ICEM, Python (scipy+pygmsh)")
+    )
+  );
+}
+
+ReactDOM.render(React.createElement(App), document.getElementById("root"));
+</script>
+
+</div>
+
+
+<!-- COMMENTS -->
+<div class="wrap">
+<div id="comments-section" style="margin-top:3rem;padding-top:2rem;border-top:2px solid #d9cfc0">
+<h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
+<div id="comments-list"><p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p></div>
+<div id="comment-form" style="display:none;margin-top:.8rem">
+<textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
+<div style="display:flex;justify-content:flex-end;margin-top:.4rem">
+<button onclick="window._postComment()" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:6px 16px;border-radius:5px;background:#b44a2d;color:#fff;border:none;cursor:pointer;font-weight:600">Отправить</button>
+</div>
+</div>
+<div id="comment-login" style="margin-top:.5rem">
+<p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p>
+</div>
+</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+// === Comments System ===
+(function(){
+  if (typeof firebase === 'undefined') { console.warn('Comments: firebase not loaded'); return; }
+  var db, auth;
+  try { db = firebase.firestore(); auth = firebase.auth(); }
+  catch(e) { console.warn('Comments: firebase not initialized', e); return; }
+
+  var PAGE_ID = location.pathname.split('/').pop().replace('.html','') || 'index';
+  var ADMINS = (typeof ADMIN_EMAILS !== 'undefined') ? ADMIN_EMAILS : [];
+
+  function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function loadComments() {
+    var list = document.getElementById('comments-list');
+    if (!list) return;
+    db.collection('comments').where('page','==',PAGE_ID).get().then(function(snap) {
+      var docs = [];
+      snap.forEach(function(d) { docs.push(d); });
+      docs.sort(function(a,b) {
+        var ta = a.data().createdAt ? a.data().createdAt.seconds : 0;
+        var tb = b.data().createdAt ? b.data().createdAt.seconds : 0;
+        return tb - ta;
+      });
+      if (docs.length === 0) {
+        list.innerHTML = '<p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p>';
+        return;
+      }
+      var user = auth.currentUser;
+      var isAdm = user && ADMINS.indexOf(user.email) >= 0;
+      var html = '';
+      docs.forEach(function(doc) {
+        var c = doc.data();
+        var date = c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+        var del = isAdm ? ' <button onclick="window._deleteComment(\''+doc.id+'\')" style="font-size:.7rem;color:#c44;background:none;border:none;cursor:pointer">удалить</button>' : '';
+        var badge = '';
+        if (c.authorRole === 'superadmin') badge = ' <span style="font-size:.6rem;background:#faeeda;color:#854f0b;padding:1px 4px;border-radius:3px;font-weight:700">преподаватель</span>';
+        html += '<div style="padding:.6rem 0;border-bottom:1px solid #ede6da">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:baseline">';
+        html += '<strong style="font-size:.88rem">'+(c.authorFio||c.authorEmail)+badge+'</strong>';
+        html += '<span style="font-size:.72rem;color:#9a8d7e">'+date+del+'</span></div>';
+        html += '<p style="font-size:.88rem;margin-top:.2rem;margin-bottom:0">'+esc(c.text)+'</p></div>';
+      });
+      list.innerHTML = html;
+    }).catch(function(e) {
+      list.innerHTML = '<p style="color:#c44;font-size:.85rem">Ошибка: '+e.message+'</p>';
+      console.error('Comments load error:', e);
+    });
+  }
+
+  window._postComment = function() {
+    var text = document.getElementById('comment-text').value.trim();
+    if (!text) return;
+    var user = auth.currentUser;
+    if (!user) return;
+    var fio = user.email;
+    var role = (ADMINS.indexOf(user.email) >= 0) ? 'superadmin' : 'student';
+    db.collection('users').doc(user.uid).get().then(function(ud) {
+      if (ud.exists && ud.data().fio) fio = ud.data().fio;
+    }).catch(function(){}).finally(function() {
+      db.collection('comments').add({
+        page: PAGE_ID, text: text,
+        authorEmail: user.email, authorFio: fio, authorUid: user.uid, authorRole: role,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function() {
+        document.getElementById('comment-text').value = '';
+        loadComments();
+      }).catch(function(e) { alert('Ошибка: '+e.message); });
+    });
+  };
+
+  window._deleteComment = function(id) {
+    if (!confirm('Удалить?')) return;
+    db.collection('comments').doc(id).delete().then(loadComments).catch(function(e){alert(e.message);});
+  };
+
+  var _checkAuthRetries = 0;
+  function checkAuth() {
+    var user = auth.currentUser;
+    var form = document.getElementById('comment-form');
+    var login = document.getElementById('comment-login');
+    if (!form || !login) return;
+    if (user && window._userApproved) {
+      form.style.display = '';
+      login.style.display = 'none';
+      _checkAuthRetries = 0;
+    } else if (user && typeof window._userApproved === 'undefined' && _checkAuthRetries < 15) {
+      // _userApproved not yet loaded by auth.js — retry
+      _checkAuthRetries++;
+      setTimeout(checkAuth, 400);
+    } else if (user) {
+      form.style.display = 'none';
+      login.style.display = '';
+      login.querySelector('p').textContent = 'Ваш профиль ещё не подтверждён.';
+      _checkAuthRetries = 0;
+    } else {
+      form.style.display = 'none';
+      login.style.display = '';
+      _checkAuthRetries = 0;
+    }
+  }
+
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', loadComments); }
+  else { loadComments(); }
+
+  function safeCheckAuth() {
+    if (document.getElementById('comment-form')) checkAuth();
+    else setTimeout(safeCheckAuth, 200);
+  }
+  auth.onAuthStateChanged(function() { setTimeout(safeCheckAuth, 500); });
+  window.addEventListener('authReady', safeCheckAuth);
+})();
+</script>
+
+</body>
+</html>
+

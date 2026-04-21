@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <h3>Индивидуальные оценки</h3>
     <p style="font-size:.85rem;color:var(--text2);margin-bottom:.8rem"><strong>Зачёт</strong> (работа за семестр, групповая) — до 50 баллов. <strong>Экзамен</strong> (индивидуальное задание) — до 50 баллов. Итого 100.</p>
     <table>
-      <thead><tr><th>ФИО</th><th>Уч. группа</th><th>Раб. группа</th><th>Прогресс зачёта</th><th>Задание</th><th>Зачёт (50)</th><th>Экзамен (50)</th><th>Итого</th><th>Комментарий</th><th></th></tr></thead>
+      <thead><tr><th>ФИО</th><th>Уч. группа</th><th>Раб. группа</th><th>Прогресс зачёта</th><th>Задание</th><th>Зачёт (50)</th><th>Экзамен (50)</th><th>Итого</th><th>Комментарий</th></tr></thead>
       <tbody id="gradesBody"></tbody>
     </table>
   </div>
@@ -649,21 +649,34 @@ function renderGrades() {
       <td><span class="badge b-group">${rg}</span></td>
       <td>${progressHtml}</td>
       <td style="font-size:.82rem">${task}</td>
-      <td><input type="number" min="0" max="50" value="${zachet}" class="grade-input" id="zachet-${u.uid}"></td>
-      <td><input type="number" min="0" max="50" value="${exam}" class="grade-input" id="exam-${u.uid}"></td>
+      <td><input type="number" min="0" max="50" value="${zachet}" class="grade-input" id="zachet-${u.uid}" onchange="autoSaveGrade('${u.uid}')" oninput="debounceSaveGrade('${u.uid}')"></td>
+      <td><input type="number" min="0" max="50" value="${exam}" class="grade-input" id="exam-${u.uid}" onchange="autoSaveGrade('${u.uid}')" oninput="debounceSaveGrade('${u.uid}')"></td>
       <td style="font-weight:700;text-align:center">${total || ''}</td>
-      <td><input type="text" value="${comment}" class="comment-input" id="comment-${u.uid}" placeholder="Комментарий"></td>
-      <td><button class="btn btn-primary btn-sm" onclick="saveIndividualGrade('${u.uid}')">💾</button></td>
+      <td><input type="text" value="${comment}" class="comment-input" id="comment-${u.uid}" placeholder="Комментарий" onchange="autoSaveGrade('${u.uid}')" oninput="debounceSaveGrade('${u.uid}')"></td>
     </tr>`;
   }
-  if (!html) html = '<tr><td colspan="10" style="text-align:center;color:var(--text3)">Нет студентов</td></tr>';
+  if (!html) html = '<tr><td colspan="9" style="text-align:center;color:var(--text3)">Нет студентов</td></tr>';
   tbody.innerHTML = html;
 }
 
-async function saveIndividualGrade(uid) {
-  const zachet = document.getElementById('zachet-' + uid).value;
-  const exam = document.getElementById('exam-' + uid).value;
-  const comment = document.getElementById('comment-' + uid).value;
+const _saveTimers = {};
+
+function debounceSaveGrade(uid) {
+  if (_saveTimers[uid]) clearTimeout(_saveTimers[uid]);
+  _saveTimers[uid] = setTimeout(() => autoSaveGrade(uid), 800);
+}
+
+async function autoSaveGrade(uid) {
+  if (_saveTimers[uid]) { clearTimeout(_saveTimers[uid]); delete _saveTimers[uid]; }
+  const zachetEl = document.getElementById('zachet-' + uid);
+  const examEl = document.getElementById('exam-' + uid);
+  const commentEl = document.getElementById('comment-' + uid);
+  if (!zachetEl || !examEl || !commentEl) return;
+  const zachet = zachetEl.value;
+  const exam = examEl.value;
+  const comment = commentEl.value;
+  // Visual feedback — highlight row
+  const row = zachetEl.closest('tr');
   try {
     await db.collection('individual_grades').doc(uid).set({
       zachet: parseInt(zachet) || 0,
@@ -672,10 +685,24 @@ async function saveIndividualGrade(uid) {
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     allIndividualGrades[uid] = { zachet, exam, comment };
-    renderGrades(); // re-render to update total
-    alert('Сохранено ✓');
-  } catch(e) { alert('Ошибка: ' + e.message); }
+    // Update total cell inline without full re-render (avoids losing focus)
+    const totalVal = (parseInt(zachet)||0) + (parseInt(exam)||0);
+    const cells = row.querySelectorAll('td');
+    // total is the 8th td (index 7)
+    cells[7].textContent = totalVal || '';
+    // Flash green
+    row.style.transition = 'background .3s';
+    row.style.background = 'rgba(26,107,90,0.12)';
+    setTimeout(() => { row.style.background = ''; }, 1000);
+  } catch(e) {
+    row.style.background = 'rgba(196,68,68,0.15)';
+    setTimeout(() => { row.style.background = ''; }, 2000);
+    console.error('Ошибка сохранения:', e);
+  }
 }
+
+// Keep old name as alias in case it's referenced elsewhere
+function saveIndividualGrade(uid) { autoSaveGrade(uid); }
 
 
 async function saveGrade(gid) {

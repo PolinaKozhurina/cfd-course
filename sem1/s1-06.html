@@ -29,6 +29,8 @@ window.MathJax = {
   <a href="#model">Модельная задача</a>
   <a href="#fourier">Разложение Фурье</a>
   <a href="#results">Результаты расчётов</a>
+  <a href="#examples">Примеры дисс./дисп.</a>
+  <a href="#interactive">Интерактивный расчёт</a>
   <div class="sep"></div>
   <div class="g">Навигация</div>
   <a href="s1-05.html">← §5 Устойчивость</a>
@@ -164,6 +166,199 @@ a_k^{(m)} = \frac{1}{N+1} \sum_{n=1}^{N+1} f_n^{(m)} \cdot \exp[i(kh) \cdot n].
 <p>В начальный момент времени все гармоники разложения (6.7) подогнаны друг к другу так, что в сумме составляют начальные данные. В последующие моменты времени каждая гармоника будет уменьшаться в амплитуде в соответствии с её местом на диссипативной поверхности, и распространяться со своей фазовой скоростью, определяемой дисперсионной поверхностью, так что «пакет» гармоник начнёт разъезжаться. Полная картина будет ещё зависеть от числа Куранта–Фридрихса–Леви \(r\).</p>
 
 <p>Из рис.&nbsp;1а видно, что наибольшая диссипация высоких гармоник имеет место при \(r = 0.5\). На рис.&nbsp;4 приведены результаты расчёта переноса начальных профилей (6.6), рассчитанные по схеме «уголок» при разных числах Куранта, до одного и того же момента времени. Сплошной линией показано аналитическое решение дифференциальной задачи, линией с маркерами — решение, рассчитанное по разностной схеме.</p>
+
+<h2 id="examples">Примеры диссипации и дисперсии</h2>
+
+<h3>Пример диссипации</h3>
+<p>Рассмотрим гармонику с приведённым волновым числом \(kh = \pi\) (максимальная частота на сетке) и число Куранта \(r = 0.5\). Из формулы (6.1):</p>
+<div class="eq">\[
+|\lambda| = \sqrt{(1 - 0.5 + 0.5\cos\pi)^2 + \sin^2\pi} = \sqrt{(1 - 0.5 - 0.5)^2 + 0} = 0.
+\]</div>
+<p>Через один шаг по времени амплитуда высокочастотной гармоники обращается в ноль — полная диссипация. Это максимальная диссипация среди всех \(r \in [0,1]\). Для длинных волн (\(kh \approx 0\)) при любом \(r\): \(|\lambda| \approx 1\) — диссипация мала.</p>
+
+<div class="remark">
+<strong>Физический смысл:</strong> Диссипация — это «размазывание» решения. Высокочастотные компоненты (мелкие детали) подавляются первыми. Это приводит к сглаживанию фронтов ударных волн и потере мелкомасштабных структур.
+</div>
+
+<h3>Пример нормальной дисперсии (\(r = 0.3\))</h3>
+<p>При \(r = 0.3\) для гармоники с \(kh = \pi/2\):</p>
+<div class="eq">\[
+\lambda = 1 - 0.3 + 0.3 e^{i\pi/2} = 0.7 + 0.3i, \qquad \arg(\lambda) = \arctan(0.3/0.7) \approx 0.405.
+\]</div>
+<p>Численная фазовая скорость: \(\gamma = \arg(\lambda)/(r \cdot kh) = 0.405/(0.3 \cdot \pi/2) \approx 0.86 < 1\). Гармоника <strong>отстаёт</strong> от точного решения — это <em>нормальная</em> дисперсия.</p>
+
+<h3>Пример аномальной дисперсии (\(r = 0.8\))</h3>
+<p>При \(r = 0.8\) для той же гармоники \(kh = \pi/2\):</p>
+<div class="eq">\[
+\lambda = 0.2 + 0.8i, \qquad \gamma = \arctan(0.8/0.2)/(0.8 \cdot \pi/2) \approx 1.326/1.257 \approx 1.05 > 1.
+\]</div>
+<p>Гармоника <strong>опережает</strong> точное решение — это <em>аномальная</em> дисперсия. Проявляется в виде «предвестников» (осцилляций перед фронтом).</p>
+
+<div class="remark">
+<strong>Физический смысл дисперсии:</strong> В точном уравнении переноса все гармоники движутся с одинаковой скоростью \(c\). В разностной схеме каждая гармоника имеет свою фазовую скорость. Из-за этого начальный профиль «расплывается»: гармоники разъезжаются, порождая осцилляции и искажения формы.
+</div>
+
+<h2 id="interactive">Интерактивный расчёт переноса</h2>
+<p>Ниже представлен интерактивный расчёт переноса начального профиля схемой «уголок» при различных числах Куранта и типах начальных условий.</p>
+
+<div id="solver-container" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.2rem;margin:1.5rem 0">
+<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Начальные условия</label>
+    <select id="ic-type" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)">
+      <option value="gaussian">Гауссиан</option>
+      <option value="step">Ступенька</option>
+      <option value="triangle">Треугольник</option>
+      <option value="sine">Синус</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Число Куранта r = <span id="r-val">0.50</span></label>
+    <input type="range" id="r-slider" min="5" max="95" value="50" style="width:160px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Шагов: <span id="steps-val">50</span></label>
+    <input type="range" id="steps-slider" min="10" max="200" value="50" style="width:120px">
+  </div>
+  <button id="run-btn" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 20px;font-family:'Source Serif 4',serif;font-size:.9rem;font-weight:600;cursor:pointer">Пуск</button>
+</div>
+<canvas id="plot-canvas" width="800" height="300" style="width:100%;height:auto;background:#fff;border-radius:6px;border:1px solid var(--border)"></canvas>
+<div style="display:flex;gap:1.2rem;justify-content:center;margin-top:.5rem;font-size:.78rem;color:var(--text2);font-family:'JetBrains Mono',monospace">
+  <span>— <span style="color:#3a5ba0;font-weight:600">точное</span></span>
+  <span>— <span style="color:#b44a2d;font-weight:600">схема «уголок»</span></span>
+</div>
+</div>
+
+<script>
+(function(){
+  var N = 200, L = 2*Math.PI;
+  var h = L/N;
+
+  function initCond(type) {
+    var u = new Float64Array(N);
+    for (var i=0; i<N; i++) {
+      var x = i*h;
+      switch(type) {
+        case 'gaussian':
+          u[i] = Math.exp(-((x-Math.PI)*(x-Math.PI))/(0.1*Math.PI*0.1*Math.PI));
+          break;
+        case 'step':
+          u[i] = (x >= 0.3*Math.PI && x <= 0.7*Math.PI) ? 1 : 0;
+          break;
+        case 'triangle':
+          var cx = Math.PI, w = 0.4*Math.PI;
+          u[i] = Math.max(0, 1 - Math.abs(x - cx)/w);
+          break;
+        case 'sine':
+          u[i] = 0.5*(1 + Math.sin(2*x));
+          break;
+      }
+    }
+    return u;
+  }
+
+  function solve(u0, r, steps) {
+    var u = new Float64Array(u0);
+    for (var n=0; n<steps; n++) {
+      var unew = new Float64Array(N);
+      for (var i=0; i<N; i++) {
+        var im = (i-1+N)%N;
+        unew[i] = (1-r)*u[i] + r*u[im];
+      }
+      u = unew;
+    }
+    return u;
+  }
+
+  function exact(u0, r, steps) {
+    // shift by r*steps*h (modulo L)
+    var shift = r*steps*h;
+    var ue = new Float64Array(N);
+    for (var i=0; i<N; i++) {
+      var xs = ((i*h - shift) % L + L) % L;
+      var j = Math.floor(xs/h);
+      var frac = xs/h - j;
+      ue[i] = (1-frac)*u0[j%N] + frac*u0[(j+1)%N];
+    }
+    return ue;
+  }
+
+  function draw() {
+    var canvas = document.getElementById('plot-canvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var W = canvas.width, H = canvas.height;
+    ctx.clearRect(0,0,W,H);
+
+    var type = document.getElementById('ic-type').value;
+    var r = parseInt(document.getElementById('r-slider').value)/100;
+    var steps = parseInt(document.getElementById('steps-slider').value);
+
+    document.getElementById('r-val').textContent = r.toFixed(2);
+    document.getElementById('steps-val').textContent = steps;
+
+    var u0 = initCond(type);
+    var un = solve(u0, r, steps);
+    var ue = exact(u0, r, steps);
+
+    // Find range
+    var mn = 0, mx = 0;
+    for (var i=0; i<N; i++) {
+      mn = Math.min(mn, un[i], ue[i]);
+      mx = Math.max(mx, un[i], ue[i]);
+    }
+    var pad = (mx-mn)*0.15 || 0.1;
+    mn -= pad; mx += pad;
+
+    var px = 40, py = 20, pw = W-60, ph = H-50;
+
+    // Grid
+    ctx.strokeStyle = '#d9cfc0'; ctx.lineWidth = 0.5;
+    for (var g=0; g<=4; g++) {
+      var gy = py + ph*(1 - g/4);
+      ctx.beginPath(); ctx.moveTo(px,gy); ctx.lineTo(px+pw,gy); ctx.stroke();
+      ctx.fillStyle='#9a8d7e'; ctx.font='9px JetBrains Mono';
+      ctx.fillText((mn + (mx-mn)*g/4).toFixed(2), 2, gy+3);
+    }
+
+    function xp(i) { return px + pw*i/N; }
+    function yp(v) { return py + ph*(1 - (v-mn)/(mx-mn)); }
+
+    // Exact (blue)
+    ctx.strokeStyle = '#3a5ba0'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (var i=0; i<N; i++) { i===0 ? ctx.moveTo(xp(i),yp(ue[i])) : ctx.lineTo(xp(i),yp(ue[i])); }
+    ctx.stroke();
+
+    // Numerical (red)
+    ctx.strokeStyle = '#b44a2d'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (var i=0; i<N; i++) { i===0 ? ctx.moveTo(xp(i),yp(un[i])) : ctx.lineTo(xp(i),yp(un[i])); }
+    ctx.stroke();
+
+    // X axis labels
+    ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono';
+    ctx.fillText('0', px-3, py+ph+15);
+    ctx.fillText('π', px+pw/2-3, py+ph+15);
+    ctx.fillText('2π', px+pw-10, py+ph+15);
+
+    // Info
+    ctx.fillStyle='#2c2419'; ctx.font='11px Source Serif 4, serif';
+    ctx.fillText('r = '+r.toFixed(2)+'  |  '+steps+' шагов  |  '+({gaussian:'Гауссиан',step:'Ступенька',triangle:'Треугольник',sine:'Синус'}[type]), px, py+ph+35);
+  }
+
+  document.getElementById('run-btn').addEventListener('click', draw);
+  document.getElementById('r-slider').addEventListener('input', function(){
+    document.getElementById('r-val').textContent = (this.value/100).toFixed(2);
+  });
+  document.getElementById('steps-slider').addEventListener('input', function(){
+    document.getElementById('steps-val').textContent = this.value;
+  });
+
+  // Initial draw
+  setTimeout(draw, 100);
+})();
+</script>
 
 <div class="remark">
 <strong>Ключевой вывод:</strong> Диссипативная и дисперсионная поверхности полностью характеризуют поведение разностной схемы на различных начальных данных. Гладкие профили (гауссиан) хорошо переносятся даже при умеренной диссипации, тогда как разрывные профили (ступенька) требуют точного выбора числа Куранта для минимизации осцилляций и размазывания.

@@ -962,9 +962,11 @@ async function ghApiFetch(url) {
 
 function parseGhUrl(url) {
   // https://github.com/user/repo or https://github.com/user/repo/tree/branch/path
-  const m = url.match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
-  if (!m) return null;
-  return {owner: m[1], repo: m[2].replace('.git','')};
+  // Trim trailing slashes, whitespace, .git suffix
+  const clean = url.trim().replace(/\/+$/, '').replace(/\.git$/, '');
+  const m = clean.match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
+  if (!m || !m[1] || !m[2]) return null;
+  return {owner: m[1], repo: m[2]};
 }
 
 async function getRepoTree(owner, repo) {
@@ -973,13 +975,60 @@ async function getRepoTree(owner, repo) {
   const branch = info.default_branch || 'main';
   // Get full tree
   const tree = await ghApiFetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`);
+  if (tree.truncated) {
+    // Tree too large — fallback: fetch top-level and key subdirectories recursively
+    console.warn(`Tree truncated for ${owner}/${repo}, using fallback`);
+    const paths = tree.tree.map(t => t.path);
+    // Try to also fetch results/ and src/ subtrees
+    for (const subdir of ['results', 'src', 'code', 'lib']) {
+      const sub = tree.tree.find(t => t.path === subdir && t.type === 'tree');
+      if (sub) {
+        try {
+          const subTree = await ghApiFetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${sub.sha}?recursive=1`);
+          subTree.tree.forEach(t => paths.push(subdir + '/' + t.path));
+        } catch(e) {}
+      }
+    }
+    return paths;
+  }
   return tree.tree.map(t => t.path);
 }
 
 async function getFileContent(owner, repo, path) {
-  const data = await ghApiFetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`);
-  if (data.encoding === 'base64' && data.content) {
-    return atob(data.content.replace(/\n/g,''));
+  try {
+    const data = await ghApiFetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`);
+    if (data.encoding === 'base64' && data.content) {
+      // Handle UTF-8 properly
+      try {
+        const bytes = Uint8Array.from(atob(data.content.replace(/\n/g,'')), c => c.charCodeAt(0));
+        return new TextDecoder('utf-8', {fatal:false}).decode(bytes);
+      } catch(e) {
+        return atob(data.content.replace(/\n/g,''));
+      }
+    }
+    // File too large for Contents API (>1MB) — use Blob API
+    if (data.size && data.size > 0 && data.git_url) {
+      const blob = await ghApiFetch(data.git_url);
+      if (blob.encoding === 'base64' && blob.content) {
+        try {
+          const bytes = Uint8Array.from(atob(blob.content.replace(/\n/g,'')), c => c.charCodeAt(0));
+          return new TextDecoder('utf-8', {fatal:false}).decode(bytes);
+        } catch(e) {
+          return atob(blob.content.replace(/\n/g,''));
+        }
+      }
+    }
+  } catch(e) {
+    // If Contents API fails with 403 (too large), try raw download
+    if (e.message && e.message.startsWith('403')) {
+      try {
+        const token = document.getElementById('ghToken') && document.getElementById('ghToken').value;
+        const headers = token ? {'Authorization': 'token ' + token} : {};
+        const r = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${path}`, {headers});
+        if (r.ok) return await r.text();
+      } catch(e2) {}
+    }
+    throw e;
   }
   return '';
 }
@@ -994,16 +1043,27 @@ async function checkOneRepo(gid, repoUrl) {
   
   try {
     const files = await getRepoTree(gh.owner, gh.repo);
+    const filesLower = files.map(f => f.toLowerCase());
     
     // Check README
-    result.hasReadme = files.some(f => f.toLowerCase() === 'readme.md');
+    result.hasReadme = filesLower.some(f => f === 'readme.md' || f.endsWith('/readme.md'));
     
-    // Check results folders
+    // Check results folders — fix: normalize path matching
     for (const req of REQUIRED_RESULTS) {
-      const found = req.files.filter(rf => 
-        files.some(f => f.toLowerCase().includes(req.path.toLowerCase() + '/' + rf.toLowerCase()) ||
-                        f.toLowerCase().endsWith('/' + rf.toLowerCase()) && f.toLowerCase().includes(req.path.split('/').pop()))
-      );
+      const reqPathLower = req.path.toLowerCase();
+      const reqDir = reqPathLower.split('/').pop(); // e.g. "01_sod_flic"
+      const found = req.files.filter(rf => {
+        const rfLower = rf.toLowerCase();
+        return files.some((f, i) => {
+          const fl = filesLower[i];
+          // Primary: exact path match results/01_sod_flic/sod_rho.png
+          if (fl === reqPathLower + '/' + rfLower) return true;
+          if (fl.endsWith('/' + reqPathLower + '/' + rfLower)) return true;
+          // Secondary: dir name match + filename
+          if (fl.includes(reqDir + '/') && fl.endsWith('/' + rfLower)) return true;
+          return false;
+        });
+      });
       const missing = req.files.filter(rf => !found.includes(rf));
       if (found.length > 0) result.results.found.push({path:req.path, found, missing});
       if (missing.length > 0) result.results.missing.push({path:req.path, files:missing});
@@ -1011,8 +1071,9 @@ async function checkOneRepo(gid, repoUrl) {
     
     // Check txt files with expected values
     for (const tc of TXT_CHECKS) {
-      const txtFile = files.find(f => f.toLowerCase().endsWith(tc.path.toLowerCase()) || 
-                                      f.toLowerCase().includes(tc.path.toLowerCase()));
+      const tcPathLower = tc.path.toLowerCase();
+      const txtFile = files.find((f, i) => filesLower[i] === tcPathLower || 
+                                           filesLower[i].endsWith('/' + tcPathLower));
       if (!txtFile) {
         result.txtChecks.push({file:tc.path, status:'missing'});
         continue;
@@ -1042,14 +1103,23 @@ async function checkOneRepo(gid, repoUrl) {
     result.codeFiles = codeFiles;
     
     const allFoundMarkers = new Set();
-    const toRead = codeFiles.slice(0, 80);
-    for (const cf of toRead) {
-      try {
+    // Read files in parallel batches of 10 (up to 150 files total)
+    const toRead = codeFiles.slice(0, 150);
+    const batchSize = 10;
+    for (let i = 0; i < toRead.length; i += batchSize) {
+      const batch = toRead.slice(i, i + batchSize);
+      const results = await Promise.allSettled(batch.map(async cf => {
         const content = await getFileContent(gh.owner, gh.repo, cf);
-        result.codeContents[cf] = content;
-        const found = content.match(/CHECK\s*:?\s*([A-Z_0-9]+)/g) || [];
-        found.forEach(m => allFoundMarkers.add(m.replace(/CHECK\s*:?\s*/,'').trim()));
-      } catch(e) {}
+        return {cf, content};
+      }));
+      for (const r of results) {
+        if (r.status === 'fulfilled') {
+          const {cf, content} = r.value;
+          result.codeContents[cf] = content;
+          const found = content.match(/CHECK\s*:?\s*([A-Z_0-9]+)/g) || [];
+          found.forEach(m => allFoundMarkers.add(m.replace(/CHECK\s*:?\s*/,'').trim()));
+        }
+      }
     }
     
     result.markers = [...allFoundMarkers];
@@ -1068,24 +1138,34 @@ async function runGithubCheck() {
   btn.disabled = true;
   status.textContent = 'Проверка...';
   container.innerHTML = '';
+  lastCheckResults = {};
   
   const groups = Object.keys(allGroups).sort();
-  let html = '';
+  let done = 0;
   
   for (const gid of groups) {
     const g = allGroups[gid];
     if (!g.repoUrl) {
-      html += `<div class="card" style="border-left:4px solid #e8b8b8;margin-bottom:.8rem;padding:.8rem 1rem">
+      container.innerHTML += `<div class="card" style="border-left:4px solid #e8b8b8;margin-bottom:.8rem;padding:.8rem 1rem">
         <strong>${gid.replace('group_','Группа ')}</strong> — GitHub не указан</div>`;
+      done++;
       continue;
     }
-    status.textContent = `Проверка ${gid}...`;
-    const r = await checkOneRepo(gid, g.repoUrl);
+    status.textContent = `Проверка ${gid.replace('group_','группы ')} (${done+1}/${groups.length})...`;
+    
+    let r;
+    try {
+      r = await checkOneRepo(gid, g.repoUrl);
+      lastCheckResults[gid] = r;
+    } catch(e) {
+      r = {gid, error: e.message, repo: g.repoUrl};
+    }
     
     if (r.error) {
-      html += `<div class="card" style="border-left:4px solid #e8b8b8;margin-bottom:.8rem;padding:.8rem 1rem">
+      container.innerHTML += `<div class="card" style="border-left:4px solid #e8b8b8;margin-bottom:.8rem;padding:.8rem 1rem">
         <strong>${gid.replace('group_','Группа ')}</strong> — <a href="${g.repoUrl}" target="_blank">${r.repo||g.repoUrl}</a>
         <br><span style="color:#c44">Ошибка: ${r.error}</span></div>`;
+      done++;
       continue;
     }
     
@@ -1140,7 +1220,7 @@ async function runGithubCheck() {
     const txtCount = r.txtChecks ? r.txtChecks.filter(t => t.status === 'checked' && t.checks && t.checks.every(c => c.status === 'pass')).length : 0;
     const txtTotal = TXT_CHECKS.length;
     
-    html += `<div class="card" style="border-left:4px solid ${markersColor};margin-bottom:.8rem;padding:.8rem 1rem">
+    container.innerHTML += `<div class="card" style="border-left:4px solid ${markersColor};margin-bottom:.8rem;padding:.8rem 1rem">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
         <strong>${gid.replace('group_','Группа ')}</strong>
         <a href="${g.repoUrl}" target="_blank" style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--accent3)">${r.repo}</a>
@@ -1154,10 +1234,11 @@ async function runGithubCheck() {
       </div>
       ${missingHtml}${resultsHtml}${txtHtml}
     </div>`;
+    done++;
   }
   
-  container.innerHTML = html || '<p style="color:var(--text3)">Нет групп с GitHub-ссылками</p>';
-  status.textContent = 'Готово';
+  if (container.innerHTML === '') container.innerHTML = '<p style="color:var(--text3)">Нет групп с GitHub-ссылками</p>';
+  status.textContent = `Готово (${groups.length} групп)`;
   btn.disabled = false;
 }
 

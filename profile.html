@@ -603,6 +603,14 @@ function profLoadDmChat(uid) {
 }
 
 function profRenderMsgs(snap, type, refId) {
+  // Guard: only render if this chat is still active
+  if (type !== _profChatMode) return;
+  if (type === 'group' && refId !== _profChatId) return;
+  if (type === 'dm') {
+    var me2 = window._pUser;
+    if (me2 && getDmId(me2.uid, _profChatId) !== refId) return;
+  }
+  var collection = window._profCollection || 'messages';
   var body = document.getElementById('profChatBody');
   if (!body) return;
   var me = window._pUser, html = '', unreadIds = [];

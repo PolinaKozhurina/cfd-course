@@ -1359,6 +1359,7 @@ function loadAdminGroupChat(gid) {
 }
 
 function renderGroupMsgs(snap,gid) {
+  if (_currentChatMode !== 'group' || _currentChatId !== gid) return;
   var body=document.getElementById('adminChatBody'); if(!body) return;
   var html='';
   var groupMembers=allGroups[gid]?allGroups[gid].members:[];
@@ -1420,6 +1421,10 @@ function loadAdminDmChat(uid){
 }
 
 function renderDmMsgs(snap,dmId){
+  // Guard: only render if this DM is still the active chat
+  if (_currentChatMode !== 'dm') return;
+  var me=auth.currentUser;
+  if (me && getDmId(me.uid, _currentChatId) !== dmId) return;
   var body=document.getElementById('adminChatBody');if(!body)return;
   var me=auth.currentUser,html='',unreadIds=[];
   snap.forEach(function(doc){

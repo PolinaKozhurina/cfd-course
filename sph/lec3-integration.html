@@ -24,6 +24,7 @@ window.MathJax = {
   <a href="#why">Зачем симплектичный интегратор</a>
   <a href="#leapfrog">Схема Leap-Frog</a>
   <a href="#properties">Свойства Leap-Frog</a>
+  <a href="#oscillator-demo">Интерактив: осциллятор</a>
   <a href="#init">Инициализация полушагом</a>
   <a href="#cfl">Адаптивный шаг (CFL)</a>
   <a href="#algorithm">Полный алгоритм</a>
@@ -185,6 +186,245 @@ window.MathJax = {
 </table>
 
 <p>Leap-Frog имеет ту же вычислительную стоимость за шаг, что и явный Эйлер, но кардинально лучшие статистические свойства на больших временах. Это объясняет его популярность в астрофизике, молекулярной динамике и SPH.</p>
+
+<h3 id="oscillator-demo">Интерактив: оба интегратора на одной задаче</h3>
+
+<p>Сравним работу двух интеграторов на гармоническом осцилляторе \(\ddot x = -\omega^2 x\) с \(\omega = 1\), начальным условием \(x_0 = 1\), \(v_0 = 0\). Точное решение: \(x(t) = \cos t\). Два графика: фазовый портрет \((x, v)\) и полная энергия \(E(t)\).</p>
+
+<div id="oscDemo" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.6rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Δt · ω = <span id="oscDtV">0.15</span></label>
+    <input type="range" id="oscDt" min="5" max="30" value="15" style="width:140px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Периодов: <span id="oscPV">20</span></label>
+    <input type="range" id="oscP" min="5" max="50" value="20" style="width:140px">
+  </div>
+  <button id="oscPlay" style="background:var(--accent);color:#fff;border:none;border-radius:5px;padding:6px 16px;font-family:'Source Serif 4',serif;font-size:.85rem;font-weight:600;cursor:pointer">▶ Воспроизвести</button>
+  <button id="oscReset" style="background:#6b5d4f;color:#fff;border:none;border-radius:5px;padding:6px 12px;font-family:'Source Serif 4',serif;font-size:.82rem;cursor:pointer">↻ Сброс</button>
+  <span style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text2)">t·ω = <span id="oscTv">0.00</span></span>
+  <input type="range" id="oscT" min="0" max="1000" value="1000" style="flex:1;min-width:180px">
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Фазовый портрет (x, v)</div>
+    <canvas id="oscPhase" width="400" height="320" style="width:100%;height:auto"></canvas>
+  </div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Энергия E(t) / E₀</div>
+    <canvas id="oscEnergy" width="400" height="320" style="width:100%;height:auto"></canvas>
+  </div>
+</div>
+<div id="oscStats" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.4rem"></div>
+</div>
+
+<script>
+(function(){
+  var state = { traj: null, anim: null };
+
+  function compute(){
+    var dt = +document.getElementById('oscDt').value/100;
+    var nPer = +document.getElementById('oscP').value;
+    document.getElementById('oscDtV').textContent = dt.toFixed(2);
+    document.getElementById('oscPV').textContent = nPer;
+
+    var T = 2*Math.PI*nPer;
+    var N = Math.ceil(T/dt);
+    var x_eu = 1, v_eu = 0;   // explicit Euler
+    var x_lf = 1, v_lf_cur = 0;
+    // Leap-Frog: v^{1/2} = v_0 + 0.5*dt*a_0 = 0.5*dt*(-x_0)
+    var v_lfh = 0.5*dt*(-x_lf);
+    var E0 = 0.5*(v_eu*v_eu + x_eu*x_eu);
+    if (E0 < 1e-10) E0 = 1;  // safety
+
+    var snap = { t: new Float64Array(N+1), x_eu: new Float64Array(N+1), v_eu: new Float64Array(N+1),
+                 x_lf: new Float64Array(N+1), v_lf: new Float64Array(N+1), E_eu: new Float64Array(N+1),
+                 E_lf: new Float64Array(N+1) };
+    snap.t[0]=0; snap.x_eu[0]=x_eu; snap.v_eu[0]=v_eu; snap.x_lf[0]=x_lf; snap.v_lf[0]=v_lf_cur;
+    snap.E_eu[0] = (0.5*(v_eu*v_eu + x_eu*x_eu))/E0;
+    snap.E_lf[0] = (0.5*(v_lf_cur*v_lf_cur + x_lf*x_lf))/E0;
+
+    for (var k=0; k<N; k++){
+      // Explicit Euler
+      var a_eu = -x_eu;
+      var x_eu_n = x_eu + dt*v_eu;
+      var v_eu_n = v_eu + dt*a_eu;
+      x_eu = x_eu_n; v_eu = v_eu_n;
+
+      // Leap-Frog
+      x_lf = x_lf + dt*v_lfh;                   // x^{k+1}
+      v_lfh = v_lfh + dt*(-x_lf);                // v^{k+3/2}
+      // v^{k+1} for display: v^{k+1} = v^{k+1/2} + 0.5*dt*a^{k+1}
+      // where v^{k+1/2} was stored BEFORE the update. So re-derive:
+      // After loop: we just updated vlh from v^{k+1/2} to v^{k+3/2}.
+      // So v^{k+1} = (new vlh - 0.5*dt*a^{k+1}) = vlh + 0.5*dt*x_lf
+      var v_lf_display = v_lfh + 0.5*dt*x_lf;
+
+      snap.t[k+1] = (k+1)*dt;
+      snap.x_eu[k+1] = x_eu; snap.v_eu[k+1] = v_eu;
+      snap.x_lf[k+1] = x_lf; snap.v_lf[k+1] = v_lf_display;
+      snap.E_eu[k+1] = (0.5*(v_eu*v_eu + x_eu*x_eu))/E0;
+      snap.E_lf[k+1] = (0.5*(v_lf_display*v_lf_display + x_lf*x_lf))/E0;
+    }
+    state.traj = { N: N, dt: dt, T: T, snap: snap };
+  }
+
+  function render(frac){
+    if (!state.traj) return;
+    var snap = state.traj.snap, N = state.traj.N, T = state.traj.T;
+    var idx = Math.max(0, Math.min(N, Math.round(frac*N)));
+    document.getElementById('oscTv').textContent = (snap.t[idx]).toFixed(2);
+
+    // --- Phase portrait ---
+    var c = document.getElementById('oscPhase');
+    var ctx = c.getContext('2d'), W=c.width, H=c.height;
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+    var P = {l:42,r:12,t:12,b:28}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+    // Find bounds
+    var mx = 1.1;
+    for (var i=0; i<=idx; i++){
+      var ax = Math.abs(snap.x_eu[i]), av = Math.abs(snap.v_eu[i]);
+      if (ax > mx) mx = ax; if (av > mx) mx = av;
+    }
+    mx = Math.max(mx, 1.1);
+    function xp(x){ return P.l + pw*(x+mx)/(2*mx); }
+    function yp(v){ return P.t + ph*(1 - (v+mx)/(2*mx)); }
+    // Grid
+    ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+    for (var g=-2; g<=2; g++){
+      ctx.beginPath(); ctx.moveTo(xp(g*mx/2),P.t); ctx.lineTo(xp(g*mx/2),P.t+ph); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(P.l,yp(g*mx/2)); ctx.lineTo(P.l+pw,yp(g*mx/2)); ctx.stroke();
+    }
+    // Ideal orbit (unit circle)
+    ctx.strokeStyle='#9a8d7e'; ctx.lineWidth=1.2; ctx.setLineDash([4,3]);
+    ctx.beginPath();
+    for (var k=0;k<=100;k++){
+      var th = 2*Math.PI*k/100;
+      var cx = xp(Math.cos(th)), cy = yp(Math.sin(th));
+      if (k===0) ctx.moveTo(cx,cy); else ctx.lineTo(cx,cy);
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+    // Euler trail — red
+    ctx.strokeStyle='#b44a2d'; ctx.lineWidth=1.5; ctx.globalAlpha = 0.55;
+    ctx.beginPath();
+    for (var i=0;i<=idx;i++){ i===0?ctx.moveTo(xp(snap.x_eu[i]),yp(snap.v_eu[i])):ctx.lineTo(xp(snap.x_eu[i]),yp(snap.v_eu[i])); }
+    ctx.stroke(); ctx.globalAlpha = 1;
+    // Leap-Frog trail — green
+    ctx.strokeStyle='#1a6b5a'; ctx.lineWidth=1.5; ctx.globalAlpha = 0.55;
+    ctx.beginPath();
+    for (var i=0;i<=idx;i++){ i===0?ctx.moveTo(xp(snap.x_lf[i]),yp(snap.v_lf[i])):ctx.lineTo(xp(snap.x_lf[i]),yp(snap.v_lf[i])); }
+    ctx.stroke(); ctx.globalAlpha = 1;
+    // Current particles
+    ctx.fillStyle='#b44a2d'; ctx.beginPath(); ctx.arc(xp(snap.x_eu[idx]),yp(snap.v_eu[idx]),5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#1a6b5a'; ctx.beginPath(); ctx.arc(xp(snap.x_lf[idx]),yp(snap.v_lf[idx]),5,0,Math.PI*2); ctx.fill();
+    // Axes
+    ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+    ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+    ctx.fillText('x', P.l+pw/2, P.t+ph+15);
+    ctx.save(); ctx.translate(12,P.t+ph/2); ctx.rotate(-Math.PI/2); ctx.fillText('v',0,0); ctx.restore();
+    // Legend
+    ctx.textAlign='left'; ctx.font='10px JetBrains Mono';
+    ctx.fillStyle='#9a8d7e'; ctx.fillText('- - точная', P.l+5, P.t+10);
+    ctx.fillStyle='#b44a2d'; ctx.fillText('● Эйлер', P.l+5, P.t+22);
+    ctx.fillStyle='#1a6b5a'; ctx.fillText('● Leap-Frog', P.l+5, P.t+34);
+
+    // --- Energy plot ---
+    var c2 = document.getElementById('oscEnergy');
+    var ctx2 = c2.getContext('2d');
+    ctx2.fillStyle='#fdf9f3'; ctx2.fillRect(0,0,W,H);
+    var P2 = {l:50,r:12,t:12,b:28}, pw2=W-P2.l-P2.r, ph2=H-P2.t-P2.b;
+    // y range: 0 to max(E_eu) + 0.2
+    var emax = 2.0;
+    for (var i=0;i<=idx;i++){ if (snap.E_eu[i] > emax) emax = snap.E_eu[i]; }
+    emax = Math.min(emax, 20);  // cap
+    function xp2(t){ return P2.l + pw2*t/T; }
+    function yp2(e){ return P2.t + ph2*(1 - e/emax); }
+    ctx2.strokeStyle='#e8e0d4'; ctx2.lineWidth=0.5;
+    for (var g=0;g<=5;g++){ var gy=P2.t+ph2*g/5; ctx2.beginPath(); ctx2.moveTo(P2.l,gy); ctx2.lineTo(P2.l+pw2,gy); ctx2.stroke(); }
+    // Reference line E=1
+    ctx2.strokeStyle='#9a8d7e'; ctx2.lineWidth=1.2; ctx2.setLineDash([4,3]);
+    ctx2.beginPath(); ctx2.moveTo(P2.l,yp2(1)); ctx2.lineTo(P2.l+pw2,yp2(1)); ctx2.stroke();
+    ctx2.setLineDash([]);
+    // Euler E(t)
+    ctx2.strokeStyle='#b44a2d'; ctx2.lineWidth=1.8;
+    ctx2.beginPath();
+    for (var i=0;i<=idx;i++){ i===0?ctx2.moveTo(xp2(snap.t[i]),yp2(snap.E_eu[i])):ctx2.lineTo(xp2(snap.t[i]),yp2(snap.E_eu[i])); }
+    ctx2.stroke();
+    // Leap-Frog E(t)
+    ctx2.strokeStyle='#1a6b5a'; ctx2.lineWidth=1.8;
+    ctx2.beginPath();
+    for (var i=0;i<=idx;i++){ i===0?ctx2.moveTo(xp2(snap.t[i]),yp2(snap.E_lf[i])):ctx2.lineTo(xp2(snap.t[i]),yp2(snap.E_lf[i])); }
+    ctx2.stroke();
+    // Axes
+    ctx2.strokeStyle='#6b5d4f'; ctx2.lineWidth=1;
+    ctx2.beginPath(); ctx2.moveTo(P2.l,P2.t); ctx2.lineTo(P2.l,P2.t+ph2); ctx2.lineTo(P2.l+pw2,P2.t+ph2); ctx2.stroke();
+    ctx2.fillStyle='#6b5d4f'; ctx2.font='10px JetBrains Mono'; ctx2.textAlign='center';
+    ctx2.fillText('0', P2.l, P2.t+ph2+14);
+    ctx2.fillText((T/2).toFixed(0), P2.l+pw2/2, P2.t+ph2+14);
+    ctx2.fillText(T.toFixed(0), P2.l+pw2, P2.t+ph2+14);
+    ctx2.fillText('t·ω', P2.l+pw2/2, P2.t+ph2+26);
+    ctx2.textAlign='right';
+    for (var g=0;g<=5;g++) ctx2.fillText((emax*(5-g)/5).toFixed(1), P2.l-3, P2.t+ph2*g/5+3);
+    ctx2.save(); ctx2.translate(14,P2.t+ph2/2); ctx2.rotate(-Math.PI/2); ctx2.textAlign='center'; ctx2.fillText('E/E₀', 0, 0); ctx2.restore();
+
+    // Statistics under charts
+    var de = (snap.E_eu[idx] - 1)/1;
+    var dl = (snap.E_lf[idx] - 1)/1;
+    document.getElementById('oscStats').innerHTML =
+      'После ' + (snap.t[idx]/(2*Math.PI)).toFixed(2) + ' периодов: ' +
+      '<span style="color:#b44a2d">ΔE Эйлер = ' + (de*100).toFixed(2) + '%</span> · ' +
+      '<span style="color:#1a6b5a">ΔE LF = ' + (dl*100).toFixed(2) + '%</span>';
+  }
+
+  function play(){
+    var btn = document.getElementById('oscPlay');
+    if (state.anim){
+      cancelAnimationFrame(state.anim);
+      state.anim = null;
+      btn.textContent = '▶ Воспроизвести';
+      return;
+    }
+    btn.textContent = '⏸ Пауза';
+    var slider = document.getElementById('oscT');
+    if (+slider.value >= 995) slider.value = 0;
+    var last = performance.now(), total = 6000;
+    function tick(now){
+      var dtMs = now - last; last = now;
+      var v = +slider.value + dtMs*1000/total;
+      if (v >= 1000){ slider.value = 1000; render(1); state.anim = null; btn.textContent = '▶ Воспроизвести'; return; }
+      slider.value = v;
+      render(v/1000);
+      state.anim = requestAnimationFrame(tick);
+    }
+    state.anim = requestAnimationFrame(tick);
+  }
+
+  function reset(){
+    if (state.anim){ cancelAnimationFrame(state.anim); state.anim = null; document.getElementById('oscPlay').textContent='▶ Воспроизвести'; }
+    document.getElementById('oscT').value = 0;
+    render(0);
+  }
+
+  function refreshAll(){ compute(); render(+document.getElementById('oscT').value/1000); }
+
+  document.getElementById('oscDt').addEventListener('input', refreshAll);
+  document.getElementById('oscP').addEventListener('input', refreshAll);
+  document.getElementById('oscT').addEventListener('input', function(){
+    if (state.anim){ cancelAnimationFrame(state.anim); state.anim = null; document.getElementById('oscPlay').textContent='▶ Воспроизвести'; }
+    render(+this.value/1000);
+  });
+  document.getElementById('oscPlay').addEventListener('click', play);
+  document.getElementById('oscReset').addEventListener('click', reset);
+
+  window.addEventListener('load', function(){ setTimeout(refreshAll, 200); });
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно.</strong> Нажмите ▶: явный Эйлер (красный) раскручивается по спирали наружу — энергия экспоненциально растёт; Leap-Frog (зелёный) держится замкнутой орбитой вокруг точной окружности — энергия колеблется около 1 без дрейфа. Увеличьте шаг Δt — эффект становится ярче. Увеличьте число периодов — видно линейный (в логарифмическом смысле) рост ошибки Эйлера.
+</div>
 
 <h2 id="init">Инициализация полушагом</h2>
 

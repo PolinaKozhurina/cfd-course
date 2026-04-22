@@ -28,6 +28,7 @@ window.MathJax = {
   <a href="#damBreak">Пример: разрушение плотины</a>
   <a href="#extensions">Обзор расширений</a>
   <a href="#comparison">Сравнение с сеточными методами</a>
+  <a href="#cloud-demo">Интерактив: 2D-облако SPH</a>
   <div class="sep"></div>
   <div class="g">Навигация</div>
   <a href="index.html">← Обзор</a>
@@ -334,6 +335,334 @@ c_0 \geq 10\,v_{\text{max}}
 
 <div class="remark">
 <strong>Итог мини-курса.</strong> За пять занятий мы прошли путь от понятия сглаживающего ядра до работающего солвера задачи Сода с полноценной вязкостью и анализом сходимости. Этого достаточно чтобы понимать современные SPH-коды, читать статьи по теме и распознавать, в каких задачах SPH — правильный выбор. Лабораторная 5 — ваш финальный мини-проект: выберите один из трёх вариантов и продемонстрируйте, что можете самостоятельно расширить базовую реализацию.
+</div>
+
+<h2 id="cloud-demo">Интерактив: 2D-облако частиц SPH</h2>
+
+<p>Всё время курса мы работали в 1D, где частица — точка на отрезке. В реальных приложениях SPH используется в 2D и 3D для моделирования свободных поверхностей, капель, разлётов. Посмотрим как ведёт себя <strong>двумерное</strong> облако частиц: круг радиуса \(R = 0.5\) с равномерным распределением ~200 частиц. В начальный момент все частицы покоятся, но левая половина имеет давление в 3 раза выше правой. Запустите — и увидите как возмущение распространяется по 2D-облаку.</p>
+
+<div id="cloud" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.6rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Частиц: <span id="cloudNV">200</span></label>
+    <input type="range" id="cloudN" min="100" max="400" value="200" style="width:140px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Отношение P_L/P_R: <span id="cloudPV">3.0</span></label>
+    <input type="range" id="cloudP" min="10" max="50" value="30" style="width:140px">
+  </div>
+  <button id="cloudRun" style="background:var(--accent);color:#fff;border:none;border-radius:5px;padding:6px 16px;font-family:'Source Serif 4',serif;font-size:.85rem;font-weight:600;cursor:pointer">▶ Посчитать</button>
+  <button id="cloudPlay" style="background:var(--accent2);color:#fff;border:none;border-radius:5px;padding:6px 16px;font-family:'Source Serif 4',serif;font-size:.85rem;font-weight:600;cursor:pointer;display:none">▶ Воспроизвести</button>
+  <button id="cloudReset" style="background:#6b5d4f;color:#fff;border:none;border-radius:5px;padding:6px 12px;font-family:'Source Serif 4',serif;font-size:.82rem;cursor:pointer;display:none">↻</button>
+  <span style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text2)">t = <span id="cloudTv">0.00</span></span>
+  <input type="range" id="cloudT" min="0" max="1000" value="0" style="flex:1;min-width:150px">
+</div>
+<div id="cloudStatus" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin:.4rem 0">Выберите число частиц и нажмите «Посчитать»</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Положения частиц (цвет = плотность)</div>
+    <canvas id="cloudParticles" width="420" height="420" style="width:100%;height:auto"></canvas>
+  </div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Скорости (стрелки)</div>
+    <canvas id="cloudVelocity" width="420" height="420" style="width:100%;height:auto"></canvas>
+  </div>
+</div>
+</div>
+
+<script>
+(function(){
+  // 2D cubic B-spline: sigma = 10/(7*pi)
+  var SIGMA_2D = 10/(7*Math.PI);
+  function W2D(q){
+    if (q>=2) return 0;
+    if (q>=1) return SIGMA_2D*0.25*Math.pow(2-q,3);
+    return SIGMA_2D*(1 - 1.5*q*q + 0.75*q*q*q);
+  }
+  function Wp2D(q){
+    if (q>=2) return 0;
+    if (q>=1) return -SIGMA_2D*0.75*Math.pow(2-q,2);
+    return SIGMA_2D*(-3*q + 2.25*q*q);
+  }
+
+  var state = { snaps: null, anim: null, N: 0 };
+
+  function runCloud(N, pressureRatio){
+    var R = 0.5;
+    var area = Math.PI*R*R;
+    var n_linear = Math.ceil(Math.sqrt(N*4/Math.PI));
+    var dx_est = 2*R/n_linear;
+    var h = 1.8*dx_est;  // 2D: h typically 1.8-2.0 * dx
+    var gamma = 1.4, P_L = pressureRatio, P_R = 1.0;
+    var rho0 = 1.0;
+    var k_eos_L = P_L/Math.pow(rho0, gamma);
+    var k_eos_R = P_R/Math.pow(rho0, gamma);
+
+    // Place particles on hex grid inside circle
+    var xs = [], ys = [];
+    var spacing = dx_est*0.95;
+    for (var jy=-n_linear;jy<=n_linear;jy++){
+      var y = jy*spacing*Math.sqrt(3)/2;
+      var offset = (jy%2===0) ? 0 : spacing/2;
+      for (var jx=-n_linear;jx<=n_linear;jx++){
+        var x = jx*spacing + offset;
+        if (x*x + y*y < R*R*0.98){ xs.push(x); ys.push(y); }
+      }
+    }
+    var N_real = xs.length;
+    var area_real = area;
+    var m_per = rho0*area_real/N_real;
+
+    var x = new Float64Array(N_real), y = new Float64Array(N_real);
+    var vx = new Float64Array(N_real), vy = new Float64Array(N_real);
+    var m = new Float64Array(N_real);
+    var rho = new Float64Array(N_real);
+    var P = new Float64Array(N_real);
+    var k_i = new Float64Array(N_real);   // each particle carries its "k"
+    var ax = new Float64Array(N_real), ay = new Float64Array(N_real);
+    for (var i=0;i<N_real;i++){
+      x[i] = xs[i]; y[i] = ys[i]; m[i] = m_per;
+      k_i[i] = (x[i] < 0) ? k_eos_L : k_eos_R;
+    }
+
+    // Periodic-ish: ignore particles outside domain for neighbor search
+    function density(){
+      for (var i=0;i<N_real;i++){
+        var s = 0;
+        for (var j=0;j<N_real;j++){
+          var dx = x[i]-x[j], dy = y[i]-y[j];
+          var r = Math.sqrt(dx*dx+dy*dy);
+          var q = r/h;
+          if (q<2) s += m[j]*W2D(q)/(h*h);
+        }
+        rho[i] = Math.max(s, 1e-10);
+      }
+    }
+    function eos(){
+      for (var i=0;i<N_real;i++) P[i] = k_i[i]*Math.pow(rho[i], gamma);
+    }
+    function accel(){
+      for (var i=0;i<N_real;i++){
+        var sx = 0, sy = 0;
+        for (var j=0;j<N_real;j++){
+          if (i===j) continue;
+          var dx = x[i]-x[j], dy = y[i]-y[j];
+          var r = Math.sqrt(dx*dx+dy*dy);
+          if (r<1e-10) continue;
+          var q = r/h;
+          if (q>=2) continue;
+          // Monaghan viscosity for damping
+          var dvx = vx[i]-vx[j], dvy = vy[i]-vy[j];
+          var vdotr = dvx*dx + dvy*dy;
+          var Pi = 0;
+          if (vdotr < 0){
+            var mu = h*vdotr/(r*r + 0.01*h*h);
+            var ci = Math.sqrt(gamma*P[i]/rho[i]);
+            var cj = Math.sqrt(gamma*P[j]/rho[j]);
+            var cbar = 0.5*(ci+cj), rbar = 0.5*(rho[i]+rho[j]);
+            Pi = (-1.0*cbar*mu + 2.0*mu*mu)/rbar;
+          }
+          var coef = -m[j]*(P[i]/(rho[i]*rho[i]) + P[j]/(rho[j]*rho[j]) + Pi);
+          var gradCoef = Wp2D(q)/(h*h*h);
+          sx += coef * gradCoef * dx/r;
+          sy += coef * gradCoef * dy/r;
+        }
+        ax[i] = sx; ay[i] = sy;
+      }
+    }
+
+    density(); eos(); accel();
+    var mxc = 1e-6;
+    for (var i=0;i<N_real;i++){
+      var c = Math.sqrt(gamma*P[i]/rho[i]);
+      var s = 2*c + Math.sqrt(vx[i]*vx[i]+vy[i]*vy[i]);
+      if (s>mxc) mxc = s;
+    }
+    var dt0 = 0.2*h/mxc;
+    for (var i=0;i<N_real;i++){ vx[i] -= 0.5*dt0*ax[i]; vy[i] -= 0.5*dt0*ay[i]; }
+
+    var t_end = 0.5;
+    var nSnaps = 25;
+    function makeSnap(t){
+      return { t:t, x:Array.from(x), y:Array.from(y), rho:Array.from(rho), vx:Array.from(vx), vy:Array.from(vy) };
+    }
+    var snaps = [makeSnap(0)];
+    var snapInt = t_end/nSnaps, nextSnap = snapInt;
+    var t = 0, ns = 0;
+    var MAX_STEPS = 500;
+    while (t < t_end && ns < MAX_STEPS){
+      density(); eos(); accel();
+      var mxc = 1e-6;
+      for (var i=0;i<N_real;i++){
+        var c = Math.sqrt(gamma*P[i]/rho[i]);
+        var s = 2*c + Math.sqrt(vx[i]*vx[i]+vy[i]*vy[i]);
+        if (s>mxc) mxc = s;
+      }
+      var dt = 0.2*h/mxc;
+      if (t+dt > t_end) dt = t_end-t;
+      for (var i=0;i<N_real;i++){
+        vx[i] += dt*ax[i]; vy[i] += dt*ay[i];
+        x[i]  += dt*vx[i]; y[i]  += dt*vy[i];
+      }
+      t += dt; ns++;
+      if (t >= nextSnap-1e-9 || t >= t_end-1e-9){
+        density(); eos();
+        snaps.push(makeSnap(t));
+        nextSnap += snapInt;
+      }
+    }
+    return { snaps: snaps, N: N_real, nSteps: ns, t_end: t_end };
+  }
+
+  function render(frac){
+    if (!state.snaps) return;
+    var snaps = state.snaps;
+    var idx = Math.max(0, Math.min(snaps.length-1, Math.round(frac*(snaps.length-1))));
+    var snap = snaps[idx];
+    document.getElementById('cloudTv').textContent = snap.t.toFixed(3);
+
+    // Particle plot — color by density
+    var c = document.getElementById('cloudParticles');
+    var ctx = c.getContext('2d'), W=c.width, H=c.height;
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+    var P={l:20,r:20,t:20,b:20}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+    var LIM = 1.0;  // show -1..1 domain
+    function xp(xx){ return P.l + pw*(xx+LIM)/(2*LIM); }
+    function yp(yy){ return P.t + ph*(1 - (yy+LIM)/(2*LIM)); }
+    // Axis hint
+    ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+    ctx.beginPath(); ctx.moveTo(xp(0),P.t); ctx.lineTo(xp(0),P.t+ph); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(P.l,yp(0)); ctx.lineTo(P.l+pw,yp(0)); ctx.stroke();
+    // Initial circle boundary
+    ctx.strokeStyle='#d9cfc0'; ctx.setLineDash([3,3]); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(xp(0),yp(0), pw*0.5/LIM/2, 0, Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+    // Particles colored by density
+    var rhoMin = 0.5, rhoMax = 1.5;
+    for (var i=0;i<snap.x.length;i++){
+      var f = (snap.rho[i]-rhoMin)/(rhoMax-rhoMin);
+      f = Math.max(0, Math.min(1, f));
+      // Color gradient: blue (low rho) → white → red (high rho)
+      var r, g, b;
+      if (f < 0.5){
+        var ff = f*2;
+        r = Math.round(80 + (255-80)*ff);
+        g = Math.round(120 + (255-120)*ff);
+        b = Math.round(200 + (255-200)*ff);
+      } else {
+        var ff = (f-0.5)*2;
+        r = Math.round(255 - (255-180)*ff);
+        g = Math.round(255 - (255-70)*ff);
+        b = Math.round(255 - (255-40)*ff);
+      }
+      ctx.fillStyle = 'rgb('+r+','+g+','+b+')';
+      ctx.beginPath(); ctx.arc(xp(snap.x[i]), yp(snap.y[i]), 3.5, 0, Math.PI*2); ctx.fill();
+    }
+    // Color bar
+    ctx.font='10px JetBrains Mono'; ctx.fillStyle='#6b5d4f'; ctx.textAlign='left';
+    ctx.fillText('ρ ∈ ['+rhoMin+', '+rhoMax+']', P.l+5, P.t+15);
+    ctx.fillText('синий: ρ мала', P.l+5, P.t+30);
+    ctx.fillText('красный: ρ высока', P.l+5, P.t+45);
+
+    // Velocity plot — arrows
+    var c2 = document.getElementById('cloudVelocity');
+    var ctx2 = c2.getContext('2d');
+    ctx2.fillStyle='#fdf9f3'; ctx2.fillRect(0,0,W,H);
+    ctx2.strokeStyle='#e8e0d4'; ctx2.lineWidth=0.5;
+    ctx2.beginPath(); ctx2.moveTo(xp(0),P.t); ctx2.lineTo(xp(0),P.t+ph); ctx2.stroke();
+    ctx2.beginPath(); ctx2.moveTo(P.l,yp(0)); ctx2.lineTo(P.l+pw,yp(0)); ctx2.stroke();
+    // Find max velocity for scaling
+    var vmax = 0.01;
+    for (var i=0;i<snap.x.length;i++){
+      var vm = Math.sqrt(snap.vx[i]*snap.vx[i]+snap.vy[i]*snap.vy[i]);
+      if (vm > vmax) vmax = vm;
+    }
+    var arrScale = 15 / vmax;  // px per unit velocity
+    for (var i=0;i<snap.x.length;i++){
+      var px = xp(snap.x[i]), py = yp(snap.y[i]);
+      ctx2.fillStyle = '#9a8d7e';
+      ctx2.beginPath(); ctx2.arc(px, py, 1.5, 0, Math.PI*2); ctx2.fill();
+      var vdx = snap.vx[i]*arrScale, vdy = -snap.vy[i]*arrScale;  // y flipped
+      if (Math.abs(vdx)+Math.abs(vdy) > 1){
+        ctx2.strokeStyle='#b44a2d'; ctx2.lineWidth=1;
+        ctx2.beginPath();
+        ctx2.moveTo(px, py);
+        ctx2.lineTo(px+vdx, py+vdy);
+        ctx2.stroke();
+        // Arrow head
+        var ang = Math.atan2(vdy, vdx);
+        ctx2.beginPath();
+        ctx2.moveTo(px+vdx, py+vdy);
+        ctx2.lineTo(px+vdx - 4*Math.cos(ang-0.3), py+vdy - 4*Math.sin(ang-0.3));
+        ctx2.moveTo(px+vdx, py+vdy);
+        ctx2.lineTo(px+vdx - 4*Math.cos(ang+0.3), py+vdy - 4*Math.sin(ang+0.3));
+        ctx2.stroke();
+      }
+    }
+    ctx2.font='10px JetBrains Mono'; ctx2.fillStyle='#6b5d4f'; ctx2.textAlign='left';
+    ctx2.fillText('|v|_max = '+vmax.toFixed(3), P.l+5, P.t+15);
+  }
+
+  function runIt(){
+    var btn = document.getElementById('cloudRun'); btn.disabled = true;
+    document.getElementById('cloudStatus').textContent = 'Считаю 2D-SPH... (несколько секунд)';
+    requestAnimationFrame(function(){ setTimeout(function(){
+      try {
+        var N = +document.getElementById('cloudN').value;
+        var PR = +document.getElementById('cloudP').value/10;
+        var t0 = performance.now();
+        var res = runCloud(N, PR);
+        var el = (performance.now()-t0).toFixed(0);
+        state.snaps = res.snaps; state.N = res.N;
+        document.getElementById('cloudPlay').style.display = '';
+        document.getElementById('cloudReset').style.display = '';
+        document.getElementById('cloudT').value = 0;
+        render(0);
+        document.getElementById('cloudStatus').textContent = '✓ '+res.N+' частиц, '+res.nSteps+' шагов, '+el+' мс';
+      } catch(err){
+        document.getElementById('cloudStatus').textContent = 'Ошибка: '+err.message;
+      }
+      btn.disabled = false;
+    }, 50); });
+  }
+
+  function play(){
+    var btn = document.getElementById('cloudPlay');
+    if (state.anim){ cancelAnimationFrame(state.anim); state.anim=null; btn.textContent='▶ Воспроизвести'; return; }
+    btn.textContent = '⏸ Пауза';
+    var slider = document.getElementById('cloudT');
+    if (+slider.value >= 995) slider.value = 0;
+    var last = performance.now(), total = 5000;
+    function tick(now){
+      var dtMs = now - last; last = now;
+      var v = +slider.value + dtMs*1000/total;
+      if (v >= 1000){ slider.value=1000; render(1); state.anim=null; btn.textContent='▶ Воспроизвести'; return; }
+      slider.value = v;
+      render(v/1000);
+      state.anim = requestAnimationFrame(tick);
+    }
+    state.anim = requestAnimationFrame(tick);
+  }
+  function reset(){
+    if (state.anim){ cancelAnimationFrame(state.anim); state.anim=null; document.getElementById('cloudPlay').textContent='▶ Воспроизвести'; }
+    document.getElementById('cloudT').value = 0;
+    if (state.snaps) render(0);
+  }
+
+  document.getElementById('cloudN').addEventListener('input', function(){ document.getElementById('cloudNV').textContent = this.value; });
+  document.getElementById('cloudP').addEventListener('input', function(){ document.getElementById('cloudPV').textContent = (+this.value/10).toFixed(1); });
+  document.getElementById('cloudRun').addEventListener('click', runIt);
+  document.getElementById('cloudPlay').addEventListener('click', play);
+  document.getElementById('cloudReset').addEventListener('click', reset);
+  document.getElementById('cloudT').addEventListener('input', function(){
+    if (state.anim){ cancelAnimationFrame(state.anim); state.anim=null; document.getElementById('cloudPlay').textContent='▶ Воспроизвести'; }
+    if (state.snaps) render(+this.value/1000);
+  });
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно.</strong> После расчёта (~2-5 секунд) нажмите ▶ Воспроизвести. Частицы из левой половины (высокое давление, изначально более красные) расширяются вправо, правая половина сжимается. Через короткое время видно формирование <strong>радиальной волны</strong> — плотность перераспределяется по кругу. Картина скоростей показывает что сначала движение в основном горизонтальное (градиент давления вдоль оси x), но потом добавляется вертикальная компонента — так работает SPH в 2D: он автоматически «понимает» геометрию через градиенты ядра \(\nabla W\). В реальных задачах (разрушение плотины) качественная картина такая же, но с гравитацией и границей.
 </div>
 
 <div class="lecture-nav">

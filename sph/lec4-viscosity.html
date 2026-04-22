@@ -29,6 +29,7 @@ window.MathJax = {
   <a href="#params">Параметры α и β</a>
   <a href="#cfl">Модификация CFL</a>
   <a href="#reference">Эталонное решение Сода</a>
+  <a href="#sod-demo">Интерактив: Sod с вязкостью</a>
   <div class="sep"></div>
   <div class="g">Навигация</div>
   <a href="index.html">← Обзор</a>
@@ -381,6 +382,319 @@ x_{\text{УВ}} \approx 0.850.
 
 <div class="remark">
 <strong>Вывод.</strong> В лаб 4 мы построим на одном графике численное решение (точки) и кусочно-постоянную аппроксимацию точного решения (сплошная линия). Согласие должно быть видно невооружённым глазом. Если есть заметное расхождение на 1-3 частицах у ударного фронта — это нормально (ожидаемая ширина размывания). Если расхождение больше — ошибка в реализации вязкости.
+</div>
+
+<h2 id="sod-demo">Интерактив: задача Сода с разными значениями α</h2>
+
+<p>Запустим настоящий SPH-солвер 1D-Sod прямо в браузере. Частицы инициализируются как в вашей лабораторной 2 (N=120 для ускорения). Выбирайте значение \(\alpha\) от 0 (без вязкости) до 2.0 (сильная) и запустите — увидите эволюцию \(\rho(x)\), \(P(x)\), \(v(x)\) от \(t = 0\) до \(t = 0.2\).</p>
+
+<div id="sphSod" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.6rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">α (линейный член)</label>
+    <select id="sodAlpha" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <option value="0">0 (без вязкости)</option>
+      <option value="0.5">0.5 (малая)</option>
+      <option value="1" selected>1.0 (стандарт)</option>
+      <option value="2">2.0 (сильная)</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">β</label>
+    <select id="sodBeta" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <option value="0">0</option>
+      <option value="1">1</option>
+      <option value="2" selected>2 (стандарт)</option>
+      <option value="4">4</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">N</label>
+    <input type="number" id="sodN" value="120" min="60" max="300" style="width:70px;background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+  </div>
+  <button id="sodRun" style="background:var(--accent);color:#fff;border:none;border-radius:5px;padding:6px 16px;font-family:'Source Serif 4',serif;font-size:.85rem;font-weight:600;cursor:pointer">▶ Запустить</button>
+</div>
+<div id="sodStatus" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin:.4rem 0">Выберите параметры и нажмите Запустить</div>
+<div id="sodAnim" style="display:none;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:.5rem">
+  <button id="sodPlay" style="background:var(--accent);color:#fff;border:none;border-radius:5px;padding:5px 12px;font-family:'Source Serif 4',serif;font-size:.82rem;font-weight:600;cursor:pointer">▶ Воспроизвести</button>
+  <button id="sodReset" style="background:#6b5d4f;color:#fff;border:none;border-radius:5px;padding:5px 10px;font-family:'Source Serif 4',serif;font-size:.82rem;cursor:pointer">↻</button>
+  <span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">t = <span id="sodTv">0.000</span></span>
+  <input type="range" id="sodT" min="0" max="1000" value="1000" style="flex:1;min-width:180px">
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">ρ(x)</div><canvas id="sodRho" width="400" height="260" style="width:100%;height:auto"></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">P(x)</div><canvas id="sodP" width="400" height="260" style="width:100%;height:auto"></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">v(x)</div><canvas id="sodV" width="400" height="260" style="width:100%;height:auto"></canvas></div>
+</div>
+</div>
+
+<script>
+(function(){
+  function W(q){
+    var s = 2/3;
+    if (q >= 2) return 0;
+    if (q >= 1) return s*0.25*Math.pow(2-q,3);
+    return s*(1 - 1.5*q*q + 0.75*q*q*q);
+  }
+  function Wp(q){
+    var s = 2/3;
+    if (q >= 2) return 0;
+    if (q >= 1) return -s*0.75*Math.pow(2-q,2);
+    return s*(-3*q + 2.25*q*q);
+  }
+
+  var state = { snaps: null, anim: null, params: null };
+
+  function runSPH(N_inner, alpha, beta){
+    var gamma = 1.4, gm1 = 0.4, k_eos = 1.0;
+    var dx = 1.0/N_inner, h = 2.0*dx, eta = 0.01*h;
+    var t_end = 0.2;
+    // Extend domain with padded buffer particles so interior particles see "correct" density
+    var pad = 10;
+    var N = N_inner + 2*pad;
+    var xmin = -pad*dx;
+
+    var x = new Float64Array(N), v = new Float64Array(N);
+    var m = new Float64Array(N), rho = new Float64Array(N);
+    var P = new Float64Array(N), c = new Float64Array(N);
+    var a = new Float64Array(N);
+    var isBuf = new Uint8Array(N);  // buffer particles (frozen)
+
+    // Init Sod on extended domain
+    for (var j=0;j<N;j++){
+      x[j] = xmin + (j+0.5)*dx;
+      v[j] = 0;
+      if (x[j] < 0.5){ rho[j]=1.0; P[j]=1.0; m[j]=rho[j]*dx; }
+      else            { rho[j]=0.125; P[j]=0.1; m[j]=rho[j]*dx; }
+      if (j < pad || j >= N-pad) isBuf[j] = 1;
+    }
+
+    function density(){
+      for (var i=0;i<N;i++){
+        var s = 0;
+        for (var j=0;j<N;j++){
+          var q = Math.abs(x[i]-x[j])/h;
+          if (q < 2) s += m[j]*W(q)/h;
+        }
+        rho[i] = Math.max(s, 1e-10);
+      }
+    }
+    function eos(){
+      for (var i=0;i<N;i++){
+        P[i] = k_eos*Math.pow(rho[i], gamma);
+        c[i] = Math.sqrt(gamma*P[i]/rho[i]);
+      }
+    }
+    function accel(){
+      for (var i=0;i<N;i++){
+        if (isBuf[i]){ a[i] = 0; continue; }
+        var sa = 0;
+        for (var j=0;j<N;j++){
+          if (i===j) continue;
+          var dx_ij = x[i]-x[j];
+          var q = Math.abs(dx_ij)/h;
+          if (q >= 2) continue;
+          var dW = Wp(q)*Math.sign(dx_ij)/(h*h);
+          var dv = v[i]-v[j];
+          var vdotr = dv*dx_ij;
+          var Pi = 0;
+          if (vdotr < 0){
+            var mu = h*vdotr/(dx_ij*dx_ij + eta*eta);
+            var cbar = 0.5*(c[i]+c[j]);
+            var rbar = 0.5*(rho[i]+rho[j]);
+            Pi = (-alpha*cbar*mu + beta*mu*mu)/rbar;
+          }
+          sa -= m[j]*(P[i]/(rho[i]*rho[i]) + P[j]/(rho[j]*rho[j]) + Pi)*dW;
+        }
+        a[i] = sa;
+      }
+    }
+
+    density(); eos(); accel();
+    // Snapshots (only inner particles for display)
+    var nSnaps = 40;
+    function makeSnap(t){
+      var xIn=[], rIn=[], pIn=[], vIn=[];
+      for (var i=0;i<N;i++){
+        if (isBuf[i]) continue;
+        if (x[i] < -0.02 || x[i] > 1.02) continue;  // clip any escapees
+        xIn.push(x[i]); rIn.push(rho[i]); pIn.push(P[i]); vIn.push(v[i]);
+      }
+      return {t:t, x:xIn, rho:rIn, P:pIn, v:vIn};
+    }
+    var snaps = [makeSnap(0)];
+    var snapInt = t_end/nSnaps, nextSnap = snapInt;
+
+    // Initial half-kick back
+    var mxc = 1e-6;
+    for (var i=0;i<N;i++){ var s = (1+alpha)*c[i] + Math.abs(v[i]); if (s > mxc) mxc = s; }
+    var dt0 = 0.2*h/mxc;
+    for (var i=0;i<N;i++){ if (!isBuf[i]) v[i] -= 0.5*dt0*a[i]; }
+
+    var t = 0, ns = 0;
+    var MAX_STEPS = 2000;
+    while (t < t_end && ns < MAX_STEPS){
+      density(); eos(); accel();
+      var mxc = 1e-6;
+      for (var i=0;i<N;i++){ var s = (1+alpha)*c[i] + Math.abs(v[i]); if (s > mxc) mxc = s; }
+      var dt = 0.2*h/mxc;
+      if (t + dt > t_end) dt = t_end - t;
+
+      for (var i=0;i<N;i++){
+        if (isBuf[i]) continue;
+        v[i] += dt*a[i];
+        x[i] += dt*v[i];
+      }
+      t += dt; ns++;
+
+      if (t >= nextSnap - 1e-9 || t >= t_end - 1e-9){
+        density(); eos();
+        snaps.push(makeSnap(t));
+        nextSnap += snapInt;
+      }
+    }
+    return {snaps: snaps, nSteps: ns};
+  }
+
+  function render(frac){
+    if (!state.snaps) return;
+    var snaps = state.snaps;
+    var idx = Math.max(0, Math.min(snaps.length-1, Math.round(frac*(snaps.length-1))));
+    var snap = snaps[idx];
+    document.getElementById('sodTv').textContent = snap.t.toFixed(4);
+
+    // Exact solution at this time
+    var Ne = 300, xe=[], re=[], pe=[], ue=[];
+    var t_eval = snap.t < 1e-6 ? 1e-6 : snap.t;
+    // Toro reference values for Sod
+    var rhoL=1, PL=1, rhoR=0.125, PR=0.1;
+    var rho_star_L = 0.4263, rho_star_R = 0.2656, P_star = 0.3031, u_star = 0.9274;
+    var x0 = 0.5;
+    // At t: positions
+    var aL = Math.sqrt(1.4);   // 1.1832
+    var x_head = x0 - aL*t_eval;
+    // Tail: characteristic of rarefaction at rho_star_L
+    var a_star_L = Math.sqrt(1.4*P_star/rho_star_L);
+    var x_tail = x0 + (u_star - a_star_L)*t_eval;
+    var x_contact = x0 + u_star*t_eval;
+    // Shock speed: u_s = u_R + a_R * sqrt((gamma+1)/(2*gamma)*P_star/PR + (gamma-1)/(2*gamma))
+    var a_R = Math.sqrt(1.4*PR/rhoR);
+    var S = a_R*Math.sqrt((1.4+1)/(2*1.4)*(P_star/PR) + (1.4-1)/(2*1.4));
+    var x_shock = x0 + S*t_eval;
+    for (var k=0;k<Ne;k++){
+      var x = (k+0.5)/Ne;
+      xe.push(x);
+      if (x < x_head){ re.push(rhoL); pe.push(PL); ue.push(0); }
+      else if (x < x_tail){
+        // Inside rarefaction fan
+        var xi = (x - x0)/t_eval;
+        var u = (2/(1.4+1))*(aL + xi);
+        var c = aL - (1.4-1)/2*u;
+        var rho_fan = rhoL*Math.pow(c/aL, 2/(1.4-1));
+        var P_fan = PL*Math.pow(rho_fan/rhoL, 1.4);
+        re.push(rho_fan); pe.push(P_fan); ue.push(u);
+      }
+      else if (x < x_contact){ re.push(rho_star_L); pe.push(P_star); ue.push(u_star); }
+      else if (x < x_shock){   re.push(rho_star_R); pe.push(P_star); ue.push(u_star); }
+      else                   { re.push(rhoR); pe.push(PR); ue.push(0); }
+    }
+
+    plot1D('sodRho', snap.x, snap.rho, xe, re, [0, 1.1]);
+    plot1D('sodP',   snap.x, snap.P,   xe, pe, [0, 1.1]);
+    plot1D('sodV',   snap.x, snap.v,   xe, ue, [-0.1, 1.2]);
+  }
+
+  function plot1D(cid, xs, ys, xe, ye, yRange){
+    var c = document.getElementById(cid);
+    var ctx = c.getContext('2d'), W=c.width, H=c.height;
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+    var P={l:42,r:12,t:12,b:28}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+    var mn = yRange[0], mx = yRange[1];
+    ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+    for (var g=0;g<=4;g++){var gy=P.t+ph*g/4; ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke();}
+    function xp(x){ return P.l + pw*x; }
+    function yp(v){ return P.t + ph*(1 - (v-mn)/(mx-mn)); }
+    // Exact - dashed
+    ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1.5; ctx.setLineDash([5,3]);
+    ctx.beginPath();
+    for (var i=0;i<xe.length;i++){ i===0?ctx.moveTo(xp(xe[i]),yp(ye[i])):ctx.lineTo(xp(xe[i]),yp(ye[i])); }
+    ctx.stroke(); ctx.setLineDash([]);
+    // SPH points
+    ctx.fillStyle='#b44a2d';
+    for (var i=0;i<xs.length;i++){
+      ctx.beginPath(); ctx.arc(xp(xs[i]),yp(ys[i]),2.2,0,Math.PI*2); ctx.fill();
+    }
+    // Axes
+    ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+    ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+    ctx.fillText('0', P.l, P.t+ph+14);
+    ctx.fillText('0.5', P.l+pw/2, P.t+ph+14);
+    ctx.fillText('1', P.l+pw, P.t+ph+14);
+    ctx.textAlign='right';
+    for (var g=0;g<=4;g++) ctx.fillText((mx-(mx-mn)*g/4).toFixed(2), P.l-3, P.t+ph*g/4+3);
+  }
+
+  function runIt(){
+    var btn = document.getElementById('sodRun'); btn.disabled = true;
+    document.getElementById('sodStatus').textContent = 'Считаю SPH...';
+    requestAnimationFrame(function(){ setTimeout(function(){
+      try {
+        var alpha = +document.getElementById('sodAlpha').value;
+        var beta  = +document.getElementById('sodBeta').value;
+        var N     = +document.getElementById('sodN').value;
+        var t0 = performance.now();
+        var res = runSPH(N, alpha, beta);
+        var el = (performance.now()-t0).toFixed(0);
+        state.snaps = res.snaps;
+        state.params = {alpha:alpha, beta:beta, N:N};
+        document.getElementById('sodAnim').style.display = 'flex';
+        document.getElementById('sodT').value = 1000;
+        render(1);
+        document.getElementById('sodStatus').textContent =
+          '✓ α='+alpha+', β='+beta+', N='+N+', шагов='+res.nSteps+', время='+el+' мс · ожидается формирование ударной волны у x≈0.85 при t=0.2';
+      } catch(err) {
+        document.getElementById('sodStatus').textContent = 'Ошибка: '+err.message;
+      }
+      btn.disabled = false;
+    }, 50); });
+  }
+
+  function play(){
+    var btn = document.getElementById('sodPlay');
+    if (state.anim){ cancelAnimationFrame(state.anim); state.anim = null; btn.textContent='▶ Воспроизвести'; return; }
+    btn.textContent = '⏸ Пауза';
+    var slider = document.getElementById('sodT');
+    if (+slider.value >= 995) slider.value = 0;
+    var last = performance.now(), total = 4000;
+    function tick(now){
+      var dtMs = now - last; last = now;
+      var v = +slider.value + dtMs*1000/total;
+      if (v >= 1000){ slider.value = 1000; render(1); state.anim = null; btn.textContent='▶ Воспроизвести'; return; }
+      slider.value = v;
+      render(v/1000);
+      state.anim = requestAnimationFrame(tick);
+    }
+    state.anim = requestAnimationFrame(tick);
+  }
+  function reset(){
+    if (state.anim){ cancelAnimationFrame(state.anim); state.anim = null; document.getElementById('sodPlay').textContent='▶ Воспроизвести'; }
+    document.getElementById('sodT').value = 0;
+    if (state.snaps) render(0);
+  }
+
+  document.getElementById('sodRun').addEventListener('click', runIt);
+  document.getElementById('sodPlay').addEventListener('click', play);
+  document.getElementById('sodReset').addEventListener('click', reset);
+  document.getElementById('sodT').addEventListener('input', function(){
+    if (state.anim){ cancelAnimationFrame(state.anim); state.anim = null; document.getElementById('sodPlay').textContent='▶ Воспроизвести'; }
+    if (state.snaps) render(+this.value/1000);
+  });
+})();
+</script>
+
+<div class="remark">
+<strong>Что сравнить.</strong> Запустите сначала с α=0 — увидите сильные осцилляции давления у x≈0.85 (ударный фронт). Затем α=1, β=2 — стандартный выбор. Осцилляции пропадают, но ударный фронт размывается на 3-5 частиц. α=2 — фронт ещё шире, при этом волна разрежения и контакт тоже «смазаны». Это и есть компромисс между резкостью и устойчивостью, описанный выше.
 </div>
 
 <div class="lecture-nav">

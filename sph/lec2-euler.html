@@ -26,6 +26,7 @@ window.MathJax = {
   <a href="#momentum">Уравнение импульса</a>
   <a href="#symmetric">Симметричная форма</a>
   <a href="#conservation">Сохранение импульса</a>
+  <a href="#pair-demo">Интерактив: две частицы</a>
   <a href="#eos">Уравнение состояния</a>
   <a href="#summary">Полная система SPH</a>
   <div class="sep"></div>
@@ -220,6 +221,300 @@ window.MathJax = {
 
 <div class="remark">
 <strong>Физическая интерпретация.</strong> Формула (2.4) эквивалентна тому, что между каждой парой частиц \((i,j)\) действует сила \(F_{ij} = -m_i m_j(P_i/\rho_i^2 + P_j/\rho_j^2)\nabla_i W_{ij}\) вдоль линии \(\mathbf r_i - \mathbf r_j\). Эта сила автоматически удовлетворяет третьему закону Ньютона: \(F_{ij} = -F_{ji}\). Полный импульс замкнутой системы сохраняется как следствие.
+</div>
+
+<h2 id="pair-demo">Интерактив: две частицы и сохранение импульса</h2>
+
+<p>Теорема 5 утверждает что симметричная форма (2.4) сохраняет полный импульс точно. Проверим это численно. Рассмотрим систему из <strong>двух частиц</strong>: левая (красная, \(\rho_L = 1, P_L = 1\)) и правая (синяя, \(\rho_R = 0.3, P_R = 0.15\)), на расстоянии \(\Delta x = 0.8h\). Высокое давление слева должно толкать правую частицу вправо.</p>
+
+<p>Одновременно запустим <strong>обе формы</strong>: наивная (2.3) и симметричная (2.4). Левая и нижняя панели — фазовый портрет \((x, v)\) каждой частицы; правая — график суммарного импульса системы \(P(t) = m_L v_L + m_R v_R\). В исходной системе \(P(0) = 0\) (обе частицы покоятся).</p>
+
+<div id="pairDemo" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.6rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Начальное расст. / h: <span id="pairDxV">0.8</span></label>
+    <input type="range" id="pairDx" min="30" max="150" value="80" style="width:140px">
+  </div>
+  <button id="pairPlay" style="background:var(--accent);color:#fff;border:none;border-radius:5px;padding:6px 16px;font-family:'Source Serif 4',serif;font-size:.85rem;font-weight:600;cursor:pointer">▶ Воспроизвести</button>
+  <button id="pairReset" style="background:#6b5d4f;color:#fff;border:none;border-radius:5px;padding:6px 12px;font-family:'Source Serif 4',serif;font-size:.82rem;cursor:pointer">↻ Сброс</button>
+  <span style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text2)">t = <span id="pairTv">0.00</span></span>
+  <input type="range" id="pairT" min="0" max="1000" value="0" style="flex:1;min-width:180px">
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Положение частиц (во времени)</div>
+    <canvas id="pairPos" width="440" height="260" style="width:100%;height:auto"></canvas>
+  </div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Полный импульс: наивная vs симметричная</div>
+    <canvas id="pairMomentum" width="440" height="260" style="width:100%;height:auto"></canvas>
+  </div>
+</div>
+<div id="pairStats" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.4rem"></div>
+</div>
+
+<script>
+(function(){
+  function W(q){ var s=2/3; if (q>=2) return 0; if (q>=1) return s*0.25*Math.pow(2-q,3); return s*(1 - 1.5*q*q + 0.75*q*q*q); }
+  function Wp(q){ var s=2/3; if (q>=2) return 0; if (q>=1) return -s*0.75*Math.pow(2-q,2); return s*(-3*q + 2.25*q*q); }
+
+  var state = { traj: null, anim: null };
+
+  function compute(){
+    var dxH = +document.getElementById('pairDx').value/100;
+    document.getElementById('pairDxV').textContent = dxH.toFixed(2);
+
+    var h = 0.05;
+    var x0L = 0.0, x0R = dxH*h;
+    var rhoL = 1.0, rhoR = 0.3;
+    var PL = 1.0, PR = 0.15;
+    var gamma = 1.4, k_eos = PL/Math.pow(rhoL, gamma);  // ≈1.0
+    // Mass per particle — use dx = h (standard for SPH)
+    var dx_init = h;
+    var mL = rhoL*dx_init, mR = rhoR*dx_init;
+
+    // Naive state
+    var x_n = [x0L, x0R], v_n = [0, 0];
+    // Symmetric state
+    var x_s = [x0L, x0R], v_s = [0, 0];
+
+    var dt = 0.002;
+    var N = 1500;  // ~3 seconds of evolution
+    var snap = {
+      t: new Float64Array(N+1),
+      xL_n: new Float64Array(N+1), xR_n: new Float64Array(N+1),
+      vL_n: new Float64Array(N+1), vR_n: new Float64Array(N+1),
+      xL_s: new Float64Array(N+1), xR_s: new Float64Array(N+1),
+      vL_s: new Float64Array(N+1), vR_s: new Float64Array(N+1),
+      P_n: new Float64Array(N+1), P_s: new Float64Array(N+1)
+    };
+    snap.t[0]=0;
+    snap.xL_n[0]=x_n[0]; snap.xR_n[0]=x_n[1]; snap.vL_n[0]=0; snap.vR_n[0]=0;
+    snap.xL_s[0]=x_s[0]; snap.xR_s[0]=x_s[1]; snap.vL_s[0]=0; snap.vR_s[0]=0;
+    snap.P_n[0]=0; snap.P_s[0]=0;
+
+    function step_naive(x, v){
+      // Recompute densities (SPH sum over 2 particles)
+      var m = [mL, mR];
+      var rho = [0, 0];
+      for (var i=0;i<2;i++){
+        var s=0;
+        for (var j=0;j<2;j++){
+          var q = Math.abs(x[i]-x[j])/h;
+          if (q<2) s += m[j]*W(q)/h;
+        }
+        rho[i] = Math.max(s, 1e-10);
+      }
+      var P = [k_eos*Math.pow(rho[0],gamma), k_eos*Math.pow(rho[1],gamma)];
+      // Naive: a_i = −(1/ρ_i) Σ_j (m_j/ρ_j) P_j ∇W_ij
+      var a = [0, 0];
+      for (var i=0;i<2;i++){
+        var s=0;
+        for (var j=0;j<2;j++){
+          if (i===j) continue;
+          var dxij = x[i]-x[j];
+          var q = Math.abs(dxij)/h;
+          if (q>=2) continue;
+          var dW = Wp(q)*Math.sign(dxij)/(h*h);
+          s += (m[j]/rho[j]) * P[j] * dW;
+        }
+        a[i] = -s/rho[i];
+      }
+      // Euler step
+      for (var i=0;i<2;i++){ v[i] += dt*a[i]; x[i] += dt*v[i]; }
+    }
+    function step_sym(x, v){
+      var m = [mL, mR];
+      var rho = [0, 0];
+      for (var i=0;i<2;i++){
+        var s=0;
+        for (var j=0;j<2;j++){
+          var q = Math.abs(x[i]-x[j])/h;
+          if (q<2) s += m[j]*W(q)/h;
+        }
+        rho[i] = Math.max(s, 1e-10);
+      }
+      var P = [k_eos*Math.pow(rho[0],gamma), k_eos*Math.pow(rho[1],gamma)];
+      // Symmetric: a_i = −Σ_j m_j (P_i/ρ_i² + P_j/ρ_j²) ∇W_ij
+      var a = [0, 0];
+      for (var i=0;i<2;i++){
+        var s=0;
+        for (var j=0;j<2;j++){
+          if (i===j) continue;
+          var dxij = x[i]-x[j];
+          var q = Math.abs(dxij)/h;
+          if (q>=2) continue;
+          var dW = Wp(q)*Math.sign(dxij)/(h*h);
+          s += m[j]*(P[i]/(rho[i]*rho[i]) + P[j]/(rho[j]*rho[j])) * dW;
+        }
+        a[i] = -s;
+      }
+      for (var i=0;i<2;i++){ v[i] += dt*a[i]; x[i] += dt*v[i]; }
+    }
+
+    for (var k=0;k<N;k++){
+      step_naive(x_n, v_n);
+      step_sym(x_s, v_s);
+      snap.t[k+1] = (k+1)*dt;
+      snap.xL_n[k+1]=x_n[0]; snap.xR_n[k+1]=x_n[1]; snap.vL_n[k+1]=v_n[0]; snap.vR_n[k+1]=v_n[1];
+      snap.xL_s[k+1]=x_s[0]; snap.xR_s[k+1]=x_s[1]; snap.vL_s[k+1]=v_s[0]; snap.vR_s[k+1]=v_s[1];
+      snap.P_n[k+1] = mL*v_n[0] + mR*v_n[1];
+      snap.P_s[k+1] = mL*v_s[0] + mR*v_s[1];
+    }
+    state.traj = { N:N, dt:dt, T:N*dt, h:h, snap:snap };
+  }
+
+  function render(frac){
+    if (!state.traj) return;
+    var s = state.traj.snap, N = state.traj.N, T = state.traj.T, h = state.traj.h;
+    var idx = Math.max(0, Math.min(N, Math.round(frac*N)));
+    document.getElementById('pairTv').textContent = s.t[idx].toFixed(3);
+
+    // Position plot: x(t) for both pairs
+    var c = document.getElementById('pairPos');
+    var ctx = c.getContext('2d'), W=c.width, H=c.height;
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+    var P={l:45,r:90,t:12,b:28}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+    // Find x range: want to show both particles' trajectories
+    var xmin = 1e9, xmax = -1e9;
+    for (var i=0;i<=N;i++){
+      if (s.xL_n[i]<xmin) xmin=s.xL_n[i]; if (s.xR_n[i]<xmin) xmin=s.xR_n[i];
+      if (s.xL_s[i]<xmin) xmin=s.xL_s[i]; if (s.xR_s[i]<xmin) xmin=s.xR_s[i];
+      if (s.xL_n[i]>xmax) xmax=s.xL_n[i]; if (s.xR_n[i]>xmax) xmax=s.xR_n[i];
+      if (s.xL_s[i]>xmax) xmax=s.xL_s[i]; if (s.xR_s[i]>xmax) xmax=s.xR_s[i];
+    }
+    var pad = (xmax-xmin)*0.05; xmin -= pad; xmax += pad;
+    function xp(t){ return P.l + pw*t/T; }
+    function yp(x){ return P.t + ph*(1 - (x-xmin)/(xmax-xmin)); }
+    ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+    for (var g=0;g<=4;g++){ var gy=P.t+ph*g/4; ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke(); }
+    // Trajectories: naive = dashed red/blue, symmetric = solid red/blue
+    function drawTraj(arr, col, dashed){
+      ctx.strokeStyle = col; ctx.lineWidth = 1.8;
+      if (dashed) ctx.setLineDash([4,3]);
+      ctx.beginPath();
+      for (var i=0;i<=idx;i++){ i===0?ctx.moveTo(xp(s.t[i]),yp(arr[i])):ctx.lineTo(xp(s.t[i]),yp(arr[i])); }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    drawTraj(s.xL_n, '#b44a2d', true);
+    drawTraj(s.xR_n, '#3a5ba0', true);
+    drawTraj(s.xL_s, '#b44a2d', false);
+    drawTraj(s.xR_s, '#3a5ba0', false);
+    // Current particles
+    ctx.fillStyle='#b44a2d'; ctx.beginPath(); ctx.arc(xp(s.t[idx]),yp(s.xL_n[idx]),3.5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#3a5ba0'; ctx.beginPath(); ctx.arc(xp(s.t[idx]),yp(s.xR_n[idx]),3.5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#b44a2d'; ctx.beginPath(); ctx.arc(xp(s.t[idx]),yp(s.xL_s[idx]),4.5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#3a5ba0'; ctx.beginPath(); ctx.arc(xp(s.t[idx]),yp(s.xR_s[idx]),4.5,0,Math.PI*2); ctx.fill();
+    // Axes
+    ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+    ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+    ctx.fillText('0', P.l, P.t+ph+14);
+    ctx.fillText((T/2).toFixed(1), P.l+pw/2, P.t+ph+14);
+    ctx.fillText(T.toFixed(1), P.l+pw, P.t+ph+14);
+    ctx.fillText('t', P.l+pw/2, P.t+ph+26);
+    ctx.textAlign='right';
+    for (var g=0;g<=4;g++) ctx.fillText((xmax-(xmax-xmin)*g/4).toFixed(2), P.l-3, P.t+ph*g/4+3);
+    ctx.save(); ctx.translate(12,P.t+ph/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center'; ctx.fillText('x',0,0); ctx.restore();
+    // Legend
+    ctx.textAlign='left'; ctx.font='9px JetBrains Mono';
+    ctx.fillStyle='#b44a2d'; ctx.fillText('— левая (симм)', P.l+pw+5, P.t+10);
+    ctx.fillStyle='#b44a2d'; ctx.fillText('-- левая (наив)', P.l+pw+5, P.t+24);
+    ctx.fillStyle='#3a5ba0'; ctx.fillText('— правая (симм)', P.l+pw+5, P.t+42);
+    ctx.fillStyle='#3a5ba0'; ctx.fillText('-- правая (наив)', P.l+pw+5, P.t+56);
+
+    // Momentum plot
+    var c2 = document.getElementById('pairMomentum');
+    var ctx2 = c2.getContext('2d');
+    ctx2.fillStyle='#fdf9f3'; ctx2.fillRect(0,0,W,H);
+    var P2={l:55,r:12,t:12,b:28}, pw2=W-P2.l-P2.r, ph2=H-P2.t-P2.b;
+    // Find range
+    var pmax = 0;
+    for (var i=0;i<=idx;i++){
+      var apn = Math.abs(s.P_n[i]), aps = Math.abs(s.P_s[i]);
+      if (apn>pmax) pmax = apn; if (aps>pmax) pmax = aps;
+    }
+    pmax = Math.max(pmax*1.2, 1e-4);
+    function xp2(t){ return P2.l + pw2*t/T; }
+    function yp2(p){ return P2.t + ph2*(1 - (p+pmax)/(2*pmax)); }
+    ctx2.strokeStyle='#e8e0d4'; ctx2.lineWidth=0.5;
+    for (var g=0;g<=4;g++){ var gy=P2.t+ph2*g/4; ctx2.beginPath(); ctx2.moveTo(P2.l,gy); ctx2.lineTo(P2.l+pw2,gy); ctx2.stroke(); }
+    // Zero line (ideal)
+    ctx2.strokeStyle='#9a8d7e'; ctx2.lineWidth=1.2; ctx2.setLineDash([4,3]);
+    ctx2.beginPath(); ctx2.moveTo(P2.l,yp2(0)); ctx2.lineTo(P2.l+pw2,yp2(0)); ctx2.stroke(); ctx2.setLineDash([]);
+    // Naive momentum — red dashed
+    ctx2.strokeStyle='#b44a2d'; ctx2.lineWidth=1.8; ctx2.setLineDash([5,3]);
+    ctx2.beginPath();
+    for (var i=0;i<=idx;i++){ i===0?ctx2.moveTo(xp2(s.t[i]),yp2(s.P_n[i])):ctx2.lineTo(xp2(s.t[i]),yp2(s.P_n[i])); }
+    ctx2.stroke(); ctx2.setLineDash([]);
+    // Symmetric — green solid
+    ctx2.strokeStyle='#1a6b5a'; ctx2.lineWidth=1.8;
+    ctx2.beginPath();
+    for (var i=0;i<=idx;i++){ i===0?ctx2.moveTo(xp2(s.t[i]),yp2(s.P_s[i])):ctx2.lineTo(xp2(s.t[i]),yp2(s.P_s[i])); }
+    ctx2.stroke();
+    // Axes
+    ctx2.strokeStyle='#6b5d4f'; ctx2.lineWidth=1;
+    ctx2.beginPath(); ctx2.moveTo(P2.l,P2.t); ctx2.lineTo(P2.l,P2.t+ph2); ctx2.lineTo(P2.l+pw2,P2.t+ph2); ctx2.stroke();
+    ctx2.fillStyle='#6b5d4f'; ctx2.font='10px JetBrains Mono'; ctx2.textAlign='center';
+    ctx2.fillText('0', P2.l, P2.t+ph2+14);
+    ctx2.fillText((T/2).toFixed(1), P2.l+pw2/2, P2.t+ph2+14);
+    ctx2.fillText(T.toFixed(1), P2.l+pw2, P2.t+ph2+14);
+    ctx2.fillText('t', P2.l+pw2/2, P2.t+ph2+26);
+    ctx2.textAlign='right';
+    for (var g=0;g<=4;g++){
+      var pv = pmax - 2*pmax*g/4;
+      ctx2.fillText(pv.toExponential(1), P2.l-3, P2.t+ph2*g/4+3);
+    }
+    ctx2.save(); ctx2.translate(14,P2.t+ph2/2); ctx2.rotate(-Math.PI/2); ctx2.textAlign='center'; ctx2.fillText('Σm·v',0,0); ctx2.restore();
+    ctx2.textAlign='left'; ctx2.font='10px JetBrains Mono';
+    ctx2.fillStyle='#b44a2d'; ctx2.fillText('-- наивная (2.3)', P2.l+5, P2.t+10);
+    ctx2.fillStyle='#1a6b5a'; ctx2.fillText('— симметричная (2.4)', P2.l+5, P2.t+24);
+
+    // Stats
+    document.getElementById('pairStats').innerHTML =
+      'При t = '+s.t[idx].toFixed(3)+': <span style="color:#b44a2d">P_наив = '+s.P_n[idx].toExponential(2)+'</span> · ' +
+      '<span style="color:#1a6b5a">P_симм = '+s.P_s[idx].toExponential(2)+'</span> ' +
+      '(должно быть 0 для замкнутой системы)';
+  }
+
+  function play(){
+    var btn = document.getElementById('pairPlay');
+    if (state.anim){ cancelAnimationFrame(state.anim); state.anim=null; btn.textContent='▶ Воспроизвести'; return; }
+    btn.textContent = '⏸ Пауза';
+    var slider = document.getElementById('pairT');
+    if (+slider.value >= 995) slider.value = 0;
+    var last = performance.now(), total = 5000;
+    function tick(now){
+      var dtMs = now - last; last = now;
+      var v = +slider.value + dtMs*1000/total;
+      if (v >= 1000){ slider.value=1000; render(1); state.anim=null; btn.textContent='▶ Воспроизвести'; return; }
+      slider.value = v;
+      render(v/1000);
+      state.anim = requestAnimationFrame(tick);
+    }
+    state.anim = requestAnimationFrame(tick);
+  }
+  function reset(){
+    if (state.anim){ cancelAnimationFrame(state.anim); state.anim=null; document.getElementById('pairPlay').textContent='▶ Воспроизвести'; }
+    document.getElementById('pairT').value = 0;
+    render(0);
+  }
+  function refresh(){ compute(); render(+document.getElementById('pairT').value/1000); }
+
+  document.getElementById('pairDx').addEventListener('input', refresh);
+  document.getElementById('pairPlay').addEventListener('click', play);
+  document.getElementById('pairReset').addEventListener('click', reset);
+  document.getElementById('pairT').addEventListener('input', function(){
+    if (state.anim){ cancelAnimationFrame(state.anim); state.anim=null; document.getElementById('pairPlay').textContent='▶ Воспроизвести'; }
+    render(+this.value/1000);
+  });
+  window.addEventListener('load', function(){ setTimeout(refresh, 200); });
+})();
+</script>
+
+<div class="remark">
+<strong>Что увидите.</strong> Нажмите ▶: обе системы начинают двигаться (левая частица влево, правая вправо — давление толкает врозь). На левом графике траектории <em>почти совпадают</em> у обеих форм — качественно поведение то же. Но на правом графике видна принципиальная разница: <strong>зелёная (симметричная) линия импульса остаётся на нуле строго</strong>, в то время как <strong>красная (наивная) имеет ненулевой импульс</strong> — система «разгоняется» сама себя в нарушение закона сохранения. Это и есть теорема 5 в действии.
 </div>
 
 <h2 id="eos">Уравнение состояния. Политропная модель</h2>

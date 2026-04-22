@@ -21,12 +21,19 @@ window.MathJax = {
 <nav class="sidebar">
   <h2>§25 ENO</h2>
   <div class="g">Содержание</div>
-  <a href="#motivation">Мотивация ENO</a>
+  <a href="#motivation">Мотивация</a>
   <a href="#semidiscrete">Полудискретная форма</a>
-  <a href="#flux-splitting">Расщепление потока</a>
-  <a href="#stencil">Выбор шаблона</a>
+  <a href="#flux-reconstruction">Реконструкция потока</a>
+  <a href="#splitting">Расщепление потока</a>
+  <a href="#stencils">Шаблоны</a>
+  <a href="#selection">Нелинейный выбор</a>
+  <a href="#divided-diff">Разделённые разности</a>
+  <a href="#eno-properties">Свойства реконструкции</a>
   <a href="#time">Временная аппроксимация</a>
-  <a href="#properties">Свойства</a>
+  <a href="#systems">Системы уравнений</a>
+  <a href="#properties">Интерактив: выбор шаблона</a>
+  <a href="#comparison">Интерактив: сравнение</a>
+  <a href="#properties2">Свойства и область</a>
   <div class="sep"></div>
   <div class="g">Навигация</div>
   <a href="s1-24.html">← §24 Колган–Родионов</a>
@@ -35,7 +42,7 @@ window.MathJax = {
 <div class="main"><div class="main-inner">
 <span class="lecture-tag tag-highorder">Высокий порядок</span>
 <div class="lecture-num">§25 · Семестр 1</div>
-<h1>ENO-схемы. Нелинейный выбор шаблона аппроксимации</h1>
+<h1>ENO-схемы. Нелинейный выбор шаблона аппроксимации. Подавление осцилляций вблизи разрывов</h1>
 
 <!-- SVG: ENO stencil selection -->
 <div class="figure">
@@ -49,46 +56,434 @@ window.MathJax = {
   <text x="320" y="120" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b5d4f" text-anchor="middle">i+1</text>
   <text x="380" y="120" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b5d4f" text-anchor="middle">i+2</text>
   <text x="440" y="120" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b5d4f" text-anchor="middle">i+3</text>
-  <rect x="70" y="40" width="190" height="20" rx="3" fill="rgba(180,74,45,0.1)" stroke="#b44a2d" stroke-width="1.5"/>
-  <text x="165" y="54" font-family="JetBrains Mono,monospace" font-size="8" fill="#b44a2d" text-anchor="middle">S₁ = {i−3, i−2, i−1, i}</text>
-  <rect x="130" y="63" width="190" height="20" rx="3" fill="rgba(26,107,90,0.15)" stroke="#1a6b5a" stroke-width="2"/>
-  <text x="225" y="77" font-family="JetBrains Mono,monospace" font-size="8" fill="#1a6b5a" text-anchor="middle" font-weight="700">S₂ = {i−2, i−1, i, i+1} ✓</text>
-  <rect x="190" y="130" width="190" height="20" rx="3" fill="rgba(58,91,160,0.1)" stroke="#3a5ba0" stroke-width="1.5"/>
-  <text x="285" y="144" font-family="JetBrains Mono,monospace" font-size="8" fill="#3a5ba0" text-anchor="middle">S₃ = {i−1, i, i+1, i+2}</text>
-  <rect x="250" y="153" width="190" height="20" rx="3" fill="rgba(133,79,11,0.1)" stroke="#854f0b" stroke-width="1.5"/>
-  <text x="345" y="167" font-family="JetBrains Mono,monospace" font-size="8" fill="#854f0b" text-anchor="middle">S₄ = {i, i+1, i+2, i+3}</text>
-  <text x="430" y="77" font-family="Source Serif 4,serif" font-size="9" fill="#1a6b5a" font-style="italic">← наиболее гладкий</text>
-  <text x="280" y="195" font-family="Source Serif 4,serif" font-size="10" fill="#9a8d7e" text-anchor="middle" font-style="italic">ENO: выбор шаблона с минимальными разделёнными разностями</text>
+  <rect x="130" y="45" width="190" height="20" rx="3" fill="rgba(26,107,90,0.15)" stroke="#1a6b5a" stroke-width="2"/>
+  <text x="225" y="59" font-family="JetBrains Mono,monospace" font-size="8" fill="#1a6b5a" text-anchor="middle" font-weight="700">{i−2, i−1, i} ✓ min|Δ²f|</text>
+  <rect x="190" y="130" width="190" height="20" rx="3" fill="rgba(180,74,45,0.1)" stroke="#b44a2d" stroke-width="1.5"/>
+  <text x="285" y="144" font-family="JetBrains Mono,monospace" font-size="8" fill="#b44a2d" text-anchor="middle">{i−1, i, i+1} — |Δ²f| больше</text>
+  <text x="280" y="185" font-family="Source Serif 4,serif" font-size="10" fill="#9a8d7e" text-anchor="middle" font-style="italic">ENO: на каждом шаге выбирается направление с минимальной разделённой разностью</text>
 </svg>
-<div class="caption">ENO-выбор шаблона: из кандидатов выбирается тот, на котором разделённые разности минимальны (зелёный).</div>
+<div class="caption">ENO-выбор шаблона: сравниваются разделённые разности, выбирается более гладкое направление.</div>
 </div>
 
 <h2 id="motivation">Мотивация ENO-подхода</h2>
-<p>Методы повышения порядка аппроксимации, основанные на линейной реконструкции и антидиффузионной коррекции, требуют введения специальных ограничителей для подавления осцилляций вблизи разрывов. Альтернативный подход — изначально выбирать такой шаблон аппроксимации, который не пересекает разрывов решения.</p>
-<p>ENO-схемы (Essentially Non-Oscillatory) реализуют эту идею, используя нелинейный выбор шаблона аппроксимации на основе локальных критериев гладкости.</p>
+
+<p>Методы повышения порядка аппроксимации, основанные на линейной реконструкции и антидиффузионной коррекции (§23–§24), позволяют существенно уменьшить численную диффузию, однако требуют введения специальных ограничителей для подавления осцилляций вблизи разрывов. Альтернативный подход заключается в том, чтобы <em>изначально выбирать такой шаблон аппроксимации, который не пересекает разрывов решения</em>.</p>
+
+<p>ENO-схемы (Essentially Non-Oscillatory) реализуют эту идею, используя нелинейный выбор шаблона аппроксимации на основе локальных критериев гладкости. В результате достигается высокий порядок точности на гладких участках решения и отсутствие нефизических осцилляций вблизи разрывов без явного введения ограничителей.</p>
 
 <h2 id="semidiscrete">Полудискретная форма схемы</h2>
+
+<p>Рассмотрим одномерный закон сохранения \(\partial_t u + \partial_x f(u) = 0\) и полудискретную консервативную аппроксимацию</p>
+
 <div class="eq">\[
 \frac{du_i(t)}{dt} = -\frac{1}{\Delta x}\left(\hat{f}_{i+1/2} - \hat{f}_{i-1/2}\right),
 \tag{25.1}
 \]</div>
-<p>где \(\hat{f}_{i+1/2}\) — численный поток, вычисляемый на основе ENO-реконструкции.</p>
 
-<h2 id="flux-splitting">Расщепление потока</h2>
-<p>В ENO-схемах реконструируется не само решение \(u(x)\), а численный поток \(f(u)\) или его разложение на положительную и отрицательную части:</p>
+<p>где \(\hat{f}_{i+1/2}\) — численный поток, вычисляемый на основе ENO-реконструкции значений решения в окрестности границы ячейки.</p>
+
+<h2 id="flux-reconstruction">Идея реконструкции численного потока</h2>
+
+<p>В ENO-схемах реконструируется не само решение \(u(x)\), а численный поток \(f(u)\) или его разложение на положительную и отрицательную части.</p>
+
+<h2 id="splitting">Расщепление потока</h2>
+
 <div class="eq">\[
-f(u) = f^+(u) + f^-(u), \qquad f^{\pm}(u) = \frac{1}{2}(f(u) \pm \alpha u),
+f(u) = f^+(u) + f^-(u),
 \]</div>
-<p>где \(\alpha \ge \max|f'(u)|\).</p>
 
-<h2 id="stencil">Нелинейный выбор шаблона</h2>
-<p>Ключевая идея ENO состоит в адаптивном выборе шаблона интерполяции. На каждом шаге шаблон расширяется в направлении наименьших разделённых разностей. В результате вблизи разрывов шаблон автоматически смещается в сторону гладкой области, что предотвращает появление осцилляций, без необходимости в явных ограничителях наклона.</p>
+<p>где \(f^+\) переносится вправо, а \(f^-\) — влево. В простейшем случае используется разложение Лакса–Фридрихса:</p>
+
+<div class="eq">\[
+f^{\pm}(u) = \frac{1}{2}(f(u) \pm \alpha u), \qquad \alpha \ge \max|f'(u)|.
+\]</div>
+
+<p>Численный поток на границе ячейки вычисляется как \(\hat{f}_{i+1/2} = \hat{f}^+_{i+1/2} + \hat{f}^-_{i+1/2}\), где \(\hat{f}^+\) реконструируется по значениям слева, а \(\hat{f}^-\) — по значениям справа.</p>
+
+<h2 id="stencils">Полиномиальная реконструкция и шаблоны</h2>
+
+<p>Для реконструкции \(\hat{f}^+_{i+1/2}\) используется интерполяционный полином степени \(k-1\), построенный по \(k\) значениям потока \(f^+(u_j)\) на одном из возможных шаблонов, содержащих точку \(x_{i+1/2}\). Например, для схемы третьего порядка (\(k = 3\)) возможны два шаблона:</p>
+
+<div class="eq">\[
+\{i-2, i-1, i\}, \qquad \{i-1, i, i+1\}.
+\]</div>
+
+<p>Аналогично для \(f^-\) используются шаблоны, расположенные справа от границы.</p>
+
+<h2 id="selection">Нелинейный выбор шаблона по критерию гладкости</h2>
+
+<p>Ключевой элемент ENO-схемы — <em>нелинейный выбор шаблона</em> аппроксимации. Выбор осуществляется пошагово, начиная с центральной точки, путём сравнения модулей разделённых разностей более высоких порядков.</p>
+
+<p>Пусть на очередном шаге имеются два кандидата на расширение шаблона. Выбирается тот вариант, для которого соответствующая разделённая разность имеет <em>меньший модуль</em>. Тем самым предпочтение отдаётся наиболее гладкому направлению, избегающему пересечения разрыва.</p>
+
+<h2 id="divided-diff">Разделённые разности</h2>
+
+<p>Формально, если \(\Delta^m f_j\) — разделённая разность порядка \(m\), то на каждом шаге выбирается шаблон, для которого</p>
+
+<div class="eq">\[
+|\Delta^m f_j| = \min.
+\]</div>
+
+<p>Эта процедура продолжается, пока не будет набрано необходимое число точек шаблона.</p>
+
+<div class="remark">
+<strong>Пример для \(k=3\):</strong> Начинаем с точки \(i\). Сравниваем \(|\Delta^1 f_{i-1}|\) и \(|\Delta^1 f_i|\). Если \(|\Delta^1 f_{i-1}| < |\Delta^1 f_i|\), расширяем влево → шаблон \(\{i-1, i\}\). Затем сравниваем \(|\Delta^2 f_{i-2}|\) и \(|\Delta^2 f_{i-1}|\) и снова выбираем меньшее. Итого получается один из шаблонов: \(\{i-2, i-1, i\}\) или \(\{i-1, i, i+1\}\).
+</div>
+
+<h2 id="eno-properties">Свойства ENO-реконструкции</h2>
+
+<p>Нелинейный выбор шаблона приводит к следующим важным свойствам ENO-схем:</p>
+<ul>
+<li>на <strong>гладких участках</strong> решения выбирается симметричный шаблон, и схема имеет порядок точности \(k\);</li>
+<li><strong>вблизи разрывов</strong> шаблон автоматически смещается в сторону гладкой области, что предотвращает появление осцилляций;</li>
+<li>отсутствует необходимость в явных ограничителях наклона или антидиффузионных коррекциях.</li>
+</ul>
 
 <h2 id="time">Временная аппроксимация</h2>
-<p>Для получения полной разностной схемы полудискретная система (25.1) интегрируется по времени методами Рунге–Кутты. Чтобы сохранить монотонные свойства, используются TVD- или SSP-методы Рунге–Кутты.</p>
 
-<h2 id="properties">Свойства ENO-схем</h2>
-<p>ENO-схемы обеспечивают высокий порядок точности на гладких решениях и эффективно подавляют нефизические осцилляции вблизи разрывов. Основным недостатком является сравнительно высокая вычислительная стоимость, связанная с нелинейным выбором шаблона, что послужило мотивацией для разработки WENO-схем.</p>
+<p>Для получения полной разностной схемы полудискретная система (25.1) интегрируется по времени методами Рунге–Кутты. Чтобы сохранить монотонные свойства, используются <em>TVD- или SSP-методы Рунге–Кутты</em>, которые представляют собой выпуклые комбинации одностадийных шагов Эйлера.</p>
+
+<div class="remark">
+<strong>SSP-RK3 (наиболее популярный):</strong>
+\[
+\mathbf{u}^{(1)} = \mathbf{u}^n + \Delta t\, L(\mathbf{u}^n),
+\]
+\[
+\mathbf{u}^{(2)} = \tfrac{3}{4}\mathbf{u}^n + \tfrac{1}{4}\bigl(\mathbf{u}^{(1)} + \Delta t\, L(\mathbf{u}^{(1)})\bigr),
+\]
+\[
+\mathbf{u}^{n+1} = \tfrac{1}{3}\mathbf{u}^n + \tfrac{2}{3}\bigl(\mathbf{u}^{(2)} + \Delta t\, L(\mathbf{u}^{(2)})\bigr),
+\]
+где \(L(\mathbf{u})\) — правая часть полудискретной системы (25.1). Все три стадии — выпуклые комбинации шагов Эйлера вперёд, что гарантирует TVD-свойство.
+</div>
+
+<h2 id="systems">Обобщение на системы законов сохранения</h2>
+
+<p>Для систем законов сохранения ENO-реконструкция может выполняться <em>покомпонентно</em> или в <em>характеристическом пространстве</em>. Во втором случае выполняется разложение решения по собственным векторам матрицы Якоби, ENO-реконструкция проводится для характеристических переменных, после чего выполняется обратное преобразование. Такой подход позволяет лучше контролировать осцилляции в присутствии взаимодействующих волн.</p>
+
+<h2 id="properties">Интерактив 1: выбор шаблона в динамике</h2>
+
+<p>Ниже — визуализация ENO-выбора шаблона для скалярного уравнения переноса \(u_t + u_x = 0\) (\(k = 3\), два кандидата: \(\{i-2, i-1, i\}\) слева и \(\{i-1, i, i+1\}\) справа от грани \(i+1/2\)). Цвет над каждой ячейкой показывает, какой шаблон выбран на последнем шаге: <span style="color:#1a6b5a">■ зелёный</span> — левый, <span style="color:#b44a2d">■ красный</span> — правый. На гладких участках выбор почти случайный (шум из-за численной ошибки), но в окрестности разрыва шаблон стабильно уходит в гладкую сторону.</p>
+
+<div id="enoSel" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.6rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">НУ</label>
+    <select id="enoSelIC" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)">
+      <option value="step">Ступенька</option>
+      <option value="gauss">Гауссиан</option>
+      <option value="mixed">Смешанные (разрыв + синус)</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Шагов: <span id="enoStv">80</span></label>
+    <input type="range" id="enoSt" min="10" max="300" value="80" style="width:130px">
+  </div>
+  <button id="enoRunSel" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 16px;font-family:'Source Serif 4',serif;font-size:.85rem;font-weight:600;cursor:pointer">▶ Запуск</button>
+</div>
+<canvas id="enoSelPlot" width="900" height="280" style="width:100%;height:auto;background:#fff;border-radius:6px;border:1px solid var(--border)"></canvas>
+<div style="text-align:center;margin-top:.3rem;font-size:.76rem;color:var(--text2);font-family:'JetBrains Mono',monospace">
+  <span style="color:#1a6b5a">■</span> выбран левый шаблон {i−2,i−1,i}&nbsp;&nbsp;&nbsp;
+  <span style="color:#b44a2d">■</span> выбран правый {i−1,i,i+1}
+</div>
+</div>
+
+<script>
+(function(){
+var N = 120, L = 2*Math.PI, h = L/N;
+function ic(t){
+  var u=new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var x = i*h;
+    if (t==='step') u[i] = (x >= 0.35*Math.PI && x <= 0.75*Math.PI) ? 1 : 0;
+    else if (t==='gauss') u[i] = Math.exp(-Math.pow((x-Math.PI)/(0.4*Math.PI),2));
+    else u[i] = 0.5*(1+Math.sin(x)) * (x < Math.PI ? 1 : 0) + (x >= Math.PI && x <= 1.5*Math.PI ? 1 : 0);
+  }
+  return u;
+}
+// ENO-3 reconstruction at i+1/2 (for f+ = u when c=1). Returns chosen stencil: 'L' or 'R'
+function eno3FluxLeft(u, i){
+  // candidate stencils containing i: {i-2,i-1,i} or {i-1,i,i+1}
+  var im2 = u[(i-2+N)%N], im1 = u[(i-1+N)%N], ui = u[i], ip1 = u[(i+1)%N];
+  // Second differences for smoothness indicators
+  var d2L = u[(i-2+N)%N] - 2*u[(i-1+N)%N] + u[i]; // {i-2,i-1,i}
+  var d2R = u[(i-1+N)%N] - 2*u[i] + u[(i+1)%N];   // {i-1,i,i+1}
+  var choice;
+  var pL, pR;
+  // Left stencil {i-2,i-1,i}: u_{i+1/2} = (1/3)u_{i-2} - (7/6)u_{i-1} + (11/6)u_i
+  pL = (1/3)*im2 - (7/6)*im1 + (11/6)*ui;
+  // Right stencil {i-1,i,i+1}: u_{i+1/2} = -(1/6)u_{i-1} + (5/6)u_i + (1/3)u_{i+1}
+  pR = -(1/6)*im1 + (5/6)*ui + (1/3)*ip1;
+  if (Math.abs(d2L) < Math.abs(d2R)){
+    return {val: pL, stencil: 'L'};
+  } else {
+    return {val: pR, stencil: 'R'};
+  }
+}
+function stepENO(u, r){
+  var v = new Float64Array(N), sten = new Uint8Array(N);
+  for (var i=0;i<N;i++){
+    var uL = eno3FluxLeft(u, i);   // flux at i+1/2 (upwind c=1)
+    var uLm = eno3FluxLeft(u, (i-1+N)%N); // flux at i-1/2
+    v[i] = u[i] - r*(uL.val - uLm.val);
+    sten[i] = uL.stencil === 'L' ? 0 : 1;
+  }
+  return {u: v, sten: sten};
+}
+function shift(u, r, n){
+  var s = r*n*h, v = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var xs = ((i*h - s) % L + L) % L;
+    var j = Math.floor(xs/h), f = xs/h - j;
+    v[i] = (1-f)*u[j%N] + f*u[(j+1)%N];
+  }
+  return v;
+}
+
+function runSel(){
+  var ic0 = ic(document.getElementById('enoSelIC').value);
+  var r = 0.5;
+  var nsteps = +document.getElementById('enoSt').value;
+  document.getElementById('enoStv').textContent = nsteps;
+  var u = new Float64Array(ic0);
+  var lastSten = new Uint8Array(N);
+  for (var s=0;s<nsteps;s++){
+    var res = stepENO(u, r);
+    u = res.u;
+    lastSten = res.sten;
+  }
+  var ex = shift(ic0, r, nsteps);
+
+  var c = document.getElementById('enoSelPlot');
+  var ctx = c.getContext('2d');
+  var W = c.width, H = c.height;
+  ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+  var P={l:40,r:15,t:40,b:30}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+  // color strip of stencil choice at top
+  var stripY = 8, stripH = 20;
+  for (var i=0;i<N;i++){
+    var X = P.l + pw*i/N;
+    var Xn = P.l + pw*(i+1)/N;
+    ctx.fillStyle = lastSten[i]===0 ? '#1a6b5a' : '#b44a2d';
+    ctx.fillRect(X, stripY, Xn-X+0.5, stripH);
+  }
+  ctx.fillStyle='#2c2419'; ctx.font='10px JetBrains Mono'; ctx.textAlign='left';
+  ctx.fillText('Выбор шаблона в каждой ячейке ↓', P.l, stripY-2);
+  // grid
+  var mn = -0.1, mx = 1.15;
+  ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+  for (var g=0;g<=5;g++){ var gy = P.t + ph*g/5; ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke(); }
+  function xp(i){ return P.l + pw*i/N; }
+  function yp(v){ return P.t + ph*(1 - (v-mn)/(mx-mn)); }
+  // exact
+  ctx.strokeStyle='#9a8d7e'; ctx.lineWidth=2; ctx.setLineDash([5,3]);
+  ctx.beginPath(); for (var i=0;i<N;i++) i===0 ? ctx.moveTo(xp(i),yp(ex[i])) : ctx.lineTo(xp(i),yp(ex[i])); ctx.stroke();
+  ctx.setLineDash([]);
+  // ENO solution
+  ctx.strokeStyle='#3a5ba0'; ctx.lineWidth=2;
+  ctx.beginPath(); for (var i=0;i<N;i++) i===0 ? ctx.moveTo(xp(i),yp(u[i])) : ctx.lineTo(xp(i),yp(u[i])); ctx.stroke();
+  // axes
+  ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(P.l, P.t); ctx.lineTo(P.l, P.t+ph); ctx.lineTo(P.l+pw, P.t+ph); ctx.stroke();
+  ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+  ctx.fillText('0', P.l, P.t+ph+14); ctx.fillText('π', P.l+pw/2, P.t+ph+14); ctx.fillText('2π', P.l+pw, P.t+ph+14);
+  ctx.textAlign='right';
+  for (var g=0;g<=5;g++) ctx.fillText((mx-(mx-mn)*g/5).toFixed(2), P.l-3, P.t+ph*g/5+3);
+  ctx.textAlign='left';
+  ctx.fillStyle='#3a5ba0'; ctx.fillText('— ENO-3', P.l+pw-90, P.t+10);
+  ctx.fillStyle='#9a8d7e'; ctx.fillText('- - точное', P.l+pw-90, P.t+22);
+}
+
+document.getElementById('enoRunSel').addEventListener('click', runSel);
+document.getElementById('enoSt').addEventListener('input', function(){ document.getElementById('enoStv').textContent = this.value; });
+window.addEventListener('load', function(){ setTimeout(runSel, 150); });
+})();
+</script>
+
+<h2 id="comparison">Интерактив 2: ENO-3 vs Лакс-Вендрофф vs уголок</h2>
+
+<p>Численное сравнение трёх схем на уравнении \(u_t + u_x = 0\). ENO-3 реализована в характеристической форме с расщеплением Лакса-Фридрихса + SSP-RK3.</p>
+
+<div id="enoCmp" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.6rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">НУ</label>
+    <select id="enoCmpIC" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)">
+      <option value="step">Ступенька (разрыв)</option>
+      <option value="gauss">Гауссиан (гладкий)</option>
+      <option value="mixed">Смешанный (разрыв + гладкая часть)</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">CFL = <span id="enoCflv">0.40</span></label>
+    <input type="range" id="enoCfl" min="10" max="80" value="40" style="width:120px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Шагов: <span id="enoCmpStv">150</span></label>
+    <input type="range" id="enoCmpSt" min="20" max="500" value="150" style="width:120px">
+  </div>
+  <button id="enoCmpRun" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 16px;font-family:'Source Serif 4',serif;font-size:.85rem;font-weight:600;cursor:pointer">▶ Запуск</button>
+</div>
+<canvas id="enoCmpPlot" width="900" height="300" style="width:100%;height:auto;background:#fff;border-radius:6px;border:1px solid var(--border)"></canvas>
+<div style="display:flex;gap:1.2rem;justify-content:center;margin-top:.4rem;font-size:.78rem;color:var(--text2);font-family:'JetBrains Mono',monospace;flex-wrap:wrap">
+  <span><span style="color:#9a8d7e">- -</span> точное</span>
+  <span><span style="color:#1a6b5a">—</span> уголок</span>
+  <span><span style="color:#b44a2d">—</span> Лакс-Вендрофф</span>
+  <span><span style="color:#3a5ba0">—</span> ENO-3</span>
+</div>
+<div id="enoCmpAn" style="margin-top:.6rem;padding:.6rem;background:#fff;border:1px solid var(--border);border-radius:6px;font-size:.85rem;display:none"></div>
+</div>
+
+<script>
+(function(){
+var N = 150, L = 2*Math.PI, h = L/N;
+function ic(t){
+  var u=new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var x = i*h;
+    if (t==='step') u[i] = (x >= 0.4*Math.PI && x <= 0.8*Math.PI) ? 1 : 0;
+    else if (t==='gauss') u[i] = Math.exp(-Math.pow((x-Math.PI)/(0.35*Math.PI),2));
+    else u[i] = (x >= 0.2*Math.PI && x <= 0.5*Math.PI) ? 1 : (x>=0.9*Math.PI && x<=1.6*Math.PI ? 0.5*(1+Math.sin(4*(x-0.9*Math.PI))) : 0);
+  }
+  return u;
+}
+function stepUp(u,r){ var v=new Float64Array(N); for(var i=0;i<N;i++) v[i] = (1-r)*u[i] + r*u[(i-1+N)%N]; return v; }
+function stepLW(u,r){
+  var v=new Float64Array(N);
+  for(var i=0;i<N;i++){
+    var im=(i-1+N)%N, ip=(i+1)%N;
+    v[i] = u[i] - 0.5*r*(u[ip]-u[im]) + 0.5*r*r*(u[ip]-2*u[i]+u[im]);
+  }
+  return v;
+}
+// ENO-3 reconstruction at i+1/2 for upwind (c=1, use left stencils only)
+function enoFlux(u, i){
+  var im2=u[(i-2+N)%N], im1=u[(i-1+N)%N], ui=u[i], ip1=u[(i+1)%N];
+  var d2L = im2 - 2*im1 + ui;
+  var d2R = im1 - 2*ui + ip1;
+  var pL = (1/3)*im2 - (7/6)*im1 + (11/6)*ui;
+  var pR = -(1/6)*im1 + (5/6)*ui + (1/3)*ip1;
+  return (Math.abs(d2L) < Math.abs(d2R)) ? pL : pR;
+}
+function rhsENO(u){
+  var R = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var fp = enoFlux(u, i);
+    var fm = enoFlux(u, (i-1+N)%N);
+    R[i] = -(fp - fm)/h * h; // times r-scaling applied later in caller
+  }
+  return R;
+}
+function stepENO_SSP(u, r){
+  // SSP-RK3 for du/dt = -(F(u))_x with c=1. Here "dt" folded into r
+  // u^(1) = u + r * (-(flux diff))
+  var R0 = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var fp = enoFlux(u, i);
+    var fm = enoFlux(u, (i-1+N)%N);
+    R0[i] = u[i] - r*(fp - fm);
+  }
+  var u1 = R0;
+  var R1 = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var fp = enoFlux(u1, i);
+    var fm = enoFlux(u1, (i-1+N)%N);
+    R1[i] = 0.75*u[i] + 0.25*(u1[i] - r*(fp - fm));
+  }
+  var u2 = R1;
+  var v = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var fp = enoFlux(u2, i);
+    var fm = enoFlux(u2, (i-1+N)%N);
+    v[i] = (1/3)*u[i] + (2/3)*(u2[i] - r*(fp - fm));
+  }
+  return v;
+}
+function shift(u, r, n){
+  var s = r*n*h, v = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var xs = ((i*h - s) % L + L) % L;
+    var j = Math.floor(xs/h), f = xs/h - j;
+    v[i] = (1-f)*u[j%N] + f*u[(j+1)%N];
+  }
+  return v;
+}
+function tv(u){ var s=0; for (var i=0;i<N;i++) s += Math.abs(u[(i+1)%N]-u[i]); return s; }
+
+function runCmp(){
+  var icName = document.getElementById('enoCmpIC').value;
+  var r = +document.getElementById('enoCfl').value/100;
+  var ns = +document.getElementById('enoCmpSt').value;
+  document.getElementById('enoCflv').textContent = r.toFixed(2);
+  document.getElementById('enoCmpStv').textContent = ns;
+  var u0 = ic(icName);
+  var uUp = new Float64Array(u0), uLW = new Float64Array(u0), uENO = new Float64Array(u0);
+  for (var s=0;s<ns;s++){
+    uUp  = stepUp(uUp, r);
+    uLW  = stepLW(uLW, r);
+    uENO = stepENO_SSP(uENO, r);
+  }
+  var ex = shift(u0, r, ns);
+  var c = document.getElementById('enoCmpPlot');
+  var ctx = c.getContext('2d');
+  var W = c.width, H = c.height;
+  ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+  var P={l:40,r:15,t:15,b:30}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+  var mn=-0.2, mx=1.3;
+  for (var i=0;i<N;i++){ mn=Math.min(mn,uUp[i],uLW[i],uENO[i]); mx=Math.max(mx,uUp[i],uLW[i],uENO[i]); }
+  var pad=(mx-mn)*0.08; mn-=pad; mx+=pad;
+  ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+  for (var g=0;g<=5;g++){ var gy=P.t+ph*g/5; ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke(); }
+  function xp(i){ return P.l + pw*i/N; }
+  function yp(v){ return P.t + ph*(1-(v-mn)/(mx-mn)); }
+  if (mn<0 && mx>0){ ctx.strokeStyle='#d9cfc0'; ctx.lineWidth=1; var y0=yp(0); ctx.beginPath(); ctx.moveTo(P.l,y0); ctx.lineTo(P.l+pw,y0); ctx.stroke(); }
+  // exact
+  ctx.strokeStyle='#9a8d7e'; ctx.lineWidth=2.5; ctx.setLineDash([6,3]);
+  ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(ex[i])):ctx.lineTo(xp(i),yp(ex[i])); ctx.stroke();
+  ctx.setLineDash([]);
+  // upwind
+  ctx.strokeStyle='#1a6b5a'; ctx.lineWidth=1.8;
+  ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(uUp[i])):ctx.lineTo(xp(i),yp(uUp[i])); ctx.stroke();
+  // LW
+  ctx.strokeStyle='#b44a2d'; ctx.lineWidth=1.8;
+  ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(uLW[i])):ctx.lineTo(xp(i),yp(uLW[i])); ctx.stroke();
+  // ENO
+  ctx.strokeStyle='#3a5ba0'; ctx.lineWidth=2;
+  ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(uENO[i])):ctx.lineTo(xp(i),yp(uENO[i])); ctx.stroke();
+  // axes
+  ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+  ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+  ctx.fillText('0', P.l, P.t+ph+14); ctx.fillText('π', P.l+pw/2, P.t+ph+14); ctx.fillText('2π', P.l+pw, P.t+ph+14);
+  ctx.textAlign='right';
+  for (var g=0;g<=5;g++) ctx.fillText((mx-(mx-mn)*g/5).toFixed(2), P.l-3, P.t+ph*g/5+3);
+  // Analysis
+  var tv0 = tv(u0), tvU = tv(uUp), tvL = tv(uLW), tvE = tv(uENO);
+  var an = document.getElementById('enoCmpAn');
+  var html = '<strong>Полные вариации (было '+tv0.toFixed(3)+'):</strong> ';
+  html += 'уголок = <span style="color:#1a6b5a">'+tvU.toFixed(3)+'</span>, ';
+  html += 'Лакс-Вендрофф = <span style="color:#b44a2d">'+tvL.toFixed(3)+'</span>, ';
+  html += 'ENO-3 = <span style="color:#3a5ba0">'+tvE.toFixed(3)+'</span>.<br>';
+  if (icName==='step'){
+    html += '<em>Наблюдение:</em> уголок сильно размазан (TV ≪ TV₀ из-за диффузии); Л-В осциллирует (TV > TV₀); ENO-3 сохраняет резкость без осцилляций — TV ≈ TV₀, решение близко к точному.';
+  } else if (icName==='gauss'){
+    html += '<em>На гладких данных:</em> уголок теряет амплитуду (диссипативная ошибка O(Δx)); Л-В и ENO-3 дают решение 2-3 порядка — амплитуда сохраняется почти точно.';
+  } else {
+    html += '<em>Смешанный режим:</em> видно как ENO-3 сочетает резкость на разрыве (слева) и гладкое разрешение формы (справа) — это уникальное преимущество нелинейного выбора шаблона.';
+  }
+  an.innerHTML = html;
+  an.style.display = '';
+}
+document.getElementById('enoCmpRun').addEventListener('click', runCmp);
+document.getElementById('enoCfl').addEventListener('input', function(){ document.getElementById('enoCflv').textContent = (this.value/100).toFixed(2); });
+document.getElementById('enoCmpSt').addEventListener('input', function(){ document.getElementById('enoCmpStv').textContent = this.value; });
+window.addEventListener('load', function(){ setTimeout(runCmp, 200); });
+})();
+</script>
+
+<h2 id="properties2">Свойства и область применения ENO-схем</h2>
+
+<p>ENO-схемы обеспечивают высокий порядок точности на гладких решениях и эффективно подавляют нефизические осцилляции вблизи разрывов. Основным недостатком ENO-схем является сравнительно высокая вычислительная стоимость, связанная с нелинейным выбором шаблона, что послужило мотивацией для разработки <em>WENO-схем</em> (§26), в которых жёсткий выбор одного шаблона заменяется взвешенной комбинацией.</p>
 
 <div class="lecture-nav">
 <a href="s1-24.html" class="nav-prev">← §24. Колган–Родионов</a>

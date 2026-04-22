@@ -22,115 +22,455 @@ window.MathJax = {
   <h2>§8 Монотонность</h2>
   <div class="g">Содержание</div>
   <a href="#conservation">Консервативность</a>
+  <a href="#lax-wendroff-th">Теорема Лакса-Вендроффа</a>
   <a href="#monotonicity">Монотонность</a>
+  <a href="#friedrichs">Монотонность по Фридрихсу</a>
   <a href="#maximum">Принцип максимума</a>
-  <a href="#equivalence">Эквивалентность</a>
-  <a href="#tvd-intro">TVD (введение)</a>
-  <a href="#theorem-gfh">Теорема Годунова–Фридрихса–Хартерна</a>
+  <a href="#tvd-intro">Полная вариация и TVD</a>
+  <a href="#equivalence">Теорема эквивалентности</a>
+  <a href="#proof">Доказательство</a>
+  <a href="#examples">Примеры схем</a>
+  <a href="#interactive">Интерактив: мон. vs нем.</a>
   <div class="sep"></div>
   <div class="g">Навигация</div>
-  <a href="s1-07.html">← §7 Неопр. коэффициенты</a>
+  <a href="s1-07.html">← §7 Неопр. коэфф.</a>
   <a href="s1-09.html">→ §9 Теорема Годунова</a>
 </nav>
-
-<div class="main">
-<div class="main-inner">
+<div class="main"><div class="main-inner">
 <span class="lecture-tag tag-props">Свойства</span>
 <div class="lecture-num">§8 · Семестр 1</div>
 <h1>Консервативность и&nbsp;монотонность разностных схем</h1>
 
-<p>Рассматривается одномерный закон сохранения</p>
+<p>Предыдущие параграфы были посвящены локальным свойствам разностных схем — аппроксимации, устойчивости, дисперсии и диссипации. Теперь перейдём к <em>глобальным</em> свойствам решения: сохранению интегральных величин на дискретной сетке и отсутствию нефизических осцилляций на разрывах. Обе характеристики критически важны для задач газовой динамики, где присутствуют ударные волны и контактные разрывы.</p>
 
+<p>Рассматривается одномерный скалярный закон сохранения</p>
 <div class="eq">\[
 \frac{\partial u}{\partial t} + \frac{\partial f(u)}{\partial x} = 0,
 \tag{8.1}
 \]</div>
+<p>для которого строится разностная аппроксимация на равномерной пространственно-временной сетке с шагами \(\Delta x\) и \(\Delta t\).</p>
 
-<p>для которого строится разностная аппроксимация на равномерной пространственно-временной сетке.</p>
-
-<h2 id="conservation">Консервативность</h2>
+<h2 id="conservation">Консервативная форма разностной схемы</h2>
 
 <div class="definition">
 <strong>Определение 1.</strong> Разностная схема для уравнения (8.1) называется <em>консервативной</em>, если она может быть записана в виде
 \[
-u_i^{n+1} = u_i^n - \frac{\Delta t}{\Delta x}\left(F_{i+1/2}^n - F_{i-1/2}^n\right),
+u_i^{n+1} = u_i^n - \frac{\Delta t}{\Delta x}\bigl(F_{i+1/2}^n - F_{i-1/2}^n\bigr),
 \tag{8.2}
 \]
-где \(F_{i+1/2}^n\) — численный поток, одинаково входящий в уравнения для соседних ячеек.
+где \(F_{i+1/2}^n\) — численный поток, <strong>одинаково</strong> входящий в уравнения для двух соседних ячеек (с индексом \(i\) слева и \(i+1\) справа).
+</div>
+
+<p>Консервативная форма (8.2) является <em>дискретным аналогом интегральной формы</em> закона сохранения. Проинтегрируем уравнение (8.1) по ячейке \([x_{i-1/2}, x_{i+1/2}]\) за шаг \(\Delta t\):</p>
+
+<div class="eq">\[
+\int_{x_{i-1/2}}^{x_{i+1/2}}\!\!\! u(x, t^{n+1})\,dx - \int_{x_{i-1/2}}^{x_{i+1/2}}\!\!\! u(x, t^n)\,dx = -\int_{t^n}^{t^{n+1}}\!\!\bigl[f(u(x_{i+1/2}, t)) - f(u(x_{i-1/2}, t))\bigr]\,dt.
+\]</div>
+
+<p>Обозначая осреднённые по ячейке значения как \(u_i^n\) и осреднённые по времени потоки как \(F_{i\pm 1/2}^n\), мы немедленно получаем (8.2).</p>
+
+<div class="remark">
+<strong>Телескопическое сокращение.</strong> Ключевое достоинство формы (8.2) — телескопическая структура. Просуммируем уравнение по всем ячейкам \(i = 1, \ldots, N\):
+\[
+\sum_{i=1}^{N} u_i^{n+1} = \sum_{i=1}^{N} u_i^n - \frac{\Delta t}{\Delta x}\sum_{i=1}^{N}\bigl(F_{i+1/2}^n - F_{i-1/2}^n\bigr) = \sum_{i=1}^{N} u_i^n - \frac{\Delta t}{\Delta x}\bigl(F_{N+1/2}^n - F_{1/2}^n\bigr).
+\]
+Все внутренние потоки взаимно сокращаются; остаются только <em>граничные</em>. В отсутствие втекания/вытекания интегральная величина \(\sum u_i^n \cdot \Delta x\) сохраняется <strong>в точности на уровне машинной точности</strong>.
 </div>
 
 <div class="remark">
-<strong>Замечание.</strong> Форма (8.2) обеспечивает дискретный закон баланса: изменение величины в ячейке равно разности потоков через её границы. При суммировании по всем ячейкам внутренние потоки взаимно сокращаются, что гарантирует сохранение интегральной величины с точностью до граничных потоков.
+<strong>Требование согласованности потока:</strong> на гладком решении численный поток должен удовлетворять \(F_{i+1/2}^n \to f(u_{i+1/2}^n)\) при \(\Delta x, \Delta t \to 0\). Обычно накладывается условие \(F(u, u, \ldots, u) = f(u)\) — поток от константы равен аналитическому.
 </div>
 
-<div class="remark">
-<strong>Замечание.</strong> Для разрывных решений консервативность схемы является необходимым условием сходимости к физически корректному (энтропийному) решению. Неконсервативные схемы могут давать неверные скорости распространения разрывов.
+<h2 id="lax-wendroff-th">Теорема Лакса–Вендроффа (о сходимости к слабому решению)</h2>
+
+<div class="theorem">
+<strong>Теорема Лакса–Вендроффа (1960).</strong> Если консервативная разностная схема (8.2) с непрерывным согласованным численным потоком сходится в \(L^1_\text{loc}\) к некоторой функции \(u(x, t)\) при \(\Delta x, \Delta t \to 0\) с фиксированным отношением, то предельная функция \(u(x, t)\) является <em>слабым решением</em> закона сохранения (8.1).
 </div>
 
-<h2 id="monotonicity">Монотонность</h2>
+<p>Практическое следствие: <strong>только консервативные схемы могут правильно ловить скорость ударной волны</strong>. Если схема не консервативна, ударная волна в численном решении будет двигаться со скоростью, отличной от определяемой условием Ренкина-Гюгонио. Этот эффект можно обнаружить тривиально — достаточно решить задачу Бюргерса с начальным разрывом и сравнить положение фронта с аналитическим.</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 200" xmlns="http://www.w3.org/2000/svg" style="max-width:540px">
+  <defs>
+    <marker id="ar8a" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2c2419"/></marker>
+  </defs>
+  <g transform="translate(30,45)">
+    <rect x="0" y="0" width="200" height="90" fill="#fdf9f3" stroke="#d9cfc0"/>
+    <line x1="40" y1="0" x2="40" y2="90" stroke="#d9cfc0" stroke-dasharray="3,3"/>
+    <line x1="120" y1="0" x2="120" y2="90" stroke="#d9cfc0" stroke-dasharray="3,3"/>
+    <line x1="160" y1="0" x2="160" y2="90" stroke="#d9cfc0" stroke-dasharray="3,3"/>
+    <text x="80" y="50" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">u_{i-1}</text>
+    <text x="140" y="50" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle" font-weight="700">u_i</text>
+    <text x="180" y="50" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">u_{i+1}</text>
+    <line x1="120" y1="-5" x2="120" y2="-25" stroke="#1a6b5a" stroke-width="2" marker-end="url(#ar8a)"/>
+    <text x="120" y="-30" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a" text-anchor="middle">F_{i-1/2}</text>
+    <line x1="160" y1="-5" x2="160" y2="-25" stroke="#1a6b5a" stroke-width="2" marker-end="url(#ar8a)"/>
+    <text x="160" y="-30" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a" text-anchor="middle">F_{i+1/2}</text>
+    <text x="100" y="115" font-family="Source Serif 4,serif" font-size="10" fill="#6b5d4f" text-anchor="middle" font-style="italic">F_{i+1/2} общий для ячеек i и i+1</text>
+  </g>
+  <g transform="translate(280,45)">
+    <rect x="0" y="10" width="250" height="75" fill="#e8f4f0" stroke="#1a6b5a" stroke-width="1.5" rx="6"/>
+    <text x="125" y="35" font-family="Playfair Display,serif" font-size="12" fill="#1a6b5a" text-anchor="middle" font-weight="700">Телескопическое сокращение</text>
+    <text x="125" y="58" font-family="JetBrains Mono,monospace" font-size="10" fill="#2c2419" text-anchor="middle">Σ u_i(Δx) = const (до границ)</text>
+    <text x="125" y="75" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">⇒ верная скорость скачка</text>
+    <text x="125" y="155" font-family="Source Serif 4,serif" font-size="10" fill="#6b5d4f" text-anchor="middle" font-style="italic">Теорема Лакса–Вендроффа</text>
+  </g>
+</svg>
+<div class="caption">Рис. 1. Консервативная форма (8.2): поток \(F_{i+1/2}\) общий для соседних ячеек.</div>
+</div>
+
+<h2 id="monotonicity">Монотонные схемы</h2>
+
+<p>Рассмотрим общий явный оператор разностной схемы:</p>
+<div class="eq">\[ u_i^{n+1} = H\bigl(u_{i-p}^n, u_{i-p+1}^n, \ldots, u_{i+q}^n\bigr). \tag{8.3} \]</div>
 
 <div class="definition">
-<strong>Определение 2.</strong> Разностная схема называется <em>монотонной</em>, если значения решения на новом временном слое являются монотонными функциями значений предыдущего слоя, то есть
+<strong>Определение 2 (Годунов, 1959).</strong> Разностная схема (8.3) называется <em>монотонной</em>, если оператор \(H\) не убывает по каждому аргументу:
 \[
-\frac{\partial u_i^{n+1}}{\partial u_k^n} \ge 0 \quad \text{для всех } i, k.
-\tag{8.3}
+\frac{\partial H}{\partial u_k^n} \ge 0 \quad \text{для всех } k = i-p, \ldots, i+q.
+\tag{8.4}
 \]
 </div>
 
+<p>Для линейной схемы \(u_i^{n+1} = \sum_k a_k\, u_{i+k}^n\) условие (8.4) превращается в требование <strong>неотрицательности всех коэффициентов</strong>: \(a_k \ge 0\) для всех \(k\).</p>
+
+<h2 id="friedrichs">Монотонность по Фридрихсу</h2>
+
 <div class="definition">
-<strong>Определение 3 (по Фридрихсу).</strong> Разностная схема монотонна, если из условия \(u_i^n \ge v_i^n\) для всех \(i\) следует \(u_i^{n+1} \ge v_i^{n+1}\) для всех \(i\).
+<strong>Определение 3 (Фридрихс).</strong> Разностная схема сохраняет <em>покомпонентный порядок</em>, если из условия \(u_i^n \ge v_i^n\) для всех \(i\) следует \(u_i^{n+1} \ge v_i^{n+1}\) для всех \(i\).
 </div>
+
+<p>Пусть \(u^n\) и \(v^n\) — две сеточные функции, причём \(u_i^n \ge v_i^n\) для всех \(i\). Применим к ним обе одну и ту же схему. Разность \(u_i^{n+1} - v_i^{n+1}\) в силу монотонности оператора \(H\) (определение 2) тоже будет неотрицательной:</p>
+
+<div class="eq">\[
+u_i^{n+1} - v_i^{n+1} = H(u^n) - H(v^n) = \sum_k \frac{\partial H}{\partial u_k^n}\Big|_{\xi}\cdot \bigl(u_{i+k}^n - v_{i+k}^n\bigr) \ge 0,
+\]</div>
+
+<p>где \(\xi\) — некоторое промежуточное значение по теореме о среднем. Таким образом, определения 2 и 3 эквивалентны.</p>
 
 <h2 id="maximum">Дискретный принцип максимума</h2>
 
 <div class="definition">
-<strong>Определение 4.</strong> Разностная схема удовлетворяет <em>дискретному принципу максимума</em>, если
+<strong>Определение 4.</strong> Разностная схема удовлетворяет <em>дискретному принципу максимума</em>, если для всех \(i\) и всех \(n\)
 \[
-\min_k u_k^n \le u_i^{n+1} \le \max_k u_k^n
-\tag{8.4}
-\]
-для всех \(i\). Это эквивалентно тому, что \(u_i^{n+1}\) является выпуклой комбинацией значений предыдущего слоя:
-\[
-u_i^{n+1} = \sum_k a_k u_k^n, \qquad a_k \ge 0, \quad \sum_k a_k = 1.
+\min_{k \in \mathrm{stencil}(i)} u_k^n \ \le\ u_i^{n+1}\ \le\ \max_{k \in \mathrm{stencil}(i)} u_k^n.
 \tag{8.5}
 \]
-</div>
-
-<h2 id="tvd-intro">Полная вариация и TVD</h2>
-
-<div class="definition">
-<strong>Определение 5.</strong> Полной вариацией сеточной функции \(\{u_i^n\}\) называется величина
-\[ \mathrm{TV}(u^n) = \sum_i |u_{i+1}^n - u_i^n|. \]
-</div>
-
-<div class="definition">
-<strong>Определение 6.</strong> Разностная схема называется <em>TVD</em> (total variation diminishing), если для всех \(n\) выполняется \(\mathrm{TV}(u^{n+1}) \le \mathrm{TV}(u^n)\).
+Эквивалентная формулировка: \(u_i^{n+1}\) является <em>выпуклой комбинацией</em> значений предыдущего слоя:
+\[
+u_i^{n+1} = \sum_k a_k\, u_{i+k}^n, \quad a_k \ge 0, \quad \sum_k a_k = 1.
+\tag{8.6}
+\]
 </div>
 
 <div class="remark">
-<strong>Замечание.</strong> Свойство TVD ограничивает рост суммарной вариации решения, однако не гарантирует строгого отсутствия новых локальных максимумов или минимумов. Новые экстремумы возможны, если они не приводят к увеличению полной вариации.
+<strong>Связь с физикой:</strong> принцип максимума запрещает появление новых локальных экстремумов. Если в начальных данных \(0 \le u^0 \le 1\), то и все последующие значения остаются в \([0, 1]\). Для газовой динамики это означает физически корректное поведение: плотность и давление остаются положительными, а разрывы не порождают нефизических «выбросов» и «впадин».
 </div>
 
-<h2 id="theorem-gfh">Связь между определениями</h2>
+<h2 id="tvd-intro">Полная вариация и TVD-свойство</h2>
+
+<div class="definition">
+<strong>Определение 5.</strong> <em>Полной вариацией</em> сеточной функции \(\{u_i^n\}\) называется величина
+\[ \mathrm{TV}(u^n) = \sum_i |u_{i+1}^n - u_i^n|. \tag{8.7}\]
+Аналогично для непрерывной функции \(\mathrm{TV}(u) = \int |\partial_x u|\, dx\).
+</div>
+
+<p>Для гиперболических уравнений точное решение обладает свойством <strong>невозрастания полной вариации</strong>: \(\mathrm{TV}(u(\cdot, t_2)) \le \mathrm{TV}(u(\cdot, t_1))\) при \(t_2 \ge t_1\). Это свойство естественно потребовать и от численной схемы.</p>
+
+<div class="definition">
+<strong>Определение 6 (Хартен, 1983).</strong> Разностная схема называется <em>TVD</em> (Total Variation Diminishing), если для любых начальных данных
+\[ \mathrm{TV}(u^{n+1}) \le \mathrm{TV}(u^n) \quad \text{для всех } n \ge 0. \tag{8.8}\]
+</div>
+
+<p>Хартен показал, что консервативная схема вида \(u_i^{n+1} = u_i^n + C_{i+1/2}(u_{i+1}^n - u_i^n) - D_{i-1/2}(u_i^n - u_{i-1}^n)\) является TVD, если её коэффициенты удовлетворяют</p>
+
+<div class="eq">\[
+C_{i+1/2} \ge 0, \quad D_{i-1/2} \ge 0, \quad C_{i+1/2} + D_{i+1/2} \le 1.
+\tag{8.9}
+\]</div>
+
+<div class="remark">
+<strong>Замечание.</strong> Условие TVD ограничивает <em>суммарную</em> вариацию, но формально не запрещает появления новых локальных экстремумов, если они не увеличивают \(\mathrm{TV}\) (например, два симметричных выбросика с равными амплитудами противоположного знака). Поэтому TVD — более слабое свойство, чем монотонность.
+</div>
+
+<h2 id="equivalence">Иерархия свойств</h2>
 
 <div class="theorem">
-<strong>Теорема 1 (Годунов–Фридрихс–Хартерн).</strong> Для линейной разностной схемы следующие утверждения эквивалентны:
-<ol>
-<li>аналитическая монотонность в смысле (8.3);</li>
-<li>неотрицательность коэффициентов и выполнение условий (8.5);</li>
-<li>выполнение дискретного принципа максимума.</li>
-</ol>
-Кроме того, каждое из этих условий влечёт выполнение TVD-свойства, однако обратное утверждение, в общем случае, неверно.
+<strong>Теорема (Хартен–Хайман–Лакс, 1976).</strong> Для линейной консервативной схемы справедливы импликации:
+\[
+\text{монотонность (8.4)} \ \Longleftrightarrow\ \text{пол. коэфф. в (8.6)} \ \Longleftrightarrow\ \text{принцип максимума (8.5)} \ \Longrightarrow\ \text{TVD (8.8)}.
+\]
+Обратная импликация \(\text{TVD} \Rightarrow \text{монотонность}\) <strong>в общем случае неверна</strong>.
 </div>
 
-<p><em>Пример.</em> Противопоточная схема первого порядка для уравнения переноса является монотонной, удовлетворяет принципу максимума и является TVD. Центральная схема второго порядка не является монотонной и нарушает принцип максимума, что проявляется в появлении осцилляций вблизи разрывов.</p>
+<div class="figure">
+<svg viewBox="0 0 560 220" xmlns="http://www.w3.org/2000/svg" style="max-width:540px">
+  <ellipse cx="280" cy="115" rx="245" ry="80" fill="#fdf6ee" stroke="#b44a2d" stroke-width="1.5"/>
+  <text x="280" y="55" font-family="Playfair Display,serif" font-size="13" fill="#b44a2d" text-anchor="middle" font-weight="700">Устойчивые</text>
+  <ellipse cx="280" cy="130" rx="175" ry="60" fill="#fff3cd" stroke="#b8950b" stroke-width="1.5"/>
+  <text x="280" y="85" font-family="Playfair Display,serif" font-size="12" fill="#b8950b" text-anchor="middle" font-weight="700">TVD</text>
+  <ellipse cx="280" cy="140" rx="105" ry="42" fill="#e8f4f0" stroke="#1a6b5a" stroke-width="1.5"/>
+  <text x="280" y="120" font-family="Playfair Display,serif" font-size="11" fill="#1a6b5a" text-anchor="middle" font-weight="700">Монотонные</text>
+  <text x="280" y="140" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b5d4f" text-anchor="middle">a_k ≥ 0, Σa_k = 1</text>
+  <text x="280" y="154" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b5d4f" text-anchor="middle">принцип максимума</text>
+  <text x="80" y="120" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419" text-anchor="middle">Лакс–Вендрофф</text>
+  <text x="80" y="134" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b5d4f" text-anchor="middle">(уст., не TVD)</text>
+  <text x="475" y="120" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419" text-anchor="middle">MUSCL-лимит.</text>
+  <text x="475" y="134" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b5d4f" text-anchor="middle">(TVD, не мон.)</text>
+  <text x="280" y="175" font-family="JetBrains Mono,monospace" font-size="9" fill="#1a6b5a" text-anchor="middle">уголок, Лакс–Фридрихс, Годунов</text>
+  <text x="280" y="208" font-family="Source Serif 4,serif" font-size="10" fill="#6b5d4f" text-anchor="middle" font-style="italic">Импликации строгие: включения ⊂ в общем случае необратимы</text>
+</svg>
+<div class="caption">Рис. 2. Иерархия свойств схем. Монотонные ⊂ TVD ⊂ устойчивые.</div>
+</div>
+
+<h2 id="proof">Доказательство импликации «монотонность ⇒ TVD»</h2>
+
+<div class="proof">
+<p>Пусть схема записана в форме (8.6) с коэффициентами \(a_k \ge 0\), \(\sum a_k = 1\). Вычислим</p>
+\[
+u_{i+1}^{n+1} - u_i^{n+1} = \sum_k a_k\bigl(u_{i+1+k}^n - u_{i+k}^n\bigr).
+\]
+<p>Применяя неравенство треугольника и пользуясь неотрицательностью \(a_k\):</p>
+\[
+|u_{i+1}^{n+1} - u_i^{n+1}| \le \sum_k a_k\,|u_{i+1+k}^n - u_{i+k}^n|.
+\]
+<p>Суммируем по \(i\) и меняем порядок сумм:</p>
+\[
+\mathrm{TV}(u^{n+1}) \le \sum_k a_k \sum_i |u_{i+1+k}^n - u_{i+k}^n| = \sum_k a_k \cdot \mathrm{TV}(u^n) = \mathrm{TV}(u^n).
+\]
+<p>Таким образом, монотонность немедленно влечёт TVD. ∎</p>
+</div>
+
+<div class="remark">
+<strong>Обратное неверно.</strong> Схема MUSCL-minmod второго порядка является TVD (это её ключевое свойство), но её коэффициенты явно зависят от решения \(u^n\) (через ограничители) и могут становиться отрицательными для отдельных конфигураций, то есть схема не монотонна в смысле определения 2. Именно это «чуть-чуть нелинейное» поведение и позволяет ей достичь второго порядка, обходя ограничение теоремы Годунова (§9).
+</div>
+
+<h2 id="examples">Анализ классических схем</h2>
+
+<h3>1. Схема «уголок» (upwind)</h3>
+<p>Для уравнения переноса \(u_t + cu_x = 0\) с \(c > 0\):</p>
+<div class="eq">\[
+u_i^{n+1} = (1 - r)\,u_i^n + r\,u_{i-1}^n, \qquad r = \frac{c\,\Delta t}{\Delta x}.
+\]</div>
+<p>Коэффициенты: \(a_0 = 1 - r\), \(a_{-1} = r\). При \(0 \le r \le 1\) оба неотрицательны, сумма равна 1 — схема <strong>монотонна</strong>, удовлетворяет принципу максимума и является TVD.</p>
+
+<h3>2. Схема Лакса-Вендроффа</h3>
+<div class="eq">\[
+u_i^{n+1} = u_i^n - \tfrac{r}{2}(u_{i+1}^n - u_{i-1}^n) + \tfrac{r^2}{2}(u_{i+1}^n - 2u_i^n + u_{i-1}^n).
+\]</div>
+<p>Коэффициенты: \(a_{-1} = \tfrac{r(r+1)}{2}\), \(a_0 = 1 - r^2\), \(a_{+1} = \tfrac{r(r-1)}{2}\). При \(0 < r < 1\) коэффициент \(a_{+1} < 0\) — схема <strong>не монотонна</strong>, принцип максимума нарушен, TVD-свойство не выполнено. Следствие: на разрывах возникают осцилляции.</p>
+
+<h3>3. Центральная схема</h3>
+<div class="eq">\[
+u_i^{n+1} = u_i^n - \tfrac{r}{2}(u_{i+1}^n - u_{i-1}^n).
+\]</div>
+<p>Коэффициенты \(a_{\pm 1} = \mp r/2\) имеют разные знаки — не монотонна ни при каких \(r\). Более того, она <strong>безусловно неустойчива</strong> (анализ фон Неймана даёт \(|\lambda|^2 = 1 + r^2\sin^2\theta > 1\)).</p>
+
+<h2 id="interactive">Интерактив: монотонная vs немонотонная схемы</h2>
+
+<p>Ниже — численный эксперимент, демонстрирующий связь монотонности и осцилляций на разрыве. Перенос ступеньки уравнением \(u_t + u_x = 0\), периодические ГУ, сравнение уголка (монотонная) и Лакса-Вендроффа (немонотонная, 2-й порядок). Отслеживаются \(\mathrm{TV}\) и границы решения.</p>
+
+<div id="solver8" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.2rem;margin:1.5rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Начальные данные</label>
+    <select id="ic8" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)">
+      <option value="step">Ступенька (разрыв)</option>
+      <option value="triangle">Треугольник</option>
+      <option value="doublestep">Двойная ступенька</option>
+      <option value="gauss">Гауссиан (гладкий)</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Куранта r = <span id="r8v">0.50</span></label>
+    <input type="range" id="r8" min="5" max="95" value="50" style="width:130px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Шагов: <span id="s8v">120</span></label>
+    <input type="range" id="s8" min="20" max="400" value="120" style="width:100px">
+  </div>
+  <button id="run8" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 18px;font-family:'Source Serif 4',serif;font-size:.88rem;font-weight:600;cursor:pointer">▶ Старт</button>
+  <button id="stop8" style="background:#6b5d4f;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer;display:none">⏸ Стоп</button>
+</div>
+<div style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-bottom:.4rem">
+  Шаг: <span id="step8">0</span>
+  &nbsp;│&nbsp; TV(уголок) = <span id="tv1" style="color:#1a6b5a">—</span>
+  &nbsp;│&nbsp; TV(Л-В) = <span id="tv2" style="color:#b44a2d">—</span>
+  &nbsp;│&nbsp; диапазон Л-В = <span id="mm2" style="color:#b44a2d">—</span>
+</div>
+<canvas id="plot8" width="900" height="320" style="width:100%;height:auto;background:#fff;border-radius:6px;border:1px solid var(--border)"></canvas>
+<div style="display:flex;gap:1.2rem;justify-content:center;margin-top:.5rem;font-size:.78rem;color:var(--text2);font-family:'JetBrains Mono',monospace;flex-wrap:wrap">
+  <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:2px;background:#9a8d7e"></span> точное решение</span>
+  <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:2px;background:#1a6b5a"></span> уголок (монотонная)</span>
+  <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:2px;background:#b44a2d"></span> Лакс-Вендрофф (немонотонная)</span>
+</div>
+<div id="obs8" style="margin-top:.8rem;padding:.8rem;background:#fff;border:1px solid var(--border);border-radius:6px;font-size:.88rem;display:none"></div>
+</div>
+
+<script>
+(function(){
+  var N = 200, L = 2*Math.PI, h = L/N;
+  var id=null, st=0, tgt=0, u0=null, u1=null, u2=null;
+
+  function ic(t){
+    var u = new Float64Array(N);
+    for (var i=0;i<N;i++){
+      var x = i*h;
+      if (t==='step') u[i] = (x >= 0.3*Math.PI && x <= 0.7*Math.PI) ? 1 : 0;
+      else if (t==='triangle'){ var w=0.4*Math.PI; u[i] = Math.max(0, 1 - Math.abs(x-Math.PI)/w); }
+      else if (t==='doublestep'){
+        u[i] = (x >= 0.2*Math.PI && x <= 0.5*Math.PI) ? 1 :
+               (x >= 0.8*Math.PI && x <= 1.1*Math.PI) ? 0.6 : 0;
+      }
+      else u[i] = Math.exp(-Math.pow((x-Math.PI)/(0.25*Math.PI),2));
+    }
+    return u;
+  }
+  function stepUp(u,r){ var v=new Float64Array(N); for(var i=0;i<N;i++) v[i] = (1-r)*u[i] + r*u[(i-1+N)%N]; return v; }
+  function stepLW(u,r){
+    var v=new Float64Array(N);
+    for(var i=0;i<N;i++){
+      var im=(i-1+N)%N, ip=(i+1)%N;
+      v[i] = u[i] - 0.5*r*(u[ip]-u[im]) + 0.5*r*r*(u[ip]-2*u[i]+u[im]);
+    }
+    return v;
+  }
+  function shift(u, r, n){
+    var s = r*n*h, v = new Float64Array(N);
+    for(var i=0;i<N;i++){
+      var xs = ((i*h - s) % L + L) % L;
+      var j = Math.floor(xs/h), f = xs/h - j;
+      v[i] = (1-f)*u[j%N] + f*u[(j+1)%N];
+    }
+    return v;
+  }
+  function tv(u){ var s=0; for(var i=0;i<N;i++) s += Math.abs(u[(i+1)%N]-u[i]); return s; }
+
+  function draw(u1a,u2a,ue,step,r,t){
+    var c = document.getElementById('plot8');
+    if (!c) return;
+    var ctx = c.getContext('2d'), W = c.width, H = c.height;
+    ctx.clearRect(0,0,W,H);
+    var mn=-0.25,mx=1.3;
+    for(var i=0;i<N;i++){ mn=Math.min(mn,u1a[i],u2a[i]); mx=Math.max(mx,u1a[i],u2a[i]); }
+    var pad=(mx-mn)*0.08; mn-=pad; mx+=pad;
+    var px=45, py=15, pw=W-65, ph=H-45;
+    ctx.strokeStyle='#ede6da'; ctx.lineWidth=0.5;
+    for(var g=0;g<=5;g++){
+      var gy = py + ph*(1-g/5);
+      ctx.beginPath(); ctx.moveTo(px,gy); ctx.lineTo(px+pw,gy); ctx.stroke();
+      ctx.fillStyle='#9a8d7e'; ctx.font='9px JetBrains Mono'; ctx.textAlign='right';
+      ctx.fillText((mn+(mx-mn)*g/5).toFixed(2), px-4, gy+3);
+    }
+    if (mn<0 && mx>0){
+      ctx.strokeStyle='#d9cfc0'; ctx.lineWidth=1;
+      var y0 = py + ph*(1 - (0-mn)/(mx-mn));
+      ctx.beginPath(); ctx.moveTo(px,y0); ctx.lineTo(px+pw,y0); ctx.stroke();
+    }
+    function xp(i){ return px + pw*i/N; }
+    function yp(v){ return py + ph*(1 - (v-mn)/(mx-mn)); }
+    ctx.strokeStyle='#9a8d7e'; ctx.lineWidth=2.5; ctx.setLineDash([6,3]);
+    ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(ue[i])):ctx.lineTo(xp(i),yp(ue[i])); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle='#1a6b5a'; ctx.lineWidth=2;
+    ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(u1a[i])):ctx.lineTo(xp(i),yp(u1a[i])); ctx.stroke();
+    ctx.strokeStyle='#b44a2d'; ctx.lineWidth=2;
+    ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(u2a[i])):ctx.lineTo(xp(i),yp(u2a[i])); ctx.stroke();
+    ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+    ctx.fillText('0', px, py+ph+15); ctx.fillText('π', px+pw/2, py+ph+15); ctx.fillText('2π', px+pw, py+ph+15);
+    ctx.fillText('r='+r.toFixed(2)+' · шаг '+step, px+pw/2, py+ph+32);
+    document.getElementById('step8').textContent = step;
+    document.getElementById('tv1').textContent = tv(u1a).toFixed(3);
+    document.getElementById('tv2').textContent = tv(u2a).toFixed(3);
+    var mx2=-1e9, mn2=1e9;
+    for(var i=0;i<N;i++){ if(u2a[i]>mx2) mx2=u2a[i]; if(u2a[i]<mn2) mn2=u2a[i]; }
+    document.getElementById('mm2').textContent = '['+mn2.toFixed(3)+', '+mx2.toFixed(3)+']';
+  }
+
+  function analyze(type, r, s){
+    var el = document.getElementById('obs8');
+    var tv1v = tv(u1), tv2v = tv(u2), tv0v = tv(u0);
+    var mx2=-1e9, mn2=1e9;
+    for(var i=0;i<N;i++){ if(u2[i]>mx2) mx2=u2[i]; if(u2[i]<mn2) mn2=u2[i]; }
+    var h1='<strong>Наблюдения:</strong><br>';
+    h1 += '<span style="color:#1a6b5a">■ Уголок</span>: TV = '+tv1v.toFixed(3)+' (исходно '+tv0v.toFixed(3)+') — <em>не возрастает</em>, принцип максимума выполнен. Решение в пределах [0,1], но сильно размазано численной диффузией. Это цена монотонности для 1-го порядка.<br>';
+    h1 += '<span style="color:#b44a2d">■ Лакс-Вендрофф</span>: TV = '+tv2v.toFixed(3);
+    if (tv2v > tv0v*1.01) h1 += ' — <em>выросла</em> относительно начальных данных. ';
+    if (mn2 < -0.01 || mx2 > 1.01) h1 += 'Решение вышло за пределы ['+mn2.toFixed(2)+', '+mx2.toFixed(2)+'] — <strong>нарушен принцип максимума</strong>. ';
+    if (type==='step' || type==='doublestep'){
+      if (r > 0.5) h1 += 'При r='+r.toFixed(2)+'>0.5 осцилляции <em>перед</em> фронтом (аномальная дисперсия, см. §6).';
+      else h1 += 'При r='+r.toFixed(2)+'≤0.5 осцилляции <em>за</em> фронтом (нормальная дисперсия).';
+    } else if (type==='gauss'){
+      h1 += ' На гладких данных Л-В сохраняет форму лучше — там, где нет разрывов, 2-й порядок выигрывает.';
+    }
+    h1 += '<br><em>Вывод:</em> немонотонная схема высокого порядка даёт осцилляции на разрывах. Обход — нелинейные TVD-схемы (§23-24) и ENO/WENO (§25-26).';
+    el.innerHTML = h1;
+    el.style.display = '';
+  }
+
+  function run(){
+    var t = document.getElementById('ic8').value;
+    var r = parseInt(document.getElementById('r8').value)/100;
+    tgt = parseInt(document.getElementById('s8').value);
+    document.getElementById('r8v').textContent = r.toFixed(2);
+    document.getElementById('s8v').textContent = tgt;
+    if (id){ cancelAnimationFrame(id); id=null; }
+    u0 = ic(t); u1 = new Float64Array(u0); u2 = new Float64Array(u0); st = 0;
+    document.getElementById('run8').style.display='none';
+    document.getElementById('stop8').style.display='';
+    function frame(){
+      if (st >= tgt){
+        analyze(t, r, st);
+        document.getElementById('run8').style.display='';
+        document.getElementById('stop8').style.display='none';
+        return;
+      }
+      u1 = stepUp(u1, r); u2 = stepLW(u2, r); st++;
+      draw(u1, u2, shift(u0, r, st), st, r, t);
+      id = requestAnimationFrame(frame);
+    }
+    frame();
+  }
+  function stop(){
+    if (id){ cancelAnimationFrame(id); id=null; }
+    document.getElementById('run8').style.display='';
+    document.getElementById('stop8').style.display='none';
+    var t = document.getElementById('ic8').value;
+    var r = parseInt(document.getElementById('r8').value)/100;
+    analyze(t, r, st);
+  }
+
+  document.getElementById('run8').addEventListener('click', run);
+  document.getElementById('stop8').addEventListener('click', stop);
+  document.getElementById('r8').addEventListener('input', function(){ document.getElementById('r8v').textContent = (this.value/100).toFixed(2); });
+  document.getElementById('s8').addEventListener('input', function(){ document.getElementById('s8v').textContent = this.value; });
+
+  setTimeout(function(){
+    u0 = ic('step'); u1 = new Float64Array(u0); u2 = new Float64Array(u0);
+    draw(u1, u2, u0, 0, 0.5, 'step');
+  }, 100);
+})();
+</script>
+
+<div class="remark">
+<strong>Ключевой вывод.</strong> Консервативность гарантирует правильную скорость разрывов (теорема Лакса-Вендроффа), монотонность — отсутствие нефизических осцилляций и соблюдение физических ограничений (плотность/давление положительны). Однако теорема Годунова (следующий параграф) утверждает, что <em>линейная</em> монотонная схема не может иметь порядок выше первого. Выход из этого тупика — нелинейные TVD/MUSCL-схемы с ограничителями, рассматриваемые в §23-24.
+</div>
+
+<div class="exercise">
+<strong>Упражнение 1.</strong> Проверьте непосредственно, что схема Лакса–Фридрихса
+\[ u_i^{n+1} = \tfrac{1}{2}(u_{i+1}^n + u_{i-1}^n) - \tfrac{r}{2}(u_{i+1}^n - u_{i-1}^n) \]
+монотонна при \(|r| \le 1\), и вычислите её коэффициент численной диффузии.
+</div>
+
+<div class="exercise">
+<strong>Упражнение 2.</strong> Покажите в интерактиве выше, что \(\mathrm{TV}\) уголка не возрастает ни при каких \(r \in [0,1]\) и ни для каких начальных данных, а \(\mathrm{TV}\) Лакса-Вендроффа может возрастать (особенно на разрыве).
+</div>
 
 <div class="lecture-nav">
 <a href="s1-07.html" class="nav-prev">← §7. Метод неопределённых коэффициентов</a>
 <a href="s1-09.html" class="nav-next">§9. Теорема Годунова →</a>
 </div>
-</div>
-</div>
+</div></div>
 
 <div class="comments-wrap">
 <div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">
@@ -143,7 +483,6 @@ u_i^{n+1} = \sum_k a_k u_k^n, \qquad a_k \ge 0, \quad \sum_k a_k = 1.
 <div id="comment-login"><p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p></div>
 </div>
 </div>
-
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>

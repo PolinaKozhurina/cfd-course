@@ -14,6 +14,17 @@ window.MathJax = {
 };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.roe-plots{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;margin:1rem 0}
+@media(max-width:900px){.roe-plots{grid-template-columns:1fr}}
+.roe-plot{background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)}
+.roe-plot-title{text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace}
+.roe-plot canvas{width:100%;height:auto;display:block}
+.roe-vtable{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:.78rem;margin:.6rem 0}
+.roe-vtable th{background:#ede6da;color:var(--accent);padding:5px 8px;text-align:left;border:1px solid var(--border)}
+.roe-vtable td{padding:4px 8px;border:1px solid var(--border)}
+.roe-pass{color:#1a6b5a;font-weight:600}.roe-fail{color:#c44;font-weight:600}
+</style>
 </head>
 <body>
 <script src="../js/nav.js"></script>
@@ -22,83 +33,631 @@ window.MathJax = {
   <h2>§19 Метод Рое</h2>
   <div class="g">Содержание</div>
   <a href="#position">Положение в классификации</a>
-  <a href="#linearization">Линеаризация</a>
-  <a href="#roe-matrix">Матрица Рое</a>
+  <a href="#linearization">Идея линеаризации</a>
+  <a href="#roe-matrix">Условие Рое (Property U)</a>
+  <a href="#derivation">Вывод матрицы для Эйлера</a>
+  <a href="#roe-averages">Усреднения Рое</a>
+  <a href="#decomposition">Спектральное разложение</a>
   <a href="#flux">Численный поток</a>
   <a href="#entropy">Энтропийная коррекция</a>
   <a href="#properties">Свойства</a>
+  <a href="#interactive">Интерактив: тесты Торо</a>
   <div class="sep"></div>
   <div class="g">Навигация</div>
   <a href="s1-18.html">← §18 Классификация</a>
   <a href="s1-20.html">→ §20 Метод Ошера</a>
 </nav>
-
-<div class="main">
-<div class="main-inner">
+<div class="main"><div class="main-inner">
 <span class="lecture-tag tag-riemann">Задача Римана</span>
 <div class="lecture-num">§19 · Семестр 1</div>
-<h1>Метод Рое</h1>
+<h1>Метод Рое. Линеаризация задачи Римана</h1>
 
-<h2 id="position">Положение в классификации</h2>
+<h2 id="position">Положение метода Рое в классификации</h2>
 
-<p>Метод Рое относится к классу приближённых решателей задачи Римана, основанных на линеаризации исходной системы законов сохранения. В отличие от точного решателя, метод Рое заменяет нелинейную задачу Римана эквивалентной задачей Римана для линейной гиперболической системы с постоянной матрицей коэффициентов, специально построенной по паре состояний по обе стороны границы ячейки.</p>
+<p>В §18 был намечен общий план приближённых решателей задачи Римана. Метод Рое (P.&nbsp;L.&nbsp;Roe, 1981) относится к классу решателей, основанных на <em>полной линеаризации</em> системы законов сохранения. В отличие от точного решателя (итерационный алгоритм Ньютона для давления в центральной области), метод Рое заменяет нелинейную задачу Римана эквивалентной <em>линейной</em> задачей с постоянной матрицей коэффициентов, специально построенной по паре состояний по обе стороны от грани ячейки.</p>
+
+<p>Ключевое идейное преимущество метода: <em>волновая структура решения сохраняется</em>, то есть остаются три волны — акустические слева и справа и контактный разрыв в центре. Контактный разрыв переносится через матрицу Рое <strong>точно</strong> — в этом методе он не размазывается сильнее, чем от численной диффузии самой схемы, что является основной причиной его широкого применения в практических расчётах.</p>
 
 <h2 id="linearization">Идея линеаризации</h2>
 
-<p>Рассмотрим систему законов сохранения и задачу Римана с начальными состояниями \(\mathbf{u}_L\) и \(\mathbf{u}_R\). Метод Рое заключается в замене этой задачи задачей Римана для линейной системы</p>
-
+<p>Рассмотрим одномерную систему законов сохранения</p>
 <div class="eq">\[
-\frac{\partial\mathbf{u}}{\partial t} + \tilde{A}(\mathbf{u}_L, \mathbf{u}_R)\frac{\partial\mathbf{u}}{\partial x} = 0,
+\frac{\partial\mathbf{u}}{\partial t} + \frac{\partial\mathbf{f}(\mathbf{u})}{\partial x} = 0,
 \tag{19.1}
 \]</div>
-
-<p>где матрица \(\tilde{A}\) постоянна в рамках локальной задачи Римана и аппроксимирует матрицу Якоби \(\partial\mathbf{f}/\partial\mathbf{u}\) на паре состояний.</p>
-
-<h2 id="roe-matrix">Матрица Рое и её свойства</h2>
-
-<p>Матрица Рое выбирается так, чтобы выполнялось соотношение</p>
+<p>и локальную задачу Римана на грани \(i+1/2\) с начальными состояниями \(\mathbf{u}_L = \mathbf{u}_i^n\) и \(\mathbf{u}_R = \mathbf{u}_{i+1}^n\). Метод Рое заменяет её задачей Римана для линейной системы</p>
 
 <div class="eq">\[
-\mathbf{f}(\mathbf{u}_R) - \mathbf{f}(\mathbf{u}_L) = \tilde{A}(\mathbf{u}_L, \mathbf{u}_R)\bigl(\mathbf{u}_R - \mathbf{u}_L\bigr),
+\frac{\partial\mathbf{u}}{\partial t} + \tilde{A}(\mathbf{u}_L, \mathbf{u}_R)\,\frac{\partial\mathbf{u}}{\partial x} = 0,
 \tag{19.2}
 \]</div>
 
-<p>обеспечивающее точное воспроизведение интегрального баланса на разрыве. Кроме того, при совпадении состояний матрица Рое должна переходить в точную матрицу Якоби: \(\tilde{A}(\mathbf{u}, \mathbf{u}) = \partial\mathbf{f}/\partial\mathbf{u}(\mathbf{u})\), и обладать вещественными собственными значениями и полным набором собственных векторов.</p>
+<p>где \(\tilde{A}\) — постоянная матрица, аппроксимирующая якобиан \(A(\mathbf{u}) = \partial\mathbf{f}/\partial\mathbf{u}\) на паре состояний \((\mathbf{u}_L, \mathbf{u}_R)\). Решение линейной задачи (19.2) известно в замкнутой форме через спектральное разложение \(\tilde{A}\).</p>
 
-<p>Разложим скачок по собственным векторам матрицы Рое:</p>
+<h2 id="roe-matrix">Условие Рое (Property U)</h2>
 
-<div class="eq">\[
-\mathbf{u}_R - \mathbf{u}_L = \sum_{k=1}^{m} \alpha_k \mathbf{r}_k,
+<div class="definition">
+<strong>Определение (Roe, 1981).</strong> Матрица \(\tilde{A}(\mathbf{u}_L, \mathbf{u}_R)\) называется <em>матрицей Рое</em>, если она удовлетворяет трём условиям:
+<ol>
+<li><strong>Согласованность потока (Property U):</strong>
+\[
+\mathbf{f}(\mathbf{u}_R) - \mathbf{f}(\mathbf{u}_L) = \tilde{A}(\mathbf{u}_L, \mathbf{u}_R)\bigl(\mathbf{u}_R - \mathbf{u}_L\bigr).
 \tag{19.3}
-\]</div>
+\]</li>
+<li><strong>Согласованность с якобианом:</strong> при совпадении состояний \(\tilde{A}(\mathbf{u}, \mathbf{u}) = A(\mathbf{u})\).</li>
+<li><strong>Гиперболичность:</strong> \(\tilde{A}\) имеет вещественный спектр и полный набор линейно независимых собственных векторов.</li>
+</ol>
+</div>
 
-<p>где \(\mathbf{r}_k\) — правые собственные векторы, \(\alpha_k\) — волновые амплитуды.</p>
+<div class="remark">
+<strong>Зачем нужно условие (19.3).</strong> Оно гарантирует, что <em>стационарный</em> разрыв, удовлетворяющий условию Ренкина–Гюгонио, воспроизводится решателем <strong>точно</strong>. Действительно, если \(\mathbf{u}_L\) и \(\mathbf{u}_R\) связаны условием Ренкина–Гюгонио \(S(\mathbf{u}_R - \mathbf{u}_L) = \mathbf{f}(\mathbf{u}_R) - \mathbf{f}(\mathbf{u}_L)\) со скоростью \(S\), то в силу (19.3)
+\(\tilde{A}(\mathbf{u}_R - \mathbf{u}_L) = S(\mathbf{u}_R - \mathbf{u}_L)\), то есть \((\mathbf{u}_R - \mathbf{u}_L)\) является собственным вектором \(\tilde{A}\) с собственным значением \(S\). Линейный решатель «узнаёт» истинный скачок.
+</div>
 
-<h2 id="flux">Численный поток метода Рое</h2>
+<h2 id="derivation">Вывод матрицы Рое для уравнений Эйлера</h2>
 
-<p>Численный поток метода Рое определяется выражением</p>
+<p>Для скалярных уравнений \(\tilde{A}\) очевидна: \(\tilde{A} = (f(u_R) - f(u_L))/(u_R - u_L)\) — разностное отношение. Для систем задача нетривиальна. Оригинальная конструкция Рое основана на <em>параметризации</em> через специальные переменные.</p>
+
+<p>Рассмотрим одномерные уравнения Эйлера с вектором консервативных переменных \(\mathbf{u} = (\rho, \rho v, E)^{\!\top}\) и потоком \(\mathbf{f}(\mathbf{u}) = (\rho v, \rho v^2 + p, v(E+p))^{\!\top}\). Введём вектор <em>параметризации Рое</em>:</p>
 
 <div class="eq">\[
-\mathbf{F}_\text{Roe} = \frac{1}{2}\bigl[\mathbf{f}(\mathbf{u}_L) + \mathbf{f}(\mathbf{u}_R)\bigr] - \frac{1}{2}\sum_{k=1}^{m}|\tilde{\lambda}_k|\,\alpha_k\,\mathbf{r}_k.
+\mathbf{z} = \sqrt{\rho}\,\begin{pmatrix} 1 \\ v \\ H \end{pmatrix}, \qquad H = \frac{E+p}{\rho}.
 \tag{19.4}
 \]</div>
 
-<p>Первый член соответствует центральной аппроксимации потока, в то время как второй член представляет собой численную диссипацию, связанную с распространением волн линеаризованной системы. Таким образом, диссипативные свойства метода Рое не вводятся искусственно, а непосредственно следуют из волновой структуры задачи.</p>
+<p>Прямая проверка показывает, что как \(\mathbf{u}\), так и \(\mathbf{f}(\mathbf{u})\) представимы в виде <em>однородных квадратичных форм</em> от \(\mathbf{z}\). Например, первая компонента:</p>
+<div class="eq">\[
+\rho = z_1^2, \qquad \rho v = z_1 z_2, \qquad \rho H = z_1 z_3,
+\]</div>
+<p>и так далее. Введя обозначение \(\Delta\mathbf{z} = \mathbf{z}_R - \mathbf{z}_L\) и \(\bar{\mathbf{z}} = (\mathbf{z}_L + \mathbf{z}_R)/2\), получаем тождество <em>билинейности</em>:</p>
 
-<h2 id="entropy">Энтропийная коррекция</h2>
+<div class="eq">\[
+\mathbf{u}_R - \mathbf{u}_L = B(\bar{\mathbf{z}})\,\Delta\mathbf{z}, \qquad
+\mathbf{f}_R - \mathbf{f}_L = C(\bar{\mathbf{z}})\,\Delta\mathbf{z},
+\]</div>
 
-<p>Линеаризация, лежащая в основе метода Рое, может приводить к нарушению энтропийного условия вблизи центров волн разрежения, где собственные скорости обращаются в нуль. Для устранения этого эффекта используется <em>энтропийная коррекция</em>, заключающаяся в модификации модулей собственных значений \(|\tilde{\lambda}_k|\) в окрестности нуля. После введения такой коррекции метод Рое становится энтропийно корректным и пригодным для практических расчётов.</p>
+<p>где матрицы \(B\) и \(C\) зависят только от среднего \(\bar{\mathbf{z}}\). Отсюда</p>
+
+<div class="eq">\[
+\mathbf{f}_R - \mathbf{f}_L = C(\bar{\mathbf{z}})\,B^{-1}(\bar{\mathbf{z}})\,(\mathbf{u}_R - \mathbf{u}_L) \ \Rightarrow\ \tilde{A} = C(\bar{\mathbf{z}})\,B^{-1}(\bar{\mathbf{z}}).
+\tag{19.5}
+\]</div>
+
+<p>После прямых, но громоздких алгебраических вычислений получается замечательный результат: матрица \(\tilde{A}\) имеет <strong>в точности форму якобиана</strong> \(A(\mathbf{u})\), где все физические величины заменены специальными средними.</p>
+
+<h2 id="roe-averages">Усреднённые величины Рое</h2>
+
+<p>Окончательный результат имеет вид:</p>
+
+<div class="eq">\[
+\tilde{\rho} = \sqrt{\rho_L \rho_R}, \tag{19.6}
+\]</div>
+
+<div class="eq">\[
+\tilde{v} = \frac{\sqrt{\rho_L}\,v_L + \sqrt{\rho_R}\,v_R}{\sqrt{\rho_L} + \sqrt{\rho_R}}, \tag{19.7}
+\]</div>
+
+<div class="eq">\[
+\tilde{H} = \frac{\sqrt{\rho_L}\,H_L + \sqrt{\rho_R}\,H_R}{\sqrt{\rho_L} + \sqrt{\rho_R}}, \tag{19.8}
+\]</div>
+
+<div class="eq">\[
+\tilde{a}^2 = (\gamma - 1)\left(\tilde{H} - \frac{\tilde{v}^2}{2}\right). \tag{19.9}
+\]</div>
+
+<div class="figure">
+<svg viewBox="0 0 560 220" xmlns="http://www.w3.org/2000/svg" style="max-width:540px">
+  <!-- Riemann fan for linearized problem -->
+  <line x1="30" y1="190" x2="540" y2="190" stroke="#6b5d4f" stroke-width="1"/>
+  <line x1="285" y1="190" x2="285" y2="30" stroke="#d9cfc0" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="540" y="203" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">x</text>
+  <text x="270" y="25" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">t</text>
+  <!-- left acoustic wave -->
+  <line x1="285" y1="190" x2="110" y2="40" stroke="#3a5ba0" stroke-width="2.5"/>
+  <text x="130" y="70" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0" font-weight="700">ṽ − ã</text>
+  <text x="115" y="85" font-family="Source Serif 4,serif" font-size="9" fill="#6b5d4f" font-style="italic">лев. акустическая</text>
+  <!-- contact wave -->
+  <line x1="285" y1="190" x2="310" y2="40" stroke="#1a6b5a" stroke-width="2.5" stroke-dasharray="4,4"/>
+  <text x="330" y="60" font-family="JetBrains Mono,monospace" font-size="11" fill="#1a6b5a" font-weight="700">ṽ</text>
+  <text x="345" y="75" font-family="Source Serif 4,serif" font-size="9" fill="#6b5d4f" font-style="italic">контактный разрыв</text>
+  <!-- right acoustic wave -->
+  <line x1="285" y1="190" x2="460" y2="40" stroke="#b44a2d" stroke-width="2.5"/>
+  <text x="400" y="70" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" font-weight="700">ṽ + ã</text>
+  <text x="430" y="85" font-family="Source Serif 4,serif" font-size="9" fill="#6b5d4f" font-style="italic">прав. акустическая</text>
+  <!-- left state -->
+  <text x="80" y="170" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">uL</text>
+  <text x="80" y="183" font-family="Source Serif 4,serif" font-size="8" fill="#6b5d4f" text-anchor="middle">ρL, vL, pL</text>
+  <!-- right state -->
+  <text x="495" y="170" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">uR</text>
+  <text x="495" y="183" font-family="Source Serif 4,serif" font-size="8" fill="#6b5d4f" text-anchor="middle">ρR, vR, pR</text>
+  <!-- star regions -->
+  <text x="210" y="120" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">u_L*</text>
+  <text x="360" y="120" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">u_R*</text>
+  <text x="285" y="213" font-family="Source Serif 4,serif" font-size="10" fill="#2c2419" text-anchor="middle" font-style="italic">Волновая структура линеаризованной задачи Римана</text>
+</svg>
+<div class="caption">Рис. 1. Три волны линейной задачи (19.2) со скоростями \(\tilde{v} \pm \tilde{a}\) и \(\tilde{v}\).</div>
+</div>
+
+<div class="remark">
+<strong>Почему именно \(\sqrt{\rho}\)-усреднение?</strong> Можно было бы попробовать обычное арифметическое среднее \(\bar{v} = (v_L + v_R)/2\), но тогда Property U не выполняется. Параметризация через \(\mathbf{z} = \sqrt{\rho}(1, v, H)^{\!\top}\) — единственный (с точностью до эквивалентности) выбор, обеспечивающий билинейность и потоков, и консервативных переменных одновременно. Это нетривиальный результат, который был одним из главных вкладов Рое.
+</div>
+
+<h2 id="decomposition">Спектральное разложение скачка</h2>
+
+<p>Матрица \(\tilde{A}\) имеет три собственных значения:</p>
+<div class="eq">\[
+\tilde{\lambda}_1 = \tilde{v} - \tilde{a}, \quad \tilde{\lambda}_2 = \tilde{v}, \quad \tilde{\lambda}_3 = \tilde{v} + \tilde{a},
+\]</div>
+<p>и три правых собственных вектора (напр., из Toro, 2009):</p>
+
+<div class="eq">\[
+\tilde{\mathbf{r}}_1 = \begin{pmatrix} 1 \\ \tilde{v} - \tilde{a} \\ \tilde{H} - \tilde{v}\tilde{a} \end{pmatrix},\ \
+\tilde{\mathbf{r}}_2 = \begin{pmatrix} 1 \\ \tilde{v} \\ \tfrac{1}{2}\tilde{v}^2 \end{pmatrix},\ \
+\tilde{\mathbf{r}}_3 = \begin{pmatrix} 1 \\ \tilde{v} + \tilde{a} \\ \tilde{H} + \tilde{v}\tilde{a} \end{pmatrix}.
+\tag{19.10}
+\]</div>
+
+<p>Разложим скачок состояний по базису собственных векторов:</p>
+
+<div class="eq">\[
+\mathbf{u}_R - \mathbf{u}_L = \sum_{k=1}^{3} \tilde{\alpha}_k\, \tilde{\mathbf{r}}_k,
+\tag{19.11}
+\]</div>
+
+<p>где коэффициенты \(\tilde{\alpha}_k\) — <em>волновые амплитуды</em>. Для уравнений Эйлера они вычисляются в явном виде:</p>
+
+<div class="eq">\[
+\tilde{\alpha}_2 = \Delta\rho - \frac{\Delta p}{\tilde{a}^2}, \qquad
+\tilde{\alpha}_{1,3} = \frac{1}{2\tilde{a}^2}\bigl(\Delta p \mp \tilde{\rho}\tilde{a}\,\Delta v\bigr),
+\tag{19.12}
+\]</div>
+<p>где \(\Delta(\cdot) = (\cdot)_R - (\cdot)_L\).</p>
+
+<h2 id="flux">Численный поток метода Рое</h2>
+
+<p>Численный поток Рое на грани \(i+1/2\) имеет классическую форму <em>центральная часть + диссипация</em>:</p>
+
+<div class="eq">\[
+\mathbf{F}^\text{Roe}_{i+1/2} = \frac{1}{2}\bigl[\mathbf{f}(\mathbf{u}_L) + \mathbf{f}(\mathbf{u}_R)\bigr] - \frac{1}{2}\sum_{k=1}^{3}|\tilde{\lambda}_k|\,\tilde{\alpha}_k\,\tilde{\mathbf{r}}_k.
+\tag{19.13}
+\]</div>
+
+<p>Структура формулы прозрачна. Первое слагаемое — центральная (недиссипативная) аппроксимация потока. Второе — численная диссипация, масштабируемая <em>абсолютными значениями</em> собственных скоростей. Именно модули \(|\tilde{\lambda}_k|\) обеспечивают «апвиндинг» каждой волны согласно направлению её распространения.</p>
+
+<div class="remark">
+<strong>Апвиндинг по волнам.</strong> Формулу (19.13) можно переписать как
+\[
+\mathbf{F}^\text{Roe}_{i+1/2} = \mathbf{f}(\mathbf{u}_L) + \sum_{\tilde{\lambda}_k < 0}\tilde{\lambda}_k\,\tilde{\alpha}_k\,\tilde{\mathbf{r}}_k
+= \mathbf{f}(\mathbf{u}_R) - \sum_{\tilde{\lambda}_k > 0}\tilde{\lambda}_k\,\tilde{\alpha}_k\,\tilde{\mathbf{r}}_k.
+\]
+«Волны, бегущие вправо» даёт левое состояние; «волны, бегущие влево» — правое. В сверхзвуковом потоке (\(\tilde{v} > \tilde{a}\)) все три \(\tilde{\lambda}_k > 0\), и поток просто равен \(\mathbf{f}(\mathbf{u}_L)\) — рецепт Куранта-Изаксона-Рис.
+</div>
+
+<h2 id="entropy">Энтропийная коррекция (поправка Хартена)</h2>
+
+<p>Линейный решатель Рое имеет одну <em>паталогию</em>: в трансзвуковом разрежении, где одно из собственных значений \(\tilde{\lambda}_k\) меняет знак внутри волны (проходя через нуль), формула (19.13) нарушает энтропийное условие. На месте физически допустимой волны разрежения появляется <em>нефизический стационарный скачок разрежения</em> — «expansion shock». Это артефакт именно линеаризации: точная задача Римана таких решений не имеет.</p>
+
+<p>Классический рецепт устранения — <em>энтропийная коррекция Хартена</em> (1983): модули собственных значений в окрестности нуля «сглаживаются»:</p>
+
+<div class="eq">\[
+|\tilde{\lambda}_k|^\text{fix} = \begin{cases}
+|\tilde{\lambda}_k|, & |\tilde{\lambda}_k| \ge \delta, \\[4pt]
+\dfrac{\tilde{\lambda}_k^2 + \delta^2}{2\delta}, & |\tilde{\lambda}_k| < \delta,
+\end{cases}
+\tag{19.14}
+\]</div>
+
+<p>где \(\delta = \varepsilon\,(|\tilde{v}| + \tilde{a})\) с \(\varepsilon \sim 0.05 \div 0.2\). Коррекция непрерывна, работает как добавка численной вязкости в окрестности звуковой точки и сохраняет точное разрешение контактного разрыва.</p>
+
+<div class="figure">
+<svg viewBox="0 0 520 190" xmlns="http://www.w3.org/2000/svg" style="max-width:500px">
+  <!-- axes -->
+  <line x1="40" y1="160" x2="480" y2="160" stroke="#6b5d4f"/>
+  <line x1="260" y1="170" x2="260" y2="20" stroke="#6b5d4f"/>
+  <text x="490" y="164" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">λ</text>
+  <text x="260" y="14" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">|λ|</text>
+  <!-- original |λ| -->
+  <path d="M 40 30 L 260 160 L 480 30" fill="none" stroke="#9a8d7e" stroke-width="2" stroke-dasharray="4,3"/>
+  <text x="120" y="65" font-family="JetBrains Mono,monospace" font-size="10" fill="#9a8d7e">|λ| (без коррекции)</text>
+  <!-- δ zone -->
+  <line x1="210" y1="160" x2="210" y2="28" stroke="#d9cfc0" stroke-width="0.8" stroke-dasharray="2,2"/>
+  <line x1="310" y1="160" x2="310" y2="28" stroke="#d9cfc0" stroke-width="0.8" stroke-dasharray="2,2"/>
+  <text x="210" y="175" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">-δ</text>
+  <text x="310" y="175" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">δ</text>
+  <!-- corrected |λ|fix -->
+  <path d="M 40 30 L 210 130" fill="none" stroke="#b44a2d" stroke-width="2.5"/>
+  <!-- parabola between -δ and δ: y = (λ^2 + δ^2)/(2δ), peak at λ=0 is δ/2 ie y=δ/2 -->
+  <path d="M 210 130 Q 260 100 310 130" fill="none" stroke="#b44a2d" stroke-width="2.5"/>
+  <path d="M 310 130 L 480 30" fill="none" stroke="#b44a2d" stroke-width="2.5"/>
+  <circle cx="260" cy="113" r="3" fill="#b44a2d"/>
+  <text x="268" y="108" font-family="JetBrains Mono,monospace" font-size="9" fill="#b44a2d">min = δ/2</text>
+  <text x="370" y="65" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">|λ|^fix (Хартен)</text>
+  <text x="260" y="189" font-family="Source Serif 4,serif" font-size="10" fill="#6b5d4f" text-anchor="middle" font-style="italic">Замена модуля параболой в окрестности нуля устраняет «expansion shock»</text>
+</svg>
+<div class="caption">Рис. 2. Энтропийная коррекция (19.14): модули склеиваются параболой при \(|\tilde{\lambda}| < \delta\).</div>
+</div>
 
 <h2 id="properties">Свойства и область применения</h2>
 
-<p>Метод Рое является консервативным, обладает малой численной диффузией и точно передаёт контактные разрывы. Эти свойства делают его эффективным базовым решателем в схемах повышенного порядка точности. В то же время необходимость спектрального разложения и введения энтропийной коррекции определяет границы применимости метода и мотивирует использование альтернативных приближённых решателей.</p>
+<ol>
+<li><strong>Консервативность</strong> — метод Рое в форме (19.13) является консервативной схемой в смысле §8.</li>
+<li><strong>Точное воспроизведение стационарных скачков</strong> — следствие Property U (19.3).</li>
+<li><strong>Точное разрешение контактных разрывов</strong> — вклад контактной волны пропорционален \(|\tilde{v}|\), а не \(|\tilde{v}| + \tilde{a}\) как у HLL (§21), что даёт минимальную численную диффузию по массе.</li>
+<li><strong>Требует энтропийной коррекции</strong> — без (19.14) метод нефизичен в трансзвуковых разрежениях.</li>
+<li><strong>Требует гарантии положительности</strong> — при очень сильных разрежениях линеаризованная задача может дать отрицательное «звёздное» давление; защита через переключение на HLLE.</li>
+</ol>
+
+<p>Метод Рое является базовым решателем в большинстве современных кодов второго-третьего порядка (MUSCL, ENO, WENO). В практических расчётах взаимодействий ударных волн и контактных разрывов — например, в LES с неоднородным течением — именно способность Рое точно «держать» контактные поверхности оказывается решающим преимуществом.</p>
+
+<h2 id="interactive">Интерактивный расчёт: тесты Торо</h2>
+
+<p>Ниже — 1D солвер Годунова с потоком Рое (с энтропийной коррекцией и опциональной MUSCL-реконструкцией) на стандартных тестах Торо (E.&nbsp;F.&nbsp;Toro, <em>Riemann Solvers and Numerical Methods for Fluid Dynamics</em>, 2009). Сравнение с точным решением задачи Римана.</p>
+
+<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.2rem;margin:1.5rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Тест Торо</label>
+    <select id="roeTest" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)">
+      <option value="sod">Тест 1 (Sod): ВР-КР-УВ, t=0.2</option>
+      <option value="123">Тест 2 (1-2-3): двойное разрежение, t=0.15</option>
+      <option value="blast">Тест 3 (левый бласт): сильная УВ, t=0.012</option>
+      <option value="trans">Тест 4 (трансзвук): проверка энт. кор., t=0.035</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">N ячеек</label>
+    <input type="number" id="roeN" value="200" min="50" max="1000" style="width:80px;background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">CFL</label>
+    <input type="number" id="roeCFL" value="0.8" min="0.1" max="1.0" step="0.05" style="width:70px;background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Реконструкция</label>
+    <select id="roeRecon" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)">
+      <option value="const">Кусочно-постоянная (1-й)</option>
+      <option value="muscl" selected>MUSCL-minmod (2-й)</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Энтр. кор. ε = <span id="roeEpsV">0.10</span></label>
+    <input type="range" id="roeEps" min="0" max="30" value="10" style="width:120px">
+  </div>
+  <button id="roeRun" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 20px;font-family:'Source Serif 4',serif;font-size:.88rem;font-weight:600;cursor:pointer">▶ Запустить Рое</button>
+</div>
+<div style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-bottom:.4rem" id="roeStatus">Готов к расчёту</div>
+<div style="display:flex;gap:1.2rem;justify-content:center;margin:.5rem 0;font-size:.78rem;color:var(--text2);font-family:'JetBrains Mono',monospace;flex-wrap:wrap">
+  <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:2px;background:#b44a2d"></span>точное</span>
+  <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:2px;background:#3a5ba0"></span>Рое</span>
+</div>
+<div class="roe-plots">
+  <div class="roe-plot"><div class="roe-plot-title">ρ(x) — плотность</div><canvas id="roe_c_rho" width="480" height="300"></canvas></div>
+  <div class="roe-plot"><div class="roe-plot-title">P(x) — давление</div><canvas id="roe_c_p" width="480" height="300"></canvas></div>
+  <div class="roe-plot"><div class="roe-plot-title">v(x) — скорость</div><canvas id="roe_c_u" width="480" height="300"></canvas></div>
+</div>
+<div id="roeResults" style="display:none">
+<table class="roe-vtable">
+<thead><tr><th>Величина</th><th>Область</th><th>Расчёт</th><th>Точное</th><th>L∞-ошибка</th><th>Статус</th></tr></thead>
+<tbody id="roeBody"></tbody>
+</table>
+</div>
+</div>
+
+<script>
+(function(){
+// === Exact Riemann solver (adapted from Toro 2009 algorithm) ===
+function exactRiemann(rL,uL,pL,rR,uR,pR,gamma,xot){
+  var g1=gamma,g2=(g1-1)/(2*g1),g3=(g1+1)/(2*g1),g4=2/(g1-1),g5=2/(g1+1),g6=(g1-1)/(g1+1),g7=(g1-1)/2;
+  var aL=Math.sqrt(g1*pL/rL),aR=Math.sqrt(g1*pR/rR);
+  function fK(p,pk,rhok,ak){ if(p>pk){ var A=g5/rhok,B=g6*pk; return(p-pk)*Math.sqrt(A/(p+B)); } return g4*ak*(Math.pow(p/pk,g2)-1); }
+  function dfK(p,pk,rhok,ak){ if(p>pk){ var A=g5/rhok,B=g6*pk,sq=Math.sqrt(A/(p+B)); return sq*(1-(p-pk)/(2*(p+B))); } return 1/(rhok*ak)*Math.pow(p/pk,-g3); }
+  var ps=.5*(pL+pR);
+  for(var i=0;i<80;i++){ var f=fK(ps,pL,rL,aL)+fK(ps,pR,rR,aR)+(uR-uL); var df=dfK(ps,pL,rL,aL)+dfK(ps,pR,rR,aR); var dp=-f/df; ps+=dp; if(ps<1e-10)ps=1e-10; if(Math.abs(dp)<1e-12*ps)break; }
+  var us=.5*(uL+uR)+.5*(fK(ps,pR,rR,aR)-fK(ps,pL,rL,aL));
+  var S=xot, rho,u,p;
+  if(S<us){
+    if(ps<=pL){ var asL=aL*Math.pow(ps/pL,g2),sHL=uL-aL,sTL=us-asL;
+      if(S<=sHL){rho=rL;u=uL;p=pL;}
+      else if(S>=sTL){rho=rL*Math.pow(ps/pL,1/g1);u=us;p=ps;}
+      else{u=g5*(aL+g7*uL+S); var a=g5*(aL+g7*(uL-S)); rho=rL*Math.pow(a/aL,g4); p=pL*Math.pow(a/aL,2*g1/(g1-1));} }
+    else{ var sL=uL-aL*Math.sqrt(g3*ps/pL+g2); if(S<=sL){rho=rL;u=uL;p=pL;} else{rho=rL*(ps/pL+g6)/(g6*ps/pL+1);u=us;p=ps;} }
+  } else {
+    if(ps<=pR){ var asR=aR*Math.pow(ps/pR,g2),sHR=uR+aR,sTR=us+asR;
+      if(S>=sHR){rho=rR;u=uR;p=pR;}
+      else if(S<=sTR){rho=rR*Math.pow(ps/pR,1/g1);u=us;p=ps;}
+      else{u=g5*(-aR+g7*uR+S); var a=g5*(aR-g7*(uR-S)); rho=rR*Math.pow(a/aR,g4); p=pR*Math.pow(a/aR,2*g1/(g1-1));} }
+    else{ var sR=uR+aR*Math.sqrt(g3*ps/pR+g2); if(S>=sR){rho=rR;u=uR;p=pR;} else{rho=rR*(ps/pR+g6)/(g6*ps/pR+1);u=us;p=ps;} }
+  }
+  return{rho:rho,u:u,p:p};
+}
+
+// === ROE FLUX with Harten entropy fix ===
+function roeFlux(rL,uL,pL,rR,uR,pR,gamma,eps){
+  var gm1 = gamma-1;
+  var EL = pL/(gm1*rL) + 0.5*uL*uL;
+  var ER = pR/(gm1*rR) + 0.5*uR*uR;
+  var HL = EL + pL/rL, HR = ER + pR/rR;
+  var sqL = Math.sqrt(rL), sqR = Math.sqrt(rR), sq = sqL + sqR;
+  // Roe averages
+  var rT = sqL*sqR;
+  var vT = (sqL*uL + sqR*uR)/sq;
+  var HT = (sqL*HL + sqR*HR)/sq;
+  var aT2 = gm1*(HT - 0.5*vT*vT);
+  if (aT2 < 1e-12) aT2 = 1e-12;
+  var aT = Math.sqrt(aT2);
+  // Jumps
+  var dr = rR - rL, du = uR - uL, dp = pR - pL;
+  // Wave amplitudes (alpha_k)
+  var a2 = dr - dp/aT2;
+  var a1 = (dp - rT*aT*du)/(2*aT2);
+  var a3 = (dp + rT*aT*du)/(2*aT2);
+  // Eigenvalues
+  var lam1 = vT - aT, lam2 = vT, lam3 = vT + aT;
+  // Harten entropy fix
+  function fix(l){
+    var d = eps*(Math.abs(vT) + aT);
+    if (Math.abs(l) < d && d > 1e-14) return (l*l + d*d)/(2*d);
+    return Math.abs(l);
+  }
+  var L1 = fix(lam1), L2 = fix(lam2), L3 = fix(lam3);
+  // Right eigenvectors
+  var r1 = [1, vT-aT, HT - vT*aT];
+  var r2 = [1, vT, 0.5*vT*vT];
+  var r3 = [1, vT+aT, HT + vT*aT];
+  // Central flux
+  var FL = [rL*uL, rL*uL*uL+pL, uL*(rL*EL+pL)];
+  var FR = [rR*uR, rR*uR*uR+pR, uR*(rR*ER+pR)];
+  var F = [0,0,0];
+  for (var k=0;k<3;k++){
+    F[k] = 0.5*(FL[k] + FR[k]) - 0.5*(L1*a1*r1[k] + L2*a2*r2[k] + L3*a3*r3[k]);
+  }
+  return F;
+}
+
+function minmod(a,b){ return a*b<=0 ? 0 : (Math.abs(a)<Math.abs(b) ? a : b); }
+
+// === Test configurations (Toro 2009, Chapter 4) ===
+var TESTS = {
+  sod:   { rL:1.0, uL:0.0, pL:1.0, rR:0.125, uR:0.0, pR:0.1, tend:0.20, x0:0.5, xmin:0, xmax:1, name:'Sod' },
+  '123': { rL:1.0, uL:-2.0, pL:0.4, rR:1.0, uR:2.0, pR:0.4, tend:0.15, x0:0.5, xmin:0, xmax:1, name:'1-2-3' },
+  blast: { rL:1.0, uL:0.0, pL:1000.0, rR:1.0, uR:0.0, pR:0.01, tend:0.012, x0:0.5, xmin:0, xmax:1, name:'Left blast (Woodward-Colella)' },
+  trans: { rL:1.0, uL:0.75, pL:1.0, rR:0.125, uR:0.0, pR:0.1, tend:0.035, x0:0.3, xmin:0, xmax:1, name:'Transonic (sonic rarefaction)' }
+};
+
+function runRoe(){
+  var btn = document.getElementById('roeRun'); btn.disabled = true;
+  document.getElementById('roeStatus').textContent = 'Считаю...';
+
+  requestAnimationFrame(function(){ setTimeout(function(){
+    try {
+      var N = +document.getElementById('roeN').value;
+      var CFL = +document.getElementById('roeCFL').value;
+      var eps = +document.getElementById('roeEps').value/100;
+      var recon = document.getElementById('roeRecon').value;
+      var testKey = document.getElementById('roeTest').value;
+      var T = TESTS[testKey];
+      var gamma = 1.4, gm1 = gamma-1;
+
+      var xmin = T.xmin, xmax = T.xmax, dx = (xmax-xmin)/N, tend = T.tend;
+      var Ng = 2, Nt = N + 2*Ng;
+      var U = [new Float64Array(Nt), new Float64Array(Nt), new Float64Array(Nt)];
+
+      for (var i=0;i<Nt;i++){
+        var x = xmin + (i-Ng+0.5)*dx;
+        var rr = x < T.x0 ? T.rL : T.rR;
+        var uu = x < T.x0 ? T.uL : T.uR;
+        var pp = x < T.x0 ? T.pL : T.pR;
+        U[0][i] = rr; U[1][i] = rr*uu; U[2][i] = pp/gm1 + 0.5*rr*uu*uu;
+      }
+
+      function applyBC(V){
+        for (var g=0;g<Ng;g++){
+          for (var k=0;k<3;k++){ V[k][g] = V[k][Ng]; V[k][N+Ng+g] = V[k][N+Ng-1]; }
+        }
+      }
+      function prim(V,i){
+        var rr = V[0][i], uu = V[1][i]/rr, EE = V[2][i];
+        var pp = gm1*(EE - 0.5*rr*uu*uu);
+        if (pp < 1e-10) pp = 1e-10;
+        if (rr < 1e-10) rr = 1e-10;
+        return {r:rr, u:uu, p:pp, a:Math.sqrt(gamma*pp/rr)};
+      }
+
+      function computeRHS(V){
+        applyBC(V);
+        var RHS = [new Float64Array(Nt), new Float64Array(Nt), new Float64Array(Nt)];
+        for (var i=Ng-1; i<N+Ng; i++){
+          var pL = prim(V,i), pR = prim(V,i+1);
+          var rL2=pL.r, uL2=pL.u, pL2=pL.p;
+          var rR2=pR.r, uR2=pR.u, pR2=pR.p;
+          if (recon !== 'const'){
+            var pIM = prim(V,i-1), pIP = prim(V,i+2);
+            var sr1 = minmod(pL.r-pIM.r, pR.r-pL.r);
+            var su1 = minmod(pL.u-pIM.u, pR.u-pL.u);
+            var sp1 = minmod(pL.p-pIM.p, pR.p-pL.p);
+            var sr2 = minmod(pR.r-pL.r, pIP.r-pR.r);
+            var su2 = minmod(pR.u-pL.u, pIP.u-pR.u);
+            var sp2 = minmod(pR.p-pL.p, pIP.p-pR.p);
+            rL2 = pL.r + 0.5*sr1; uL2 = pL.u + 0.5*su1; pL2 = pL.p + 0.5*sp1;
+            rR2 = pR.r - 0.5*sr2; uR2 = pR.u - 0.5*su2; pR2 = pR.p - 0.5*sp2;
+            if (rL2<1e-10) rL2=1e-10; if (rR2<1e-10) rR2=1e-10;
+            if (pL2<1e-10) pL2=1e-10; if (pR2<1e-10) pR2=1e-10;
+          }
+          var F = roeFlux(rL2,uL2,pL2, rR2,uR2,pR2, gamma, eps);
+          for (var k=0;k<3;k++){ RHS[k][i] -= F[k]/dx; RHS[k][i+1] += F[k]/dx; }
+        }
+        return RHS;
+      }
+
+      var t=0, ns=0, t0=performance.now();
+      while (t < tend){
+        applyBC(U);
+        var mx = 0;
+        for (var i=Ng;i<N+Ng;i++){ var p = prim(U,i); var l = Math.abs(p.u) + p.a; if (l>mx) mx = l; }
+        var dt = CFL*dx/mx;
+        if (t + dt > tend) dt = tend - t;
+        // SSP-RK2
+        var R1 = computeRHS(U);
+        var U1 = [new Float64Array(Nt), new Float64Array(Nt), new Float64Array(Nt)];
+        for (var k=0;k<3;k++) for (var i=0;i<Nt;i++) U1[k][i] = U[k][i] + dt*R1[k][i];
+        var R2 = computeRHS(U1);
+        for (var k=0;k<3;k++) for (var i=0;i<Nt;i++) U[k][i] = 0.5*U[k][i] + 0.5*(U1[k][i] + dt*R2[k][i]);
+        t += dt; ns++;
+        if (ns > 2e5) break;
+      }
+
+      var el = (performance.now()-t0).toFixed(1);
+      var xc=[], rc=[], uc=[], pc=[];
+      for (var i=Ng;i<N+Ng;i++){ var p = prim(U,i); xc.push(xmin + (i-Ng+0.5)*dx); rc.push(p.r); uc.push(p.u); pc.push(p.p); }
+      var xe=[], re=[], ue=[], pe=[];
+      var Ne = 800;
+      for (var i=0;i<Ne;i++){
+        var x = xmin + (xmax-xmin)*(i+0.5)/Ne;
+        var s = exactRiemann(T.rL, T.uL, T.pL, T.rR, T.uR, T.pR, gamma, (x - T.x0)/tend);
+        xe.push(x); re.push(s.rho); ue.push(s.u); pe.push(s.p);
+      }
+
+      plotField('roe_c_rho', xc, rc, xe, re, 'ρ', xmin, xmax);
+      plotField('roe_c_p',   xc, pc, xe, pe, 'P', xmin, xmax);
+      plotField('roe_c_u',   xc, uc, xe, ue, 'v', xmin, xmax);
+      verification(xc,rc,uc,pc, T, gamma, tend);
+
+      document.getElementById('roeStatus').textContent = '✓ Тест «'+T.name+'»: '+ns+' шагов, '+el+' мс, '+recon+(recon!=='const'?'+SSP-RK2':'+Эйлер');
+    } catch(err){
+      document.getElementById('roeStatus').textContent = 'Ошибка: '+err.message;
+    }
+    btn.disabled = false;
+  }, 20); });
+}
+
+function plotField(cid, xc, yc, xe, ye, yl, xmin, xmax){
+  var c = document.getElementById(cid); if (!c) return;
+  var ctx = c.getContext('2d'), W = c.width, H = c.height;
+  var P = {l:45, r:12, t:12, b:28}, pw = W-P.l-P.r, ph = H-P.t-P.b;
+  var mn=1e9, mx=-1e9;
+  for (var i=0;i<yc.length;i++){ if (yc[i]<mn) mn=yc[i]; if (yc[i]>mx) mx=yc[i]; }
+  for (var i=0;i<ye.length;i++){ if (ye[i]<mn) mn=ye[i]; if (ye[i]>mx) mx=ye[i]; }
+  var pad = (mx-mn)*0.08 || 0.1; mn -= pad; mx += pad;
+  ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+  for (var i=0;i<=5;i++){ var y = P.t + ph*i/5; ctx.beginPath(); ctx.moveTo(P.l,y); ctx.lineTo(P.l+pw,y); ctx.stroke(); }
+  for (var i=0;i<=10;i++){ var x = P.l + pw*i/10; ctx.beginPath(); ctx.moveTo(x,P.t); ctx.lineTo(x,P.t+ph); ctx.stroke(); }
+  ctx.fillStyle='#8b7d6e'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+  for (var i=0;i<=10;i+=2){ var xv = xmin + (xmax-xmin)*i/10; ctx.fillText(xv.toFixed(1), P.l+pw*i/10, H-6); }
+  ctx.textAlign='right';
+  for (var i=0;i<=5;i++){ var v = mx - (mx-mn)*i/5; ctx.fillText(v.toFixed(2), P.l-3, P.t+ph*i/5+3); }
+  ctx.save(); ctx.translate(9, P.t+ph/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center'; ctx.fillText(yl, 0, 0); ctx.restore();
+  // exact (dashed red)
+  ctx.strokeStyle='#b44a2d'; ctx.lineWidth=2; ctx.setLineDash([6,4]);
+  ctx.beginPath();
+  for (var i=0;i<xe.length;i++){
+    var cx = P.l + (xe[i]-xmin)/(xmax-xmin)*pw;
+    var cy = P.t + (1 - (ye[i]-mn)/(mx-mn))*ph;
+    i===0 ? ctx.moveTo(cx,cy) : ctx.lineTo(cx,cy);
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+  // numerical (blue)
+  ctx.strokeStyle='#3a5ba0'; ctx.lineWidth=1.8;
+  ctx.beginPath();
+  for (var i=0;i<xc.length;i++){
+    var cx = P.l + (xc[i]-xmin)/(xmax-xmin)*pw;
+    var cy = P.t + (1 - (yc[i]-mn)/(mx-mn))*ph;
+    i===0 ? ctx.moveTo(cx,cy) : ctx.lineTo(cx,cy);
+  }
+  ctx.stroke();
+  if (xc.length <= 150){
+    ctx.fillStyle='#3a5ba0';
+    for (var i=0;i<xc.length;i++){
+      var cx = P.l + (xc[i]-xmin)/(xmax-xmin)*pw;
+      var cy = P.t + (1 - (yc[i]-mn)/(mx-mn))*ph;
+      ctx.beginPath(); ctx.arc(cx,cy,2,0,Math.PI*2); ctx.fill();
+    }
+  }
+}
+
+function verification(xc,rc,uc,pc, T, gamma, tend){
+  var Ne = 400, xe=[], re=[], ue=[], pe=[];
+  for (var i=0;i<Ne;i++){
+    var x = T.xmin + (T.xmax-T.xmin)*(i+0.5)/Ne;
+    var s = exactRiemann(T.rL,T.uL,T.pL, T.rR,T.uR,T.pR, gamma, (x-T.x0)/tend);
+    xe.push(x); re.push(s.rho); ue.push(s.u); pe.push(s.p);
+  }
+  function Linf(a, ae){
+    var m = 0;
+    for (var i=0;i<a.length;i++){
+      var j = Math.floor((xc[i]-T.xmin)/(T.xmax-T.xmin) * Ne);
+      if (j<0) j=0; if (j>=Ne) j=Ne-1;
+      var d = Math.abs(a[i] - ae[j]);
+      if (d>m) m = d;
+    }
+    return m;
+  }
+  var er = Linf(rc, re), eu = Linf(uc, ue), ep = Linf(pc, pe);
+  // Consider pass threshold based on magnitude
+  var rRef = Math.max.apply(null, re), uRef = Math.max(Math.max.apply(null, ue.map(Math.abs)), 1e-3), pRef = Math.max.apply(null, pe);
+  var rows = [
+    ['ρ', 'L∞(Ω)', er, rRef, (er/rRef*100).toFixed(2)+'%', er/rRef < 0.2],
+    ['v', 'L∞(Ω)', eu, uRef, (eu/uRef*100).toFixed(2)+'%', eu/uRef < 0.2],
+    ['P', 'L∞(Ω)', ep, pRef, (ep/pRef*100).toFixed(2)+'%', ep/pRef < 0.2]
+  ];
+  var html = '';
+  for (var i=0;i<rows.length;i++){
+    var r = rows[i];
+    html += '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2].toExponential(3)+'</td><td>'+r[3].toFixed(3)+'</td><td>'+r[4]+'</td><td class="'+(r[5]?'roe-pass':'roe-fail')+'">'+(r[5]?'✓ <20%':'✗ ≥20%')+'</td></tr>';
+  }
+  document.getElementById('roeBody').innerHTML = html;
+  document.getElementById('roeResults').style.display = '';
+}
+
+document.getElementById('roeRun').addEventListener('click', runRoe);
+document.getElementById('roeEps').addEventListener('input', function(){
+  document.getElementById('roeEpsV').textContent = (this.value/100).toFixed(2);
+});
+
+window.addEventListener('load', function(){
+  var ids = ['roe_c_rho','roe_c_p','roe_c_u'];
+  for (var k=0;k<ids.length;k++){
+    var c = document.getElementById(ids[k]); if (!c) continue;
+    var x = c.getContext('2d');
+    x.fillStyle='#fdf9f3'; x.fillRect(0,0,c.width,c.height);
+    x.fillStyle='#c4b8a8'; x.font='14px "Source Serif 4"'; x.textAlign='center';
+    x.fillText('Нажмите «Запустить Рое»', c.width/2, c.height/2);
+  }
+});
+})();
+</script>
+
+<div class="remark">
+<strong>Что можно увидеть в интерактиве:</strong>
+<ul>
+<li><strong>Sod:</strong> классический тест с волной разрежения слева, контактным разрывом и ударной волной справа. Рое разрешает контакт с минимальной диффузией (заметно сужение перехода плотности в районе контакта по сравнению с HLL/Лакс-Фридрихс).</li>
+<li><strong>1-2-3:</strong> две волны разрежения расходятся в стороны. Звёздное давление очень мало (\(P^* \approx 0.0019\)), линеаризация Рое работает на пределе; с малым \(\varepsilon\) можно увидеть артефакты.</li>
+<li><strong>Левый бласт:</strong> \(P_L/P_R = 10^5\). Проверка на устойчивость при очень сильных разрывах. Требует хорошей реконструкции (MUSCL с RK2).</li>
+<li><strong>Трансзвук:</strong> специально подобран так, чтобы волна разрежения <em>пересекала звуковую точку</em>. Поставьте \(\varepsilon = 0\) — увидите классический нефизический скачок разрежения в центре волны. Включите коррекцию (\(\varepsilon \approx 0.1\)) — артефакт исчезает.</li>
+</ul>
+</div>
+
+<h2>Свойства и область применения метода Рое</h2>
+
+<p>Метод Рое является консервативным, обладает <em>малой численной диффузией</em> и <em>точно передаёт контактные разрывы</em>. Эти свойства делают его эффективным базовым решателем в схемах повышенного порядка точности (MUSCL §23-24, WENO §26). В то же время необходимость спектрального разложения (19.10)–(19.12) и введения энтропийной коррекции (19.14) определяют границы применимости метода и мотивируют использование альтернативных приближённых решателей: метода Ошера (§20), HLL (§21), HLLC (§22).</p>
+
+<div class="exercise">
+<strong>Упражнение 1.</strong> Проверьте непосредственно условие Property U (19.3) для линейного уравнения переноса \(u_t + cu_x = 0\). Покажите, что \(\tilde{A} = c\) для любых \(u_L, u_R\).
+</div>
+
+<div class="exercise">
+<strong>Упражнение 2.</strong> Покажите, что для стационарной ударной волны \((u_L, u_R)\), удовлетворяющей условиям Ренкина-Гюгонио со скоростью \(S = 0\), вклад соответствующей компоненты в диссипативный член формулы (19.13) равен нулю. Это и есть гарантия «точного воспроизведения стационарных скачков».
+</div>
+
+<div class="exercise">
+<strong>Упражнение 3.</strong> В интерактиве «Трансзвук» установите \(\varepsilon = 0\) и запустите расчёт. Наблюдайте нефизический скачок разрежения в окрестности \(x \approx 0.35\). Увеличьте \(\varepsilon\) до 0.10 — убедитесь что скачок исчезает.
+</div>
 
 <div class="lecture-nav">
 <a href="s1-18.html" class="nav-prev">← §18. Приближённые решатели: классификация</a>
 <a href="s1-20.html" class="nav-next">§20. Метод Ошера →</a>
 </div>
-</div>
-</div>
+</div></div>
 
 <div class="comments-wrap">
 <div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">

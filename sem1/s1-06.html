@@ -199,10 +199,10 @@ a_k^{(m)} = \frac{1}{N+1} \sum_{n=1}^{N+1} f_n^{(m)} \cdot \exp[i(kh) \cdot n].
 </div>
 
 <h2 id="interactive">Интерактивный расчёт переноса</h2>
-<p>Ниже представлен интерактивный расчёт переноса начального профиля схемой «уголок» при различных числах Куранта и типах начальных условий.</p>
+<p>Сравнение схем первого порядка (уголок, сильная диссипация) и второго порядка (Лакс–Вендрофф, слабая диссипация но дисперсия). Нажмите «Старт» для анимации пошагового расчёта.</p>
 
 <div id="solver-container" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.2rem;margin:1.5rem 0">
-<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
   <div style="display:flex;flex-direction:column;gap:3px">
     <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Начальные условия</label>
     <select id="ic-type" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)">
@@ -213,150 +213,189 @@ a_k^{(m)} = \frac{1}{N+1} \sum_{n=1}^{N+1} f_n^{(m)} \cdot \exp[i(kh) \cdot n].
     </select>
   </div>
   <div style="display:flex;flex-direction:column;gap:3px">
-    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Число Куранта r = <span id="r-val">0.50</span></label>
-    <input type="range" id="r-slider" min="5" max="95" value="50" style="width:160px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Число Куранта r = <span id="r-val">0.80</span></label>
+    <input type="range" id="r-slider" min="5" max="95" value="80" style="width:140px">
   </div>
   <div style="display:flex;flex-direction:column;gap:3px">
-    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Шагов: <span id="steps-val">50</span></label>
-    <input type="range" id="steps-slider" min="10" max="200" value="50" style="width:120px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Всего шагов: <span id="steps-val">100</span></label>
+    <input type="range" id="steps-slider" min="20" max="300" value="100" style="width:100px">
   </div>
-  <button id="run-btn" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 20px;font-family:'Source Serif 4',serif;font-size:.9rem;font-weight:600;cursor:pointer">Пуск</button>
+  <button id="run-btn" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 18px;font-family:'Source Serif 4',serif;font-size:.88rem;font-weight:600;cursor:pointer">▶ Старт</button>
+  <button id="stop-btn" style="background:#6b5d4f;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer;display:none">⏸ Стоп</button>
 </div>
-<canvas id="plot-canvas" width="800" height="300" style="width:100%;height:auto;background:#fff;border-radius:6px;border:1px solid var(--border)"></canvas>
-<div style="display:flex;gap:1.2rem;justify-content:center;margin-top:.5rem;font-size:.78rem;color:var(--text2);font-family:'JetBrains Mono',monospace">
-  <span>— <span style="color:#3a5ba0;font-weight:600">точное</span></span>
-  <span>— <span style="color:#b44a2d;font-weight:600">схема «уголок»</span></span>
+<div style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-bottom:.4rem">Шаг: <span id="step-num">0</span></div>
+<canvas id="plot-canvas" width="900" height="320" style="width:100%;height:auto;background:#fff;border-radius:6px;border:1px solid var(--border)"></canvas>
+<div style="display:flex;gap:1.5rem;justify-content:center;margin-top:.5rem;font-size:.78rem;color:var(--text2);font-family:'JetBrains Mono',monospace;flex-wrap:wrap">
+  <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:2px;background:#9a8d7e"></span> точное решение</span>
+  <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:2px;background:#b44a2d"></span> уголок (1-й порядок)</span>
+  <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:2px;background:#3a5ba0"></span> Лакс–Вендрофф (2-й порядок)</span>
 </div>
+<div id="analysis-text" style="margin-top:.8rem;padding:.8rem;background:#fff;border:1px solid var(--border);border-radius:6px;font-size:.88rem;display:none"></div>
 </div>
 
 <script>
 (function(){
-  var N = 200, L = 2*Math.PI;
-  var h = L/N;
+  var N = 200, L = 2*Math.PI, h = L/N;
+  var animId = null, animStep = 0, animTarget = 0;
+  var u1 = null, u2 = null, u0 = null;
 
-  function initCond(type) {
+  function ic(type) {
     var u = new Float64Array(N);
     for (var i=0; i<N; i++) {
       var x = i*h;
-      switch(type) {
-        case 'gaussian':
-          u[i] = Math.exp(-((x-Math.PI)*(x-Math.PI))/(0.1*Math.PI*0.1*Math.PI));
-          break;
-        case 'step':
-          u[i] = (x >= 0.3*Math.PI && x <= 0.7*Math.PI) ? 1 : 0;
-          break;
-        case 'triangle':
-          var cx = Math.PI, w = 0.4*Math.PI;
-          u[i] = Math.max(0, 1 - Math.abs(x - cx)/w);
-          break;
-        case 'sine':
-          u[i] = 0.5*(1 + Math.sin(2*x));
-          break;
-      }
+      if (type==='gaussian') u[i] = Math.exp(-((x-Math.PI)*(x-Math.PI))/(0.1*Math.PI*0.1*Math.PI));
+      else if (type==='step') u[i] = (x >= 0.3*Math.PI && x <= 0.7*Math.PI) ? 1 : 0;
+      else if (type==='triangle') { var w = 0.4*Math.PI; u[i] = Math.max(0, 1 - Math.abs(x - Math.PI)/w); }
+      else if (type==='sine') u[i] = 0.5*(1 + Math.sin(2*x));
     }
     return u;
   }
 
-  function solve(u0, r, steps) {
-    var u = new Float64Array(u0);
-    for (var n=0; n<steps; n++) {
-      var unew = new Float64Array(N);
-      for (var i=0; i<N; i++) {
-        var im = (i-1+N)%N;
-        unew[i] = (1-r)*u[i] + r*u[im];
-      }
-      u = unew;
-    }
-    return u;
+  // One step of upwind (1st order)
+  function stepUpwind(u, r) {
+    var v = new Float64Array(N);
+    for (var i=0; i<N; i++) v[i] = (1-r)*u[i] + r*u[(i-1+N)%N];
+    return v;
   }
 
-  function exact(u0, r, steps) {
-    // shift by r*steps*h (modulo L)
+  // One step of Lax-Wendroff (2nd order)
+  function stepLW(u, r) {
+    var v = new Float64Array(N);
+    for (var i=0; i<N; i++) {
+      var im = (i-1+N)%N, ip = (i+1)%N;
+      v[i] = u[i] - 0.5*r*(u[ip]-u[im]) + 0.5*r*r*(u[ip]-2*u[i]+u[im]);
+    }
+    return v;
+  }
+
+  function exactShift(u0arr, r, steps) {
     var shift = r*steps*h;
     var ue = new Float64Array(N);
     for (var i=0; i<N; i++) {
       var xs = ((i*h - shift) % L + L) % L;
-      var j = Math.floor(xs/h);
-      var frac = xs/h - j;
-      ue[i] = (1-frac)*u0[j%N] + frac*u0[(j+1)%N];
+      var j = Math.floor(xs/h), frac = xs/h - j;
+      ue[i] = (1-frac)*u0arr[j%N] + frac*u0arr[(j+1)%N];
     }
     return ue;
   }
 
-  function draw() {
+  function draw(u1arr, u2arr, ueArr, step, r, type) {
     var canvas = document.getElementById('plot-canvas');
     if (!canvas) return;
     var ctx = canvas.getContext('2d');
     var W = canvas.width, H = canvas.height;
     ctx.clearRect(0,0,W,H);
-
-    var type = document.getElementById('ic-type').value;
-    var r = parseInt(document.getElementById('r-slider').value)/100;
-    var steps = parseInt(document.getElementById('steps-slider').value);
-
-    document.getElementById('r-val').textContent = r.toFixed(2);
-    document.getElementById('steps-val').textContent = steps;
-
-    var u0 = initCond(type);
-    var un = solve(u0, r, steps);
-    var ue = exact(u0, r, steps);
-
-    // Find range
-    var mn = 0, mx = 0;
-    for (var i=0; i<N; i++) {
-      mn = Math.min(mn, un[i], ue[i]);
-      mx = Math.max(mx, un[i], ue[i]);
+    var mn = -0.15, mx = 1.25;
+    for (var i=0;i<N;i++) {
+      mn = Math.min(mn, u1arr[i], u2arr[i]);
+      mx = Math.max(mx, u1arr[i], u2arr[i]);
     }
-    var pad = (mx-mn)*0.15 || 0.1;
-    mn -= pad; mx += pad;
-
-    var px = 40, py = 20, pw = W-60, ph = H-50;
+    var pad = (mx-mn)*0.1; mn -= pad; mx += pad;
+    var px = 45, py = 15, pw = W-65, ph = H-45;
 
     // Grid
-    ctx.strokeStyle = '#d9cfc0'; ctx.lineWidth = 0.5;
-    for (var g=0; g<=4; g++) {
-      var gy = py + ph*(1 - g/4);
+    ctx.strokeStyle = '#ede6da'; ctx.lineWidth = 0.5;
+    for (var g=0; g<=5; g++) {
+      var gy = py + ph*(1 - g/5);
       ctx.beginPath(); ctx.moveTo(px,gy); ctx.lineTo(px+pw,gy); ctx.stroke();
-      ctx.fillStyle='#9a8d7e'; ctx.font='9px JetBrains Mono';
-      ctx.fillText((mn + (mx-mn)*g/4).toFixed(2), 2, gy+3);
+      ctx.fillStyle='#9a8d7e'; ctx.font='9px JetBrains Mono'; ctx.textAlign='right';
+      ctx.fillText((mn + (mx-mn)*g/5).toFixed(2), px-4, gy+3);
     }
-
     function xp(i) { return px + pw*i/N; }
     function yp(v) { return py + ph*(1 - (v-mn)/(mx-mn)); }
 
-    // Exact (blue)
-    ctx.strokeStyle = '#3a5ba0'; ctx.lineWidth = 2;
+    // Exact (gray)
+    ctx.strokeStyle = '#9a8d7e'; ctx.lineWidth = 2.5; ctx.setLineDash([6,3]);
     ctx.beginPath();
-    for (var i=0; i<N; i++) { i===0 ? ctx.moveTo(xp(i),yp(ue[i])) : ctx.lineTo(xp(i),yp(ue[i])); }
-    ctx.stroke();
+    for (var i=0; i<N; i++) { i===0 ? ctx.moveTo(xp(i),yp(ueArr[i])) : ctx.lineTo(xp(i),yp(ueArr[i])); }
+    ctx.stroke(); ctx.setLineDash([]);
 
-    // Numerical (red)
+    // Upwind (red)
     ctx.strokeStyle = '#b44a2d'; ctx.lineWidth = 2;
     ctx.beginPath();
-    for (var i=0; i<N; i++) { i===0 ? ctx.moveTo(xp(i),yp(un[i])) : ctx.lineTo(xp(i),yp(un[i])); }
+    for (var i=0; i<N; i++) { i===0 ? ctx.moveTo(xp(i),yp(u1arr[i])) : ctx.lineTo(xp(i),yp(u1arr[i])); }
     ctx.stroke();
 
-    // X axis labels
-    ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono';
-    ctx.fillText('0', px-3, py+ph+15);
-    ctx.fillText('π', px+pw/2-3, py+ph+15);
-    ctx.fillText('2π', px+pw-10, py+ph+15);
+    // Lax-Wendroff (blue)
+    ctx.strokeStyle = '#3a5ba0'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (var i=0; i<N; i++) { i===0 ? ctx.moveTo(xp(i),yp(u2arr[i])) : ctx.lineTo(xp(i),yp(u2arr[i])); }
+    ctx.stroke();
 
-    // Info
-    ctx.fillStyle='#2c2419'; ctx.font='11px Source Serif 4, serif';
-    ctx.fillText('r = '+r.toFixed(2)+'  |  '+steps+' шагов  |  '+({gaussian:'Гауссиан',step:'Ступенька',triangle:'Треугольник',sine:'Синус'}[type]), px, py+ph+35);
+    // Axes labels
+    ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+    ctx.fillText('0', px, py+ph+15); ctx.fillText('π', px+pw/2, py+ph+15); ctx.fillText('2π', px+pw, py+ph+15);
+    ctx.fillText('r='+r.toFixed(2)+' | шаг '+step+' | '+{gaussian:'Гауссиан',step:'Ступенька',triangle:'Треугольник',sine:'Синус'}[type], px+pw/2, py+ph+32);
+    document.getElementById('step-num').textContent = step;
   }
 
-  document.getElementById('run-btn').addEventListener('click', draw);
-  document.getElementById('r-slider').addEventListener('input', function(){
-    document.getElementById('r-val').textContent = (this.value/100).toFixed(2);
-  });
-  document.getElementById('steps-slider').addEventListener('input', function(){
-    document.getElementById('steps-val').textContent = this.value;
-  });
+  function analyze(type, r, steps) {
+    var el = document.getElementById('analysis-text');
+    var txt = '<strong>Наблюдения:</strong><br>';
+    txt += '<span style="color:#b44a2d">■ Уголок (1-й порядок)</span> — сильная <em>диссипация</em>: профиль размазывается, амплитуда падает. ';
+    if (r < 0.4) txt += 'При r='+r.toFixed(2)+' диссипация максимальна для средних частот. ';
+    else if (r > 0.9) txt += 'При r≈1 диссипация минимальна (почти точный перенос). ';
+    txt += 'Дисперсии почти нет — нет осцилляций.<br>';
+    txt += '<span style="color:#3a5ba0">■ Лакс–Вендрофф (2-й порядок)</span> — малая диссипация (амплитуда сохраняется лучше), но видна <em>дисперсия</em>: ';
+    if (type === 'step' || type === 'triangle')
+      txt += 'осцилляции перед и за фронтом — гармоники движутся с разными скоростями, «пакет» разъезжается. ';
+    else
+      txt += 'при гладких условиях дисперсия мала, но при ступеньке/треугольнике будет хорошо видна. ';
+    if (r > 0.5 && (type==='step'||type==='triangle'))
+      txt += 'При r>0.5 дисперсия <em>аномальная</em>: осцилляции <em>перед</em> фронтом (предвестники). ';
+    else if (type==='step'||type==='triangle')
+      txt += 'При r<0.5 дисперсия <em>нормальная</em>: осцилляции <em>за</em> фронтом. ';
+    el.innerHTML = txt;
+    el.style.display = '';
+  }
 
-  // Initial draw
-  setTimeout(draw, 100);
+  function runAnim() {
+    var type = document.getElementById('ic-type').value;
+    var r = parseInt(document.getElementById('r-slider').value)/100;
+    animTarget = parseInt(document.getElementById('steps-slider').value);
+    document.getElementById('r-val').textContent = r.toFixed(2);
+    document.getElementById('steps-val').textContent = animTarget;
+    // Reset
+    if (animId) { cancelAnimationFrame(animId); animId = null; }
+    u0 = ic(type); u1 = new Float64Array(u0); u2 = new Float64Array(u0); animStep = 0;
+    document.getElementById('run-btn').style.display = 'none';
+    document.getElementById('stop-btn').style.display = '';
+    function frame() {
+      if (animStep >= animTarget) {
+        analyze(type, r, animStep);
+        document.getElementById('run-btn').style.display = '';
+        document.getElementById('stop-btn').style.display = 'none';
+        return;
+      }
+      u1 = stepUpwind(u1, r);
+      u2 = stepLW(u2, r);
+      animStep++;
+      var ue = exactShift(u0, r, animStep);
+      draw(u1, u2, ue, animStep, r, type);
+      animId = requestAnimationFrame(frame);
+    }
+    frame();
+  }
+
+  function stopAnim() {
+    if (animId) { cancelAnimationFrame(animId); animId = null; }
+    document.getElementById('run-btn').style.display = '';
+    document.getElementById('stop-btn').style.display = 'none';
+    var type = document.getElementById('ic-type').value;
+    var r = parseInt(document.getElementById('r-slider').value)/100;
+    analyze(type, r, animStep);
+  }
+
+  document.getElementById('run-btn').addEventListener('click', runAnim);
+  document.getElementById('stop-btn').addEventListener('click', stopAnim);
+  document.getElementById('r-slider').addEventListener('input', function(){ document.getElementById('r-val').textContent = (this.value/100).toFixed(2); });
+  document.getElementById('steps-slider').addEventListener('input', function(){ document.getElementById('steps-val').textContent = this.value; });
+
+  // Initial static draw
+  setTimeout(function(){
+    u0 = ic('gaussian'); u1 = new Float64Array(u0); u2 = new Float64Array(u0);
+    draw(u1, u2, u0, 0, 0.8, 'gaussian');
+  }, 100);
 })();
 </script>
 

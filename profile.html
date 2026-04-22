@@ -61,6 +61,9 @@ td{padding:5px 10px;border:1px solid var(--border)}
   <button class="login-btn" id="loginBtn">Войти / Зарегистрироваться</button>
 </div>
 
+<!-- Admin panel container — loaded in place of student profile when user is admin -->
+<div id="adminPanelContainer" style="display:none"></div>
+
 <div id="profileContent" style="display:none">
 
   <div class="profile-header">
@@ -257,13 +260,68 @@ const TEST_IDS = [
   {id:'t9_mpi', name:'9. MPI-параллелизация', link:'mpi.html'},
 ];
 
+// ===== Admin panel loader =====
+// When the logged-in user is an admin or superadmin, their "profile" page
+// becomes the admin panel. We embed admin.html via iframe so we don't have
+// to re-implement all the admin logic. The iframe inherits Firebase auth
+// via IndexedDB (same-origin) and has its own internal auth check.
+function loadAdminPanel(user, isSuperadmin) {
+  var container = document.getElementById('adminPanelContainer');
+  if (!container) return;
+  container.style.display = '';
+  container.innerHTML = '';
+
+  // Small header strip above the iframe (native-style, since iframe is admin.html)
+  var headerStrip = document.createElement('div');
+  headerStrip.style.cssText = 'background:var(--bg2);border:1px solid var(--border);border-radius:8px 8px 0 0;padding:.6rem 1rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:0;gap:.6rem;flex-wrap:wrap';
+  headerStrip.innerHTML =
+    '<div style="display:flex;align-items:center;gap:.6rem">' +
+      '<span style="font-family:\'Playfair Display\',serif;font-size:1rem;font-weight:700;color:var(--accent)">Личный кабинет</span>' +
+      '<span style="padding:2px 8px;border-radius:4px;font-family:\'JetBrains Mono\',monospace;font-size:.68rem;font-weight:700;' +
+        (isSuperadmin ? 'background:#b44a2d;color:#fff">SUPERADMIN' : 'background:#3a5ba0;color:#fff">ADMIN') + '</span>' +
+      '<span style="font-size:.8rem;color:var(--text2)">' + (user.email||'') + '</span>' +
+    '</div>' +
+    '<span style="font-size:.72rem;color:var(--text3);font-style:italic">Профиль → админ-панель</span>';
+  container.appendChild(headerStrip);
+
+  // Mount iframe pointing at admin.html. Same origin ⇒ Firebase auth is shared.
+  var iframe = document.createElement('iframe');
+  iframe.src = 'admin.html?embedded=1';
+  iframe.style.cssText = 'width:100%;min-height:calc(100vh - 140px);border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;background:var(--bg)';
+  iframe.title = 'Админ-панель';
+  container.appendChild(iframe);
+
+  // Make the profile wrap full-width for admin (admin panel is wider than default profile)
+  var wrap = document.querySelector('.wrap');
+  if (wrap) wrap.style.maxWidth = '1200px';
+}
+
 firebase.auth().onAuthStateChanged(async user => {
   document.getElementById('loading').style.display = 'none';
 
   if (!user) {
     document.getElementById('loginPrompt').style.display = '';
     document.getElementById('profileContent').style.display = 'none';
+    document.getElementById('adminPanelContainer').style.display = 'none';
     document.getElementById('loginBtn').onclick = () => CFDAuth.openModal();
+    return;
+  }
+
+  // Determine role via Firestore (database is the truth)
+  let isDbAdmin = false, isSuperadmin = false;
+  try {
+    const userDoc0 = await db2.collection('users').doc(user.uid).get();
+    isDbAdmin = userDoc0.exists && !!userDoc0.data().isAdmin;
+    isSuperadmin = (typeof ADMIN_EMAILS !== 'undefined' && Array.isArray(ADMIN_EMAILS) && ADMIN_EMAILS.indexOf(user.email) !== -1);
+  } catch (e) {
+    console.warn('Role check failed:', e);
+  }
+
+  // Admins/superadmins see admin panel instead of student profile
+  if (isDbAdmin || isSuperadmin) {
+    document.getElementById('profileContent').style.display = 'none';
+    document.getElementById('loginPrompt').style.display = 'none';
+    loadAdminPanel(user, isSuperadmin);
     return;
   }
 

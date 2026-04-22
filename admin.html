@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </head>
 <body>
 
-<nav class="nav-bar">
+<nav class="nav-bar" id="adminNavBar">
   <a href="index.html" class="brand">CFD Course</a>
   <div class="nav-links">
     <a href="index.html">Главная</a>
@@ -78,6 +78,22 @@ document.addEventListener('DOMContentLoaded', function() {
     <a href="review.html">Проверка</a>
   </div>
 </nav>
+
+<script>
+// Hide top navigation when this page is embedded inside profile.html via iframe
+if (location.search.indexOf('embedded=1') !== -1) {
+  document.addEventListener('DOMContentLoaded', function(){
+    var nav = document.getElementById('adminNavBar');
+    if (nav) nav.style.display = 'none';
+    // Slightly tighten the wrap padding inside iframe
+    var wraps = document.querySelectorAll('.wrap');
+    wraps.forEach(function(w){ w.style.padding = '1rem'; });
+    // Also: the H1 "Админ-панель" is redundant since the outer profile page already shows a header
+    var h1 = document.querySelector('#adminContent h1');
+    if (h1) h1.style.fontSize = '1.3rem';
+  });
+}
+</script>
 
 <div class="wrap">
 
@@ -91,8 +107,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <div id="adminContent" style="display:none">
 
-<h1>Админ-панель</h1>
-<p class="sub">Управление студентами, группами и результатами</p>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;gap:.8rem;flex-wrap:wrap">
+  <h1 style="margin:0">Админ-панель</h1>
+  <div id="adminHeaderInfo" style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:var(--text2)">
+    <span id="adminRoleLabel" style="padding:3px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600"></span>
+    <span id="adminScopeLabel"></span>
+  </div>
+</div>
+<p class="sub" id="adminSub">Управление студентами, группами и результатами</p>
 
 <div class="stats">
   <div class="stat"><div class="num" id="statStudents">—</div><div class="label">Студентов</div></div>
@@ -116,6 +138,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <div class="export-bar">
     <input type="text" class="search" id="searchStudents" placeholder="Поиск по ФИО, email, группе..." oninput="renderStudents()">
     <button class="btn" onclick="exportCSV()">Экспорт CSV</button>
+    <button class="btn btn-primary" onclick="exportFolderTree()" title="Скачать ZIP с папками по группам и файлами по студентам">📁 Экспорт папок (ZIP)</button>
   </div>
   <div class="card">
     <table>
@@ -234,6 +257,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="js/firebase-config.js"></script>
 <script>
 // ============================================================
@@ -270,9 +294,38 @@ const TEST_IDS = [
 ];
 
 // ===== Auth check =====
+let _currentAdminUser = null;
+let _currentAdminGroups = null; // null = all (superadmin), or array of рабочие group IDs
+let _currentAdminStudyGroups = null; // null = all, or array of учебные МИФИ groups
+
 auth.onAuthStateChanged(async user => {
   document.getElementById('loading').style.display = 'none';
-  if (!user || !isAdmin(user.email)) {
+  _currentAdminUser = user;
+  if (!user) {
+    document.getElementById('denied').style.display = '';
+    document.getElementById('adminContent').style.display = 'none';
+    return;
+  }
+  // Check admin status via Firestore first (database truth, not memory)
+  try {
+    const meDoc = await db.collection('users').doc(user.uid).get();
+    const isDbAdmin = meDoc.exists && !!meDoc.data().isAdmin;
+    const isSuperadmin = isSuperAdmin(user.email);
+    if (!isDbAdmin && !isSuperadmin) {
+      document.getElementById('denied').style.display = '';
+      document.getElementById('adminContent').style.display = 'none';
+      return;
+    }
+    // Determine which groups this admin manages
+    if (isSuperadmin) {
+      _currentAdminGroups = null; // all работ. groups
+      _currentAdminStudyGroups = null; // all учебн. groups
+    } else {
+      _currentAdminGroups = Array.isArray(meDoc.data().managedGroups) ? meDoc.data().managedGroups : [];
+      _currentAdminStudyGroups = Array.isArray(meDoc.data().managedStudyGroups) ? meDoc.data().managedStudyGroups : [];
+    }
+  } catch (e) {
+    console.warn('Admin check failed:', e);
     document.getElementById('denied').style.display = '';
     document.getElementById('adminContent').style.display = 'none';
     return;
@@ -294,20 +347,71 @@ function isAdmin(email) {
   return u && u.isAdmin;
 }
 
+// Can the current admin manage this РАБОЧУЮ group?
+function canManageGroup(gid) {
+  if (_currentAdminGroups === null) return true; // superadmin
+  return _currentAdminGroups.indexOf(gid) !== -1;
+}
+
+// Can the current admin manage this УЧЕБНУЮ group?
+function canManageStudyGroup(sg) {
+  if (_currentAdminStudyGroups === null) return true; // superadmin
+  if (!sg) return false;
+  return _currentAdminStudyGroups.indexOf(sg) !== -1;
+}
+
+// Can the current admin see this user?
+// Правило: у админа студент виден если его studyGroup ∈ managedStudyGroups ИЛИ group ∈ managedGroups.
+function canManageUser(u) {
+  if (_currentAdminStudyGroups === null && _currentAdminGroups === null) return true; // superadmin
+  // Admins can't see other admins' data (only own or students in own groups)
+  if (u.isAdmin && u.uid !== (_currentAdminUser && _currentAdminUser.uid)) return false;
+  if (u.studyGroup && canManageStudyGroup(u.studyGroup)) return true;
+  if (u.group && canManageGroup(u.group)) return true;
+  return false;
+}
+
 // ===== Load all data =====
+let allStudyGroups = []; // list of unique МИФИ groups among users
+
 async function loadAllData() {
   // Load users
   const usersSnap = await db.collection('users').get();
-  allUsers = [];
+  const rawAllUsers = [];
   usersSnap.forEach(doc => {
-    allUsers.push({ uid: doc.id, ...doc.data() });
+    rawAllUsers.push({ uid: doc.id, ...doc.data() });
   });
 
-  // Load groups and results
+  // Auto-discover all study groups present in DB (for UI dropdowns / suggestions)
+  const sgSet = new Set();
+  rawAllUsers.forEach(u => { if (u.studyGroup) sgSet.add(u.studyGroup); });
+  allStudyGroups = Array.from(sgSet).sort();
+
+  // Filter users: only students my admin can see
+  if (_currentAdminGroups === null && _currentAdminStudyGroups === null) {
+    // superadmin: see everything
+    allUsers = rawAllUsers;
+  } else {
+    allUsers = rawAllUsers.filter(function(u) {
+      if (u.uid === _currentAdminUser.uid) return true; // always include self
+      if (u.isAdmin) return false; // other admins hidden from regular admins
+      // Visible if studyGroup ∈ managedStudyGroups OR group ∈ managedGroups
+      const byStudy = u.studyGroup && _currentAdminStudyGroups && _currentAdminStudyGroups.indexOf(u.studyGroup) !== -1;
+      const byWork = u.group && _currentAdminGroups && _currentAdminGroups.indexOf(u.group) !== -1;
+      return byStudy || byWork;
+    });
+  }
+
+  // Load рабочие groups and results
   allGroups = {};
   allResults = {};
   for (let g = 1; g <= 5; g++) {
     const gid = 'group_' + String(g).padStart(2, '0');
+    if (!canManageGroup(gid)) {
+      // But: this admin may still need group info if one of his studyGroup students is here
+      const anyVisibleHere = allUsers.some(u => u.group === gid);
+      if (!anyVisibleHere) continue;
+    }
     const members = allUsers.filter(u => u.group === gid);
     if (members.length === 0) continue;
     allGroups[gid] = { members };
@@ -381,6 +485,35 @@ async function loadAllData() {
 
 // ===== Stats =====
 function updateStats() {
+  // Header: role and scope
+  const roleEl = document.getElementById('adminRoleLabel');
+  const scopeEl = document.getElementById('adminScopeLabel');
+  const subEl = document.getElementById('adminSub');
+  if (roleEl && scopeEl) {
+    const isSA = _currentAdminUser && isSuperAdmin(_currentAdminUser.email);
+    if (isSA) {
+      roleEl.textContent = 'SUPERADMIN';
+      roleEl.style.background = '#b44a2d'; roleEl.style.color = '#fff';
+      scopeEl.innerHTML = '<span style="color:var(--text3)">все группы</span>';
+      subEl.textContent = 'Полный доступ: управление всеми студентами, группами и администраторами';
+    } else {
+      roleEl.textContent = 'ADMIN';
+      roleEl.style.background = '#3a5ba0'; roleEl.style.color = '#fff';
+      const sgs = _currentAdminStudyGroups || [];
+      const wgs = _currentAdminGroups || [];
+      const parts = [];
+      if (sgs.length) parts.push('учебные МИФИ: <strong>' + sgs.join(', ') + '</strong>');
+      if (wgs.length) parts.push('рабочие: <strong>' + wgs.map(g=>g.replace('group_','№')).join(', ') + '</strong>');
+      if (parts.length === 0) {
+        scopeEl.innerHTML = '<span style="color:#c44">группы не назначены</span>';
+        subEl.textContent = 'У вас пока нет назначенных групп. Обратитесь к главному администратору.';
+      } else {
+        scopeEl.innerHTML = '<span>' + parts.join(' · ') + '</span>';
+        subEl.textContent = 'Управление вашими группами и их студентами';
+      }
+    }
+  }
+
   document.getElementById('statStudents').textContent = allUsers.length;
   document.getElementById('statGroups').textContent = Object.keys(allGroups).length;
   let submissions = 0, passed = 0;
@@ -427,7 +560,13 @@ function renderStudents() {
       <td style="text-align:center">${u.approved ? '<span class="badge b-pass" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', false)">✓</span>' : '<span class="badge b-fail" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', true)">✗</span>'}</td>
       <td style="text-align:center">${(() => {
         if (isSuperAdmin(u.email)) return '<span class="badge" style="background:#faeeda;color:#854f0b;font-weight:700">главный</span>';
-        if (viewerIsSuperAdmin && isAdm) return '<span class="badge b-admin" style="cursor:pointer" title="Снять права" onclick="toggleAdmin(\'' + u.uid + '\',\'' + u.email + '\',false)">admin ✕</span>';
+        if (viewerIsSuperAdmin && isAdm) {
+          const sg = Array.isArray(u.managedStudyGroups) && u.managedStudyGroups.length ? u.managedStudyGroups.join(',') : '';
+          const wg = Array.isArray(u.managedGroups) && u.managedGroups.length ? u.managedGroups.map(g=>g.replace('group_','№')).join(',') : '';
+          const scope = [sg && ('МИФИ: '+sg), wg && ('раб: '+wg)].filter(Boolean).join(' · ') || '(нет групп)';
+          return '<span class="badge b-admin" style="cursor:pointer" title="Снять права" onclick="toggleAdmin(\'' + u.uid + '\',\'' + u.email + '\',false)">admin ✕</span>' +
+                 ' <span class="badge" style="background:#e6f1fb;color:#3a5ba0;cursor:pointer;font-size:.62rem" title="Изменить группы" onclick="editManagedGroups(\'' + u.uid + '\',\'' + u.email + '\')">'+ scope +' ⚙</span>';
+        }
         if (viewerIsSuperAdmin && !isAdm) return '<span class="badge b-student" style="cursor:pointer" title="Назначить админом" onclick="toggleAdmin(\'' + u.uid + '\',\'' + u.email + '\',true)">student →</span>';
         if (isAdm) return '<span class="badge b-admin">admin</span>';
         return '<span class="badge b-student">student</span>';
@@ -455,17 +594,114 @@ async function toggleAdmin(uid, email, makeAdmin) {
     alert('Нельзя изменить роль главного администратора');
     return;
   }
+  const fioOrEmail = (allUsers.find(x=>x.uid===uid)||{}).fio || email;
   if (makeAdmin) {
-    if (!confirm('Дать права администратора: ' + (allUsers.find(x=>x.uid===uid)||{}).fio || email + '?\nАдминистратор может ставить оценки и подтверждать профили, но НЕ может назначать других админов.')) return;
-    await db.collection('users').doc(uid).set({ isAdmin: true }, { merge: true });
+    if (!confirm('Дать права администратора: ' + fioOrEmail + '?\n\nДальше вы назначите ему учебные группы МИФИ и/или рабочие группы по курсу.\nАдмин увидит только студентов из назначенных групп.')) return;
+
+    // Step 1: ask for study groups (МИФИ)
+    const suggestion = (allStudyGroups && allStudyGroups.length) ? allStudyGroups.join(', ') : '(в базе пока нет учебных групп)';
+    const inputSG = prompt(
+      'УЧЕБНЫЕ группы МИФИ (например: Б22-505, Б22-506)\n' +
+      'Через запятую. Пусто = никаких. «all» = все.\n\n' +
+      'В базе сейчас есть: ' + suggestion,
+      ''
+    );
+    if (inputSG === null) return; // cancelled
+    let managedStudyGroups = [];
+    if (inputSG.trim().toLowerCase() === 'all') {
+      managedStudyGroups = allStudyGroups.slice();
+    } else if (inputSG.trim()) {
+      managedStudyGroups = inputSG.split(',').map(s => s.trim()).filter(Boolean);
+    }
+
+    // Step 2: ask for work groups по курсу
+    const workOpts = [];
+    for (let g = 1; g <= 5; g++) workOpts.push('group_' + String(g).padStart(2, '0'));
+    const inputWG = prompt(
+      'РАБОЧИЕ группы по курсу (1-5 человек делают лабы вместе)\n' +
+      'Через запятую из: ' + workOpts.join(', ') + '\n' +
+      'Пусто = никаких. «all» = все.',
+      ''
+    );
+    if (inputWG === null) return;
+    let managedGroups = [];
+    if (inputWG.trim().toLowerCase() === 'all') {
+      managedGroups = workOpts.slice();
+    } else if (inputWG.trim()) {
+      managedGroups = inputWG.split(',').map(s => s.trim()).filter(s => workOpts.indexOf(s) !== -1);
+    }
+
+    await db.collection('users').doc(uid).set({
+      isAdmin: true,
+      managedStudyGroups: managedStudyGroups,
+      managedGroups: managedGroups
+    }, { merge: true });
     const u = allUsers.find(x => x.uid === uid);
-    if (u) u.isAdmin = true;
+    if (u) { u.isAdmin = true; u.managedStudyGroups = managedStudyGroups; u.managedGroups = managedGroups; }
+    const sgLabel = managedStudyGroups.length ? managedStudyGroups.join(', ') : '(учебные — нет)';
+    const wgLabel = managedGroups.length ? managedGroups.join(', ') : '(рабочие — нет)';
+    alert('✓ ' + fioOrEmail + ' назначен админом.\nУчебные: ' + sgLabel + '\nРабочие: ' + wgLabel);
   } else {
-    if (!confirm('Снять права администратора у ' + (allUsers.find(x=>x.uid===uid)||{}).fio || email + '?')) return;
-    await db.collection('users').doc(uid).set({ isAdmin: false }, { merge: true });
+    if (!confirm('Снять права администратора у ' + fioOrEmail + '?')) return;
+    await db.collection('users').doc(uid).set({ isAdmin: false, managedGroups: [], managedStudyGroups: [] }, { merge: true });
     const u = allUsers.find(x => x.uid === uid);
-    if (u) u.isAdmin = false;
+    if (u) { u.isAdmin = false; u.managedGroups = []; u.managedStudyGroups = []; }
   }
+  renderStudents();
+}
+
+// Only superadmin can call this — change which groups an admin manages
+async function editManagedGroups(uid, email) {
+  const me = auth.currentUser;
+  if (!me || !isSuperAdmin(me.email)) {
+    alert('Только главный администратор может изменять назначения групп');
+    return;
+  }
+  if (isSuperAdmin(email)) {
+    alert('Главный администратор видит все группы всегда');
+    return;
+  }
+  const u = allUsers.find(x => x.uid === uid);
+  if (!u || !u.isAdmin) { alert('Этот пользователь не админ'); return; }
+
+  // Study groups
+  const currentSG = Array.isArray(u.managedStudyGroups) ? u.managedStudyGroups.join(', ') : '';
+  const suggestion = (allStudyGroups && allStudyGroups.length) ? allStudyGroups.join(', ') : '(в базе пока нет)';
+  const inputSG = prompt(
+    'УЧЕБНЫЕ группы МИФИ для админа ' + (u.fio || email) + '\n' +
+    'Текущие: ' + (currentSG || '(пусто)') + '\n\n' +
+    'В базе сейчас: ' + suggestion + '\n' +
+    'Через запятую. Пусто = никаких. «all» = все.',
+    currentSG
+  );
+  if (inputSG === null) return;
+  let managedStudyGroups = [];
+  if (inputSG.trim().toLowerCase() === 'all') managedStudyGroups = allStudyGroups.slice();
+  else if (inputSG.trim()) managedStudyGroups = inputSG.split(',').map(s => s.trim()).filter(Boolean);
+
+  // Work groups
+  const workOpts = [];
+  for (let g = 1; g <= 5; g++) workOpts.push('group_' + String(g).padStart(2, '0'));
+  const currentWG = Array.isArray(u.managedGroups) ? u.managedGroups.join(', ') : '';
+  const inputWG = prompt(
+    'РАБОЧИЕ группы для админа ' + (u.fio || email) + '\n' +
+    'Текущие: ' + (currentWG || '(пусто)') + '\n\n' +
+    'Через запятую из: ' + workOpts.join(', ') + '\n' +
+    'Пусто = никаких. «all» = все.',
+    currentWG
+  );
+  if (inputWG === null) return;
+  let managedGroups = [];
+  if (inputWG.trim().toLowerCase() === 'all') managedGroups = workOpts.slice();
+  else if (inputWG.trim()) managedGroups = inputWG.split(',').map(s => s.trim()).filter(s => workOpts.indexOf(s) !== -1);
+
+  await db.collection('users').doc(uid).set({
+    managedStudyGroups: managedStudyGroups,
+    managedGroups: managedGroups
+  }, { merge: true });
+  u.managedStudyGroups = managedStudyGroups;
+  u.managedGroups = managedGroups;
+  alert('✓ Обновлено.\nУчебные: ' + (managedStudyGroups.length?managedStudyGroups.join(', '):'(пусто)') + '\nРабочие: ' + (managedGroups.length?managedGroups.join(', '):'(пусто)'));
   renderStudents();
 }
 async function saveUserField(uid, field, value) {
@@ -869,6 +1105,169 @@ function exportCSV() {
   a.href = URL.createObjectURL(blob);
   a.download = 'cfd_course_results.csv';
   a.click();
+}
+
+// ===== Export folder tree (ZIP with per-group/per-student files) =====
+async function exportFolderTree() {
+  if (typeof JSZip === 'undefined') {
+    alert('JSZip не загружен. Попробуйте обновить страницу.');
+    return;
+  }
+  const btn = event && event.target;
+  if (btn) { btn.disabled = true; btn.textContent = 'Собираю...'; }
+
+  try {
+    const zip = new JSZip();
+    // Top-level README
+    const now = new Date();
+    const iso = now.toISOString();
+    const me = auth.currentUser;
+    const isSA = me && isSuperAdmin(me.email);
+    const sgScope = _currentAdminStudyGroups === null ? 'все учебные' : (_currentAdminStudyGroups||[]).join(', ') || '(нет)';
+    const wgScope = _currentAdminGroups === null ? 'все рабочие' : (_currentAdminGroups||[]).join(', ') || '(нет)';
+    zip.file('README.txt',
+      'CFD Course — экспорт данных студентов\n' +
+      'Дата: ' + iso + '\n' +
+      'Автор экспорта: ' + (me ? me.email : '?') + '\n' +
+      'Роль: ' + (isSA ? 'superadmin' : 'admin') + '\n' +
+      'Учебные группы МИФИ (видимость): ' + sgScope + '\n' +
+      'Рабочие группы (видимость): ' + wgScope + '\n\n' +
+      'Структура:\n' +
+      '  study_groups/                     — папки по учебным группам МИФИ (Б22-505 и т.п.)\n' +
+      '    Б22-505/\n' +
+      '      students/\n' +
+      '        <ФИО>.json                  — профиль студента, чек-лист, рабочая группа по курсу\n' +
+      '  work_groups/                      — папки по рабочим группам 1-5\n' +
+      '    group_01/\n' +
+      '      _group_info.json              — repoUrl, оценка, список членов\n' +
+      '      _results.json                 — сданные тесты\n' +
+      '      _messages.json                — чат группы\n' +
+      '  summary.csv                       — сводная таблица всех студентов\n'
+    );
+
+    // === Folder 1: study_groups (по учебным группам МИФИ) ===
+    const studyGroupsInScope = new Set();
+    allUsers.forEach(u => { if (u.studyGroup) studyGroupsInScope.add(u.studyGroup); });
+    const sgFolder = zip.folder('study_groups');
+    for (const sg of Array.from(studyGroupsInScope).sort()) {
+      const safeSG = sg.replace(/[^\w\-А-Яа-яёЁ]/g, '_');
+      const sgSubFolder = sgFolder.folder(safeSG).folder('students');
+      const membersHere = allUsers.filter(u => u.studyGroup === sg && !(u.isAdmin && !isSA));
+      for (const m of membersHere) {
+        const base = (m.fio || m.email || m.uid).replace(/[^\w\s\-А-Яа-яёЁ]/g, '_').replace(/\s+/g, '_');
+        const fileName = base + '.json';
+        let checklist = null;
+        try {
+          const clSnap = await db.collection('users').doc(m.uid).collection('checklist').get();
+          checklist = {};
+          clSnap.forEach(d => { checklist[d.id] = d.data(); });
+        } catch(e) { checklist = { error: e.message }; }
+        const payload = {
+          uid: m.uid,
+          email: m.email || '',
+          fio: m.fio || '',
+          studyGroup: m.studyGroup || '',
+          workGroup: m.group || null,
+          approved: !!m.approved,
+          isAdmin: !!m.isAdmin,
+          registeredAt: m.registeredAt ? (m.registeredAt.toDate ? m.registeredAt.toDate().toISOString() : m.registeredAt) : null,
+          checklist: checklist,
+          exportedAt: iso
+        };
+        sgSubFolder.file(fileName, JSON.stringify(payload, null, 2));
+      }
+      // Group-level README inside study group folder
+      sgFolder.folder(safeSG).file('_info.txt',
+        'Учебная группа МИФИ: ' + sg + '\n' +
+        'Студентов: ' + membersHere.length + '\n' +
+        'Экспортировано: ' + iso + '\n'
+      );
+    }
+
+    // === Folder 2: work_groups (рабочие по курсу) ===
+    const wgFolder = zip.folder('work_groups');
+    const groupIds = Object.keys(allGroups).sort();
+    for (const gid of groupIds) {
+      const group = allGroups[gid];
+      const groupFolder = wgFolder.folder(gid);
+      groupFolder.file('_group_info.json', JSON.stringify({
+        groupId: gid,
+        repoUrl: group.repoUrl || null,
+        memberCount: (group.members||[]).length,
+        members: (group.members||[]).map(m => ({
+          uid: m.uid,
+          fio: m.fio || '',
+          email: m.email || '',
+          studyGroup: m.studyGroup || '',
+          approved: !!m.approved,
+          isAdmin: !!m.isAdmin
+        })),
+        grade: group.grade || null,
+        adminChecklistProgress: {
+          checked: group.adminChecked || 0,
+          total: group.adminTotal || 71
+        },
+        exportedAt: iso
+      }, null, 2));
+
+      const results = allResults[gid] || {};
+      groupFolder.file('_results.json', JSON.stringify(results, null, 2));
+
+      try {
+        const msgsSnap = await db.collection('groups').doc(gid).collection('messages').orderBy('createdAt','asc').get();
+        const msgs = [];
+        msgsSnap.forEach(doc => {
+          const d = doc.data();
+          msgs.push({
+            id: doc.id,
+            text: d.text || '',
+            authorEmail: d.authorEmail || '',
+            authorFio: d.authorFio || '',
+            role: d.role || 'student',
+            createdAt: d.createdAt ? d.createdAt.toDate().toISOString() : null
+          });
+        });
+        groupFolder.file('_messages.json', JSON.stringify(msgs, null, 2));
+      } catch(e) {
+        groupFolder.file('_messages.json', JSON.stringify({ error: e.message }, null, 2));
+      }
+    }
+
+    // Also drop CSV at root (same as Export CSV, for convenience)
+    let csv = 'Учебная группа МИФИ,Рабочая группа,ФИО,Email,Роль,Подтверждён,GitHub';
+    TEST_IDS.forEach(t => csv += ',' + t.name);
+    csv += ',Оценка,Комментарий\n';
+    for (const u of allUsers) {
+      if (u.isAdmin && !isSA) continue;
+      const gid = u.group || '';
+      const repo = allGroups[gid] && allGroups[gid].repoUrl ? allGroups[gid].repoUrl : '';
+      let row = `${u.studyGroup||''},${gid},"${(u.fio||'').replace(/"/g,'""')}",${u.email||''},${u.isAdmin?'admin':'student'},${u.approved?'yes':'no'},${repo}`;
+      const results = allResults[gid] || {};
+      for (const t of TEST_IDS) {
+        const r = results[t.id];
+        row += ',' + (r ? (r.values && r.values.allPass ? 'pass' : 'fail') : '');
+      }
+      const gr = allGroups[gid] && allGroups[gid].grade;
+      row += ',' + (gr ? gr.grade : '') + ',' + (gr ? '"' + (gr.comment || '').replace(/"/g,'""') + '"' : '');
+      csv += row + '\n';
+    }
+    zip.file('summary.csv', csv);
+
+    // Generate the ZIP
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const stamp = iso.replace(/[:.]/g,'-').slice(0,19);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'cfd_course_export_' + stamp + '.zip';
+    a.click();
+    // Revoke URL after download
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 5000);
+  } catch (e) {
+    console.error('Export failed:', e);
+    alert('Ошибка экспорта: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📁 Экспорт папок (ZIP)'; }
+  }
 }
 
 // ===== GitHub Auto-Check =====

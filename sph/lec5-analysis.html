@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPH-Лекция 5. Анализ метода и расширения</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>SPH · Лекция 5</h2>
+  <div class="g">Содержание</div>
+  <a href="#2d3d">Обобщение на 2D и 3D</a>
+  <a href="#neighbors">Поиск соседей: linked-list</a>
+  <a href="#ghost">Граничные условия: ghost-частицы</a>
+  <a href="#wcsph">Слабо сжимаемый SPH (WCSPH)</a>
+  <a href="#damBreak">Пример: разрушение плотины</a>
+  <a href="#extensions">Обзор расширений</a>
+  <a href="#comparison">Сравнение с сеточными методами</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор</a>
+  <a href="lec4-viscosity.html">← Лекция 4</a>
+  <a href="lab5.html">→ Лабораторная 5</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-riemann">SPH</span>
+<div class="lecture-num">Лекция 5 · Мини-курс SPH</div>
+<h1>Анализ метода, расширения, мини-проект</h1>
+
+<p>В заключительной лекции — обзор того, как SPH обобщается на многомерные задачи, сжимаемые среды со свободной поверхностью, и современные варианты метода. Цель — дать общее понимание экосистемы, в которой будет жить ваша реализация, и помочь с выбором варианта мини-проекта.</p>
+
+<h2 id="2d3d">Обобщение на 2D и 3D</h2>
+
+<p>Переход от 1D к двум и трём измерениям прямолинеен. Ядро обобщается заменой скаляра \(x\) на вектор \(\mathbf r\):</p>
+
+<div class="eq">\[
+W(\mathbf r, h) = \frac{\sigma_d}{h^d}\,\phi(q), \qquad q = |\mathbf r|/h,
+\tag{5.1}
+\]</div>
+
+<p>где \(\phi(q)\) — <em>безразмерный</em> кусочно-полиномиальный профиль (такой же как в 1D для кубического B-сплайна, см. (1.7)), а \(\sigma_d\) — константа нормировки, зависящая от размерности: \(\sigma_1 = 2/3\), \(\sigma_2 = 10/(7\pi)\), \(\sigma_3 = 1/\pi\).</p>
+
+<p>Градиент ядра в многомерном случае мы уже получили в лекции 1 (формула (1.12)):</p>
+
+<div class="eq">\[
+\nabla_i W_{ij} = \frac{W'(q_{ij})}{h}\cdot\frac{\mathbf r_i - \mathbf r_j}{|\mathbf r_i - \mathbf r_j|}.
+\tag{5.2}
+\]</div>
+
+<p>Основные формулы (2.2), (2.4), (4.1) остаются в силе дословно — нужно только использовать векторные скорости и координаты.</p>
+
+<h2 id="neighbors">Поиск соседей: linked-list cells</h2>
+
+<p>Во всех наших лабораторных мы использовали двойной цикл \(O(N^2)\) по всем парам частиц. Это допустимо при \(N \sim 400\) (как в Sod-тесте), но при \(N \sim 10^5\)–\(10^7\) становится катастрофически медленно. В реальных кодах (SPH-FLOW, DualSPHysics, Gadget) используется <strong>метод связанных списков ячеек</strong>:</p>
+
+<ol>
+<li>Разделим расчётную область на ячейки размером \(2h \times 2h\) (в 2D) или \(2h \times 2h \times 2h\) (в 3D).</li>
+<li>Для каждой частицы вычислим её ячейку \((ic, jc)\) по округлению координат.</li>
+<li>Построим связанный список: для каждой ячейки храним список номеров частиц в ней.</li>
+<li>При расчёте \(\rho_i\) или \(\mathbf a_i\) перебираем только частицы из <em>своей и 8 соседних</em> ячеек (в 2D) — всего \(9\cdot\bar n\) частиц, где \(\bar n = N/N_{\text{cells}}\) — среднее число частиц в ячейке.</li>
+</ol>
+
+<div class="figure">
+<svg viewBox="0 0 480 330" xmlns="http://www.w3.org/2000/svg" style="max-width:440px">
+  <!-- Grid of 6x5 cells, each 60x50 px, starting from (30,30) -->
+  <g stroke="#d9cfc0" stroke-width="1" fill="none">
+    <!-- Vertical lines -->
+    <line x1="30" y1="30" x2="30" y2="280"/>
+    <line x1="90" y1="30" x2="90" y2="280"/>
+    <line x1="150" y1="30" x2="150" y2="280"/>
+    <line x1="210" y1="30" x2="210" y2="280"/>
+    <line x1="270" y1="30" x2="270" y2="280"/>
+    <line x1="330" y1="30" x2="330" y2="280"/>
+    <line x1="390" y1="30" x2="390" y2="280"/>
+    <line x1="450" y1="30" x2="450" y2="280"/>
+    <!-- Horizontal lines -->
+    <line x1="30" y1="30" x2="450" y2="30"/>
+    <line x1="30" y1="80" x2="450" y2="80"/>
+    <line x1="30" y1="130" x2="450" y2="130"/>
+    <line x1="30" y1="180" x2="450" y2="180"/>
+    <line x1="30" y1="230" x2="450" y2="230"/>
+    <line x1="30" y1="280" x2="450" y2="280"/>
+  </g>
+  <!-- Highlighted 3x3 block around center cell -->
+  <rect x="210" y="130" width="180" height="150" fill="#faeeda" opacity="0.55"/>
+  <rect x="270" y="180" width="60" height="50" fill="#b44a2d" opacity="0.2" stroke="#b44a2d" stroke-width="1.5"/>
+  <!-- Cell size label -->
+  <line x1="270" y1="288" x2="330" y2="288" stroke="#6b5d4f" stroke-width="1"/>
+  <line x1="270" y1="285" x2="270" y2="291" stroke="#6b5d4f" stroke-width="1"/>
+  <line x1="330" y1="285" x2="330" y2="291" stroke="#6b5d4f" stroke-width="1"/>
+  <text x="300" y="302" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">2h</text>
+  <!-- Particles randomly distributed (a few dozen) -->
+  <g fill="#1a6b5a" opacity="0.7">
+    <circle cx="55" cy="55" r="3.5"/>
+    <circle cx="70" cy="100" r="3.5"/>
+    <circle cx="42" cy="140" r="3.5"/>
+    <circle cx="75" cy="170" r="3.5"/>
+    <circle cx="65" cy="215" r="3.5"/>
+    <circle cx="50" cy="250" r="3.5"/>
+    <circle cx="115" cy="55" r="3.5"/>
+    <circle cx="125" cy="95" r="3.5"/>
+    <circle cx="105" cy="145" r="3.5"/>
+    <circle cx="130" cy="190" r="3.5"/>
+    <circle cx="110" cy="245" r="3.5"/>
+    <circle cx="175" cy="50" r="3.5"/>
+    <circle cx="185" cy="115" r="3.5"/>
+    <circle cx="175" cy="165" r="3.5"/>
+    <circle cx="190" cy="215" r="3.5"/>
+    <circle cx="165" cy="255" r="3.5"/>
+  </g>
+  <!-- Particles in 3x3 block (neighbors — red) -->
+  <g fill="#b44a2d">
+    <circle cx="230" cy="155" r="3.8"/>
+    <circle cx="245" cy="200" r="3.8"/>
+    <circle cx="225" cy="245" r="3.8"/>
+    <circle cx="290" cy="150" r="3.8"/>
+    <circle cx="305" cy="210" r="3.8"/>
+    <circle cx="285" cy="255" r="3.8"/>
+    <circle cx="350" cy="160" r="3.8"/>
+    <circle cx="365" cy="195" r="3.8"/>
+    <circle cx="360" cy="250" r="3.8"/>
+  </g>
+  <!-- Central particle "i" -->
+  <circle cx="300" cy="205" r="7" fill="#2c2419"/>
+  <text x="313" y="208" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419" font-weight="700">i</text>
+  <!-- Search circle (radius 2h from i) -->
+  <circle cx="300" cy="205" r="60" fill="none" stroke="#2c2419" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <!-- Far particles (gray — skipped) -->
+  <g fill="#9a8d7e" opacity="0.7">
+    <circle cx="410" cy="60" r="3.5"/>
+    <circle cx="425" cy="110" r="3.5"/>
+    <circle cx="415" cy="165" r="3.5"/>
+    <circle cx="420" cy="220" r="3.5"/>
+    <circle cx="410" cy="265" r="3.5"/>
+  </g>
+  <!-- Legend -->
+  <circle cx="40" cy="315" r="4" fill="#2c2419"/>
+  <text x="50" y="319" font-family="JetBrains Mono,monospace" font-size="10" fill="#2c2419">частица i</text>
+  <circle cx="140" cy="315" r="4" fill="#b44a2d"/>
+  <text x="150" y="319" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">соседи (проверяем)</text>
+  <circle cx="285" cy="315" r="4" fill="#9a8d7e"/>
+  <text x="295" y="319" font-family="JetBrains Mono,monospace" font-size="10" fill="#9a8d7e">далёкие (пропускаем)</text>
+</svg>
+<div class="caption">Метод linked-list cells. Пространство разбито на квадратные ячейки со стороной \(2h\) (равной диаметру носителя ядра). Для центральной частицы \(i\) достаточно проверить только частицы, попавшие в её ячейку и 8 соседних (жёлтая область, красные кружки). Далёкие частицы (серые) не проверяются. Число проверок — константа, не зависящая от \(N\).</div>
+</div>
+
+<p>Суммарная сложность одного шага: \(O(N\cdot\bar n) = O(N\cdot\mathrm{const})\), то есть <strong>линейная по \(N\)</strong>. При \(\bar n \sim 5\)-\(30\) (типичные SPH-конфигурации) ускорение над наивным \(O(N^2)\) составляет \(\sim N/30\) — на миллионе частиц это тридцать тысяч раз.</p>
+
+<div class="remark">
+<strong>Важная деталь.</strong> При движении частиц они могут перейти из одной ячейки в другую. Поэтому связанный список нужно <em>перестраивать на каждом шаге</em>. Перестройка имеет сложность \(O(N)\), то есть не нарушает общую линейность.
+</div>
+
+<h2 id="ghost">Граничные условия: ghost-частицы</h2>
+
+<p>В задаче Сода граничные условия были свободные — мы просто ограничивали расчёт областью \([0, 1]\), и у частиц у края соседей с внешней стороны не было. Для более реалистичных задач (стенка, вход, выход) нужны <strong>специальные типы частиц</strong>:</p>
+
+<div class="figure">
+<svg viewBox="0 0 500 230" xmlns="http://www.w3.org/2000/svg" style="max-width:460px">
+  <defs>
+    <marker id="arrG" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#b44a2d"/></marker>
+    <marker id="arrGhost" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#9a8d7e"/></marker>
+  </defs>
+  <!-- Wall at x = 300 -->
+  <line x1="300" y1="30" x2="300" y2="200" stroke="#2c2419" stroke-width="4"/>
+  <!-- Hatching for wall -->
+  <g stroke="#2c2419" stroke-width="1">
+    <line x1="300" y1="30" x2="312" y2="20"/>
+    <line x1="300" y1="60" x2="312" y2="50"/>
+    <line x1="300" y1="90" x2="312" y2="80"/>
+    <line x1="300" y1="120" x2="312" y2="110"/>
+    <line x1="300" y1="150" x2="312" y2="140"/>
+    <line x1="300" y1="180" x2="312" y2="170"/>
+  </g>
+  <text x="315" y="20" font-family="Source Serif 4,serif" font-size="12" fill="#2c2419" font-weight="700">стенка</text>
+  <text x="315" y="35" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">x = L</text>
+  <!-- Real particles (blue) with velocity arrows -->
+  <g>
+    <circle cx="170" cy="80" r="8" fill="#3a5ba0"/>
+    <text x="170" y="85" font-family="JetBrains Mono,monospace" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">i</text>
+    <line x1="180" y1="80" x2="215" y2="80" stroke="#b44a2d" stroke-width="2.5" marker-end="url(#arrG)"/>
+    <text x="200" y="72" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle" font-weight="700">v_i</text>
+
+    <circle cx="240" cy="115" r="8" fill="#3a5ba0"/>
+    <text x="240" y="120" font-family="JetBrains Mono,monospace" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">j</text>
+    <line x1="250" y1="115" x2="280" y2="115" stroke="#b44a2d" stroke-width="2.5" marker-end="url(#arrG)"/>
+    <text x="265" y="107" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle" font-weight="700">v_j</text>
+
+    <circle cx="200" cy="160" r="8" fill="#3a5ba0"/>
+    <text x="200" y="165" font-family="JetBrains Mono,monospace" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">k</text>
+  </g>
+  <text x="195" y="210" font-family="Source Serif 4,serif" font-size="11" fill="#3a5ba0" text-anchor="middle" font-weight="600">Реальные частицы (x &lt; L)</text>
+  <!-- Ghost particles (gray dashed, mirrored) -->
+  <g>
+    <circle cx="430" cy="80" r="8" fill="none" stroke="#9a8d7e" stroke-width="1.5" stroke-dasharray="3,2"/>
+    <text x="430" y="85" font-family="JetBrains Mono,monospace" font-size="11" fill="#9a8d7e" text-anchor="middle" font-weight="700">i'</text>
+    <line x1="420" y1="80" x2="385" y2="80" stroke="#9a8d7e" stroke-width="2" marker-end="url(#arrGhost)"/>
+    <text x="400" y="72" font-family="JetBrains Mono,monospace" font-size="11" fill="#9a8d7e" text-anchor="middle" font-weight="700">−v_i</text>
+
+    <circle cx="360" cy="115" r="8" fill="none" stroke="#9a8d7e" stroke-width="1.5" stroke-dasharray="3,2"/>
+    <text x="360" y="120" font-family="JetBrains Mono,monospace" font-size="11" fill="#9a8d7e" text-anchor="middle" font-weight="700">j'</text>
+    <line x1="350" y1="115" x2="320" y2="115" stroke="#9a8d7e" stroke-width="2" marker-end="url(#arrGhost)"/>
+    <text x="335" y="107" font-family="JetBrains Mono,monospace" font-size="11" fill="#9a8d7e" text-anchor="middle" font-weight="700">−v_j</text>
+
+    <circle cx="400" cy="160" r="8" fill="none" stroke="#9a8d7e" stroke-width="1.5" stroke-dasharray="3,2"/>
+    <text x="400" y="165" font-family="JetBrains Mono,monospace" font-size="11" fill="#9a8d7e" text-anchor="middle" font-weight="700">k'</text>
+  </g>
+  <text x="395" y="210" font-family="Source Serif 4,serif" font-size="11" fill="#9a8d7e" text-anchor="middle" font-style="italic">Ghost-частицы (x_{i'} = 2L − x_i)</text>
+  <!-- Mirror lines -->
+  <line x1="178" y1="80" x2="422" y2="80" stroke="#ede6da" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="248" y1="115" x2="352" y2="115" stroke="#ede6da" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="208" y1="160" x2="392" y2="160" stroke="#ede6da" stroke-width="1" stroke-dasharray="2,2"/>
+</svg>
+<div class="caption">Ghost-частицы для моделирования твёрдой стенки. Каждая реальная частица \(i\) (синие кружки) порождает зеркальную копию \(i'\) (серые пунктирные) по другую сторону стенки на таком же расстоянии. Нормальная компонента скорости <strong>зеркалится</strong> (\(\mathbf v_{i'} = -\mathbf v_i\) в нормальной компоненте), тангенциальная сохраняется. При суммировании по соседям ghost-частицы участвуют как обычные — что автоматически обеспечивает условие непротекания через стенку.</div>
+</div>
+
+<ul>
+<li><strong>Ghost-частицы (зеркальное отражение).</strong> При наличии твёрдой стенки на \(x = L\) каждая «живая» частица \(i\) с координатой \(x_i < L\) порождает свою зеркальную копию \(i'\) на \(x_{i'} = 2L - x_i\). Скорости зеркалятся: нормальная компонента \(v_n^{(i')} = -v_n^{(i)}\), тангенциальная сохраняется. Плотности, давления, ускорения SPH вычисляются с участием ghost-частиц как будто они настоящие. Результат — выполняется условие непротекания через стенку.</li>
+<li><strong>Буферные частицы.</strong> Используются на границах типа «вход» или «выход» (inflow/outflow): фиксированные частицы, чьи параметры не эволюционируют, но которые участвуют в сглаживании.</li>
+<li><strong>Полупроницаемые границы.</strong> Для задач с движущимися телами.</li>
+</ul>
+
+<h2 id="wcsph">Слабо сжимаемый SPH (WCSPH)</h2>
+
+<p>В задачах со <strong>свободной поверхностью</strong> (разрушение плотины, волна в бассейне, всплеск) вода считается практически несжимаемой: отношение \(\Delta\rho/\rho_0\) должно быть меньше нескольких процентов. Решение полностью несжимаемых уравнений требует проекционного шага (уравнение Пуассона для давления) — дорогое и сложное в реализации.</p>
+
+<p>Обходной путь — <strong>слабо сжимаемая аппроксимация</strong> (Weakly Compressible SPH, WCSPH): используем политропное уравнение, но с искусственно большой скоростью звука так, что при любой разумной скорости течения \(v\) отношение \(M = v/c_0 \ll 1\), и, как следствие, \(\Delta\rho/\rho \sim M^2 \ll 1\).</p>
+
+<div class="eq">\[
+P(\rho) = \frac{\rho_0 c_0^2}{\gamma}\left[\left(\frac{\rho}{\rho_0}\right)^\gamma - 1\right], \qquad \gamma = 7.
+\tag{5.3}
+\]</div>
+
+<p>Это уравнение состояния Тейта (Tait's equation). Показатель \(\gamma = 7\) обеспечивает сильную нелинейность: небольшие отклонения плотности дают большой градиент давления, что возвращает частицы в равновесие. Критерий выбора \(c_0\):</p>
+
+<div class="eq">\[
+c_0 \geq 10\,v_{\text{max}}
+\quad\Rightarrow\quad \frac{\Delta\rho}{\rho_0} \sim \frac{v_{\text{max}}^2}{c_0^2} \leq 1\%.
+\tag{5.4}
+\]</div>
+
+<div class="remark">
+<strong>Цена.</strong> Большая \(c_0\) означает жёсткое CFL-ограничение: \(\Delta t \sim h/c_0\). В обычном воздухе \(c_0 \sim 340\) м/с, в WCSPH для задачи со скоростями \(\sim 5\) м/с получим \(c_0 \geq 50\) м/с — всё равно гораздо быстрее чем в реальной воде, поэтому шаги малы. Это компромисс: вычислительно быстро по сравнению с полным ISPH, но медленно по сравнению с явными сжимаемыми схемами в воздухе.
+</div>
+
+<h2 id="damBreak">Пример: задача разрушения плотины</h2>
+
+<p>Классический тестовый пример WCSPH — <strong>задача разрушения плотины (dam break)</strong>. В начальный момент столб воды ширины \(a\) и высоты \(2a\) удерживается мембраной справа; в момент \(t = 0\) мембрана убирается, и вода начинает течь под действием силы тяжести.</p>
+
+<div class="figure">
+<svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg" style="max-width:440px">
+  <defs><marker id="aD" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2c2419"/></marker></defs>
+  <!-- Floor -->
+  <line x1="30" y1="150" x2="480" y2="150" stroke="#6b5d4f" stroke-width="3"/>
+  <!-- Left wall -->
+  <line x1="30" y1="150" x2="30" y2="30" stroke="#6b5d4f" stroke-width="3"/>
+  <!-- Water column at t=0 -->
+  <rect x="30" y="30" width="120" height="120" fill="#3a5ba0" opacity="0.5"/>
+  <text x="90" y="90" font-family="Source Serif 4,serif" font-size="13" fill="#3a5ba0" font-weight="700" text-anchor="middle">вода</text>
+  <text x="90" y="110" font-family="Source Serif 4,serif" font-size="10" fill="#6b5d4f" text-anchor="middle">t = 0</text>
+  <!-- Membrane (dashed) -->
+  <line x1="150" y1="30" x2="150" y2="150" stroke="#b44a2d" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="160" y="28" font-family="Source Serif 4,serif" font-size="10" fill="#b44a2d">мембрана</text>
+  <!-- Water profile at t>0 -->
+  <path d="M 30 30 C 60 32, 140 60, 200 100 Q 260 130, 310 145 L 310 150 L 30 150 Z"
+        fill="#1a6b5a" opacity="0.3" stroke="#1a6b5a" stroke-width="1.5"/>
+  <text x="260" y="128" font-family="Source Serif 4,serif" font-size="10" fill="#1a6b5a" font-weight="600">t &gt; 0: фронт распространяется</text>
+  <!-- Gravity -->
+  <line x1="400" y1="40" x2="400" y2="75" stroke="#2c2419" stroke-width="1.3" marker-end="url(#aD)"/>
+  <text x="407" y="60" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419">g</text>
+  <!-- Dimensions -->
+  <text x="90" y="175" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">← a →</text>
+  <text x="15" y="90" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle" transform="rotate(-90 15 90)">← 2a →</text>
+</svg>
+<div class="caption">Задача разрушения плотины: в начальный момент — прямоугольный столб воды, мембрана убирается при \(t=0\), под действием силы тяжести вода разливается по полу.</div>
+</div>
+
+<p>Экспериментальные данные — Martin & Moyce (1952) — показывают, как фронт жидкости \(x_{\text{front}}(t)\) движется вперёд. WCSPH воспроизводит эту зависимость с погрешностью \(\sim 5\%\), что считается отличным результатом для бессеточного метода. Для сеточных методов (VOF, Level Set) сходная задача требует существенно более сложной реализации.</p>
+
+<h2 id="extensions">Обзор расширений метода</h2>
+
+<p>Стандартный SPH, описанный в этом курсе, — <em>базовая формулировка 1992 года</em>. За три десятилетия метод прошёл большой путь. Краткий обзор современных модификаций:</p>
+
+<ul>
+<li><strong>ISPH (Incompressible SPH, 1999).</strong> Полностью несжимаемая версия: два шага — предиктор (движение без давления) и корректор (решение уравнения Пуассона для давления). Обеспечивает \(\Delta\rho/\rho < 10^{-4}\). Цена — решение системы линейных уравнений на каждом шаге.</li>
+<li><strong>δ-SPH (Molteni & Colagrossi, 2009).</strong> Добавляет диффузионный член в уравнение непрерывности для подавления шума в поле плотности. Используется в задачах с длительной эволюцией.</li>
+<li><strong>Godunov-SPH (Inutsuka, 2002).</strong> Вместо искусственной вязкости решается задача Римана между каждой парой частиц. Результат — резче фронты, но сильно дороже вычислительно.</li>
+<li><strong>Адаптивная длина сглаживания \(h_i\).</strong> Длина сглаживания отдельна для каждой частицы: в плотных областях маленькая, в разреженных большая. Обеспечивает равномерную точность во всех регионах.</li>
+<li><strong>Тензильная нестабильность (Monaghan 2000).</strong> В SPH с уравнением состояния, допускающим \(P < 0\) (натяжение), могут возникать нефизические кластеры частиц. Корректируется введением <em>искусственного давления</em> Монагана-Грея.</li>
+<li><strong>GPU-реализации.</strong> SPH отлично параллелизуется: каждая частица — независимая задача. Современные коды (DualSPHysics) работают на NVIDIA GPU с ускорением \(\times 100\) к CPU.</li>
+</ul>
+
+<h2 id="comparison">Сравнение SPH с сеточными методами</h2>
+
+<p>Резюме сильных и слабых сторон:</p>
+
+<table style="width:100%;border-collapse:collapse;margin:.8rem 0;font-size:.88rem">
+<thead>
+<tr style="background:var(--bg2)">
+  <th style="padding:8px 10px;border:1px solid var(--border);text-align:left">Аспект</th>
+  <th style="padding:8px 10px;border:1px solid var(--border);text-align:left">SPH</th>
+  <th style="padding:8px 10px;border:1px solid var(--border);text-align:left">Сеточные (WENO, Godunov)</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:6px 10px;border:1px solid var(--border)"><strong>Свободные поверхности</strong></td><td style="padding:6px 10px;border:1px solid var(--border);color:#1a6b5a">+++ Естественно</td><td style="padding:6px 10px;border:1px solid var(--border);color:#b44a2d">Нужен VOF/Level Set</td></tr>
+<tr><td style="padding:6px 10px;border:1px solid var(--border)"><strong>Фрагментация</strong></td><td style="padding:6px 10px;border:1px solid var(--border);color:#1a6b5a">+++ Естественно</td><td style="padding:6px 10px;border:1px solid var(--border);color:#b44a2d">Очень сложно</td></tr>
+<tr><td style="padding:6px 10px;border:1px solid var(--border)"><strong>Большие деформации</strong></td><td style="padding:6px 10px;border:1px solid var(--border);color:#1a6b5a">+++ Без перестройки</td><td style="padding:6px 10px;border:1px solid var(--border);color:#8a6b20">Требует remap</td></tr>
+<tr style="background:#fdfaf4"><td style="padding:6px 10px;border:1px solid var(--border)"><strong>Ударные волны</strong></td><td style="padding:6px 10px;border:1px solid var(--border);color:#8a6b20">-- Размыты на \(\sim 3h\)</td><td style="padding:6px 10px;border:1px solid var(--border);color:#1a6b5a">+ Резкие (\(\sim\Delta x\))</td></tr>
+<tr style="background:#fdfaf4"><td style="padding:6px 10px;border:1px solid var(--border)"><strong>Точность на гладком</strong></td><td style="padding:6px 10px;border:1px solid var(--border);color:#8a6b20">-- \(O(h)\)-\(O(h^2)\)</td><td style="padding:6px 10px;border:1px solid var(--border);color:#1a6b5a">+++ до \(O(\Delta x^5)\)</td></tr>
+<tr><td style="padding:6px 10px;border:1px solid var(--border)"><strong>Параллелизация</strong></td><td style="padding:6px 10px;border:1px solid var(--border);color:#1a6b5a">+++ По частицам</td><td style="padding:6px 10px;border:1px solid var(--border);color:#1a6b5a">+++ По доменам</td></tr>
+<tr><td style="padding:6px 10px;border:1px solid var(--border)"><strong>Граничные условия</strong></td><td style="padding:6px 10px;border:1px solid var(--border);color:#b44a2d">-- Нетривиальны (ghost)</td><td style="padding:6px 10px;border:1px solid var(--border);color:#1a6b5a">Стандартно</td></tr>
+</tbody>
+</table>
+
+<p><strong>Когда выбирать SPH:</strong> задачи со свободными поверхностями (волнение, обрушение), фрагментация (взрывы, удары), задачи с большими деформациями (металлургия, баллистика), астрофизические задачи с сильной локальной концентрацией вещества.</p>
+
+<p><strong>Когда выбирать сеточные методы:</strong> задачи с сильными ударными волнами, где нужна точность на разрывах (сверхзвуковая аэродинамика, детонация), гладкие течения с высокой точностью (ламинарные турбулентные переходы), задачи с неподвижными границами сложной формы (обтекание профиля).</p>
+
+<p><strong>Гибридные подходы</strong> — стандартная практика в современной науке. Например, SPH в зоне свободной поверхности + сеточный метод в остальной области (coupled SPH/Eulerian). Или SPH как препроцессор для инициализации сеточного решателя.</p>
+
+<div class="remark">
+<strong>Итог мини-курса.</strong> За пять занятий мы прошли путь от понятия сглаживающего ядра до работающего солвера задачи Сода с полноценной вязкостью и анализом сходимости. Этого достаточно чтобы понимать современные SPH-коды, читать статьи по теме и распознавать, в каких задачах SPH — правильный выбор. Лабораторная 5 — ваш финальный мини-проект: выберите один из трёх вариантов и продемонстрируйте, что можете самостоятельно расширить базовую реализацию.
+</div>
+
+<div class="lecture-nav">
+<a href="lec4-viscosity.html" class="nav-prev">← Лекция 4</a>
+<a href="lab5.html" class="nav-next">Лабораторная 5 (мини-проект) →</a>
+</div>
+</div>
+</div>
+
+</body>
+</html>

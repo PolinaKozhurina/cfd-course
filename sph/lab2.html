@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPH-Лабораторная 2. Правые части уравнений</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.task{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.3rem;margin:1.2rem 0;border-left:4px solid var(--accent2)}
+.task h3{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--accent2);margin-bottom:.4rem}
+.task .task-num{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);letter-spacing:.08em}
+pre.code{background:#2b2520;color:#e9dcc4;padding:.9rem 1.1rem;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.55;overflow-x:auto;margin:.7rem 0}
+pre.code .kw{color:#d89a5a}
+pre.code .str{color:#a8c789}
+pre.code .cmt{color:#7d7163;font-style:italic}
+.hint{background:var(--bg2);border-left:3px solid var(--accent3);padding:.6rem .9rem;margin:.6rem 0;font-size:.88rem;border-radius:0 4px 4px 0}
+.hint strong{color:var(--accent3)}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>SPH · Лаб 2</h2>
+  <div class="g">Задания</div>
+  <a href="#task21">2.1 Инициализация</a>
+  <a href="#task22">2.2 Плотность</a>
+  <a href="#task23">2.3 Ускорение</a>
+  <a href="#task24">2.4 Давление и скорость звука</a>
+  <div class="sep"></div>
+  <a href="#deliverables">Что сдавать</a>
+  <div class="sep"></div>
+  <a href="maple-reference.html" style="background:var(--bg2);border-radius:4px;padding:4px 8px;margin:4px 0;font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--accent);display:block">📘 Памятка Maple</a>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор</a>
+  <a href="lec2-euler.html">← Лекция 2</a>
+  <a href="lec3-integration.html">→ Лекция 3</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-highorder">SPH · Лаб</span>
+<div class="lecture-num">Лабораторная 2 · Мини-курс SPH</div>
+<h1>Реализация правых частей уравнений (без интегрирования по времени)</h1>
+
+<p><strong>Цель:</strong> реализовать на Maple все три процедуры, составляющие одну итерацию SPH: <code>compute_density()</code>, <code>compute_accel()</code>, вычисление давления/скорости звука. Запустить на начальных данных теста Сода и проверить, что правые части уравнений физически осмыслены.</p>
+
+<p>К занятию освежите: <a href="lec2-euler.html#density">формулу плотности (2.2)</a>, <a href="lec2-euler.html#symmetric">симметричную форму ускорения (2.4)</a>, <a href="lec2-euler.html#eos">уравнение состояния (2.5)</a>.</p>
+
+<h2 id="task21">Задание 2.1. Инициализация: тест Сода</h2>
+
+<div class="task">
+<div class="task-num">ЗАДАНИЕ 2.1</div>
+<h3>Создать массив частиц с начальными условиями Сода</h3>
+<p>Написать код, создающий \(N = 400\) частиц, равномерно расположенных на \([0, 1]\). Начальные данные — задача Римана Сода:</p>
+
+<table style="width:100%;border-collapse:collapse;margin:.6rem 0;font-size:.9rem">
+<thead>
+<tr style="background:var(--bg2)">
+  <th style="padding:6px 10px;border:1px solid var(--border);text-align:left">Область</th>
+  <th style="padding:6px 10px;border:1px solid var(--border);text-align:center">\(\rho\)</th>
+  <th style="padding:6px 10px;border:1px solid var(--border);text-align:center">\(P\)</th>
+  <th style="padding:6px 10px;border:1px solid var(--border);text-align:center">\(u\)</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:6px 10px;border:1px solid var(--border)">\(x &lt; 0.5\) (левая)</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">1</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">1</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0</td></tr>
+<tr><td style="padding:6px 10px;border:1px solid var(--border)">\(x \geq 0.5\) (правая)</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0.125</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0.1</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0</td></tr>
+</tbody>
+</table>
+
+<p>Частицы расположены равномерно: \(x_j = (j-0.5)\Delta x\), \(\Delta x = 1/N = 0.0025\). Массы частиц:</p>
+<ul>
+<li>\(m_j = \rho_j\cdot\Delta x\), то есть \(m_j = 0.0025\) при \(x_j &lt; 0.5\) и \(m_j = 0.0003125\) при \(x_j \geq 0.5\).</li>
+</ul>
+<p>Начальные скорости \(v_j = 0\) для всех частиц. Параметры: \(\gamma = 1.4\), \(k = P_L/\rho_L^\gamma = 1\), \(h = 2\Delta x = 0.005\).</p>
+</div>
+
+<pre class="code"><span class="cmt"># --- Задание 2.1: Инициализация теста Сода ---</span>
+restart;
+with(plots):
+
+<span class="cmt"># Параметры</span>
+N := 400;
+dx := 1/N;
+h := 2*dx;
+gamma_g := 1.4;
+k_eos := 1.0;  <span class="cmt"># = P_L / rho_L^gamma при rho_L=1, P_L=1</span>
+
+<span class="cmt"># Начальные условия Сода</span>
+x := Array(1..N):
+rho := Array(1..N):
+v := Array(1..N):
+P := Array(1..N):
+m := Array(1..N):
+
+for j from 1 to N do
+  x[j] := (j - 0.5) * dx;
+  v[j] := 0;
+  if x[j] < 0.5 then
+    rho[j] := 1.0;
+    P[j]   := 1.0;
+  else
+    rho[j] := 0.125;
+    P[j]   := 0.1;
+  end if;
+  m[j] := rho[j] * dx;  <span class="cmt"># масса фиксируется в начальный момент и не меняется!</span>
+end do:
+
+<span class="cmt"># Контрольная проверка</span>
+<span class="kw">printf</span>("m[левая]  = %.4f (ожид. 0.0025)\n", m[1]);
+<span class="kw">printf</span>("m[правая] = %.6f (ожид. 0.0003125)\n", m[N]);
+
+<span class="cmt"># Процедуры для ядра (копии из лаб 1)</span>
+sigma1D := 2/3;
+W_kernel := proc(q) local qq;
+  qq := abs(q);
+  if qq >= 2 then return 0
+  elif qq >= 1 then return sigma1D*(2-qq)^3/4
+  else return sigma1D*(1 - 3*qq^2/2 + 3*qq^3/4)
+  end if;
+end proc:
+
+dW_kernel := proc(q) local qq, sgn;
+  qq := abs(q); sgn := sign(q);
+  if qq >= 2 then return 0
+  elif qq >= 1 then return -sigma1D*3*(2-qq)^2/4 * sgn
+  else return sigma1D*(-3*qq + 9*qq^2/4) * sgn
+  end if;
+end proc:
+</pre>
+
+<h2 id="task22">Задание 2.2. Процедура compute_density</h2>
+
+<div class="task">
+<div class="task-num">ЗАДАНИЕ 2.2</div>
+<h3>Вычисление плотности суммированием по соседям</h3>
+<p>Написать процедуру <code>compute_density()</code>, которая для каждой частицы \(i\) вычисляет \(\rho_i\) по формуле (2.2) двойным циклом по \(i\) и \(j\).</p>
+<p>Построить график \(\rho(x)\) при \(t=0\). Проверить:</p>
+<ul>
+<li>\(\rho_i \approx 1\) при \(x_i &lt; 0.4\),</li>
+<li>\(\rho_i \approx 0.125\) при \(x_i &gt; 0.6\),</li>
+<li>Монотонный переход в окрестности \(x = 0.5\) шириной \(\sim 2h\) (т.е. около 10 частиц при \(h = 2\Delta x\)).</li>
+</ul>
+</div>
+
+<pre class="code"><span class="cmt"># --- Задание 2.2: compute_density ---</span>
+compute_density := proc()
+  local i, j, s, qij;
+  for i from 1 to N do
+    s := 0;
+    for j from 1 to N do
+      qij := abs(x[i] - x[j]) / h;
+      if qij < 2 then
+        s := s + m[j] * W_kernel(qij) / h;
+      end if;
+    end do;
+    rho[i] := s;
+  end do;
+end proc:
+
+compute_density();
+
+<span class="cmt"># Контрольные значения</span>
+<span class="kw">printf</span>("rho[x=0.2]  = %.4f (ожид. ~1.0)\n", rho[80]);
+<span class="kw">printf</span>("rho[x=0.5]  = %.4f (переход)\n", rho[200]);
+<span class="kw">printf</span>("rho[x=0.8]  = %.4f (ожид. ~0.125)\n", rho[320]);
+
+<span class="cmt"># График</span>
+p_rho0 := plot([seq([x[i], rho[i]], i=1..N)], style=line,
+               color=blue, thickness=1.5,
+               labels=["x","ρ"], title="Плотность при t=0 (Sod)"):
+display(p_rho0);
+</pre>
+
+<div class="hint">
+<strong>Что должно быть видно на графике.</strong> Слева плато \(\rho \approx 1\), справа плато \(\rho \approx 0.125\), плавный переход на ширине \(\sim 4h = 8\Delta x\) (два-три радиуса носителя ядра). Если переход узкий (как ступенька) — ошибка в вычислении \(q_{ij}\) или \(h\). Если плотность <em>на плато</em> не 1 — ошибка в нормировке ядра (забыли делить на \(h\)).
+</div>
+
+<h2 id="task23">Задание 2.3. Процедура compute_accel</h2>
+
+<div class="task">
+<div class="task-num">ЗАДАНИЕ 2.3</div>
+<h3>Вычисление ускорения (симметричная форма)</h3>
+<p>Написать процедуру <code>compute_accel()</code>, которая для каждой частицы \(i\) вычисляет ускорение \(a_i\) по формуле (2.4) двойным циклом. Использовать \(P_i\) и \(\rho_i\) из предыдущего задания.</p>
+<p>Построить \(a(x)\) при \(t = 0\). Убедиться:</p>
+<ul>
+<li>\(a_i \approx 0\) вдали от мембраны \(x = 0.5\),</li>
+<li>\(|a_i|\) максимально при \(x \approx 0.5\),</li>
+<li>Знак определяется градиентом давления: газ ускоряется из области высокого \(P\) в область низкого \(P\) (вправо, положительное \(a\)).</li>
+</ul>
+</div>
+
+<pre class="code"><span class="cmt"># --- Задание 2.3: compute_accel ---</span>
+a := Array(1..N):
+
+<span class="cmt"># Сначала пересчитаем давления</span>
+for i from 1 to N do
+  P[i] := k_eos * rho[i]^gamma_g;
+end do:
+
+compute_accel := proc()
+  local i, j, sum_a, dxij, qij, dWij;
+  for i from 1 to N do
+    sum_a := 0;
+    for j from 1 to N do
+      if i <> j then
+        dxij := x[i] - x[j];
+        qij := abs(dxij) / h;
+        if qij < 2 then
+          dWij := dW_kernel(qij) * sign(dxij) / h^2;  <span class="cmt"># см. формулу (1.11)</span>
+          sum_a := sum_a - m[j] * (P[i]/rho[i]^2 + P[j]/rho[j]^2) * dWij;
+        end if;
+      end if;
+    end do;
+    a[i] := sum_a;
+  end do;
+end proc:
+
+compute_accel();
+
+<span class="cmt"># Контрольные значения</span>
+<span class="kw">printf</span>("a[x=0.2]  = %.4e (ожид. ~0)\n", a[80]);
+<span class="kw">printf</span>("a[x=0.5]  = %.4e (максимум по модулю)\n", a[200]);
+<span class="kw">printf</span>("a[x=0.8]  = %.4e (ожид. ~0)\n", a[320]);
+
+p_a := plot([seq([x[i], a[i]], i=1..N)], style=line, color=red, thickness=1.5,
+            labels=["x","a"], title="Ускорение при t=0 (Sod)"):
+display(p_a);
+</pre>
+
+<div class="hint">
+<strong>Интерпретация результата.</strong> Ускорение положительное (вправо) в переходной области, потому что левая часть имеет более высокое давление и «толкает» вправо. Максимум \(|a|\) должен быть в районе сотен — это соответствует интенсивности начального давления скачка \(\Delta P = 0.9\) на ширине \(\sim 2h = 0.01\), то есть \(a \sim \Delta P/\rho\cdot(1/2h) \sim 0.9/1 \cdot 100 = 90\). Если ваш максимум на 3 порядка меньше — забыли поделить на \(h^2\) в формуле градиента.
+</div>
+
+<h2 id="task24">Задание 2.4. Давление и скорость звука</h2>
+
+<div class="task">
+<div class="task-num">ЗАДАНИЕ 2.4</div>
+<h3>Процедура compute_eos</h3>
+<p>Написать процедуру, вычисляющую для каждой частицы давление \(P_i\) и скорость звука \(c_i\) по формулам (2.5):</p>
+<div class="eq" style="margin:.4rem 0">\[ P_i = k\,\rho_i^\gamma, \quad c_i = \sqrt{\gamma P_i/\rho_i}. \]</div>
+<p>Построить два графика: \(P(x)\) и \(c(x)\) при \(t = 0\).</p>
+</div>
+
+<pre class="code"><span class="cmt"># --- Задание 2.4: compute_eos ---</span>
+c_sound := Array(1..N):
+
+compute_eos := proc()
+  local i;
+  for i from 1 to N do
+    P[i] := k_eos * rho[i]^gamma_g;
+    c_sound[i] := sqrt(gamma_g * P[i] / rho[i]);
+  end do;
+end proc:
+
+compute_eos();
+
+p_P := plot([seq([x[i], P[i]], i=1..N)], style=line, color="DarkGreen",
+            thickness=1.5, labels=["x","P"], title="Давление при t=0"):
+p_c := plot([seq([x[i], c_sound[i]], i=1..N)], style=line, color="DarkOrange",
+            thickness=1.5, labels=["x","c"], title="Скорость звука при t=0"):
+
+display(Array([p_P, p_c]));  <span class="cmt"># два графика рядом</span>
+
+<span class="kw">printf</span>("c_L = %.4f (ожид. sqrt(1.4)=%.4f)\n", c_sound[80], sqrt(1.4));
+<span class="kw">printf</span>("c_R = %.4f (ожид. sqrt(1.4·0.1/0.125)=%.4f)\n", c_sound[320], sqrt(1.4*0.1/0.125));
+</pre>
+
+<div class="hint">
+<strong>Ожидаемые значения.</strong> \(c_L = \sqrt{\gamma P_L/\rho_L} = \sqrt{1.4} \approx 1.183\). \(c_R = \sqrt{\gamma P_R/\rho_R} = \sqrt{1.4\cdot 0.1/0.125} = \sqrt{1.12} \approx 1.058\). Эти значения понадобятся в лекции 3 для вычисления CFL-шага.
+</div>
+
+<h2 id="deliverables">Что сдавать</h2>
+
+<p>Один файл Maple (<code>lab2_sph_&lt;фамилия&gt;.mw</code>) с четырьмя графиками при \(t=0\): \(\rho(x)\), \(a(x)\), \(P(x)\), \(c(x)\) и проверочными выводами контрольных значений. Код процедур <code>compute_density</code>, <code>compute_accel</code>, <code>compute_eos</code> должен быть модульным — мы повторно используем эти процедуры в лабораторной 3.</p>
+
+<div class="lecture-nav">
+<a href="lec2-euler.html" class="nav-prev">← Лекция 2</a>
+<a href="lec3-integration.html" class="nav-next">Лекция 3 →</a>
+</div>
+</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPH-Лекция 1. Сглаживающее ядро</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>SPH · Лекция 1</h2>
+  <div class="g">Содержание</div>
+  <a href="#motivation">Мотивация: почему не сетка</a>
+  <a href="#integral">Интегральная аппроксимация</a>
+  <a href="#discretization">От интеграла к сумме</a>
+  <a href="#gradient">Формула для градиента</a>
+  <a href="#requirements">Требования к ядру</a>
+  <a href="#cubic">Кубический B-сплайн</a>
+  <a href="#normalization">Вывод констант нормировки</a>
+  <a href="#derivatives">Производные ядра</a>
+  <a href="#consistency">Согласованность SPH</a>
+  <a href="#interactive">Интерактив</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+  <a href="lab1.html">→ Лабораторная 1</a>
+  <a href="lec2-euler.html">→ Лекция 2</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-gasdyn">SPH</span>
+<div class="lecture-num">Лекция 1 · Мини-курс SPH</div>
+<h1>Сглаживающее ядро и SPH-аппроксимация функций</h1>
+
+<h2 id="motivation">Мотивация: ограничения сеточных методов и идея SPH</h2>
+
+<p>В методах, рассмотренных в основном курсе (Годунов, Колган, WENO, МакКормак), пространство покрывается фиксированной сеткой из ячеек или узлов, в каждом из которых хранится значение искомой функции \(u(x,t)\). Такой подход эффективен для течений, в которых расчётная область фиксирована и геометрически простая, но сталкивается с серьёзными трудностями в трёх классах задач:</p>
+
+<ul>
+<li><strong>Свободные поверхности.</strong> Капля воды, падающая в бассейн; волна, разбивающаяся о препятствие; разрушение плотины. Граница между жидкостью и воздухом движется сложным нестационарным образом, и её невозможно заранее совместить с сеткой.</li>
+<li><strong>Фрагментация.</strong> Разлёт осколков при взрыве, соударение астероидов, разрушение мишени в лазерном эксперименте. Среда распадается на изолированные фрагменты, и топологическая связность расчётной области меняется.</li>
+<li><strong>Большие деформации.</strong> Течения с сильным искажением материального объёма: образование каверн, тонких струй, кумулятивных выбросов. Лагранжева сетка быстро вырождается, а пересчёт на новую сетку (remap) вводит численную диффузию.</li>
+</ul>
+
+<p>Фундаментальная идея <strong>метода сглаженных частиц</strong> (Smoothed Particle Hydrodynamics, SPH), предложенного независимо Люси (Lucy, 1977) и Джинголдом с Монаганом (Gingold, Monaghan, 1977) для задач астрофизики, состоит в <em>полном отказе от сетки</em>. Среда дискретизируется набором лагранжевых частиц, каждая из которых несёт массу \(m_j\), координату \(\mathbf r_j\), скорость \(\mathbf v_j\), плотность \(\rho_j\) и внутренние термодинамические параметры. Частицы движутся вместе с веществом, и расчётная область <em>автоматически</em> принимает нужную форму — нет необходимости отслеживать границы явно.</p>
+
+<div class="remark">
+<strong>Историческая справка.</strong> SPH изначально разрабатывался для моделирования трёхмерных астрофизических систем — звёздных скоплений, газовых облаков, аккреционных дисков — где расчётная область по сути бесконечна, а вещество сосредоточено в компактных сгустках. Только в 1990-х метод был перенесён в земную гидродинамику (Monaghan 1994, на задаче разрушения плотины).
+</div>
+
+<p>Ключевой вопрос: как вычислять пространственные производные, если нет сетки с фиксированной топологией соседей? Ответ SPH — <strong>через свёртку с гладким весовым ядром</strong>.</p>
+
+<h2 id="integral">Интегральная аппроксимация</h2>
+
+<p>Отправной точкой служит тривиальное тождество, справедливое для любой интегрируемой функции \(f\) и любой размерности \(d\):</p>
+
+<div class="eq">\[
+f(\mathbf r) = \int_{\mathbb R^d} f(\mathbf r') \, \delta(\mathbf r - \mathbf r') \, d\mathbf r',
+\tag{1.1}
+\]</div>
+
+<p>где \(\delta\) — дельта-функция Дирака. В формальной форме это равенство означает «значение функции в точке \(\mathbf r\) есть интеграл по всем точкам \(\mathbf r'\), свёрнутый с \(\delta\)-функцией, сосредоточенной в \(\mathbf r\)».</p>
+
+<p>Идея SPH — заменить \(\delta\)-функцию на <strong>сглаживающее ядро</strong> \(W(\mathbf r - \mathbf r', h)\) с конечной шириной \(h > 0\):</p>
+
+<div class="eq">\[
+\langle f(\mathbf r)\rangle \equiv \int_{\mathbb R^d} f(\mathbf r') \, W(\mathbf r - \mathbf r', h) \, d\mathbf r'.
+\tag{1.2}
+\]</div>
+
+<p>Параметр \(h\) называется <strong>длиной сглаживания</strong> и определяет характерный пространственный масштаб, на котором производится усреднение. Угловые скобки обозначают сглаженное значение \(f\); в пределе \(h \to 0\) ядро стремится к \(\delta\)-функции и \(\langle f\rangle \to f\).</p>
+
+<div class="theorem">
+<strong>Теорема 1 (точность интегральной аппроксимации).</strong> Пусть \(W\) — чётное ядро с нормировкой \(\int W\,d\mathbf r = 1\) и конечным вторым моментом \(\int |\mathbf r|^2 W\,d\mathbf r = C_2 h^2\). Тогда для гладкой функции \(f \in C^2\)
+\[ \langle f(\mathbf r)\rangle = f(\mathbf r) + \tfrac{1}{2}\,C_2\,h^2\,\Delta f(\mathbf r) + O(h^4). \]
+</div>
+
+<p><em>Доказательство.</em> Разложим \(f(\mathbf r')\) в ряд Тейлора в окрестности \(\mathbf r\):
+\[ f(\mathbf r') = f(\mathbf r) + (\mathbf r' - \mathbf r)\cdot\nabla f + \tfrac{1}{2}(\mathbf r' - \mathbf r)^\top\,\mathbf H\,(\mathbf r' - \mathbf r) + O(|\mathbf r'-\mathbf r|^3), \]
+где \(\mathbf H\) — матрица Гессе \(f\). Подставим в (1.2):
+\[
+\langle f\rangle = f(\mathbf r)\underbrace{\int W\,d\mathbf r'}_{=1}
+  + \nabla f\cdot\underbrace{\int (\mathbf r'-\mathbf r)W\,d\mathbf r'}_{=0\text{ (чётность)}}
+  + \tfrac{1}{2}\int (\mathbf r'-\mathbf r)^\top\mathbf H(\mathbf r'-\mathbf r)\,W\,d\mathbf r' + \ldots
+\]
+Второй интеграл обращается в ноль благодаря чётности \(W\). Третий даёт \(\tfrac{1}{2}C_2 h^2\,\mathrm{tr}(\mathbf H) = \tfrac{1}{2}C_2 h^2\,\Delta f\). Следующие чётные моменты дают \(O(h^4)\). \(\square\)</p>
+
+<p>Важное следствие — <strong>интегральная SPH-аппроксимация имеет второй порядок точности по \(h\)</strong> на гладких функциях. Нечётные моменты ядра не вносят вклада благодаря чётности.</p>
+
+<h2 id="discretization">От интеграла к сумме по частицам</h2>
+
+<p>Интеграл в (1.2) нужно аппроксимировать численно. В SPH вводится <strong>дискретизация по Монте-Карло с весами</strong>: непрерывную среду представляем как набор частиц, каждая из которых «съедает» элементарный объём \(\Delta V_j\), а плотность среды в месте частицы равна \(\rho_j = m_j / \Delta V_j\). Отсюда</p>
+
+<div class="eq">\[
+\Delta V_j = \frac{m_j}{\rho_j}.
+\tag{1.3}
+\]</div>
+
+<p>Заменяя интеграл на сумму по частицам \(\int F(\mathbf r')\,d\mathbf r' \approx \sum_j F(\mathbf r_j)\,\Delta V_j\), получаем <strong>основную SPH-формулу</strong>:</p>
+
+<div class="eq">\[
+\boxed{\;\langle f_i\rangle = \sum_j \frac{m_j}{\rho_j}\, f_j\, W_{ij},\qquad W_{ij} \equiv W(\mathbf r_i - \mathbf r_j, h).\;}
+\tag{1.4}
+\]</div>
+
+<p>Здесь индекс \(i\) нумерует «центральную» частицу, для которой вычисляется сглаженное значение; \(j\) пробегает все частицы системы, включая саму \(i\) (вклад \(j=i\) соответствует значению функции в самой частице и даёт максимальный вес \(W(0)\)).</p>
+
+<div class="remark">
+<strong>Физический смысл множителя.</strong> Величина \(m_j/\rho_j\) есть объём, который занимает частица \(j\). Таким образом формула (1.4) есть дискретизация интеграла \(\int f\,W\,dV\), в которой каждая частица вносит «свой» объём. Если частица попала в плотную область, её объём мал, а значит и вклад в сумму мал — это физически согласуется с представлением, что плотные области «лучше разрешены».
+</div>
+
+<h2 id="gradient">Формула для градиента функции</h2>
+
+<p>Преимущество SPH — пространственные производные <em>вычисляются аналитически</em> через производную ядра. Из (1.2) формально</p>
+
+<div class="eq">\[
+\langle \nabla f(\mathbf r)\rangle = \int (\nabla f)(\mathbf r')\,W(\mathbf r - \mathbf r',h)\,d\mathbf r'.
+\]</div>
+
+<p>Проинтегрируем по частям:
+\[
+\int (\nabla f)\,W\,d\mathbf r' = \underbrace{\oint f\,W\,d\mathbf S}_{\text{граничн., =0 при }W\text{ комп.}} - \int f\,\nabla_{r'}\,W\,d\mathbf r'.
+\]
+Граничный интеграл обращается в ноль, если ядро имеет <em>компактный носитель</em> (равно нулю вне шара радиуса \(\sim h\)). Используя \(\nabla_{r'}\,W(\mathbf r - \mathbf r') = -\nabla_{r}\,W(\mathbf r - \mathbf r')\), получаем</p>
+
+<div class="eq">\[
+\langle \nabla f(\mathbf r)\rangle = \int f(\mathbf r')\,\nabla_r\,W(\mathbf r - \mathbf r',h)\,d\mathbf r'.
+\tag{1.5}
+\]</div>
+
+<p>После дискретизации по частицам:</p>
+
+<div class="eq">\[
+\boxed{\;\langle\nabla f\rangle_i = \sum_j \frac{m_j}{\rho_j}\, f_j\,\nabla_i W_{ij}.\;}
+\tag{1.6}
+\]</div>
+
+<p>Производная переносится <strong>с функции на ядро</strong>. Если \(W\) известно аналитически, то и градиент известен аналитически — никаких конечных разностей не требуется. Это одно из важнейших преимуществ SPH.</p>
+
+<h2 id="requirements">Требования к ядру</h2>
+
+<p>Формулы (1.4) и (1.6) становятся приближениями; их точность и устойчивость зависят от свойств ядра \(W\). Требования, из которых выводятся конкретные ядра:</p>
+
+<div class="definition">
+<strong>Определение (допустимое SPH-ядро).</strong> Функция \(W(\mathbf r, h)\) называется допустимым SPH-ядром, если выполнены следующие условия:
+<ol>
+<li><strong>Нормировка.</strong> \(\displaystyle\int_{\mathbb R^d} W(\mathbf r, h)\,d\mathbf r = 1\) при любом \(h > 0\).</li>
+<li><strong>Компактность.</strong> Существует \(R < \infty\) такое, что \(W(\mathbf r, h) = 0\) при \(|\mathbf r| > Rh\). Обычно \(R = 2\) (для B-сплайна) или \(R = 3\) (для гауссова ядра с отсечением).</li>
+<li><strong>Чётность.</strong> \(W(\mathbf r, h) = W(-\mathbf r, h)\) — из чего следует исчезновение первого момента.</li>
+<li><strong>Неотрицательность.</strong> \(W(\mathbf r, h) \geq 0\) — обеспечивает положительность интерпретируемых величин (плотность, энергия).</li>
+<li><strong>Монотонное убывание.</strong> \(W(\mathbf r, h)\) не возрастает с ростом \(|\mathbf r|\) — обеспечивает бо́льший вес ближним соседям.</li>
+<li><strong>Гладкость.</strong> Как минимум \(W \in C^1\), а для устойчивости метода обычно \(W \in C^2\).</li>
+<li><strong>Предельное свойство.</strong> \(\displaystyle\lim_{h \to 0} W(\mathbf r, h) = \delta(\mathbf r)\) в смысле обобщённых функций.</li>
+</ol>
+</div>
+
+<p>Важность каждого требования:</p>
+
+<ul>
+<li>Нормировка → сглаженная константная функция равна той же константе (условие согласованности нулевого порядка).</li>
+<li>Компактность → для вычисления \(\langle f_i\rangle\) достаточно суммировать по частицам в шаре радиуса \(Rh\) вокруг \(i\). Это кардинально снижает вычислительную стоимость: поиск соседей в методе linked-list — \(O(N)\), а не \(O(N^2)\).</li>
+<li>Чётность → точность \(O(h^2)\) (теорема выше).</li>
+<li>Неотрицательность → суммирование плотности \(\rho_i = \sum_j m_j W_{ij}\) даёт \(\rho_i > 0\) при любой конфигурации частиц.</li>
+</ul>
+
+<h2 id="cubic">Кубический B-сплайн Монагана</h2>
+
+<p>Наиболее распространённое в практике ядро — кубический B-сплайн (Monaghan & Lattanzio, 1985). В 1D при безразмерном расстоянии \(q = |x - x'| / h\):</p>
+
+<div class="eq">\[
+W(q,h) = \frac{\sigma}{h^d}\begin{cases}
+1 - \dfrac{3}{2}q^2 + \dfrac{3}{4}q^3, & 0 \le q \le 1, \\[8pt]
+\dfrac{1}{4}(2 - q)^3, & 1 < q \le 2, \\[6pt]
+0, & q > 2.
+\end{cases}
+\tag{1.7}
+\]</div>
+
+<p>Константы \(\sigma\) зависят от размерности \(d\):</p>
+
+<div class="eq">\[
+\sigma_{1D} = \frac{2}{3}, \qquad \sigma_{2D} = \frac{10}{7\pi}, \qquad \sigma_{3D} = \frac{1}{\pi}.
+\tag{1.8}
+\]</div>
+
+<!-- SVG plot of kernel -->
+<div class="figure">
+<svg viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+  <defs>
+    <marker id="arrK" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2c2419"/></marker>
+  </defs>
+  <!-- Axes -->
+  <line x1="50" y1="220" x2="520" y2="220" stroke="#2c2419" stroke-width="1" marker-end="url(#arrK)"/>
+  <line x1="50" y1="220" x2="50" y2="25" stroke="#2c2419" stroke-width="1" marker-end="url(#arrK)"/>
+  <text x="530" y="225" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419">q</text>
+  <text x="45" y="22" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="end">W(q)</text>
+  <!-- x labels -->
+  <text x="50" y="240" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">0</text>
+  <text x="205" y="240" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">1</text>
+  <text x="360" y="240" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">2</text>
+  <text x="515" y="240" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">3</text>
+  <!-- Grid lines q=1, q=2 -->
+  <line x1="205" y1="220" x2="205" y2="30" stroke="#d9cfc0" stroke-width="0.7" stroke-dasharray="3,3"/>
+  <line x1="360" y1="220" x2="360" y2="30" stroke="#d9cfc0" stroke-width="0.7" stroke-dasharray="3,3"/>
+  <!-- Piece 1: 0 <= q <= 1: W = 2/3*(1 - 1.5 q² + 0.75 q³) -->
+  <!-- At q=0: W = 2/3 ≈ 0.667. At q=1: W = 2/3*(1-1.5+0.75) = 2/3*0.25 = 1/6 ≈ 0.167 -->
+  <!-- Map W axis: 0 → y=220, 0.7 → y=25 (190 px range) → scale = 190/0.7 -->
+  <path d="M 50 43
+           C 80 43, 130 80, 155 108
+           C 180 130, 200 148, 205 152
+           L 205 152"
+        fill="none" stroke="#b44a2d" stroke-width="2.5"/>
+  <!-- Piece 2: 1 < q <= 2: W = 2/3 * 0.25 * (2-q)³. At q=1: 1/6. At q=2: 0 -->
+  <path d="M 205 152
+           C 245 180, 300 210, 360 219
+           L 360 220"
+        fill="none" stroke="#b44a2d" stroke-width="2.5"/>
+  <!-- Piece 3: flat zero -->
+  <line x1="360" y1="220" x2="510" y2="220" stroke="#b44a2d" stroke-width="2.5"/>
+  <!-- Mark W(0) value -->
+  <line x1="50" y1="43" x2="55" y2="43" stroke="#6b5d4f" stroke-width="1"/>
+  <text x="45" y="47" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="end">σ/h</text>
+  <!-- Annotations -->
+  <text x="120" y="70" font-family="Source Serif 4,serif" font-size="11" fill="#b44a2d" font-weight="600">I: кубический</text>
+  <text x="120" y="85" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f">1 − 1.5q² + 0.75q³</text>
+  <text x="265" y="180" font-family="Source Serif 4,serif" font-size="11" fill="#b44a2d" font-weight="600">II: кубический хвост</text>
+  <text x="265" y="195" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f">(2−q)³/4</text>
+  <text x="430" y="212" font-family="Source Serif 4,serif" font-size="11" fill="#9a8d7e" font-style="italic">III: 0 (носитель)</text>
+</svg>
+<div class="caption">Кубический B-сплайн Монагана: два гладко стыкующихся полинома и нулевой хвост при \(q > 2\). В точках \(q=1\) и \(q=2\) функция непрерывна вместе с первой производной, но вторая производная имеет скачок.</div>
+</div>
+
+<h2 id="normalization">Вывод констант нормировки</h2>
+
+<p>Константа \(\sigma_{1D} = 2/3\) выводится из условия \(\int_{-\infty}^\infty W\,dx = 1\) при \(h = 1\). Ядро чётное, поэтому</p>
+
+<div class="eq">\[
+1 = 2\int_0^\infty W(q)\,dq = 2\sigma_{1D}\Bigl[\underbrace{\int_0^1 \!\!\bigl(1 - \tfrac{3}{2}q^2 + \tfrac{3}{4}q^3\bigr)dq}_{I_1}
++ \underbrace{\int_1^2 \!\tfrac{1}{4}(2-q)^3\,dq}_{I_2}\Bigr].
+\]</div>
+
+<p>Вычислим прямо:
+\[
+I_1 = \Bigl[q - \tfrac{1}{2}q^3 + \tfrac{3}{16}q^4\Bigr]_0^1 = 1 - \tfrac{1}{2} + \tfrac{3}{16} = \tfrac{16 - 8 + 3}{16} = \tfrac{11}{16}.
+\]
+\[
+I_2 = \tfrac{1}{4}\Bigl[-\tfrac{(2-q)^4}{4}\Bigr]_1^2 = \tfrac{1}{4}\cdot\tfrac{1}{4}\cdot 1 = \tfrac{1}{16}.
+\]
+\[ I_1 + I_2 = \tfrac{12}{16} = \tfrac{3}{4}. \]
+\[ 2\sigma_{1D}\cdot\tfrac{3}{4} = 1 \;\Rightarrow\; \sigma_{1D} = \tfrac{2}{3}. \]
+</p>
+
+<p>Для 2D интеграл в полярных координатах: \(1 = 2\pi\int_0^\infty W(q)\,q\,dq\), что после аналогичных вычислений даёт \(\sigma_{2D} = 10/(7\pi)\). Для 3D сферические координаты: \(1 = 4\pi\int_0^\infty W(q)\,q^2\,dq\) → \(\sigma_{3D} = 1/\pi\).</p>
+
+<h2 id="derivatives">Производные ядра</h2>
+
+<p>Дифференцируя (1.7) по \(q\):</p>
+
+<div class="eq">\[
+W'(q) = \frac{\sigma}{h^d}\begin{cases}
+-3q + \dfrac{9}{4}q^2, & 0 \le q \le 1, \\[6pt]
+-\dfrac{3}{4}(2-q)^2, & 1 < q \le 2, \\[4pt]
+0, & q > 2.
+\end{cases}
+\tag{1.9}
+\]</div>
+
+<p>В точке \(q = 0\): \(W'(0) = 0\) (экстремум в центре, как и должно быть для чётной функции). В точке \(q = 1\): \(W'(1-) = -3 + 9/4 = -3/4\), \(W'(1+) = -\tfrac{3}{4}(1)^2 = -3/4\) — значения совпадают, \(W'\) непрерывна. В точке \(q = 2\): \(W'(2) = 0\) — плавное затухание на границе носителя.</p>
+
+<p>Вторая производная:</p>
+
+<div class="eq">\[
+W''(q) = \frac{\sigma}{h^d}\begin{cases}
+-3 + \dfrac{9}{2}q, & 0 \le q \le 1, \\[6pt]
+\dfrac{3}{2}(2-q), & 1 < q \le 2, \\[4pt]
+0, & q > 2.
+\end{cases}
+\tag{1.10}
+\]</div>
+
+<p>В точке \(q = 1\): \(W''(1-) = -3 + 9/2 = 3/2\), \(W''(1+) = 3/2\) — совпадают. То есть кубический сплайн имеет непрерывную вторую производную в склейке полиномов (это свойство \(C^2\)-гладкости), но в самой точке \(q = 1\) третья производная уже скачет. Именно поэтому B-сплайн не является «супергладким» ядром: для задач с особенностями третьего порядка может потребоваться ядро более высокого порядка (например, квинтический B-сплайн, см. лекцию 5).</p>
+
+<h3 id="gradient-1d">Градиент ядра в 1D</h3>
+
+<p>В одномерном случае \(\mathbf r = x\), и \(W_{ij} = W(|x_i - x_j|/h, h)\). Градиент (по \(x_i\)):</p>
+
+<div class="eq">\[
+\frac{\partial W_{ij}}{\partial x_i} = W'(q_{ij})\cdot\frac{1}{h}\cdot\mathrm{sign}(x_i - x_j).
+\tag{1.11}
+\]</div>
+
+<p>Знак возникает из производной модуля: \(\partial |x_i - x_j|/\partial x_i = \mathrm{sign}(x_i - x_j)\). Эту формулу мы будем постоянно использовать в дальнейшем.</p>
+
+<h3 id="gradient-2d">Градиент в 2D и 3D</h3>
+
+<p>В многомерном случае \(W = W(|\mathbf r|/h, h)\), и по правилу дифференцирования сложной функции</p>
+
+<div class="eq">\[
+\nabla_i W_{ij} = W'(q_{ij})\cdot\frac{1}{h}\cdot\frac{\mathbf r_i - \mathbf r_j}{|\mathbf r_i - \mathbf r_j|}.
+\tag{1.12}
+\]</div>
+
+<p>Градиент направлен вдоль линии, соединяющей две частицы, и пропорционален скалярной функции \(W'(q)\). Знак \(W'\) отрицательный для \(q \in (0, 2]\), поэтому градиент направлен <em>от \(i\) к \(j\)</em> для внешней части шара — физически он описывает «отталкивание» от ближних частиц.</p>
+
+<h2 id="consistency">Согласованность SPH-аппроксимации</h2>
+
+<p>Насколько точно (1.4) воспроизводит значение \(f\)? Проверим для двух простейших функций.</p>
+
+<div class="theorem">
+<strong>Теорема 2 (согласованность 0-го порядка).</strong> Если SPH-сумма воспроизводит константу точно:
+\[ \sum_j \frac{m_j}{\rho_j}\, W_{ij} = 1, \]
+то говорят что метод согласован 0-го порядка.
+</div>
+
+<p>В непрерывном пределе сумма превращается в интеграл \(\int W\,d\mathbf r' = 1\) благодаря нормировке ядра. Однако на <em>дискретном</em> наборе частиц согласованность точно выполняется лишь для равномерных частиц; при неравномерном распределении возникает ошибка, уменьшающаяся как \(O(\Delta x/h)\) при росте числа соседей. Обычно \(h = 1.2\Delta x\) до \(2\Delta x\) и сумма даёт \(\sim 0.95 \ldots 1.05\).</p>
+
+<div class="theorem">
+<strong>Теорема 3 (согласованность 1-го порядка).</strong> SPH-сумма воспроизводит линейную функцию \(f(x) = ax + b\), если
+\[ \sum_j \frac{m_j}{\rho_j}\,(x_j - x_i)\,W_{ij} = 0. \]
+</div>
+
+<p>В непрерывном пределе интеграл \(\int (x' - x)\,W\,dx' = 0\) благодаря чётности \(W\). На дискретной сетке это равенство приближённое, что означает: даже линейная функция воспроизводится SPH с малой ошибкой. Это — одно из известных <strong>ограничений стандартного SPH</strong>. Для его устранения существуют специальные исправления (CSPM, MLS-SPH, Bonet-Lok корректировка), выходящие за рамки нашего курса.</p>
+
+<div class="remark">
+<strong>Практический вывод.</strong> При выборе \(h\) всегда есть компромисс: малое \(h\) — локальность (мало соседей, плохая согласованность, шумное поле); большое \(h\) — сильное сглаживание (разрывы размазываются). Типичное соотношение \(h = 1.2\Delta x \div 2\Delta x\), число соседей \(\sim 5 \div 10\) в 1D и \(\sim 30 \div 50\) в 2D.
+</div>
+
+<h2 id="interactive">Интерактив: ядро и SPH-аппроксимация</h2>
+
+<p>Ниже — реализация формул (1.7) и (1.4) на JavaScript. Выберите функцию, число частиц \(N\) и отношение \(h/\Delta x\) — сравнивается точное значение с SPH-аппроксимацией.</p>
+
+<div id="sphK" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Функция</label>
+    <select id="sphKfn" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <option value="sin">sin(x)</option>
+      <option value="cos">cos(x)</option>
+      <option value="quad">x²</option>
+      <option value="step">ступенька</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">N частиц: <span id="sphKNv">60</span></label>
+    <input type="range" id="sphKN" min="20" max="200" value="60" style="width:140px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">h/Δx = <span id="sphKhv">1.5</span></label>
+    <input type="range" id="sphKh" min="5" max="40" value="15" style="width:140px">
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">f(x) и SPH-аппрокс.</div><canvas id="sphK_f" width="440" height="280" style="width:100%;height:auto"></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">f'(x) и SPH-аппрокс.</div><canvas id="sphK_df" width="440" height="280" style="width:100%;height:auto"></canvas></div>
+</div>
+<div id="sphKstatus" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.4rem"></div>
+</div>
+
+<script>
+(function(){
+// Cubic B-spline (1D, sigma = 2/3 built into kernel)
+function W(q){
+  var s = 2/3;
+  if (q >= 2) return 0;
+  if (q >= 1) return s * 0.25 * Math.pow(2-q, 3);
+  return s * (1 - 1.5*q*q + 0.75*q*q*q);
+}
+function Wp(q){
+  var s = 2/3;
+  if (q >= 2) return 0;
+  if (q >= 1) return -s * 0.75 * Math.pow(2-q, 2);
+  return s * (-3*q + 2.25*q*q);
+}
+
+function computeSPH(N, hDx, fnName){
+  var L = 2*Math.PI;
+  var dx = L/N, h = hDx * dx;
+  var xs = new Float64Array(N);
+  var fs = new Float64Array(N);
+  var rho0 = 1.0; // constant density
+  var m = rho0 * dx;
+  for (var i=0;i<N;i++){
+    xs[i] = (i+0.5)*dx;
+    if (fnName === 'sin') fs[i] = Math.sin(xs[i]);
+    else if (fnName === 'cos') fs[i] = Math.cos(xs[i]);
+    else if (fnName === 'quad') fs[i] = (xs[i]-Math.PI)*(xs[i]-Math.PI);
+    else if (fnName === 'step') fs[i] = xs[i] < Math.PI ? 1 : 0;
+  }
+  var fSph = new Float64Array(N);
+  var dfSph = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var sumF = 0, sumDf = 0;
+    for (var j=0;j<N;j++){
+      var r = Math.abs(xs[i] - xs[j]);
+      var q = r/h;
+      if (q >= 2) continue;
+      var wij = W(q)/h; // 1D: sigma/h inside W is sigma=2/3; here we keep sigma in W and divide by h once for 1D
+      var dw_dx = (Wp(q)/h) * (1/h) * Math.sign(xs[i] - xs[j]);
+      sumF += m/rho0 * fs[j] * wij;
+      sumDf += m/rho0 * fs[j] * dw_dx;
+    }
+    fSph[i] = sumF;
+    dfSph[i] = sumDf;
+  }
+  return {xs:xs, fs:fs, fSph:fSph, dfSph:dfSph, N:N, hDx:hDx};
+}
+
+function exact(xs, fnName){
+  var N = xs.length;
+  var fa = new Float64Array(N), dfa = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var x = xs[i];
+    if (fnName === 'sin'){ fa[i] = Math.sin(x); dfa[i] = Math.cos(x); }
+    else if (fnName === 'cos'){ fa[i] = Math.cos(x); dfa[i] = -Math.sin(x); }
+    else if (fnName === 'quad'){ fa[i] = (x-Math.PI)*(x-Math.PI); dfa[i] = 2*(x-Math.PI); }
+    else if (fnName === 'step'){ fa[i] = x<Math.PI?1:0; dfa[i] = 0; }
+  }
+  return {fa:fa, dfa:dfa};
+}
+
+function plot(cid, xs, yNum, yExact, label){
+  var c = document.getElementById(cid);
+  var ctx = c.getContext('2d'), W=c.width, H=c.height;
+  ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+  var P={l:42,r:15,t:15,b:30}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+  var mn=1e9, mx=-1e9;
+  for (var i=0;i<yNum.length;i++){ if (yNum[i]<mn) mn=yNum[i]; if (yNum[i]>mx) mx=yNum[i]; }
+  for (var i=0;i<yExact.length;i++){ if (yExact[i]<mn) mn=yExact[i]; if (yExact[i]>mx) mx=yExact[i]; }
+  var pad = (mx-mn)*0.1 || 0.2; mn -= pad; mx += pad;
+  ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+  for (var g=0;g<=5;g++){ var gy=P.t+ph*g/5; ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke(); }
+  var xmin = xs[0], xmax = xs[xs.length-1];
+  function xp(x){ return P.l + pw*(x-xmin)/(xmax-xmin); }
+  function yp(v){ return P.t + ph*(1 - (v-mn)/(mx-mn)); }
+  // Exact
+  ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=2; ctx.setLineDash([6,4]);
+  ctx.beginPath();
+  for (var i=0;i<xs.length;i++){ i===0?ctx.moveTo(xp(xs[i]),yp(yExact[i])):ctx.lineTo(xp(xs[i]),yp(yExact[i])); }
+  ctx.stroke(); ctx.setLineDash([]);
+  // SPH points
+  ctx.fillStyle = '#b44a2d';
+  for (var i=0;i<xs.length;i++){
+    ctx.beginPath(); ctx.arc(xp(xs[i]),yp(yNum[i]),2.4,0,Math.PI*2); ctx.fill();
+  }
+  // Axes
+  ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+  ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+  ctx.fillText('0', P.l, P.t+ph+14);
+  ctx.fillText('π', P.l+pw/2, P.t+ph+14);
+  ctx.fillText('2π', P.l+pw, P.t+ph+14);
+  ctx.textAlign='right';
+  for (var g=0;g<=5;g++) ctx.fillText((mx-(mx-mn)*g/5).toFixed(2), P.l-3, P.t+ph*g/5+3);
+  // Legend
+  ctx.textAlign='left'; ctx.font='9px JetBrains Mono'; ctx.fillStyle='#6b5d4f';
+  ctx.fillText('- - точное', P.l+5, P.t+10);
+  ctx.fillStyle='#b44a2d';
+  ctx.fillText('• SPH', P.l+5, P.t+22);
+}
+
+function runK(){
+  var fnName = document.getElementById('sphKfn').value;
+  var N = +document.getElementById('sphKN').value;
+  var hDx = +document.getElementById('sphKh').value/10;
+  document.getElementById('sphKNv').textContent = N;
+  document.getElementById('sphKhv').textContent = hDx.toFixed(1);
+  var r = computeSPH(N, hDx, fnName);
+  var ex = exact(r.xs, fnName);
+  plot('sphK_f', r.xs, r.fSph, ex.fa, 'f(x)');
+  plot('sphK_df', r.xs, r.dfSph, ex.dfa, "f'(x)");
+  // L2 errors
+  var eF = 0, eDf = 0;
+  for (var i=0;i<N;i++){ eF += (r.fSph[i]-ex.fa[i])*(r.fSph[i]-ex.fa[i]); eDf += (r.dfSph[i]-ex.dfa[i])*(r.dfSph[i]-ex.dfa[i]); }
+  eF = Math.sqrt(eF/N); eDf = Math.sqrt(eDf/N);
+  document.getElementById('sphKstatus').innerHTML = 'N='+N+', h/Δx='+hDx.toFixed(1)+' · L₂-ошибка f: '+eF.toExponential(2)+', f′: '+eDf.toExponential(2);
+}
+document.getElementById('sphKfn').addEventListener('change', runK);
+document.getElementById('sphKN').addEventListener('input', runK);
+document.getElementById('sphKh').addEventListener('input', runK);
+window.addEventListener('load', function(){ setTimeout(runK, 200); });
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> На гладких функциях (sin, cos, x²) SPH даёт точную аппроксимацию при \(h/\Delta x \sim 1.5\ldots2\). На ступеньке видно характерное <em>размазывание разрыва</em> на масштабе \(\sim 2h\) — это фундаментальное ограничение SPH: ядро физически не может представлять функции короче длины сглаживания. Поэтому в задачах с ударными волнами разрывы всегда размазаны, и точность около них падает до \(O(h)\).
+</div>
+
+<div class="lecture-nav">
+<a href="index.html" class="nav-prev">← Обзор курса</a>
+<a href="lab1.html" class="nav-next">Лабораторная 1 →</a>
+</div>
+</div>
+</div>
+
+</body>
+</html>

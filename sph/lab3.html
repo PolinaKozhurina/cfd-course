@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPH-Лабораторная 3. Первый запуск Sod</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.task{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.3rem;margin:1.2rem 0;border-left:4px solid var(--accent2)}
+.task h3{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--accent2);margin-bottom:.4rem}
+.task .task-num{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);letter-spacing:.08em}
+pre.code{background:#2b2520;color:#e9dcc4;padding:.9rem 1.1rem;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.55;overflow-x:auto;margin:.7rem 0}
+pre.code .kw{color:#d89a5a}
+pre.code .str{color:#a8c789}
+pre.code .cmt{color:#7d7163;font-style:italic}
+.hint{background:var(--bg2);border-left:3px solid var(--accent3);padding:.6rem .9rem;margin:.6rem 0;font-size:.88rem;border-radius:0 4px 4px 0}
+.hint strong{color:var(--accent3)}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>SPH · Лаб 3</h2>
+  <div class="g">Задания</div>
+  <a href="#task31">3.1 Leap-Frog процедуры</a>
+  <a href="#task32">3.2 Главный цикл</a>
+  <a href="#task33">3.3 Результаты</a>
+  <a href="#task34">3.4 Сохранение</a>
+  <div class="sep"></div>
+  <a href="#deliverables">Что сдавать</a>
+  <div class="sep"></div>
+  <a href="maple-reference.html" style="background:var(--bg2);border-radius:4px;padding:4px 8px;margin:4px 0;font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--accent);display:block">📘 Памятка Maple</a>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор</a>
+  <a href="lec3-integration.html">← Лекция 3</a>
+  <a href="lec4-viscosity.html">→ Лекция 4</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-highorder">SPH · Лаб</span>
+<div class="lecture-num">Лабораторная 3 · Мини-курс SPH</div>
+<h1>Leap-Frog интегратор и первый запуск SPH-солвера</h1>
+
+<p><strong>Цель:</strong> собрать процедуры из лаб 2 в работающий солвер теста Сода. Получить решение при \(t_{\text{end}} = 0.2\), проверить качественную картину (три волны) и законы сохранения. Осцилляции давления на ударной волне — ожидаемая патология без вязкости, её устранение в лаб 4.</p>
+
+<p>К занятию: <a href="lec3-integration.html#leapfrog">схема Leap-Frog (3.2)</a>, <a href="lec3-integration.html#cfl">CFL-условие (3.4)</a>, <a href="lec3-integration.html#algorithm">алгоритм шага</a>.</p>
+
+<h2 id="task31">Задание 3.1. Leap-Frog и адаптивный шаг</h2>
+
+<div class="task">
+<div class="task-num">ЗАДАНИЕ 3.1</div>
+<h3>Процедуры compute_dt и leapfrog_step</h3>
+<p>Написать две процедуры:</p>
+<ul>
+<li><code>compute_dt()</code> — найти \(\max_i(c_i + |v_i|)\) и вычислить шаг по формуле (3.4);</li>
+<li><code>leapfrog_step(dt)</code> — обновить \(v_i\) и \(x_i\) по формулам (3.2).</li>
+</ul>
+<p>Для инициализации выполнить полушаг: \(v^{1/2}_i = v^0_i + \tfrac{1}{2}\Delta t^0\cdot a^0_i\), где \(\Delta t^0\) — CFL-шаг на начальных данных.</p>
+</div>
+
+<pre class="code"><span class="cmt"># --- Задание 3.1: CFL и Leap-Frog ---</span>
+<span class="cmt"># (продолжение кода лаб 2: массивы x, v, rho, P, c_sound, a, m уже существуют)</span>
+
+C0 := 0.3;  <span class="cmt"># CFL-число (без вязкости)</span>
+
+compute_dt := proc()
+  local i, maxVC;
+  maxVC := 0;
+  for i from 1 to N do
+    if c_sound[i] + abs(v[i]) > maxVC then
+      maxVC := c_sound[i] + abs(v[i]);
+    end if;
+  end do;
+  return C0 * h / maxVC;
+end proc:
+
+leapfrog_step := proc(dt)
+  local i;
+  <span class="cmt"># v^{n+1/2} = v^{n-1/2} + dt * a^n</span>
+  for i from 1 to N do
+    v[i] := v[i] + dt * a[i];
+  end do;
+  <span class="cmt"># x^{n+1} = x^n + dt * v^{n+1/2}</span>
+  for i from 1 to N do
+    x[i] := x[i] + dt * v[i];
+  end do;
+end proc:
+
+<span class="cmt"># Инициализация: полушаг</span>
+compute_density();
+compute_eos();
+compute_accel();
+dt0 := compute_dt();
+<span class="kw">printf</span>("dt0 = %.4e\n", dt0);
+<span class="cmt"># Сдвиг на полшага назад (фиктивная v^{-1/2} = v^0 - 0.5·dt0·a^0)</span>
+<span class="cmt"># После этого первый leapfrog_step(dt0) даст v^{1/2} правильно</span>
+for i from 1 to N do
+  v[i] := v[i] - 0.5 * dt0 * a[i];
+end do:
+</pre>
+
+<h2 id="task32">Задание 3.2. Главный цикл</h2>
+
+<div class="task">
+<div class="task-num">ЗАДАНИЕ 3.2</div>
+<h3>Цикл по времени до \(t_{\text{end}} = 0.2\)</h3>
+<p>Написать цикл <code>while t &lt; t_end</code>, в теле которого последовательно:</p>
+<ol>
+<li>compute_density</li>
+<li>compute_eos (давление и скорость звука)</li>
+<li>compute_accel</li>
+<li>compute_dt (получить \(\Delta t\))</li>
+<li>leapfrog_step(\(\Delta t\)) — обновить v и x</li>
+<li>увеличить t := t + \(\Delta t\)</li>
+</ol>
+<p>Если \(t + \Delta t > t_{\text{end}}\), уменьшить \(\Delta t\) до \(t_{\text{end}} - t\). Вывести число выполненных шагов и средний \(\Delta t\).</p>
+</div>
+
+<pre class="code"><span class="cmt"># --- Задание 3.2: Главный цикл ---</span>
+t := 0;
+t_end := 0.2;
+n_steps := 0;
+sum_dt := 0;
+start_time := time();
+
+while t < t_end do
+  compute_density();
+  compute_eos();
+  compute_accel();
+  dt := compute_dt();
+  if t + dt > t_end then dt := t_end - t; end if;
+  leapfrog_step(dt);
+  t := t + dt;
+  n_steps := n_steps + 1;
+  sum_dt := sum_dt + dt;
+  <span class="cmt"># Диагностика каждые 100 шагов</span>
+  if n_steps mod 100 = 0 then
+    <span class="kw">printf</span>("Step %d: t = %.4f, dt = %.4e\n", n_steps, t, dt);
+  end if;
+end do:
+
+<span class="kw">printf</span>("\nЗавершено за %d шагов, среднее Δt = %.4e\n",
+       n_steps, sum_dt/n_steps);
+<span class="kw">printf</span>("Время расчёта: %.2f сек\n", time() - start_time);
+</pre>
+
+<div class="hint">
+<strong>Ожидаемая производительность.</strong> При N=400 расчёт до t=0.2 в Maple обычно занимает 1-3 минуты (зависит от версии). Число шагов \(\sim 400-600\), средний \(\Delta t \sim 3\cdot 10^{-4}\). Если расчёт занимает 30+ минут — проблема в циклах (возможно используете символьные \(x[j]\) вместо Array). Ускорение достигается через <code>Compile()</code> процедур или переход на Matrix-нотацию.
+</div>
+
+<h2 id="task33">Задание 3.3. Результаты</h2>
+
+<div class="task">
+<div class="task-num">ЗАДАНИЕ 3.3</div>
+<h3>Графики ρ(x), P(x), v(x) при t = 0.2</h3>
+<p>Построить три графика. Убедиться, что видны три характерные волны:</p>
+<ul>
+<li><strong>Волна разрежения</strong> — плавное убывание \(\rho\), \(P\) в окрестности \(x \sim 0.3-0.5\);</li>
+<li><strong>Контактный разрыв</strong> — скачок \(\rho\) при \(x \approx 0.68\), но \(P\) и \(v\) непрерывны;</li>
+<li><strong>Ударная волна</strong> — скачок всех величин при \(x \approx 0.85\).</li>
+</ul>
+<p>Отметить на графике осцилляции давления вблизи ударной волны (стрелкой или текстом).</p>
+</div>
+
+<pre class="code"><span class="cmt"># --- Задание 3.3: Визуализация результатов ---</span>
+with(plots):
+
+<span class="cmt"># Пересчитаем скорости в полуцелом узле назад для отображения</span>
+<span class="cmt"># (Maple: v[] сейчас хранит v^{n+1/2}; для вывода можно оставить как есть,</span>
+<span class="cmt"># либо сдвинуть назад на полшага для «v^n» — достаточно для визуализации)</span>
+
+p_rho := plot([seq([x[i], rho[i]], i=1..N)], style=line, color=blue,
+              thickness=1.5, labels=["x","ρ"],
+              title="Плотность при t=0.2 (SPH, без вязкости)",
+              view=[0..1, 0..1.1]):
+p_P := plot([seq([x[i], P[i]], i=1..N)], style=line, color=red,
+            thickness=1.5, labels=["x","P"],
+            title="Давление при t=0.2",
+            view=[0..1, 0..1.1]):
+p_v := plot([seq([x[i], v[i]], i=1..N)], style=line, color="DarkGreen",
+            thickness=1.5, labels=["x","v"],
+            title="Скорость при t=0.2",
+            view=[0..1, -0.1..1.1]):
+
+display(Array([p_rho, p_P]));
+display(p_v);
+
+<span class="cmt"># Численные значения в характерных точках</span>
+<span class="kw">printf</span>("\n=== Профиль при t = %.3f ===\n", t);
+<span class="kw">printf</span>("x=0.2: rho=%.4f, P=%.4f, v=%.4f  (ожид. rho=1, P=1, v=0)\n",
+       rho[80], P[80], v[80]);
+<span class="kw">printf</span>("x=0.6: rho=%.4f, P=%.4f, v=%.4f  (ожид. rho=0.4263, P=0.3031, v=0.9274)\n",
+       rho[240], P[240], v[240]);
+<span class="kw">printf</span>("x=0.75:rho=%.4f, P=%.4f, v=%.4f  (ожид. rho=0.2656, P=0.3031, v=0.9274)\n",
+       rho[300], P[300], v[300]);
+<span class="kw">printf</span>("x=0.95:rho=%.4f, P=%.4f, v=%.4f  (ожид. rho=0.125, P=0.1, v=0)\n",
+       rho[380], P[380], v[380]);
+</pre>
+
+<div class="hint">
+<strong>Что должны увидеть.</strong> Плотность и давление качественно совпадают с точным решением, но вблизи ударной волны (\(x \in [0.8, 0.9]\)) есть осцилляции в \(\sim 10\)-\(20\%\) от амплитуды. Это ожидаемо без вязкости. Контактный разрыв размыт на \(\sim 2h \approx 0.01\) (4 частицы). Скорость плавно переходит от 0 к 0.93 и обратно к 0 — без сильных осцилляций.
+</div>
+
+<h2 id="task34">Задание 3.4. Законы сохранения</h2>
+
+<div class="task">
+<div class="task-num">ЗАДАНИЕ 3.4</div>
+<h3>Проверка сохранения массы и импульса</h3>
+<p>Вычислить:</p>
+<ul>
+<li>полную массу \(M(t) = \sum_i m_i\),</li>
+<li>полный импульс \(\mathcal P(t) = \sum_i m_i v_i\).</li>
+</ul>
+<p>Сравнить значения при \(t = 0\) и \(t = 0.2\). Убедиться:</p>
+<ul>
+<li><strong>Масса</strong> сохраняется <em>точно</em>: \(M(0.2) = M(0)\), так как \(m_i = \mathrm{const}\).</li>
+<li><strong>Импульс</strong> сохраняется с точностью до машинного \(\epsilon\) (\(|\Delta \mathcal P/\mathcal P_0| < 10^{-12}\)) благодаря симметричной форме (2.4). В задаче Сода \(\mathcal P_0 = 0\), поэтому \(\mathcal P(t) \approx 0\) всё время.</li>
+</ul>
+</div>
+
+<pre class="code"><span class="cmt"># --- Задание 3.4: Сохранение массы и импульса ---</span>
+
+M_total := add(m[i], i=1..N);
+P_total := add(m[i]*v[i], i=1..N);
+
+<span class="kw">printf</span>("\n=== Законы сохранения при t=%.3f ===\n", t);
+<span class="kw">printf</span>("Полная масса M = %.15f\n", evalf(M_total));
+<span class="kw">printf</span>("Полный импульс P = %.4e (ожид. ~ 0)\n", evalf(P_total));
+
+<span class="cmt"># Для сравнения: начальные значения (до цикла — надо сохранить)</span>
+<span class="cmt"># M_0 = 0.5 * 1.0 + 0.5 * 0.125 = 0.5625 (полмассы плотной + полмассы разреженной)</span>
+<span class="kw">printf</span>("Ожид. M_0 = %.15f\n", 0.5 * 1.0 + 0.5 * 0.125);
+<span class="kw">printf</span>("Δ M = %.4e\n", evalf(abs(M_total - 0.5625)));
+</pre>
+
+<div class="hint">
+<strong>Проверка сохранения.</strong> Полная масса должна совпадать с ожидаемой 0.5625 с точностью до машинного эпсилона (\(\Delta M \sim 10^{-15}\)) — массы вообще не меняются со временем. Полный импульс в начале 0 (все скорости нулевые), а в конце должен быть близок к 0 (\(|P| \lesssim 10^{-10}\)) — несовершенство из-за симметрии (частицы у краев не имеют равных по обе стороны соседей), но на порядки меньше любой физической величины.
+</div>
+
+<h2 id="deliverables">Что сдавать</h2>
+
+<p>Файл Maple (<code>lab3_sph_&lt;фамилия&gt;.mw</code>) с полным кодом: инициализация, все процедуры, главный цикл, графики. Графики:</p>
+<ol>
+<li>\(\rho(x)\), \(P(x)\), \(v(x)\) при \(t = 0.2\) (три графика).</li>
+<li>Таблица контрольных значений (x, \(\rho\), \(P\), \(v\)) в четырёх точках с комментариями.</li>
+<li>Численная проверка сохранения \(M\) и \(\mathcal P\).</li>
+</ol>
+
+<p>В пояснительной записке (1-2 абзаца): (1) объяснить качественное соответствие численного решения точному; (2) отметить регион с осцилляциями давления; (3) объяснить, почему масса сохраняется точно, а импульс только до машинного эпсилона.</p>
+
+<div class="lecture-nav">
+<a href="lec3-integration.html" class="nav-prev">← Лекция 3</a>
+<a href="lec4-viscosity.html" class="nav-next">Лекция 4 →</a>
+</div>
+</div>
+</div>
+
+</body>
+</html>

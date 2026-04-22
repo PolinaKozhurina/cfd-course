@@ -82,6 +82,31 @@
               { href: "sem1/comparison.html", label: "Сравнение методов" }
           ]}
         ]
+      },
+      {
+        id: "sph",
+        label: "Мини-курс SPH",
+        semester: "1 неделя · Maple",
+        sections: [
+          { title: "Лекции", items: [
+              { href: "sph/lec1-kernel.html", label: "Лек. 1 Ядро" },
+              { href: "sph/lec2-euler.html", label: "Лек. 2 Уравнения ГД" },
+              { href: "sph/lec3-integration.html", label: "Лек. 3 Leap-Frog" },
+              { href: "sph/lec4-viscosity.html", label: "Лек. 4 Вязкость" },
+              { href: "sph/lec5-analysis.html", label: "Лек. 5 Анализ" }
+          ]},
+          { title: "Лабораторные", items: [
+              { href: "sph/lab1.html", label: "Лаб. 1 Реализация ядра" },
+              { href: "sph/lab2.html", label: "Лаб. 2 Правые части" },
+              { href: "sph/lab3.html", label: "Лаб. 3 Первый Sod" },
+              { href: "sph/lab4.html", label: "Лаб. 4 Вязкость+сходимость" },
+              { href: "sph/lab5.html", label: "Лаб. 5 Мини-проект" }
+          ]}
+        ],
+        extras: [
+          { href: "sph/index.html", label: "Обзор курса" },
+          { href: "sph/maple-reference.html", label: "📘 Памятка Maple" }
+        ]
       }
     ],
     utils: [
@@ -92,11 +117,11 @@
   // Auto-detect subfolder
   var loc = location.pathname;
   var prefix = '';
-  if (loc.indexOf('/sem1/') >= 0 || loc.indexOf('/sem2/') >= 0) prefix = '../';
+  if (loc.indexOf('/sem1/') >= 0 || loc.indexOf('/sem2/') >= 0 || loc.indexOf('/sph/') >= 0) prefix = '../';
   var parts = loc.split('/');
   var fileName = parts.pop() || 'index.html';
   var folder = parts.pop() || '';
-  var currentPageFull = (folder === 'sem1' || folder === 'sem2') ? folder + '/' + fileName : fileName;
+  var currentPageFull = (folder === 'sem1' || folder === 'sem2' || folder === 'sph') ? folder + '/' + fileName : fileName;
 
   function p(href) { return prefix + href; }
 

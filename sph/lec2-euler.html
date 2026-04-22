@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPH-Лекция 2. Уравнения газовой динамики в SPH</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>SPH · Лекция 2</h2>
+  <div class="g">Содержание</div>
+  <a href="#euler">Уравнения Эйлера</a>
+  <a href="#density">Плотность: суммирование</a>
+  <a href="#momentum">Уравнение импульса</a>
+  <a href="#symmetric">Симметричная форма</a>
+  <a href="#conservation">Сохранение импульса</a>
+  <a href="#eos">Уравнение состояния</a>
+  <a href="#summary">Полная система SPH</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор</a>
+  <a href="lec1-kernel.html">← Лекция 1</a>
+  <a href="lab2.html">→ Лабораторная 2</a>
+  <a href="lec3-integration.html">→ Лекция 3</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-gasdyn">SPH</span>
+<div class="lecture-num">Лекция 2 · Мини-курс SPH</div>
+<h1>SPH-формулировка уравнений газовой динамики</h1>
+
+<h2 id="euler">Уравнения Эйлера для идеального газа в лагранжевой форме</h2>
+
+<p>Вспомним уравнения Эйлера в лагранжевой форме, где производная \(d/dt\) берётся вдоль траектории жидкой частицы (материальная производная):</p>
+
+<div class="eq">\[
+\begin{cases}
+\dfrac{d\rho}{dt} = -\rho\,\mathrm{div}\,\mathbf v,\\[6pt]
+\dfrac{d\mathbf v}{dt} = -\dfrac{1}{\rho}\nabla P,\\[6pt]
+\dfrac{de}{dt} = -\dfrac{P}{\rho}\,\mathrm{div}\,\mathbf v.
+\end{cases}
+\tag{2.1}
+\]</div>
+
+<p>Здесь \(\rho\) — плотность, \(\mathbf v\) — скорость, \(P\) — давление, \(e\) — удельная внутренняя энергия. Первое уравнение — сохранение массы в лагранжевой форме; второе — второй закон Ньютона для единичного объёма; третье — баланс энергии. Для идеального газа замыкание — уравнение состояния \(P = P(\rho, e)\).</p>
+
+<p>В SPH мы переходим к частицам \(\{i\}\) с координатами \(\mathbf r_i(t)\) и скоростями \(\mathbf v_i(t) = d\mathbf r_i/dt\). Наша задача — записать дискретный аналог каждого уравнения через суммы по соседям.</p>
+
+<h2 id="density">Плотность: суммирование по соседям</h2>
+
+<p>Применим основную SPH-формулу (1.4) к плотности \(\rho\):</p>
+
+<div class="eq">\[
+\rho_i = \langle\rho\rangle_i = \sum_j \frac{m_j}{\rho_j}\,\rho_j\,W_{ij} = \sum_j m_j\,W_{ij}.
+\tag{2.2}
+\]</div>
+
+<p>Множители \(\rho_j\) сократились! Получаем элегантную формулу: <strong>плотность частицы есть сумма масс соседей, взвешенных ядром</strong>. Это и есть ключевое свойство SPH — плотность вычисляется <em>без</em> уравнения непрерывности.</p>
+
+<div class="theorem">
+<strong>Теорема 4 (свойства формулы (2.2)).</strong>
+<ol>
+<li>\(\rho_i > 0\) всегда (сумма положительных слагаемых — следствие неотрицательности ядра).</li>
+<li>Суммирование (2.2) автоматически сохраняет <em>полную массу</em>: \(\int\rho\,dV \approx \sum_i\rho_i\cdot(m_i/\rho_i) = \sum_i m_i = \mathrm{const}\), так как массы частиц не меняются со временем.</li>
+<li>При плотном сгущении частиц в одну точку \(\rho_i\to\infty\) правильно (единица массы в нулевом объёме).</li>
+</ol>
+</div>
+
+<div class="remark">
+<strong>Альтернатива.</strong> Существует вариант SPH, в котором плотность эволюционирует как отдельная переменная через уравнение непрерывности:
+\[ \frac{d\rho_i}{dt} = \sum_j m_j (\mathbf v_i - \mathbf v_j)\cdot\nabla_i W_{ij}. \]
+Это «эволюционная» формулировка, иногда более точная вблизи границ (нет проблем с «неполными шаблонами»). В нашем курсе используем только суммирование (2.2) как более простую.
+</div>
+
+<h2 id="momentum">Уравнение импульса: наивная форма</h2>
+
+<p>Применим SPH-градиент (1.6) к \(\nabla P\) и подставим в уравнение импульса из (2.1):</p>
+
+<div class="eq">\[
+\frac{d\mathbf v_i}{dt} = -\frac{1}{\rho_i}\sum_j \frac{m_j}{\rho_j}\,P_j\,\nabla_i W_{ij}.
+\tag{2.3}
+\]</div>
+
+<p>Это <strong>наивная</strong> дискретизация. Она даёт правильный результат в непрерывном пределе, но имеет два недостатка:</p>
+
+<ol>
+<li><strong>Не симметрична по \(i\) и \(j\)</strong> — частица \(j\) воздействует на \(i\) не так, как \(i\) на \(j\).</li>
+<li><strong>Не сохраняет полный импульс</strong> на дискретной сетке (точная симметрия \(\mathbf F_{ij} = -\mathbf F_{ji}\) нарушена).</li>
+</ol>
+
+<p>Посмотрим геометрически, как именно взаимодействуют две частицы в форме (2.3):</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 220" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+  <defs>
+    <marker id="arrF" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#b44a2d"/></marker>
+    <marker id="arrF2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#1a6b5a"/></marker>
+  </defs>
+  <!-- Naive form (left) -->
+  <text x="140" y="25" font-family="Playfair Display,serif" font-size="14" fill="#2c2419" text-anchor="middle" font-weight="700">Наивная форма (2.3)</text>
+  <text x="140" y="42" font-family="Source Serif 4,serif" font-size="11" fill="#6b5d4f" text-anchor="middle">несимметрично: F_ij ≠ −F_ji</text>
+  <!-- Two particles -->
+  <circle cx="80" cy="110" r="16" fill="#b44a2d" opacity="0.85"/>
+  <text x="80" y="116" font-family="JetBrains Mono,monospace" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">i</text>
+  <circle cx="210" cy="110" r="16" fill="#3a5ba0" opacity="0.85"/>
+  <text x="210" y="116" font-family="JetBrains Mono,monospace" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">j</text>
+  <!-- Forces: on i from j, and on j from i, with DIFFERENT magnitudes -->
+  <line x1="80" y1="90" x2="80" y2="65" stroke="#b44a2d" stroke-width="3" marker-end="url(#arrF)"/>
+  <text x="70" y="60" font-family="Source Serif 4,serif" font-size="11" fill="#b44a2d" text-anchor="end" font-weight="600">F_{i←j} ∝ P_j/(ρ_i·ρ_j)</text>
+  <line x1="210" y1="130" x2="210" y2="165" stroke="#1a6b5a" stroke-width="2" marker-end="url(#arrF2)"/>
+  <text x="218" y="175" font-family="Source Serif 4,serif" font-size="11" fill="#1a6b5a" font-weight="600">F_{j←i} ∝ P_i/(ρ_j·ρ_i)</text>
+  <!-- Inequality sign -->
+  <text x="145" y="200" font-family="Source Serif 4,serif" font-size="13" fill="#b44a2d" text-anchor="middle">|F_{i←j}| ≠ |F_{j←i}|</text>
+  <!-- Divider -->
+  <line x1="290" y1="40" x2="290" y2="190" stroke="#d9cfc0" stroke-width="1" stroke-dasharray="4,3"/>
+  <!-- Symmetric form (right) -->
+  <text x="420" y="25" font-family="Playfair Display,serif" font-size="14" fill="#1a6b5a" text-anchor="middle" font-weight="700">Симметричная форма (2.4)</text>
+  <text x="420" y="42" font-family="Source Serif 4,serif" font-size="11" fill="#6b5d4f" text-anchor="middle">3-й закон Ньютона: F_ij = −F_ji</text>
+  <circle cx="360" cy="110" r="16" fill="#b44a2d" opacity="0.85"/>
+  <text x="360" y="116" font-family="JetBrains Mono,monospace" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">i</text>
+  <circle cx="490" cy="110" r="16" fill="#3a5ba0" opacity="0.85"/>
+  <text x="490" y="116" font-family="JetBrains Mono,monospace" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">j</text>
+  <!-- Equal and opposite forces -->
+  <line x1="360" y1="90" x2="360" y2="65" stroke="#b44a2d" stroke-width="3" marker-end="url(#arrF)"/>
+  <text x="350" y="60" font-family="Source Serif 4,serif" font-size="11" fill="#b44a2d" text-anchor="end" font-weight="600">F_{i←j}</text>
+  <line x1="490" y1="130" x2="490" y2="155" stroke="#1a6b5a" stroke-width="3" marker-end="url(#arrF2)"/>
+  <text x="498" y="165" font-family="Source Serif 4,serif" font-size="11" fill="#1a6b5a" font-weight="600">F_{j←i} = −F_{i←j}</text>
+  <text x="425" y="200" font-family="Source Serif 4,serif" font-size="13" fill="#1a6b5a" text-anchor="middle">|F_{i←j}| = |F_{j←i}| ✓</text>
+</svg>
+<div class="caption">Сравнение двух форм. Слева: наивная (2.3) — силы между парой частиц не равны по модулю, потому что в формуле фигурируют \(\rho_i\) слева от суммы и \(\rho_j\) в знаменателе внутри. Справа: симметричная (2.4) — силы равны по модулю и противоположно направлены, что обеспечивает сохранение импульса.</div>
+</div>
+
+<h2 id="symmetric">Вывод симметричной формы (2.4)</h2>
+
+<p>Ключ к симметризации — алгебраическое тождество. Запишем обычную производную дроби \(P/\rho\):</p>
+
+<div class="eq">\[
+\nabla\!\left(\frac{P}{\rho}\right) = \frac{\nabla P}{\rho} - \frac{P}{\rho^2}\nabla\rho.
+\]</div>
+
+<p>Отсюда перегруппируем слагаемое \(\nabla P/\rho\) (то, что нам нужно для уравнения импульса):</p>
+
+<div class="eq">\[
+\frac{\nabla P}{\rho} = \nabla\!\left(\frac{P}{\rho}\right) + \frac{P}{\rho^2}\nabla\rho.
+\tag{2.4a}
+\]</div>
+
+<p>Вместо того чтобы дискретизировать \(\nabla P/\rho\) «в лоб» (что даёт форму (2.3)), применим SPH-градиент (1.6) <strong>к каждому из двух слагаемых справа отдельно</strong>:</p>
+
+<p><strong>Первое слагаемое.</strong> Подставляем \(f = P/\rho\) в (1.6):</p>
+
+<div class="eq">\[
+\left[\nabla\!\left(\frac{P}{\rho}\right)\right]_i = \sum_j \frac{m_j}{\rho_j}\,\frac{P_j}{\rho_j}\,\nabla_i W_{ij} = \sum_j \frac{m_j P_j}{\rho_j^2}\,\nabla_i W_{ij}.
+\]</div>
+
+<p><strong>Второе слагаемое.</strong> Подставляем \(f = \rho\) в (1.6):</p>
+
+<div class="eq">\[
+[\nabla\rho]_i = \sum_j \frac{m_j}{\rho_j}\,\rho_j\,\nabla_i W_{ij} = \sum_j m_j\,\nabla_i W_{ij}.
+\]</div>
+
+<p>Заметим: \(\rho_j\) в числителе сократилось с \(\rho_j\) в знаменателе — формула градиента плотности получилась очень простой. Умножая на \(P_i/\rho_i^2\), получаем вклад второго слагаемого из (2.4a):</p>
+
+<div class="eq">\[
+\frac{P_i}{\rho_i^2}\,[\nabla\rho]_i = \sum_j m_j\,\frac{P_i}{\rho_i^2}\,\nabla_i W_{ij}.
+\]</div>
+
+<p><strong>Складываем оба вклада:</strong></p>
+
+<div class="eq">\[
+\left[\frac{\nabla P}{\rho}\right]_i = \sum_j m_j\!\left(\frac{P_j}{\rho_j^2} + \frac{P_i}{\rho_i^2}\right)\!\nabla_i W_{ij}.
+\]</div>
+
+<p>Подставляя в уравнение импульса \(d\mathbf v_i/dt = -\nabla P/\rho\), получаем <strong>симметричную форму</strong>:</p>
+
+<div class="eq">\[
+\boxed{\;\frac{d\mathbf v_i}{dt} = -\sum_j m_j\left(\frac{P_i}{\rho_i^2} + \frac{P_j}{\rho_j^2}\right)\nabla_i W_{ij}.\;}
+\tag{2.4}
+\]</div>
+
+<p>Теперь в скобках — симметричная по индексам комбинация \(P_i/\rho_i^2 + P_j/\rho_j^2\). Это делает парные силы между частицами парными и противоположно направленными, как показано на рисунке выше.</p>
+
+<div class="remark">
+<strong>Почему трюк с тождеством работает?</strong> Наивная форма (2.3) фактически дискретизирует производную \(\nabla(P/\rho)\) с выносом \(1/\rho_i\) <em>наружу</em> суммы — а это математически неправильно: \(1/\rho\) — функция от точки, её нельзя вынести из-под оператора \(\nabla\), работающего на этой же точке. Правильная дискретизация через тождество (2.4a) учитывает оба вклада и автоматически обеспечивает симметрию.
+</div>
+
+<p>Заметим: теперь в скобках симметричная по индексам комбинация \(P_i/\rho_i^2 + P_j/\rho_j^2\), что делает парные силы между частицами парными и противоположно направленными.</p>
+
+<h2 id="conservation">Сохранение импульса: третий закон Ньютона</h2>
+
+<div class="theorem">
+<strong>Теорема 5 (сохранение импульса в форме (2.4)).</strong>
+Полный импульс системы \(\mathbf P = \sum_i m_i\mathbf v_i\) сохраняется точно в схеме (2.4) для любого числа частиц и любого шага по времени.
+</div>
+
+<p><em>Доказательство.</em> Дифференцируем:
+\[
+\frac{d\mathbf P}{dt} = \sum_i m_i\frac{d\mathbf v_i}{dt} = -\sum_i\sum_j m_i m_j\left(\frac{P_i}{\rho_i^2}+\frac{P_j}{\rho_j^2}\right)\nabla_i W_{ij}.
+\]
+Переобозначим во втором слагаемом \(i \leftrightarrow j\) и используем \(\nabla_i W_{ij} = -\nabla_j W_{ji}\) (чётность ядра):
+\[
+\frac{d\mathbf P}{dt} = -\sum_i\sum_j m_i m_j\left(\frac{P_i}{\rho_i^2}+\frac{P_j}{\rho_j^2}\right)\nabla_i W_{ij} = -\frac{1}{2}\sum_i\sum_j m_i m_j\left(\ldots\right)(\nabla_i W_{ij} + \nabla_j W_{ji}) = 0.
+\]
+\(\square\)</p>
+
+<p>Это — очень сильное свойство. Оно означает что SPH с формулировкой (2.4) <strong>точно сохраняет полный импульс</strong>, независимо от интегратора по времени (Эйлер, RK, Leap-Frog). Это ключевой аргумент в пользу симметричной формы.</p>
+
+<div class="remark">
+<strong>Физическая интерпретация.</strong> Формула (2.4) эквивалентна тому, что между каждой парой частиц \((i,j)\) действует сила \(F_{ij} = -m_i m_j(P_i/\rho_i^2 + P_j/\rho_j^2)\nabla_i W_{ij}\) вдоль линии \(\mathbf r_i - \mathbf r_j\). Эта сила автоматически удовлетворяет третьему закону Ньютона: \(F_{ij} = -F_{ji}\). Полный импульс замкнутой системы сохраняется как следствие.
+</div>
+
+<h2 id="eos">Уравнение состояния. Политропная модель</h2>
+
+<p>Простейшее замыкание — <strong>политропная модель</strong> (изоэнтропическое течение):</p>
+
+<div class="eq">\[
+P_i = k\,\rho_i^\gamma, \qquad c_i = \sqrt{\gamma P_i/\rho_i},
+\tag{2.5}
+\]</div>
+
+<p>где \(c_i\) — скорость звука в частице \(i\), константа \(k\) определяется из начальных условий: \(k = P_L/\rho_L^\gamma\). Для идеального одноатомного газа \(\gamma = 5/3\); для двухатомного (воздух) \(\gamma = 1.4\).</p>
+
+<div class="remark">
+<strong>Ограничения политропной модели.</strong> Формула (2.5) <em>точна для изоэнтропических течений</em>. На ударной волне энтропия растёт, и политропная модель даёт приближённый результат. Полный учёт энергии требует интегрирования третьего уравнения из (2.1):
+\[ \frac{de_i}{dt} = \frac{P_i}{\rho_i^2}\sum_j m_j(\mathbf v_i - \mathbf v_j)\cdot\nabla_i W_{ij}. \]
+В этой версии мы работаем с политропной моделью — она проще и достаточна для тестовых задач с умеренной интенсивностью скачков.
+</div>
+
+<h2 id="summary">Полная система SPH для идеального газа</h2>
+
+<p>Собирая всё вместе, получаем систему уравнений, описывающую движение \(N\) частиц:</p>
+
+<div class="eq">\[
+\boxed{\;\begin{aligned}
+\rho_i &= \sum_j m_j\,W_{ij}, \\[4pt]
+P_i &= k\,\rho_i^\gamma, \quad c_i = \sqrt{\gamma P_i/\rho_i}, \\[4pt]
+\frac{d\mathbf v_i}{dt} &= -\sum_j m_j\!\left(\frac{P_i}{\rho_i^2} + \frac{P_j}{\rho_j^2}\right)\nabla_i W_{ij}, \\[4pt]
+\frac{d\mathbf r_i}{dt} &= \mathbf v_i.
+\end{aligned}\;}
+\tag{2.6}
+\]</div>
+
+<p>Это — полная математическая модель. Массы \(m_j\) заданы в начальный момент и не меняются (это ключевое свойство лагранжева подхода).</p>
+
+<p><strong>Порядок вычислений на шаге:</strong></p>
+<ol>
+<li>По текущим координатам \(\mathbf r_i\) вычислить \(\rho_i\) по формуле суммирования (2.2) — двойной цикл по частицам.</li>
+<li>По \(\rho_i\) вычислить давление \(P_i\) и скорость звука \(c_i\) по (2.5).</li>
+<li>Вычислить ускорения \(d\mathbf v_i/dt\) по (2.4) — опять двойной цикл.</li>
+<li>Продвинуть \(\mathbf v_i\), \(\mathbf r_i\) на шаг \(\Delta t\) каким-либо численным методом (см. лекцию 3).</li>
+</ol>
+
+<div class="remark">
+<strong>Вычислительная стоимость.</strong> На первом шаге видно что каждый расчёт \(\rho_i\) требует \(O(N)\) операций (проход по всем \(j\)). Для \(N\) частиц это \(O(N^2)\) на шаг, что становится критично при \(N > 10^4\). Поэтому в реальных SPH-кодах используется <strong>метод linked-list cells</strong>: пространство делится на ячейки размера \(\sim 2h\), для каждой частицы поиск соседей идёт только по ячейкам-соседкам — суммарная стоимость \(O(N)\) на шаг. Мы вернёмся к этому в лекции 5.
+</div>
+
+<div class="lecture-nav">
+<a href="lec1-kernel.html" class="nav-prev">← Лекция 1. Ядро</a>
+<a href="lab2.html" class="nav-next">Лабораторная 2 →</a>
+</div>
+</div>
+</div>
+
+</body>
+</html>

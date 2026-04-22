@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPH-Лабораторная 1. Ядро и аппроксимация</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.task{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.3rem;margin:1.2rem 0;border-left:4px solid var(--accent2)}
+.task h3{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--accent2);margin-bottom:.4rem}
+.task .task-num{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);letter-spacing:.08em}
+pre.code{background:#2b2520;color:#e9dcc4;padding:.9rem 1.1rem;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.55;overflow-x:auto;margin:.7rem 0}
+pre.code .kw{color:#d89a5a}
+pre.code .str{color:#a8c789}
+pre.code .cmt{color:#7d7163;font-style:italic}
+.hint{background:var(--bg2);border-left:3px solid var(--accent3);padding:.6rem .9rem;margin:.6rem 0;font-size:.88rem;border-radius:0 4px 4px 0}
+.hint strong{color:var(--accent3)}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>SPH · Лаб 1</h2>
+  <div class="g">Задания</div>
+  <a href="#task11">1.1 Ядро и производные</a>
+  <a href="#task12">1.2 Проверка нормировки</a>
+  <a href="#task13">1.3 Аппроксимация sin(x)</a>
+  <a href="#task14">1.4 Влияние h</a>
+  <div class="sep"></div>
+  <a href="#deliverables">Что сдавать</a>
+  <div class="sep"></div>
+  <a href="maple-reference.html" style="background:var(--bg2);border-radius:4px;padding:4px 8px;margin:4px 0;font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--accent);display:block">📘 Памятка Maple</a>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+  <a href="lec1-kernel.html">← Лекция 1</a>
+  <a href="lec2-euler.html">→ Лекция 2</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-highorder">SPH · Лаб</span>
+<div class="lecture-num">Лабораторная 1 · Мини-курс SPH</div>
+<h1>Реализация ядра и SPH-аппроксимация функции</h1>
+
+<p><strong>Цель:</strong> реализовать кубический B-сплайн Монагана и его производные, проверить условия нормировки аналитически, убедиться что SPH-сумма корректно приближает гладкую функцию и её производную.</p>
+
+<p><strong>Среда:</strong> Maple в режиме Document Mode. Все графики и вычисления выполняются внутри Maple-файла.</p>
+
+<p><strong>К занятию освежите:</strong> <a href="lec1-kernel.html#cubic">формулу кубического B-сплайна</a> (1.7), <a href="lec1-kernel.html#derivatives">производные</a> (1.9)–(1.10), основную SPH-формулу (1.4).</p>
+
+<h2 id="task11">Задание 1.1. Ядро и производные</h2>
+
+<div class="task">
+<div class="task-num">ЗАДАНИЕ 1.1</div>
+<h3>Реализация кубического B-сплайна</h3>
+<p>Написать в Maple две процедуры:</p>
+<ul>
+<li><code>W_kernel(q)</code> — значение ядра (1.7),</li>
+<li><code>dW_kernel(q)</code> — значение производной (1.9).</li>
+</ul>
+<p>Построить на одном рисунке три графика: \(W(q),\ W'(q),\ W''(q)\) для \(q \in [0, 3]\). При построении положить \(\sigma = \sigma_{1D} = 2/3\), \(h = 1\) — то есть строить безразмерную функцию \(W(q)\cdot h\).</p>
+
+<p><strong>Контрольные значения для проверки:</strong></p>
+<ul>
+<li>\(W(0) = \sigma_{1D} = 2/3 \approx 0.667\) (максимум в центре),</li>
+<li>\(W(1) = \sigma_{1D}\cdot 0.25 = 1/6 \approx 0.167\) (склейка полиномов),</li>
+<li>\(W(2) = 0\) (граница носителя),</li>
+<li>\(W'(0) = 0\) (экстремум в нуле),</li>
+<li>\(W'(1)\) непрерывна: \(W'(1-) = W'(1+) = -1/2\).</li>
+</ul>
+</div>
+
+<pre class="code"><span class="cmt"># --- Задание 1.1: Кубический B-сплайн Монагана ---</span>
+restart;
+
+<span class="cmt"># Константа нормировки для 1D (см. лекцию, §Нормировка)</span>
+sigma1D := 2/3;
+
+<span class="kw">W_kernel</span> := proc(q)
+  local qq;
+  qq := abs(q);  <span class="cmt"># ядро чётное</span>
+  if qq >= 2 then return 0
+  elif qq >= 1 then return sigma1D * (2 - qq)^3 / 4
+  else return sigma1D * (1 - 3*qq^2/2 + 3*qq^3/4)
+  end if;
+end proc:
+
+<span class="kw">dW_kernel</span> := proc(q)
+  local qq, sgn;
+  qq := abs(q);
+  sgn := sign(q);
+  if qq >= 2 then return 0
+  elif qq >= 1 then return -sigma1D * 3*(2-qq)^2/4 * sgn
+  else return sigma1D * (-3*qq + 9*qq^2/4) * sgn
+  end if;
+end proc:
+
+<span class="cmt"># Вторая производная (для построения)</span>
+<span class="kw">d2W_kernel</span> := proc(q)
+  local qq;
+  qq := abs(q);
+  if qq >= 2 then return 0
+  elif qq >= 1 then return sigma1D * 3*(2-qq)/2
+  else return sigma1D * (-3 + 9*qq/2)
+  end if;
+end proc:
+
+<span class="cmt"># Проверка контрольных значений</span>
+<span class="kw">printf</span>("W(0) = %a,  ожидается 2/3 = %a\n", W_kernel(0), evalf(2/3));
+<span class="kw">printf</span>("W(1) = %a,  ожидается 1/6 = %a\n", W_kernel(1), evalf(1/6));
+<span class="kw">printf</span>("W(2) = %a,  ожидается 0\n", W_kernel(2));
+<span class="kw">printf</span>("W'(0) = %a, ожидается 0\n", dW_kernel(0));
+<span class="kw">printf</span>("W'(1-) = %a = W'(1+) = %a\n", dW_kernel(0.999), dW_kernel(1.001));
+
+<span class="cmt"># Графики</span>
+with(plots):
+p1 := plot(W_kernel(q), q=0..3, color=blue, legend="W(q)", thickness=2);
+p2 := plot(dW_kernel(q), q=0..3, color=red, legend="W'(q)", thickness=2);
+p3 := plot(d2W_kernel(q), q=0..3, color="DarkGreen", legend="W''(q)", thickness=2);
+display(p1, p2, p3, title="Кубический B-сплайн и производные",
+        labels=["q", "значение"]);
+</pre>
+
+<div class="hint">
+<strong>Подсказка.</strong> В Maple функции, определённые через <code>if</code>, нельзя напрямую передать в <code>plot</code> как выражение — нужно использовать стрелку или создать процедуру с помощью <code>proc</code>, что и сделано выше. Альтернативно можно записать ядро через <code>piecewise</code>:
+<pre class="code"><span class="kw">W_sym</span> := (q) -> piecewise(
+  abs(q) < 1, sigma1D*(1 - 3*q^2/2 + 3*abs(q)^3/4),
+  abs(q) < 2, sigma1D*(2 - abs(q))^3/4,
+  0);</pre>
+Такую форму удобнее для символьных вычислений, но в численных циклах быстрее работает <code>proc</code> с <code>if</code>.
+</div>
+
+<h2 id="task12">Задание 1.2. Проверка нормировки</h2>
+
+<div class="task">
+<div class="task-num">ЗАДАНИЕ 1.2</div>
+<h3>Аналитическая проверка нормировки в 1D и 2D</h3>
+
+<p>С помощью команды Maple <code>int()</code> вычислить аналитически следующие интегралы:</p>
+<p><strong>1D:</strong></p>
+<div class="eq" style="font-size:.95rem;margin:.6rem 0">\[ I_{1D} = 2\int_0^2 W(q)\,dq = 2\int_0^1 \Bigl(1 - \tfrac{3}{2}q^2 + \tfrac{3}{4}q^3\Bigr)dq + \int_1^2 \tfrac{1}{4}(2-q)^3\,dq \]</div>
+<p>Подставить \(\sigma_{1D} = 2/3\) и убедиться, что \(\sigma_{1D}\cdot I_{1D} = 1\).</p>
+
+<p><strong>2D</strong> (радиальная часть \(r\,dr\) вместо просто \(dr\)):</p>
+<div class="eq" style="font-size:.95rem;margin:.6rem 0">\[ I_{2D} = 2\pi\int_0^2 W(q)\,q\,dq \]</div>
+<p>Проверить, что \(\sigma_{2D}\cdot I_{2D} = 1\) при \(\sigma_{2D} = 10/(7\pi)\).</p>
+</div>
+
+<pre class="code"><span class="cmt"># --- Задание 1.2: Проверка нормировки ---</span>
+
+<span class="cmt"># Символьная форма ядра (без σ) — коэффициент добавим в конце</span>
+Wbar := (q) -> piecewise(q &lt; 1, 1 - 3*q^2/2 + 3*q^3/4,
+                         q &lt; 2, (2-q)^3/4, 0);
+
+<span class="cmt"># 1D</span>
+I1D := 2*int(Wbar(q), q=0..2);
+<span class="kw">printf</span>("I_1D = %a\n", I1D);  <span class="cmt"># ожидается 3/2</span>
+
+sigma1D := 2/3;
+<span class="kw">printf</span>("σ₁D · I₁D = %a\n", sigma1D * I1D);  <span class="cmt"># должно быть 1</span>
+
+<span class="cmt"># 2D</span>
+I2D := 2*Pi*int(Wbar(q) * q, q=0..2);
+<span class="kw">printf</span>("I_2D = %a\n", I2D);
+
+sigma2D := 10/(7*Pi);
+<span class="kw">printf</span>("σ₂D · I₂D = %a\n", simplify(sigma2D * I2D));  <span class="cmt"># должно быть 1</span>
+
+<span class="cmt"># 3D (дополнительно)</span>
+I3D := 4*Pi*int(Wbar(q) * q^2, q=0..2);
+sigma3D := 1/Pi;
+<span class="kw">printf</span>("σ₃D · I₃D = %a\n", simplify(sigma3D * I3D));  <span class="cmt"># должно быть 1</span>
+</pre>
+
+<div class="hint">
+<strong>Что должно получиться.</strong> <code>I1D = 3/2</code>, <code>2/3 · 3/2 = 1</code>. <code>I2D = 7π/10</code>, <code>10/(7π) · 7π/10 = 1</code>. Если Maple вернул другое — проверьте пределы интегрирования и коэффициенты в полиномах.
+</div>
+
+<h2 id="task13">Задание 1.3. SPH-аппроксимация функции и её производной</h2>
+
+<div class="task">
+<div class="task-num">ЗАДАНИЕ 1.3</div>
+<h3>Написать SPH-аппроксимацию sin(x) и cos(x)</h3>
+<p>Написать код, создающий \(N = 200\) равноотстоящих частиц на \([0, 2\pi]\):</p>
+<ul>
+<li>координаты \(x_j = 2\pi(j-1)/N\), \(\Delta x = 2\pi/N\),</li>
+<li>массы \(m_j = \rho_0 \Delta x\) при \(\rho_0 = 1\),</li>
+<li>значения функции \(f_j = \sin(x_j)\).</li>
+</ul>
+<p>В цикле по частицам \(i\) вычислить:</p>
+<ul>
+<li>SPH-аппроксимацию функции по (1.4): \(f_i^{\text{SPH}} = \sum_j \frac{m_j}{\rho_j}f_j W_{ij}\),</li>
+<li>SPH-аппроксимацию производной по (1.6): \((f')_i^{\text{SPH}} = \sum_j \frac{m_j}{\rho_j}f_j \,\partial_i W_{ij}\).</li>
+</ul>
+<p>Построить два графика: (а) \(f_i^{\text{SPH}}\) и \(\sin(x)\); (б) \((f')_i^{\text{SPH}}\) и \(\cos(x)\). Использовать \(h = \Delta x\).</p>
+</div>
+
+<pre class="code"><span class="cmt"># --- Задание 1.3: SPH-аппроксимация sin и cos ---</span>
+
+<span class="cmt"># Параметры</span>
+N := 200;
+Lx := 2*Pi;
+dx := Lx/N;
+rho0 := 1;
+h := dx;  <span class="cmt"># длина сглаживания = шаг сетки</span>
+
+<span class="cmt"># Инициализация массивов (используем Array для скорости)</span>
+x := Array(1..N):
+f := Array(1..N):
+m := Array(1..N):
+for j from 1 to N do
+  x[j] := (j-1) * dx + dx/2;  <span class="cmt"># центры ячеек</span>
+  f[j] := sin(x[j]);
+  m[j] := rho0 * dx;
+end do:
+
+<span class="cmt"># Плотность тут постоянна, но для общности посчитаем её суммированием</span>
+<span class="cmt"># (для лаб 1 можно положить ρ = 1 без пересчёта)</span>
+rho := Array(1..N):
+for i from 1 to N do
+  s := 0;
+  for j from 1 to N do
+    qij := abs(x[i]-x[j])/h;
+    s := s + m[j] * W_kernel(qij)/h;
+  end do;
+  rho[i] := s;
+end do:
+
+<span class="cmt"># SPH-аппроксимация функции и производной</span>
+fSph := Array(1..N):
+dfSph := Array(1..N):
+for i from 1 to N do
+  sumF := 0; sumDf := 0;
+  for j from 1 to N do
+    dxij := x[i] - x[j];
+    qij := abs(dxij)/h;
+    if qij < 2 then
+      Wij := W_kernel(qij)/h;
+      dWij := dW_kernel(qij) * sign(dxij) / h^2;
+      <span class="cmt"># Примечание: 1/h от цепного правила умножается на 1/h² из-за σ/h</span>
+      sumF  := sumF  + m[j]/rho[j] * f[j] * Wij;
+      sumDf := sumDf + m[j]/rho[j] * f[j] * dWij;
+    end if;
+  end do;
+  fSph[i] := sumF;
+  dfSph[i] := sumDf;
+end do:
+
+<span class="cmt"># Визуализация</span>
+with(plots):
+p_f := plot([seq([x[i], fSph[i]], i=1..N)], style=point, symbol=circle,
+            symbolsize=8, color=red, legend="SPH"):
+p_fex := plot(sin(x), x=0..Lx, color=black, thickness=2, legend="sin(x)"):
+display(p_f, p_fex, title="SPH-аппроксимация функции", labels=["x","f"]);
+
+p_df := plot([seq([x[i], dfSph[i]], i=1..N)], style=point, symbol=circle,
+             symbolsize=8, color=red, legend="SPH"):
+p_dfex := plot(cos(x), x=0..Lx, color=black, thickness=2, legend="cos(x)"):
+display(p_df, p_dfex, title="SPH-аппроксимация производной", labels=["x","f'"]);
+</pre>
+
+<div class="hint">
+<strong>Замечание о нормировке \(1/h\).</strong> В определении ядра (1.7) константа \(\sigma/h^d\) уже включает множитель \(1/h^d\). В моей реализации <code>W_kernel</code> возвращает <code>sigma * polynomial(q)</code> без \(1/h\) — поэтому в SPH-сумме я делю на \(h\) отдельно. Проверьте себя: в 1D итоговая формула \(\rho_i = \sum_j m_j\,W(q_{ij})/h\), единица измерения — [масса/длина].
+</div>
+
+<div class="hint">
+<strong>Периодические граничные условия.</strong> Частицы на краях \([0, 2\pi]\) имеют соседей с противоположного края. Для аккуратного моделирования периодичности нужно искать соседей не только в основной области, но и через «image»-частицы. В этом задании для упрощения оставим свободные границы — возле краёв \(x=0\) и \(x=2\pi\) точность будет ниже. В задании 1.4 посмотрим, как это проявляется.
+</div>
+
+<h2 id="task14">Задание 1.4. Влияние длины сглаживания h</h2>
+
+<div class="task">
+<div class="task-num">ЗАДАНИЕ 1.4</div>
+<h3>Параметрический анализ по h</h3>
+<p>Запустить код задания 1.3 три раза при разных значениях длины сглаживания: \(h = 0.5\,\Delta x\), \(h = \Delta x\), \(h = 2\,\Delta x\). Для каждого случая вычислить \(L_2\)-ошибку:</p>
+<div class="eq" style="font-size:.95rem;margin:.6rem 0">\[ \varepsilon_{L_2} = \sqrt{\frac{1}{N}\sum_{i=1}^N \bigl(f_i^{\text{SPH}} - \sin(x_i)\bigr)^2}. \]</div>
+<p>Построить все три аппроксимации на одном графике. <strong>Объяснить:</strong> почему при \(h < \Delta x\) ядро «не видит» соседей (SPH даёт \(f_i \approx 0\)), а при \(h \gg \Delta x\) теряется локальность (сглаженная функция заметно отклоняется от истинной).</p>
+</div>
+
+<pre class="code"><span class="cmt"># --- Задание 1.4: Анализ влияния h ---</span>
+
+<span class="kw">compute_sph</span> := proc(h_val)
+  local rho, fSph, i, j, qij, dxij, sumF, Wij, s, dWij, err;
+  rho := Array(1..N);
+  fSph := Array(1..N);
+  for i from 1 to N do
+    s := 0;
+    for j from 1 to N do
+      qij := abs(x[i]-x[j])/h_val;
+      s := s + m[j] * W_kernel(qij)/h_val;
+    end do;
+    rho[i] := max(s, 1e-12);
+  end do;
+  for i from 1 to N do
+    sumF := 0;
+    for j from 1 to N do
+      qij := abs(x[i]-x[j])/h_val;
+      if qij < 2 then
+        Wij := W_kernel(qij)/h_val;
+        sumF := sumF + m[j]/rho[j] * f[j] * Wij;
+      end if;
+    end do;
+    fSph[i] := sumF;
+  end do;
+  err := sqrt(add((fSph[i] - sin(x[i]))^2, i=1..N) / N);
+  return fSph, err;
+end proc:
+
+f_h05, err_h05 := compute_sph(0.5*dx):
+f_h10, err_h10 := compute_sph(1.0*dx):
+f_h20, err_h20 := compute_sph(2.0*dx):
+
+<span class="kw">printf</span>("h = 0.5·Δx: L₂ = %.4e\n", err_h05);
+<span class="kw">printf</span>("h = 1.0·Δx: L₂ = %.4e\n", err_h10);
+<span class="kw">printf</span>("h = 2.0·Δx: L₂ = %.4e\n", err_h20);
+
+with(plots):
+P_ex := plot(sin(x), x=0..Lx, color=black, thickness=2, legend="sin(x)"):
+P_h05 := plot([seq([x[i], f_h05[i]], i=1..N)], style=point, symbol=box,
+              symbolsize=6, color="DarkOrange", legend="h=0.5Δx"):
+P_h10 := plot([seq([x[i], f_h10[i]], i=1..N)], style=point, symbol=circle,
+              symbolsize=6, color=red, legend="h=Δx"):
+P_h20 := plot([seq([x[i], f_h20[i]], i=1..N)], style=point, symbol=cross,
+              symbolsize=6, color=blue, legend="h=2Δx"):
+display(P_ex, P_h05, P_h10, P_h20,
+        title="Влияние длины сглаживания h",
+        labels=["x","f_SPH"]);
+</pre>
+
+<div class="hint">
+<strong>Ожидаемое наблюдение.</strong>
+<ul>
+<li><strong>h = 0.5Δx</strong> — ядро «не достаёт» до соседей (носитель ядра \(2h = \Delta x\) покрывает только саму частицу и её ближайшего соседа). Плотность получается недооценённой \(\rho_i < 1\), SPH-аппроксимация функции не работает. Видно «рваное» точечное распределение.</li>
+<li><strong>h = Δx</strong> — компромисс. Ядро покрывает 3-5 соседей, SPH-аппроксимация плотности и функции работает хорошо.</li>
+<li><strong>h = 2Δx</strong> — сильное сглаживание. Каждая частица видит \(\sim 9\) соседей, аппроксимация очень стабильная, но амплитуда синуса немного занижена (видно на пиках \(\pm 1\)) — это проявление \(O(h^2)\)-ошибки из теоремы 1.</li>
+</ul>
+</div>
+
+<h2 id="deliverables">Что сдавать</h2>
+
+<p>Один файл Maple (<code>lab1_sph_&lt;фамилия&gt;.mw</code>), содержащий:</p>
+<ol>
+<li>Процедуры <code>W_kernel</code>, <code>dW_kernel</code>, <code>d2W_kernel</code> с проверочными выводами контрольных значений.</li>
+<li>Объединённый график \(W\), \(W'\), \(W''\) на \(q \in [0, 3]\).</li>
+<li>Аналитические расчёты интегралов \(I_{1D}\) и \(I_{2D}\) с проверкой нормировки.</li>
+<li>Два графика для задания 1.3: \(f^{\text{SPH}}(x_i)\) vs \(\sin(x)\), \((f')^{\text{SPH}}(x_i)\) vs \(\cos(x)\).</li>
+<li>График с тремя значениями \(h\) (задание 1.4) и таблица из трёх \(L_2\)-ошибок с комментарием.</li>
+</ol>
+
+<p>Объём: 1–2 страницы текста пояснений + 3–4 графика.</p>
+
+<div class="lecture-nav">
+<a href="lec1-kernel.html" class="nav-prev">← Лекция 1</a>
+<a href="lec2-euler.html" class="nav-next">Лекция 2 →</a>
+</div>
+</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPH-Лабораторная 4. Вязкость и сходимость</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.task{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.3rem;margin:1.2rem 0;border-left:4px solid var(--accent2)}
+.task h3{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--accent2);margin-bottom:.4rem}
+.task .task-num{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);letter-spacing:.08em}
+pre.code{background:#2b2520;color:#e9dcc4;padding:.9rem 1.1rem;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.55;overflow-x:auto;margin:.7rem 0}
+pre.code .kw{color:#d89a5a}
+pre.code .str{color:#a8c789}
+pre.code .cmt{color:#7d7163;font-style:italic}
+.hint{background:var(--bg2);border-left:3px solid var(--accent3);padding:.6rem .9rem;margin:.6rem 0;font-size:.88rem;border-radius:0 4px 4px 0}
+.hint strong{color:var(--accent3)}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>SPH · Лаб 4</h2>
+  <div class="g">Задания</div>
+  <a href="#task41">4.1 Полный солвер с вязкостью</a>
+  <a href="#task42">4.2 Верификация</a>
+  <a href="#task43">4.3 Сходимость L1</a>
+  <a href="#task44">4.4 Влияние вязкости</a>
+  <div class="sep"></div>
+  <a href="#deliverables">Что сдавать</a>
+  <div class="sep"></div>
+  <a href="maple-reference.html" style="background:var(--bg2);border-radius:4px;padding:4px 8px;margin:4px 0;font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--accent);display:block">📘 Памятка Maple</a>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор</a>
+  <a href="lec4-viscosity.html">← Лекция 4</a>
+  <a href="lec5-analysis.html">→ Лекция 5</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-highorder">SPH · Лаб</span>
+<div class="lecture-num">Лабораторная 4 · Мини-курс SPH</div>
+<h1>Искусственная вязкость, верификация и сходимость</h1>
+
+<p><strong>Цель:</strong> добавить в наш SPH-код искусственную вязкость Монагана (α=1, β=2), получить решение задачи Сода без осцилляций, сравнить с эталонным решением Торо, проверить сходимость при уменьшении шага.</p>
+
+<p>К занятию: <a href="lec4-viscosity.html#monaghan">формулы (4.1)-(4.3)</a>, <a href="lec4-viscosity.html#reference">эталонные значения</a>.</p>
+
+<h2 id="task41">Задание 4.1. Полный солвер с вязкостью</h2>
+
+<div class="task">
+<div class="task-num">ЗАДАНИЕ 4.1</div>
+<h3>Модифицировать compute_accel</h3>
+<p>В процедуру <code>compute_accel</code> из лаб 2 добавить вычисление \(\mu_{ij}\) (4.3) и \(\Pi_{ij}\) (4.2), использовать формулу (4.1). Модифицировать <code>compute_dt</code> по (4.5).</p>
+<p>Запустить тест Сода при \(\alpha = 1\), \(\beta = 2\), \(t_{\text{end}} = 0.2\).</p>
+</div>
+
+<pre class="code"><span class="cmt"># --- Задание 4.1: Солвер с искусственной вязкостью ---</span>
+<span class="cmt"># (продолжение кода лаб 3; массивы x, v, rho, P, c_sound, a, m уже существуют)</span>
+
+alpha_visc := 1.0;
+beta_visc  := 2.0;
+eta_visc   := 0.01 * h;
+
+<span class="cmt"># Процедура ускорения с вязкостью</span>
+compute_accel_visc := proc()
+  local i, j, sum_a, dxij, dvij, qij, dWij, vdotr, mu_ij, c_bar, rho_bar, Pi_ij;
+  for i from 1 to N do
+    sum_a := 0;
+    for j from 1 to N do
+      if i <> j then
+        dxij := x[i] - x[j];
+        qij := abs(dxij) / h;
+        if qij < 2 then
+          dWij := dW_kernel(qij) * sign(dxij) / h^2;
+          <span class="cmt"># Вязкость: включается при сжатии пары</span>
+          dvij := v[i] - v[j];
+          vdotr := dvij * dxij;
+          if vdotr < 0 then
+            mu_ij  := h * vdotr / (dxij^2 + eta_visc^2);
+            c_bar  := (c_sound[i] + c_sound[j]) / 2;
+            rho_bar:= (rho[i] + rho[j]) / 2;
+            Pi_ij  := (-alpha_visc*c_bar*mu_ij + beta_visc*mu_ij^2) / rho_bar;
+          else
+            Pi_ij := 0;
+          end if;
+          sum_a := sum_a - m[j] * (P[i]/rho[i]^2 + P[j]/rho[j]^2 + Pi_ij) * dWij;
+        end if;
+      end if;
+    end do;
+    a[i] := sum_a;
+  end do;
+end proc:
+
+<span class="cmt"># Модифицированный CFL с учётом вязкости</span>
+compute_dt_visc := proc()
+  local i, maxVC;
+  maxVC := 0;
+  for i from 1 to N do
+    if (1+alpha_visc)*c_sound[i] + abs(v[i]) > maxVC then
+      maxVC := (1+alpha_visc)*c_sound[i] + abs(v[i]);
+    end if;
+  end do;
+  return 0.2 * h / maxVC;
+end proc:
+
+<span class="cmt"># --- Инициализация (повтор из лаб 2 для полноты) ---</span>
+for j from 1 to N do
+  x[j] := (j - 0.5) * dx;
+  v[j] := 0;
+  if x[j] < 0.5 then rho[j] := 1.0; P[j] := 1.0;
+  else rho[j] := 0.125; P[j] := 0.1; end if;
+  m[j] := rho[j] * dx;
+end do:
+
+compute_density();
+compute_eos();
+compute_accel_visc();
+dt0 := compute_dt_visc();
+<span class="cmt"># Сдвиг на полшага назад</span>
+for i from 1 to N do v[i] := v[i] - 0.5 * dt0 * a[i]; end do:
+
+<span class="cmt"># --- Главный цикл ---</span>
+t := 0;
+t_end := 0.2;
+n_steps := 0;
+while t < t_end do
+  compute_density();
+  compute_eos();
+  compute_accel_visc();
+  dt := compute_dt_visc();
+  if t + dt > t_end then dt := t_end - t; end if;
+  leapfrog_step(dt);
+  t := t + dt;
+  n_steps := n_steps + 1;
+end do:
+
+<span class="kw">printf</span>("Завершено за %d шагов\n", n_steps);
+</pre>
+
+<div class="hint">
+<strong>Сравнение с лабораторной 3.</strong> Шагов стало больше (в \(\sim 1.5\) раза) — это следствие (4.5). Зато в решении больше нет осцилляций давления.
+</div>
+
+<h2 id="task42">Задание 4.2. Верификация по эталонному решению</h2>
+
+<div class="task">
+<div class="task-num">ЗАДАНИЕ 4.2</div>
+<h3>Построить точное решение кусочно и сравнить</h3>
+<p>Построить на одном графике \(\rho^{\text{SPH}}(x)\) (точки) и точное решение (сплошная линия). Аналогично для \(P(x)\) и \(v(x)\).</p>
+
+<p><strong>Точное решение (кусочно):</strong></p>
+<ul>
+<li>\(\rho = 1\) при \(x < 0.263\);</li>
+<li>линейный переход \(1 \to 0.4263\) при \(0.263 \le x \le 0.486\) (ВР);</li>
+<li>\(\rho = 0.4263\) при \(0.486 < x < 0.685\);</li>
+<li>\(\rho = 0.2656\) при \(0.685 \le x < 0.850\);</li>
+<li>\(\rho = 0.125\) при \(x \ge 0.850\).</li>
+</ul>
+
+<p>Аналогично для \(P\) (с другими значениями) и \(v\) (с другими значениями). Подписать на графиках «ВР», «КР», «УВ».</p>
+</div>
+
+<pre class="code"><span class="cmt"># --- Задание 4.2: Верификация ---</span>
+
+<span class="cmt"># Точное решение как piecewise-функции</span>
+rho_exact := proc(xx)
+  if xx < 0.263 then 1.0
+  elif xx <= 0.486 then 1.0 + (0.4263 - 1.0) * (xx - 0.263) / (0.486 - 0.263)
+  elif xx < 0.685 then 0.4263
+  elif xx < 0.850 then 0.2656
+  else 0.125 end if;
+end proc:
+
+P_exact := proc(xx)
+  if xx < 0.263 then 1.0
+  elif xx <= 0.486 then 1.0 + (0.3031 - 1.0)*(xx - 0.263)/(0.486 - 0.263)
+  elif xx < 0.850 then 0.3031
+  else 0.1 end if;
+end proc:
+
+v_exact := proc(xx)
+  if xx < 0.263 then 0
+  elif xx <= 0.486 then 0.9274 * (xx - 0.263)/(0.486 - 0.263)
+  elif xx < 0.850 then 0.9274
+  else 0 end if;
+end proc:
+
+with(plots):
+<span class="cmt"># Плотность</span>
+p_SPH_rho := plot([seq([x[i], rho[i]], i=1..N)], style=point,
+                  symbol=circle, symbolsize=5, color=red, legend="SPH"):
+p_exact_rho := plot(rho_exact(xx), xx=0..1, color=black, thickness=2,
+                    legend="exact (Toro)"):
+p_rho_full := display(p_exact_rho, p_SPH_rho,
+  title="ρ(x) при t=0.2 (Sod, SPH vs exact)",
+  labels=["x","ρ"]):
+
+<span class="cmt"># То же для P и v</span>
+p_SPH_P := plot([seq([x[i], P[i]], i=1..N)], style=point,
+                symbol=circle, symbolsize=5, color=red):
+p_exact_P := plot(P_exact(xx), xx=0..1, color=black, thickness=2):
+p_P_full := display(p_exact_P, p_SPH_P, title="P(x) при t=0.2",
+                    labels=["x","P"]):
+
+p_SPH_v := plot([seq([x[i], v[i]], i=1..N)], style=point,
+                symbol=circle, symbolsize=5, color=red):
+p_exact_v := plot(v_exact(xx), xx=0..1, color=black, thickness=2):
+p_v_full := display(p_exact_v, p_SPH_v, title="v(x) при t=0.2",
+                    labels=["x","v"]):
+
+<span class="cmt"># Вывод всех трёх</span>
+display(Array([p_rho_full, p_P_full]));
+display(p_v_full);
+
+<span class="cmt"># Аннотации ВР/КР/УВ можно добавить через textplot:</span>
+labels_plot := textplot([
+  [0.37, 0.75, "ВР", color=blue],
+  [0.70, 0.35, "КР", color="DarkGreen"],
+  [0.87, 0.20, "УВ", color=red]
+], font=[TIMES,BOLD,12]):
+display(p_rho_full, labels_plot);
+</pre>
+
+<div class="hint">
+<strong>Ожидаемое качество.</strong> Численные точки должны лежать строго на эталонной ломаной всюду, кроме: (а) ближайших 3-5 частиц к ударному фронту (размывание вязкостью), (б) пары частиц на контактном разрыве (SPH не может дать резкий скачок). Если есть отклонения более \(5\%\) на плато — ошибка в реализации вязкости.
+</div>
+
+<h2 id="task43">Задание 4.3. Анализ сходимости</h2>
+
+<div class="task">
+<div class="task-num">ЗАДАНИЕ 4.3</div>
+<h3>L1-норма ошибки при N = 100, 200, 400, 800</h3>
+<p>Вычислить L1-норму ошибки плотности:</p>
+<div class="eq">\[ L_1 = \frac{1}{N}\sum_{i=1}^{N} |\rho^{\text{SPH}}_i - \rho^{\text{exact}}(x_i)|. \]</div>
+<p>Повторить расчёт при \(N = 100, 200, 400, 800\) (при \(h = 2\Delta x\)). Построить \(\log L_1\) vs \(\log \Delta x\). Определить наклон — порядок сходимости. Ожидание: \(\sim 1\) (SPH с вязкостью на разрывном решении).</p>
+</div>
+
+<pre class="code"><span class="cmt"># --- Задание 4.3: Сходимость ---</span>
+
+<span class="kw">run_sod</span> := proc(Nx)
+  local dx_l, h_l, t_l, dt_l, ns_l, L1, i, x_l, v_l, rho_l, P_l, c_l, m_l, a_l;
+  <span class="cmt"># ... повторный запуск всего солвера для заданного Nx ...</span>
+  <span class="cmt"># (опущен для краткости; скопируйте весь код лаб 2-3-4 и уберите глобальные</span>
+  <span class="cmt"># переменные, передавая Nx как параметр)</span>
+  ...
+  L1 := add(abs(rho_l[i] - rho_exact(x_l[i])), i=1..Nx) / Nx;
+  return L1;
+end proc:
+
+<span class="cmt"># Запуск серии</span>
+Ns := [100, 200, 400, 800];
+L1s := Array(1..4):
+for k from 1 to 4 do
+  L1s[k] := run_sod(Ns[k]);
+  <span class="kw">printf</span>("N = %d, L1 = %.4e\n", Ns[k], L1s[k]);
+end do:
+
+<span class="cmt"># log-log график</span>
+pts := [seq([log10(1.0/Ns[k]), log10(L1s[k])], k=1..4)]:
+p_conv := plot(pts, style=pointline, symbol=circle, symbolsize=10,
+               color=blue, thickness=2, labels=["log(Δx)", "log(L1)"],
+               title="Сходимость L1-ошибки плотности"):
+<span class="cmt"># Наклон (линейная регрессия через 4 точки)</span>
+slope := evalf((log10(L1s[4]) - log10(L1s[1])) / (log10(1.0/Ns[4]) - log10(1.0/Ns[1])));
+<span class="kw">printf</span>("Измеренный порядок сходимости: p ≈ %.3f\n", slope);
+
+display(p_conv);
+</pre>
+
+<div class="hint">
+<strong>Практическая рекомендация.</strong> В Maple обёртка всего солвера в одну процедуру может быть громоздкой. Проще скопировать тело кода 4 раза и вручную менять \(N\) (или использовать <code>unapply</code> для ограниченного запуска). На \(N = 800\) один запуск может занимать 10+ минут — запаситесь временем или уменьшите время расчёта до \(t_{\text{end}} = 0.1\).
+</div>
+
+<h2 id="task44">Задание 4.4. Влияние вязкости</h2>
+
+<div class="task">
+<div class="task-num">ЗАДАНИЕ 4.4</div>
+<h3>Запуск при α = 0, 0.5, 2.0</h3>
+<p>Запустить солвер три раза при \(\beta = 2\), \(N = 400\) и трёх значениях \(\alpha\): 0, 0.5, 2.0. Построить \(\rho(x)\) для всех трёх вариантов на одном графике. Определить <strong>ширину ударного фронта</strong>: число частиц в области \(x > 0.7\), для которых \(0.15 < \rho_i < 0.40\) (переходная зона между правым плато \(\rho=0.2656\) и постударным состоянием \(\rho=0.125\)).</p>
+<p>Заполнить таблицу:</p>
+
+<table style="width:70%;border-collapse:collapse;margin:.6rem 0;font-size:.9rem">
+<thead><tr style="background:var(--bg2)">
+  <th style="padding:6px 10px;border:1px solid var(--border)">α</th>
+  <th style="padding:6px 10px;border:1px solid var(--border)">Ширина фронта (частиц)</th>
+  <th style="padding:6px 10px;border:1px solid var(--border)">Осцилляции</th>
+</tr></thead>
+<tbody>
+<tr><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">?</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">да/нет</td></tr>
+<tr><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0.5</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">?</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">да/нет</td></tr>
+<tr><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">2.0</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">?</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">да/нет</td></tr>
+</tbody></table>
+</div>
+
+<pre class="code"><span class="cmt"># --- Задание 4.4: Влияние α ---</span>
+
+<span class="kw">count_front_particles</span> := proc(rho_arr, x_arr, Nx)
+  local i, count;
+  count := 0;
+  for i from 1 to Nx do
+    if x_arr[i] > 0.7 and rho_arr[i] > 0.15 and rho_arr[i] < 0.40 then
+      count := count + 1;
+    end if;
+  end do;
+  return count;
+end proc:
+
+<span class="cmt"># Три запуска (цикл по α)</span>
+alphas := [0, 0.5, 2.0]:
+results := table():
+for a_test in alphas do
+  alpha_visc := a_test;
+  <span class="cmt"># (полный запуск солвера с N=400)</span>
+  <span class="cmt"># сохранить rho[] в results[a_test]</span>
+  ...
+  results[a_test] := [seq(rho[i], i=1..N)];
+  w := count_front_particles(rho, x, N);
+  <span class="kw">printf</span>("α = %.1f: ширина фронта = %d частиц\n", a_test, w);
+end do:
+
+<span class="cmt"># Сводный график</span>
+p_a0   := plot([seq([x[i], results[0][i]], i=1..N)], color=red,
+               legend="α=0", thickness=1):
+p_a05  := plot([seq([x[i], results[0.5][i]], i=1..N)], color=blue,
+               legend="α=0.5", thickness=1):
+p_a20  := plot([seq([x[i], results[2.0][i]], i=1..N)], color="DarkGreen",
+               legend="α=2.0", thickness=1):
+display(p_a0, p_a05, p_a20,
+        title="Влияние параметра α на решение Sod",
+        labels=["x","ρ"]);
+</pre>
+
+<div class="hint">
+<strong>Ожидаемые значения.</strong>
+<ul>
+<li>\(\alpha = 0\): ширина \(\sim 5\)-\(7\) частиц, но видны осцилляции \(\pm 5\%\);</li>
+<li>\(\alpha = 0.5\): ширина \(\sim 8\)-\(10\), осцилляции ослаблены;</li>
+<li>\(\alpha = 2.0\): ширина \(\sim 14\)-\(18\), осцилляций нет, но фронт <em>слишком</em> размыт — точность падает.</li>
+</ul>
+</div>
+
+<h2 id="deliverables">Что сдавать</h2>
+
+<p>Файл Maple (<code>lab4_sph_&lt;фамилия&gt;.mw</code>) с:</p>
+<ol>
+<li>Модифицированной процедурой <code>compute_accel_visc</code> и проверенной визуализацией решения Sod (графики \(\rho\), \(P\), \(v\)).</li>
+<li>Сравнением с эталонным решением (три графика с легендой SPH/exact).</li>
+<li>Таблицей L1-ошибок для четырёх сеток и оценкой порядка сходимости.</li>
+<li>Сводным графиком влияния \(\alpha\) и заполненной таблицей ширины фронта.</li>
+</ol>
+
+<p>В пояснительной записке (2-3 абзаца): (1) объяснить как работает вязкость — какой член её «включает» и почему; (2) сформулировать компромисс между резкостью фронта и устойчивостью (малое vs большое \(\alpha\)); (3) указать, какие наблюдения подтвердили правильность реализации.</p>
+
+<div class="lecture-nav">
+<a href="lec4-viscosity.html" class="nav-prev">← Лекция 4</a>
+<a href="lec5-analysis.html" class="nav-next">Лекция 5 →</a>
+</div>
+</div>
+</div>
+
+</body>
+</html>

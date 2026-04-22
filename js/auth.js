@@ -265,11 +265,16 @@
           window._userIsAdmin = !!doc.data().isAdmin;
           window._userFio = doc.data().fio || '';
           window._userStudyGroup = doc.data().studyGroup || '';
+          window._userManagedGroups = Array.isArray(doc.data().managedGroups) ? doc.data().managedGroups : [];
+          window._userManagedStudyGroups = Array.isArray(doc.data().managedStudyGroups) ? doc.data().managedStudyGroups : [];
           window._userRole = doc.data().isAdmin ? 'admin' : 'student';
-          // Check superadmin
+          // Check superadmin (from ADMIN_EMAILS config)
           if (typeof ADMIN_EMAILS !== 'undefined' && ADMIN_EMAILS.includes(user.email)) {
             window._userRole = 'superadmin';
             window._userIsAdmin = true;
+            // superadmin manages all groups implicitly
+            window._userManagedGroups = null; // null = all
+            window._userManagedStudyGroups = null;
           }
         } else {
           // First login — create user document so admin can see them
@@ -281,6 +286,8 @@
           window._userApproved = false;
           window._userIsAdmin = false;
           window._userFio = '';
+          window._userManagedGroups = [];
+          window._userManagedStudyGroups = [];
           window._userRole = 'student';
         }
       } catch (e) {

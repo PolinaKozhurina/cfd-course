@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPH-Лабораторная 5. Мини-проект</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.variant{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.3rem;margin:1.2rem 0;border-left:4px solid var(--accent2)}
+.variant h3{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;color:var(--accent2);margin-bottom:.4rem}
+.variant .var-num{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);letter-spacing:.08em}
+pre.code{background:#2b2520;color:#e9dcc4;padding:.9rem 1.1rem;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.55;overflow-x:auto;margin:.7rem 0}
+pre.code .kw{color:#d89a5a}
+pre.code .str{color:#a8c789}
+pre.code .cmt{color:#7d7163;font-style:italic}
+.hint{background:var(--bg2);border-left:3px solid var(--accent3);padding:.6rem .9rem;margin:.6rem 0;font-size:.88rem;border-radius:0 4px 4px 0}
+.hint strong{color:var(--accent3)}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>SPH · Лаб 5</h2>
+  <div class="g">Варианты</div>
+  <a href="#var1">Вариант 1: Сходимость</a>
+  <a href="#var2">Вариант 2: Сравнение ядер</a>
+  <a href="#var3">Вариант 3: Другие тесты</a>
+  <div class="sep"></div>
+  <a href="#deliverables">Требования к отчёту</a>
+  <div class="sep"></div>
+  <a href="maple-reference.html" style="background:var(--bg2);border-radius:4px;padding:4px 8px;margin:4px 0;font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--accent);display:block">📘 Памятка Maple</a>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор</a>
+  <a href="lec5-analysis.html">← Лекция 5</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-highorder">SPH · Лаб</span>
+<div class="lecture-num">Лабораторная 5 · Мини-курс SPH</div>
+<h1>Мини-проект: исследование на выбор</h1>
+
+<p><strong>Цель</strong>: выбрать <em>один</em> из трёх вариантов и выполнить самостоятельное исследование с использованием солвера, написанного в лабораторных 1-4. Отчёт — файл Maple с кодом, результатами и выводами. Объём работы — соответствует одной лабораторной (1.5-2 часа).</p>
+
+<p>Все варианты — расширение уже работающего кода лабораторной 4, без необходимости писать солвер заново.</p>
+
+<h2 id="var1">Вариант 1. Детальный анализ сходимости</h2>
+
+<div class="variant">
+<div class="var-num">ВАРИАНТ 1 (базовый)</div>
+<h3>Порядок сходимости SPH на задаче Сода</h3>
+<p>Запустить задачу Сода на серии из <strong>5 сеток</strong>: \(N = 100, 200, 400, 800, 1600\). Параметры: \(h = 2\Delta x\), \(\alpha = 1\), \(\beta = 2\), \(t_{\text{end}} = 0.2\).</p>
+
+<p>Для каждого N вычислить \(L_1\)-норму ошибки плотности:</p>
+<div class="eq">\[ L_1 = \frac{1}{N}\sum_{i=1}^{N}|\rho^{\text{SPH}}_i - \rho^{\text{exact}}(x_i)|. \]</div>
+
+<p>Точное решение — кусочно-постоянное, как в задании 4.2 (лекция 4).</p>
+
+<p>Построить \(\log L_1\) vs \(\log N\). Определить <strong>порядок сходимости</strong> по углу наклона прямой (линейная регрессия через 5 точек, <code>Statistics[LinearFit]</code>):</p>
+
+<div class="eq">\[ L_1 \sim N^{-p} \quad\Longleftrightarrow\quad \log L_1 = -p\log N + \mathrm{const}. \]</div>
+
+<p><strong>Ожидание:</strong> \(p \approx 1\) — SPH с искусственной вязкостью на решении с разрывами даёт первый порядок сходимости. Это хуже чем у WENO-3/5 на гладких решениях, но <em>теоретически ожидаемо</em>: на любом разрыве (в том числе на контактном) любая TVD-схема падает до 1-го порядка (теорема Годунова).</p>
+</div>
+
+<pre class="code"><span class="cmt"># --- Вариант 1: Сходимость SPH ---</span>
+<span class="cmt"># Обернуть весь солвер в процедуру, возвращающую L1-ошибку</span>
+
+run_sod_L1 := proc(N_local)
+  local dx_l, h_l, gamma_l, k_l, alpha_l, beta_l, eta_l, t_local,
+        t_end_l, dt_l, n_steps, x_l, v_l, rho_l, P_l, c_l, m_l, a_l,
+        i, j, rho_ex, L1_sum;
+
+  dx_l := 1.0/N_local;
+  h_l := 2.0*dx_l;
+  gamma_l := 1.4; k_l := 1.0;
+  alpha_l := 1.0; beta_l := 2.0;
+  eta_l := 0.01*h_l;
+
+  <span class="cmt"># ...инициализация массивов x_l, v_l, rho_l и т.д.</span>
+  <span class="cmt"># ...компонент compute_density_l, compute_accel_visc_l, leapfrog_l</span>
+  <span class="cmt"># ...главный цикл while t < t_end_l</span>
+  ...
+
+  <span class="cmt"># L1-норма ошибки плотности</span>
+  L1_sum := 0;
+  for i from 1 to N_local do
+    rho_ex := rho_exact(x_l[i]);  <span class="cmt"># функция из лаб 4</span>
+    L1_sum := L1_sum + abs(rho_l[i] - rho_ex);
+  end do;
+  return L1_sum / N_local;
+end proc:
+
+<span class="cmt"># Запуск серии (внимание: N=1600 может занять 30+ мин)</span>
+Ns := [100, 200, 400, 800, 1600];
+L1s := Array(1..5):
+for k from 1 to 5 do
+  <span class="kw">printf</span>("Running N = %d ...\n", Ns[k]);
+  L1s[k] := run_sod_L1(Ns[k]);
+  <span class="kw">printf</span>("  L1 = %.4e\n", L1s[k]);
+end do:
+
+<span class="cmt"># Линейная регрессия в log-log</span>
+with(Statistics):
+xd := [seq(log10(Ns[k]), k=1..5)]:
+yd := [seq(log10(L1s[k]), k=1..5)]:
+fit := LinearFit([1, x], xd, yd, x);
+<span class="kw">printf</span>("Порядок сходимости: p ≈ %.3f\n", -coeff(fit, x, 1));
+
+with(plots):
+p_data := plot([seq([xd[k], yd[k]], k=1..5)], style=point, symbol=circle,
+               symbolsize=12, color=red):
+p_fit := plot(fit, x=min(op(xd))..max(op(xd)), color=blue, thickness=1):
+display(p_data, p_fit, labels=["log₁₀(N)", "log₁₀(L1)"],
+        title="Сходимость SPH на задаче Сода");
+</pre>
+
+<div class="hint">
+<strong>Ожидаемое замечание.</strong> В отчёте стоит обсудить: почему порядок не 2-й, хотя SPH-ядро имеет второй порядок аппроксимации (теорема 1 из лекции 1)? Ответ: на разрывах точность любой TVD-схемы падает до 1-го, а в L1-норме именно разрывы дают основной вклад в ошибку (гладкие участки дают \(O(N^{-2})\), но они усреднены с разрывом в \(O(N^{-1})\)).
+</div>
+
+<h2 id="var2">Вариант 2. Сравнение сглаживающих ядер</h2>
+
+<div class="variant">
+<div class="var-num">ВАРИАНТ 2 (средний)</div>
+<h3>Три ядра на одной задаче</h3>
+
+<p>Помимо кубического B-сплайна (4) реализовать ещё <strong>два ядра</strong>:</p>
+
+<p><strong>Гауссово ядро (обрезанное):</strong></p>
+<div class="eq">\[ W_G(q) = \frac{1}{h\sqrt{\pi}}\,e^{-q^2}, \qquad \text{обрезать при } q > 3. \tag{5.5} \]</div>
+
+<p><strong>Квинтический B-сплайн:</strong></p>
+<div class="eq">\[ W_5(q) = \frac{\sigma_5}{h}\Bigl[(3-q)_+^5 - 6(2-q)_+^5 + 15(1-q)_+^5\Bigr],\quad \sigma_5 = \frac{1}{120}. \tag{5.6} \]</div>
+
+<p>Здесь \(x_+ = \max(x, 0)\) — «срезанный» снизу аргумент.</p>
+
+<p>Запустить задачу Сода (\(N = 400\), \(h = 2\Delta x\) для всех трёх ядер). Сравнить:</p>
+<ul>
+<li>\(L_1\)-ошибки плотности;</li>
+<li>визуальное качество профилей \(\rho(x)\);</li>
+<li>время расчёта (квинтический сплайн имеет больший носитель \(|q| < 3\) против \(|q| < 2\) у кубического — больше соседей у каждой частицы).</li>
+</ul>
+
+<p><strong>Ожидание:</strong> квинтический сплайн даёт наилучшее качество (меньше шума, резче контакт), гауссов — среднее, кубический — как раньше. Цена: квинтический \(\sim 1.5\) раза дольше (больше соседей).</p>
+</div>
+
+<pre class="code"><span class="cmt"># --- Вариант 2: Три ядра ---</span>
+
+<span class="cmt"># Гауссово ядро</span>
+W_gauss := proc(q) local qq;
+  qq := abs(q);
+  if qq > 3 then return 0
+  else return exp(-qq^2)/sqrt(Pi)
+  end if;
+end proc:
+
+dW_gauss := proc(q) local qq, sgn;
+  qq := abs(q); sgn := sign(q);
+  if qq > 3 then return 0
+  else return -2*qq*exp(-qq^2)/sqrt(Pi) * sgn
+  end if;
+end proc:
+
+<span class="cmt"># Квинтический B-сплайн</span>
+W_quintic := proc(q) local qq, s5;
+  qq := abs(q); s5 := 1/120;
+  if qq >= 3 then return 0
+  elif qq >= 2 then return s5 * (3-qq)^5
+  elif qq >= 1 then return s5 * ((3-qq)^5 - 6*(2-qq)^5)
+  else return s5 * ((3-qq)^5 - 6*(2-qq)^5 + 15*(1-qq)^5)
+  end if;
+end proc:
+
+dW_quintic := proc(q) local qq, sgn, s5;
+  qq := abs(q); sgn := sign(q); s5 := 1/120;
+  if qq >= 3 then return 0
+  elif qq >= 2 then return s5 * (-5)*(3-qq)^4 * sgn
+  elif qq >= 1 then return s5 * (-5*(3-qq)^4 + 30*(2-qq)^4) * sgn
+  else return s5 * (-5*(3-qq)^4 + 30*(2-qq)^4 - 75*(1-qq)^4) * sgn
+  end if;
+end proc:
+
+<span class="cmt"># Запуск солвера с разными ядрами (параметризуйте имя ядра)</span>
+run_sod_kernel := proc(kernel_name)
+  <span class="cmt"># В compute_density и compute_accel_visc использовать W_kernel_fn, dW_kernel_fn,</span>
+  <span class="cmt"># которые выбираются по имени. Также обрезать суммы по нужному радиусу</span>
+  <span class="cmt">#   (cubic: q<2; gauss: q<3; quintic: q<3)</span>
+  ...
+end proc:
+
+L1_cubic := run_sod_kernel("cubic");
+L1_gauss := run_sod_kernel("gauss");
+L1_quintic := run_sod_kernel("quintic");
+
+<span class="kw">printf</span>("Cubic:    L1 = %.4e\n", L1_cubic);
+<span class="kw">printf</span>("Gauss:    L1 = %.4e\n", L1_gauss);
+<span class="kw">printf</span>("Quintic:  L1 = %.4e\n", L1_quintic);
+
+<span class="cmt"># Три профиля на одном графике</span>
+...
+</pre>
+
+<div class="hint">
+<strong>Подсказка.</strong> В cycle-based процедурах вместо жёстко вшитого <code>W_kernel(qij)</code> используйте переменную процедуру: <code>W_fn := W_cubic</code> перед запуском, и внутри цикла <code>W_fn(qij)</code>. Также не забудьте скорректировать отсечение: <code>if qij > q_cutoff then skip</code>, где <code>q_cutoff</code> — 2, 3 или 3 для трёх ядер.
+</div>
+
+<h2 id="var3">Вариант 3. Другие задачи Римана</h2>
+
+<div class="variant">
+<div class="var-num">ВАРИАНТ 3 (продвинутый)</div>
+<h3>Тесты Лакса и 123-задача Einfeldt</h3>
+
+<p><strong>(а) Задача Лакса.</strong> \(\gamma = 1.4\), \(t_{\text{end}} = 0.16\), \(k = P_L/\rho_L^\gamma\):</p>
+
+<table style="width:50%;border-collapse:collapse;margin:.4rem 0;font-size:.9rem">
+<thead><tr style="background:var(--bg2)">
+  <th style="padding:6px 10px;border:1px solid var(--border)"></th>
+  <th style="padding:6px 10px;border:1px solid var(--border);text-align:center">\(\rho\)</th>
+  <th style="padding:6px 10px;border:1px solid var(--border);text-align:center">\(P\)</th>
+  <th style="padding:6px 10px;border:1px solid var(--border);text-align:center">\(u\)</th>
+</tr></thead>
+<tbody>
+<tr><td style="padding:6px 10px;border:1px solid var(--border)">\(x < 0.5\)</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0.445</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">3.528</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0.698</td></tr>
+<tr><td style="padding:6px 10px;border:1px solid var(--border)">\(x \geq 0.5\)</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0.5</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0.571</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0</td></tr>
+</tbody></table>
+
+<p><strong>Особенность:</strong> левое состояние имеет ненулевую начальную скорость \(u_L = 0.698\). Это усложняет задачу — частицы сдвигаются с самого начала.</p>
+
+<p><strong>(б) 123-задача Einfeldt.</strong> \(\gamma = 1.4\), \(t_{\text{end}} = 0.15\), \(k = P_L/\rho_L^\gamma\):</p>
+
+<table style="width:50%;border-collapse:collapse;margin:.4rem 0;font-size:.9rem">
+<thead><tr style="background:var(--bg2)">
+  <th style="padding:6px 10px;border:1px solid var(--border)"></th>
+  <th style="padding:6px 10px;border:1px solid var(--border);text-align:center">\(\rho\)</th>
+  <th style="padding:6px 10px;border:1px solid var(--border);text-align:center">\(P\)</th>
+  <th style="padding:6px 10px;border:1px solid var(--border);text-align:center">\(u\)</th>
+</tr></thead>
+<tbody>
+<tr><td style="padding:6px 10px;border:1px solid var(--border)">\(x < 0.5\)</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">1</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0.4</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">−2</td></tr>
+<tr><td style="padding:6px 10px;border:1px solid var(--border)">\(x \geq 0.5\)</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">1</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0.4</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">+2</td></tr>
+</tbody></table>
+
+<p><strong>Особенность:</strong> две встречные волны разрежения, и между ними плотность падает до очень малых значений \(\rho \to 0\). Это критический тест на <em>положительность плотности</em> — некорректные схемы могут дать отрицательную плотность и упасть. SPH с симметричной формой (2.4) и формулой плотности суммированием (2.2) неявно гарантирует \(\rho > 0\), но результирующее давление может быть очень малым.</p>
+
+<p>Для каждой задачи:</p>
+<ul>
+<li>Модифицировать инициализацию (лаб 2) под новые начальные условия.</li>
+<li>Запустить до указанного \(t_{\text{end}}\).</li>
+<li>Построить \(\rho(x), P(x), v(x)\).</li>
+<li>Сравнить с точным решением — можно построить через любой точный солвер задачи Римана (например, использовать JavaScript-интерактив из §17 основного курса как эталон).</li>
+</ul>
+</div>
+
+<div class="hint">
+<strong>Ожидаемое поведение на 123-задаче.</strong> Из-за численной вязкости SPH \(\rho\) в центре (\(x = 0.5\)) не упадёт строго до нуля, а будет \(\rho_{\min} \approx 0.02-0.1\) в зависимости от N. Давление аналогично остаётся положительным. Это нефизично, но устойчиво. Настоящий вакуум (\(\rho = 0\)) в SPH не воспроизводим по построению метода — там нет частиц, и нет никакой информации.
+</div>
+
+<h2 id="deliverables">Требования к отчёту</h2>
+
+<p>Один файл Maple (<code>lab5_sph_project_&lt;фамилия&gt;.mw</code>), объёмом 3-5 страниц:</p>
+
+<ol>
+<li><strong>Титульный блок:</strong> ФИО, группа, выбранный вариант.</li>
+<li><strong>Цель</strong> (1-2 предложения).</li>
+<li><strong>Код:</strong> модификации основного солвера (не весь код — только то что изменилось).</li>
+<li><strong>Результаты:</strong> 2-4 графика + численная таблица (L1-ошибки, порядок сходимости, время расчёта и т.д.).</li>
+<li><strong>Обсуждение</strong> (1-2 абзаца): соответствуют ли результаты теоретическим ожиданиям, какие особенности поведения метода вы наблюдали, где метод работает плохо, где хорошо.</li>
+<li><strong>Выводы</strong> (1 абзац): что узнали нового, что было неожиданным.</li>
+</ol>
+
+<p>Критерии оценивания (максимум 10 баллов):</p>
+<ul>
+<li>+4 балла — корректная реализация (воспроизводимые результаты).</li>
+<li>+3 балла — качество анализа (графики информативны, есть численные сравнения).</li>
+<li>+2 балла — обсуждение и выводы (понимание причин наблюдаемого поведения).</li>
+<li>+1 балл — дополнительные исследования сверх обязательных (например, в варианте 2 — добавить 4-е ядро; в варианте 3 — решить и задачу Лакса, и 123).</li>
+</ul>
+
+<div class="lecture-nav">
+<a href="lec5-analysis.html" class="nav-prev">← Лекция 5</a>
+<a href="index.html" class="nav-next">На обзор курса →</a>
+</div>
+</div>
+</div>
+
+</body>
+</html>

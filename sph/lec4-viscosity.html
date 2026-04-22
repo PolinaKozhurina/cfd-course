@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPH-Лекция 4. Искусственная вязкость</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>SPH · Лекция 4</h2>
+  <div class="g">Содержание</div>
+  <a href="#nature">Природа осцилляций</a>
+  <a href="#gibbs-demo">Интерактив: явление Гиббса</a>
+  <a href="#monaghan">Вязкость Монагана</a>
+  <a href="#geometry">Геометрия µij и условие включения</a>
+  <a href="#properties">Свойства искусственной вязкости</a>
+  <a href="#params">Параметры α и β</a>
+  <a href="#cfl">Модификация CFL</a>
+  <a href="#reference">Эталонное решение Сода</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор</a>
+  <a href="lec3-integration.html">← Лекция 3</a>
+  <a href="lab4.html">→ Лабораторная 4</a>
+  <a href="lec5-analysis.html">→ Лекция 5</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-gasdyn">SPH</span>
+<div class="lecture-num">Лекция 4 · Мини-курс SPH</div>
+<h1>Искусственная вязкость и верификация решения</h1>
+
+<h2 id="nature">Природа осцилляций давления</h2>
+
+<p>В лабораторной 3 мы получили решение Sod-теста без искусственной вязкости и видели характерные осцилляции в \(5\)–\(20\%\) от амплитуды давления вблизи ударного фронта (\(x \approx 0.85\)). Это не ошибка реализации — это фундаментальное свойство метода.</p>
+
+<p>Физическая природа явления такова. В идеальном газе ударная волна — это <strong>математический разрыв нулевой толщины</strong>: все термодинамические параметры скачком меняются на фронте. Реальный газ имеет конечную ширину скачка (длина свободного пробега молекул), но она обычно гораздо меньше любого численного масштаба.</p>
+
+<p>SPH же <em>физически не может представить</em> функции с характерным масштабом меньше длины сглаживания \(h\): ядро \(W\) имеет конечную ширину \(2h\), и любой разрыв, попадающий в область действия ядра, размазывается. Это приводит к явлению, аналогичному <strong>явлению Гиббса</strong> в рядах Фурье:</p>
+
+<div class="theorem">
+<strong>Теорема 7 (природа осцилляций).</strong> Пусть \(f(x) = \theta(x - x_0)\) — ступенчатая функция. Её SPH-аппроксимация \(\langle f\rangle(x) = \int\theta(x' - x_0)W(x - x',h)dx'\) — гладкая функция, но её производная \(\langle f\rangle'(x) = W(x - x_0, h)\) — колоколообразный импульс ширины \(\sim 2h\). Следовательно любой градиентный член (например \(-\nabla P\)) в SPH-дискретизации <em>автоматически сглажен</em> на масштабе \(h\), что приводит к гармоническому «звону» около разрывов.
+</div>
+
+<p>Математически: ускорение \(a = -\nabla P/\rho\), в идеальном газе на ударной волне \(\nabla P = \infty\) (ступенька), а SPH даёт конечное колоколообразное ускорение. Но это ускорение перекачивает импульс с одной стороны фронта на другую в течение конечного времени, и результирующие колебания плотности и давления образуют осцилляции.</p>
+
+<p><strong>Физическое решение</strong>: в реальном газе скачок имеет конечную ширину благодаря молекулярной вязкости. Введём <em>искусственный</em> диссипативный член, который будет размазывать фронт на \(\sim 3\)–\(5\,h\), но тогда никаких осцилляций короче этого масштаба уже быть не может.</p>
+
+<h2 id="gibbs-demo">Интерактив: явление Гиббса при SPH-аппроксимации ступеньки</h2>
+
+<p>Наглядная демонстрация проблемы. Рассмотрим ступенчатую функцию \(f(x) = \begin{cases}1, & x < 0.5\\0, & x \geq 0.5\end{cases}\) и построим её SPH-аппроксимацию (формула (1.4) из лекции 1) на сетке из \(N\) частиц. Внизу — её численная производная (SPH-градиент по формуле (1.6)), которая входит в уравнение ускорения.</p>
+
+<div id="gibbs" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">N частиц: <span id="gbN_v">80</span></label>
+    <input type="range" id="gbN" min="30" max="200" value="80" style="width:140px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">h/Δx = <span id="gbH_v">1.5</span></label>
+    <input type="range" id="gbH" min="5" max="40" value="15" style="width:140px">
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">⟨f⟩(x): ступенька размазана, но гладкая</div>
+    <canvas id="gb_f" width="440" height="260" style="width:100%;height:auto"></canvas>
+  </div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">⟨f'⟩(x): колокол шириной ~2h</div>
+    <canvas id="gb_df" width="440" height="260" style="width:100%;height:auto"></canvas>
+  </div>
+</div>
+<div style="font-family:'Source Serif 4',serif;font-size:.85rem;color:var(--text2);margin-top:.5rem;font-style:italic">
+Обратите внимание: ширина области, где производная ненулевая, <strong>всегда ~2h</strong>. Это и есть «минимальный масштаб», который SPH может разрешить. Если настоящий градиент (в задаче) имеет масштаб меньше \(2h\) — SPH это «не видит», и появляются паразитные осцилляции.
+</div>
+</div>
+
+<script>
+(function(){
+function W(q){
+  var s = 2/3;
+  if (q >= 2) return 0;
+  if (q >= 1) return s * 0.25 * Math.pow(2-q, 3);
+  return s * (1 - 1.5*q*q + 0.75*q*q*q);
+}
+function Wp(q){
+  var s = 2/3;
+  if (q >= 2) return 0;
+  if (q >= 1) return -s * 0.75 * Math.pow(2-q, 2);
+  return s * (-3*q + 2.25*q*q);
+}
+function run(){
+  var N = +document.getElementById('gbN').value;
+  var hDx = +document.getElementById('gbH').value/10;
+  document.getElementById('gbN_v').textContent = N;
+  document.getElementById('gbH_v').textContent = hDx.toFixed(1);
+  var dx = 1.0/N, h = hDx*dx;
+  var xs = new Float64Array(N);
+  var fs = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    xs[i] = (i+0.5)*dx;
+    fs[i] = xs[i] < 0.5 ? 1.0 : 0.0;
+  }
+  // Evaluate on a fine grid of 300 points
+  var M = 300;
+  var xe = new Float64Array(M), fe = new Float64Array(M), dfe = new Float64Array(M);
+  var fex = new Float64Array(M), dfex = new Float64Array(M);
+  for (var k=0;k<M;k++){
+    var x = (k+0.5)/M;
+    xe[k] = x;
+    fex[k] = x < 0.5 ? 1 : 0;
+    dfex[k] = 0; // exact derivative is delta function, we show zero
+    var sF = 0, sDf = 0;
+    for (var j=0;j<N;j++){
+      var r = Math.abs(x - xs[j]);
+      var q = r/h;
+      if (q >= 2) continue;
+      var wij = W(q)/h;
+      var dw_dx = (Wp(q)/h) * (1/h) * Math.sign(x - xs[j]);
+      sF  += dx * fs[j] * wij;
+      sDf += dx * fs[j] * dw_dx;
+    }
+    fe[k] = sF;
+    dfe[k] = sDf;
+  }
+  // Plot
+  function plot(cid, yN, yEx, yLabel, yrange){
+    var c = document.getElementById(cid);
+    var ctx = c.getContext('2d'), W=c.width, H=c.height;
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+    var P={l:45,r:15,t:15,b:28}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+    var mn = yrange[0], mx = yrange[1];
+    ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+    for (var g=0;g<=5;g++){var gy=P.t+ph*g/5; ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke();}
+    // Zero line
+    var ty0 = P.t + ph * (1 - (0-mn)/(mx-mn));
+    if (ty0 > P.t && ty0 < P.t+ph){
+      ctx.strokeStyle='#9a8d7e'; ctx.lineWidth=0.8; ctx.setLineDash([3,3]);
+      ctx.beginPath(); ctx.moveTo(P.l,ty0); ctx.lineTo(P.l+pw,ty0); ctx.stroke(); ctx.setLineDash([]);
+    }
+    function xp(x){ return P.l + pw*x; }
+    function yp(v){ return P.t + ph*(1 - (v-mn)/(mx-mn)); }
+    // Exact — dashed
+    ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1.5; ctx.setLineDash([5,3]);
+    ctx.beginPath();
+    for (var i=0;i<M;i++){ i===0 ? ctx.moveTo(xp(xe[i]),yp(yEx[i])) : ctx.lineTo(xp(xe[i]),yp(yEx[i])); }
+    ctx.stroke(); ctx.setLineDash([]);
+    // SPH - solid red
+    ctx.strokeStyle='#b44a2d'; ctx.lineWidth=2;
+    ctx.beginPath();
+    for (var i=0;i<M;i++){ i===0 ? ctx.moveTo(xp(xe[i]),yp(yN[i])) : ctx.lineTo(xp(xe[i]),yp(yN[i])); }
+    ctx.stroke();
+    // Vertical line at x=0.5 (shock)
+    ctx.strokeStyle='#3a5ba0'; ctx.lineWidth=1; ctx.setLineDash([2,2]);
+    ctx.beginPath(); ctx.moveTo(xp(0.5),P.t); ctx.lineTo(xp(0.5),P.t+ph); ctx.stroke(); ctx.setLineDash([]);
+    // Axes
+    ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+    ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+    ctx.fillText('0', P.l, P.t+ph+14);
+    ctx.fillText('0.5', P.l+pw/2, P.t+ph+14);
+    ctx.fillText('1', P.l+pw, P.t+ph+14);
+    ctx.textAlign='right';
+    for (var g=0;g<=4;g++) ctx.fillText((mx-(mx-mn)*g/4).toFixed(1), P.l-3, P.t+ph*g/4+3);
+    ctx.textAlign='left'; ctx.font='9px JetBrains Mono'; ctx.fillStyle='#b44a2d';
+    ctx.fillText('— SPH', P.l+5, P.t+10);
+    ctx.fillStyle='#6b5d4f'; ctx.fillText('-- exact', P.l+5, P.t+22);
+  }
+  plot('gb_f', fe, fex, 'f', [-0.1, 1.2]);
+  plot('gb_df', dfe, dfex, 'df/dx', [-3, 30]);
+}
+document.getElementById('gbN').addEventListener('input', run);
+document.getElementById('gbH').addEventListener('input', run);
+window.addEventListener('load', function(){ setTimeout(run, 300); });
+})();
+</script>
+
+<h2 id="monaghan">Искусственная вязкость Монагана</h2>
+
+<p>Классическая формулировка Монагана (1992) вводит дополнительный член \(\Pi_{ij}\) в симметричную форму ускорения:</p>
+
+<div class="eq">\[
+\boxed{\;\frac{d\mathbf v_i}{dt} = -\sum_j m_j\!\left(\frac{P_i}{\rho_i^2} + \frac{P_j}{\rho_j^2} + \Pi_{ij}\right)\nabla_i W_{ij}.\;}
+\tag{4.1}
+\]</div>
+
+<p>Член \(\Pi_{ij}\) имеет размерность давления (делённого на плотность), но устроен так, чтобы «включаться» только при сжатии пары частиц:</p>
+
+<div class="eq">\[
+\Pi_{ij} = \begin{cases}
+\dfrac{-\alpha\,\bar c_{ij}\,\mu_{ij} + \beta\,\mu_{ij}^2}{\bar\rho_{ij}}, & \mathbf v_{ij}\cdot\mathbf r_{ij} < 0, \\[10pt]
+0, & \mathbf v_{ij}\cdot\mathbf r_{ij} \geq 0.
+\end{cases}
+\tag{4.2}
+\]</div>
+
+<p>где</p>
+
+<div class="eq">\[
+\mu_{ij} = \frac{h\,\mathbf v_{ij}\cdot\mathbf r_{ij}}{|\mathbf r_{ij}|^2 + \eta^2}, \quad
+\bar c_{ij} = \tfrac{1}{2}(c_i + c_j), \quad
+\bar\rho_{ij} = \tfrac{1}{2}(\rho_i + \rho_j), \quad
+\eta = 0.01\,h.
+\tag{4.3}
+\]</div>
+
+<p>Обозначения: \(\mathbf v_{ij} = \mathbf v_i - \mathbf v_j\) — относительная скорость пары, \(\mathbf r_{ij} = \mathbf r_i - \mathbf r_j\) — относительное положение.</p>
+
+<h2 id="geometry">Геометрия µij и условие включения</h2>
+
+<p>Разберём смысл каждой величины на картинке.</p>
+
+<div class="figure">
+<svg viewBox="0 0 580 260" xmlns="http://www.w3.org/2000/svg" style="max-width:540px">
+  <defs>
+    <marker id="arrV1" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#b44a2d"/></marker>
+    <marker id="arrV2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#3a5ba0"/></marker>
+    <marker id="arrR" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#6b5d4f"/></marker>
+  </defs>
+  <!-- LEFT: compression case (µ<0, Π activates) -->
+  <text x="150" y="25" font-family="Playfair Display,serif" font-size="13" fill="#b44a2d" text-anchor="middle" font-weight="700">Сжатие пары: v_ij·r_ij &lt; 0</text>
+  <text x="150" y="42" font-family="Source Serif 4,serif" font-size="11" fill="#b44a2d" text-anchor="middle">→ Π_ij &gt; 0, вязкость ВКЛЮЧЕНА</text>
+  <!-- i particle -->
+  <circle cx="80" cy="120" r="14" fill="#b44a2d" opacity="0.85"/>
+  <text x="80" y="125" font-family="JetBrains Mono,monospace" font-size="12" fill="#fff" text-anchor="middle" font-weight="700">i</text>
+  <!-- j particle -->
+  <circle cx="220" cy="120" r="14" fill="#3a5ba0" opacity="0.85"/>
+  <text x="220" y="125" font-family="JetBrains Mono,monospace" font-size="12" fill="#fff" text-anchor="middle" font-weight="700">j</text>
+  <!-- r_ij arrow (from j to i, i.e. r_i - r_j) -->
+  <line x1="215" y1="120" x2="90" y2="120" stroke="#6b5d4f" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrR)"/>
+  <text x="150" y="142" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle" font-style="italic">r_ij = r_i − r_j</text>
+  <!-- v_i arrow (pointing right, toward j) -->
+  <line x1="80" y1="100" x2="120" y2="100" stroke="#b44a2d" stroke-width="2.5" marker-end="url(#arrV1)"/>
+  <text x="100" y="92" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle" font-weight="700">v_i</text>
+  <!-- v_j arrow (pointing left, toward i) -->
+  <line x1="220" y1="100" x2="180" y2="100" stroke="#3a5ba0" stroke-width="2.5" marker-end="url(#arrV2)"/>
+  <text x="200" y="92" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0" text-anchor="middle" font-weight="700">v_j</text>
+  <!-- Annotation: v_ij points from j to i, same direction as r_ij → dot product negative? No: v_ij = v_i - v_j = right - left = 2·right.
+       r_ij = from j to i = pointing LEFT. So v_ij·r_ij < 0. -->
+  <text x="150" y="180" font-family="Source Serif 4,serif" font-size="11" fill="#2c2419" text-anchor="middle">v_i направо, v_j налево</text>
+  <text x="150" y="195" font-family="Source Serif 4,serif" font-size="11" fill="#2c2419" text-anchor="middle">→ v_ij направо, r_ij налево</text>
+  <text x="150" y="215" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle" font-weight="700">v_ij · r_ij = −|v_ij|·|r_ij| &lt; 0</text>
+  <text x="150" y="238" font-family="Source Serif 4,serif" font-size="11" fill="#b44a2d" text-anchor="middle" font-style="italic">(частицы сближаются → сжатие)</text>
+  <!-- Divider -->
+  <line x1="290" y1="20" x2="290" y2="250" stroke="#d9cfc0" stroke-width="1" stroke-dasharray="4,3"/>
+  <!-- RIGHT: rarefaction case (µ>0, Π = 0) -->
+  <text x="430" y="25" font-family="Playfair Display,serif" font-size="13" fill="#1a6b5a" text-anchor="middle" font-weight="700">Разрежение: v_ij·r_ij &gt; 0</text>
+  <text x="430" y="42" font-family="Source Serif 4,serif" font-size="11" fill="#1a6b5a" text-anchor="middle">→ Π_ij = 0, вязкость ВЫКЛЮЧЕНА</text>
+  <circle cx="360" cy="120" r="14" fill="#b44a2d" opacity="0.85"/>
+  <text x="360" y="125" font-family="JetBrains Mono,monospace" font-size="12" fill="#fff" text-anchor="middle" font-weight="700">i</text>
+  <circle cx="500" cy="120" r="14" fill="#3a5ba0" opacity="0.85"/>
+  <text x="500" y="125" font-family="JetBrains Mono,monospace" font-size="12" fill="#fff" text-anchor="middle" font-weight="700">j</text>
+  <line x1="495" y1="120" x2="370" y2="120" stroke="#6b5d4f" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrR)"/>
+  <text x="430" y="142" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle" font-style="italic">r_ij = r_i − r_j</text>
+  <!-- v_i points LEFT (away from j) -->
+  <line x1="360" y1="100" x2="320" y2="100" stroke="#b44a2d" stroke-width="2.5" marker-end="url(#arrV1)"/>
+  <text x="340" y="92" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle" font-weight="700">v_i</text>
+  <!-- v_j points RIGHT (away from i) -->
+  <line x1="500" y1="100" x2="540" y2="100" stroke="#3a5ba0" stroke-width="2.5" marker-end="url(#arrV2)"/>
+  <text x="520" y="92" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0" text-anchor="middle" font-weight="700">v_j</text>
+  <text x="430" y="180" font-family="Source Serif 4,serif" font-size="11" fill="#2c2419" text-anchor="middle">v_i налево, v_j направо</text>
+  <text x="430" y="195" font-family="Source Serif 4,serif" font-size="11" fill="#2c2419" text-anchor="middle">→ v_ij налево, r_ij налево</text>
+  <text x="430" y="215" font-family="JetBrains Mono,monospace" font-size="11" fill="#1a6b5a" text-anchor="middle" font-weight="700">v_ij · r_ij = +|v_ij|·|r_ij| &gt; 0</text>
+  <text x="430" y="238" font-family="Source Serif 4,serif" font-size="11" fill="#1a6b5a" text-anchor="middle" font-style="italic">(частицы разлетаются)</text>
+</svg>
+<div class="caption">Геометрия включения искусственной вязкости. Вектор \(\mathbf r_{ij} = \mathbf r_i - \mathbf r_j\) направлен от \(j\) к \(i\) (слева в обоих случаях — налево, т.к. \(i\) слева от \(j\)). Слева: частицы движутся навстречу друг другу, \(\mathbf v_{ij}\) направлена вправо, скалярное произведение отрицательное — включается вязкость. Справа: разлёт, произведение положительное — вязкость ноль.</div>
+</div>
+
+<p><strong>Знак \(\mathbf v_{ij}\cdot\mathbf r_{ij}\):</strong> если частицы \(i\) и \(j\) удаляются друг от друга (пара в разрежении), \(\mathbf v_{ij}\) сонаправлена с \(\mathbf r_{ij}\), и произведение положительно — вязкость <strong>не включается</strong>. Если сближаются — произведение отрицательно, \(\Pi_{ij} > 0\), и появляется отталкивающая «сила», препятствующая дальнейшему сжатию.</p>
+
+<div class="remark">
+<strong>Физический смысл.</strong> Вязкость в природе диссипирует кинетическую энергию <em>сжатия</em>, а не растяжения. Поэтому «включатель» \(\mathbf v_{ij}\cdot\mathbf r_{ij} < 0\) — это условие сжатия пары. Ниоткуда не следует что такая формулировка — единственно возможная; есть варианты с симметричным включением (симметричный сигнализатор), но у Монагана проверено многолетней практикой именно такое.
+</div>
+
+<p><strong>Параметр \(\mu_{ij}\)</strong> — это <em>обезразмеренная скорость сжатия</em>: в числителе \(h\cdot\mathbf v_{ij}\cdot\mathbf r_{ij}\) имеет размерность скорости, в знаменателе \(|\mathbf r_{ij}|^2\) — квадрат длины, итого \(\mu_{ij}\) ~ скорость. Маленькое слагаемое \(\eta^2 = (0.01h)^2\) в знаменателе нужно только для избежания деления на ноль при сближении двух частиц (столкновение).</p>
+
+<p><strong>Два слагаемых в формуле (4.2):</strong></p>
+
+<ol>
+<li><strong>Линейный (Навье-Стоксов) член</strong> \(-\alpha\,\bar c_{ij}\,\mu_{ij}\): моделирует обычную молекулярную вязкость. Величина \(\bar c_{ij}\,\mu_{ij}\) имеет размерность квадрата скорости, и при делении на \(\bar\rho_{ij}\) даёт давление/плотность — как и нужно по (4.1). Демпфирует быстрые колебания (высокочастотный «шум»).</li>
+<li><strong>Квадратичный (фон Нейман-Рихтмайер) член</strong> \(\beta\,\mu_{ij}^2\): срабатывает только при <em>сильном</em> сжатии (\(\mu_{ij}^2\) растёт квадратично с \(\mu\)). Фон Нейман и Рихтмайер ещё в 1950 году предложили этот вид вязкости для эйлеровых сеточных расчётов ударных волн — именно он обеспечивает «размазывание» сильных скачков на несколько ячеек.</li>
+</ol>
+
+<div class="remark">
+<strong>Почему два члена, а не один?</strong> Линейный член хорошо гасит малые возмущения, но не справляется с интенсивными скачками (квадратичные эффекты). Квадратичный эффективно размазывает скачки, но слишком агрессивен в зонах слабых возмущений (чрезмерная диффузия). Их комбинация — компромисс: линейный всегда работает мягко, квадратичный включается только когда нужен.
+</div>
+
+<h2 id="properties">Свойства искусственной вязкости</h2>
+
+<div class="theorem">
+<strong>Теорема 8 (свойства вязкости Монагана).</strong> Дополнительный член \(\Pi_{ij}\) в (4.1) со значениями (4.2)–(4.3):
+<ol>
+<li>Симметричен: \(\Pi_{ij} = \Pi_{ji}\). Следствие — сохранение импульса.</li>
+<li>Галилеево инвариантен: зависит только от <em>относительных</em> скоростей и координат.</li>
+<li>Инвариантен относительно поворотов.</li>
+<li>Равен нулю при одинаковых скоростях частиц: \(\mathbf v_{ij} = 0 \Rightarrow \mu_{ij} = 0 \Rightarrow \Pi_{ij} = 0\).</li>
+<li>Только диссипирует кинетическую энергию, не может её производить.</li>
+</ol>
+</div>
+
+<p><em>Доказательство (набросок):</em> (1) Симметричность следует из \(\mathbf v_{ij}\cdot\mathbf r_{ij} = \mathbf v_{ji}\cdot\mathbf r_{ji}\) и симметричности \(\bar c,\bar\rho\). (5) При сжатии \(\mu_{ij} < 0\), поэтому линейный член \(-\alpha\bar c\mu_{ij} > 0\), то есть \(\Pi_{ij} > 0\), и в уравнении (4.1) создаёт силу, направленную на замедление сжатия — то есть <em>рассеивает</em> кинетическую энергию. Симметричная форма гарантирует что диссипированная энергия <em>не</em> превращается в что-либо другое (в нашей политропной модели теряется).</p>
+
+<h2 id="params">Параметры α и β</h2>
+
+<p>Стандартный выбор для 1D-ударных волн:</p>
+
+<div class="eq">\[
+\alpha = 1, \qquad \beta = 2.
+\tag{4.4}
+\]</div>
+
+<p>Эти значения — результат численного подбора на тесте Сода:</p>
+
+<ul>
+<li>\(\alpha = 0\) (без линейной вязкости) — осцилляции давления остаются.</li>
+<li>\(\alpha = 1\), \(\beta = 0\) (только линейная) — осцилляции подавлены слабо, контактный разрыв размыт.</li>
+<li>\(\alpha = 1\), \(\beta = 2\) — оптимальное соотношение: фронт ударной волны размывается на \(\sim 3h\), контактный разрыв сохраняется резким.</li>
+<li>\(\alpha = 2\), \(\beta = 4\) — избыточное демпфирование, решение становится слишком диффузивным.</li>
+</ul>
+
+<div class="remark">
+<strong>Замечание о контактных разрывах.</strong> Искусственная вязкость Монагана <em>не</em> обязана включаться у контактного разрыва, потому что там \(\mathbf v_{ij} \approx 0\) (непрерывность скорости) и \(\mu_{ij} \approx 0\), значит \(\Pi_{ij} \approx 0\). Это означает что контактные разрывы остаются резкими — что хорошо для качества решения. Однако в 2D/3D при высокоскоростных сдвиговых течениях возможно ложное срабатывание вязкости по касательной скорости, для чего используются <strong>корректоры Балсара</strong> (Balsara switch, 1995) — мы их не рассматриваем.
+</div>
+
+<h2 id="cfl">Модификация CFL-условия</h2>
+
+<p>Вязкость вносит в систему ещё один механизм распространения — диффузионный, для которого ограничение на шаг имеет вид \(\Delta t \sim \Delta x^2 / \nu\). В SPH-версии это учитывается добавлением \(\alpha c_i\) в знаменатель (4-кратное усиление):</p>
+
+<div class="eq">\[
+\Delta t = \frac{0.2\,h}{\max_i(c_i + |\mathbf v_i| + \alpha\,c_i)} = \frac{0.2\,h}{\max_i((1+\alpha)c_i + |\mathbf v_i|)}.
+\tag{4.5}
+\]</div>
+
+<p>При \(\alpha = 1\) знаменатель удваивается по сравнению с (3.4), значит шаг по времени уменьшается примерно вдвое. Численно: вместо 400 шагов на тест Сода теперь 600–800 шагов.</p>
+
+<h2 id="reference">Эталонное решение задачи Сода (Toro 2009)</h2>
+
+<p>Для верификации нашего солвера понадобятся точные значения решения задачи Римана. Напомним: тест Сода имеет стандартную структуру трёх волн:</p>
+
+<table style="width:100%;border-collapse:collapse;margin:.8rem 0;font-size:.9rem">
+<thead>
+<tr style="background:var(--bg2)">
+  <th style="padding:8px 10px;border:1px solid var(--border);text-align:left">Область (слева направо)</th>
+  <th style="padding:8px 10px;border:1px solid var(--border);text-align:center">\(\rho\)</th>
+  <th style="padding:8px 10px;border:1px solid var(--border);text-align:center">\(P\)</th>
+  <th style="padding:8px 10px;border:1px solid var(--border);text-align:center">\(u\)</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:6px 10px;border:1px solid var(--border)">До головы ВР</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">1.0000</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">1.0000</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0.0000</td></tr>
+<tr style="background:#fdfaf4"><td style="padding:6px 10px;border:1px solid var(--border)">Хвост ВР – до КР</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center"><strong>0.4263</strong></td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center"><strong>0.3031</strong></td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center"><strong>0.9274</strong></td></tr>
+<tr><td style="padding:6px 10px;border:1px solid var(--border)">КР – до УВ</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center"><strong>0.2656</strong></td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0.3031</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0.9274</td></tr>
+<tr style="background:#fdfaf4"><td style="padding:6px 10px;border:1px solid var(--border)">После УВ</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0.1250</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0.1000</td><td style="padding:6px 10px;border:1px solid var(--border);text-align:center">0.0000</td></tr>
+</tbody>
+</table>
+
+<p><strong>Положения волн при \(t = 0.2\):</strong></p>
+
+<div class="eq">\[
+x_{\text{гол. ВР}} \approx 0.263, \quad
+x_{\text{хв. ВР}} \approx 0.486, \quad
+x_{\text{КР}} \approx 0.685, \quad
+x_{\text{УВ}} \approx 0.850.
+\]</div>
+
+<p>В волне разрежения (интервал 0.263 → 0.486) все параметры меняются <em>непрерывно</em> по изоэнтропическим соотношениям; для простого сравнения на графиках достаточно линейной интерполяции.</p>
+
+<div class="remark">
+<strong>Вывод.</strong> В лаб 4 мы построим на одном графике численное решение (точки) и кусочно-постоянную аппроксимацию точного решения (сплошная линия). Согласие должно быть видно невооружённым глазом. Если есть заметное расхождение на 1-3 частицах у ударного фронта — это нормально (ожидаемая ширина размывания). Если расхождение больше — ошибка в реализации вязкости.
+</div>
+
+<div class="lecture-nav">
+<a href="lec3-integration.html" class="nav-prev">← Лекция 3</a>
+<a href="lab4.html" class="nav-next">Лабораторная 4 →</a>
+</div>
+</div>
+</div>
+
+</body>
+</html>

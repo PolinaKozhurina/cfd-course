@@ -172,6 +172,177 @@ A(u) \longrightarrow \phi\, A(u), \qquad 0 \le \phi \le 1,
 
 <p>Именно в этом смысле операторная диффузия и выборочная антидиффузия являются <em>универсальным инструментом</em> управления численной диссипацией в разностных схемах, широко применяемым в вычислительной газовой динамике.</p>
 
+<h2 id="interactive">Интерактив: уголок vs уголок+антидиффузия vs FCT</h2>
+
+<p>Покажем три режима на скалярном уравнении \(u_t + u_x = 0\) со ступенчатым начальным условием. На одном графике:</p>
+<ul>
+<li><span style="color:#1a6b5a">Чистый уголок</span> — сильно диффузирован, амплитуда 1.0 превращается в «размытую сигмоиду».</li>
+<li><span style="color:#b44a2d">Уголок + полная антидиффузия</span> (без лимитирования, \(\phi = 1\)) — осцилляции перед и за фронтом: неограниченная антидиффузия нарушает TVD.</li>
+<li><span style="color:#3a5ba0">FCT (Бориса-Бук)</span> — лимитированная антидиффузия \(\phi_i \in [0, 1]\): на гладких участках \(\phi \approx 1\) (полный 2-й порядок), на фронте \(\phi \to 0\) (схема откатывается к уголку). Без осцилляций, резкий фронт.</li>
+</ul>
+
+<div id="fct_demo" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.6rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">НУ</label>
+    <select id="fct_ic" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <option value="step">Ступенька</option>
+      <option value="gauss">Гауссиан (гладкий)</option>
+      <option value="mixed">Смешанное</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">CFL = <span id="fct_cflv">0.50</span></label>
+    <input type="range" id="fct_cfl" min="10" max="80" value="50" style="width:120px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Шагов: <span id="fct_nsv">120</span></label>
+    <input type="range" id="fct_ns" min="20" max="400" value="120" style="width:120px">
+  </div>
+  <button id="fct_run" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 16px;font-family:'Source Serif 4',serif;font-size:.85rem;font-weight:600;cursor:pointer">▶ Запуск</button>
+</div>
+<canvas id="fct_plot" width="900" height="300" style="width:100%;height:auto;background:#fff;border-radius:6px;border:1px solid var(--border)"></canvas>
+<div style="display:flex;gap:1.2rem;justify-content:center;margin-top:.4rem;font-size:.76rem;color:var(--text2);font-family:'JetBrains Mono',monospace;flex-wrap:wrap">
+  <span><span style="color:#9a8d7e">- -</span> точное</span>
+  <span><span style="color:#1a6b5a">—</span> уголок (чист. диффузия)</span>
+  <span><span style="color:#b44a2d">—</span> уголок + полная антидиффузия</span>
+  <span><span style="color:#3a5ba0">—</span> FCT (лимит. антидиффузия)</span>
+</div>
+</div>
+
+<script>
+(function(){
+var N=150, L=2*Math.PI, h=L/N;
+function ic(t){
+  var u=new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var x=i*h;
+    if (t==='step') u[i] = (x>=0.4*Math.PI && x<=0.8*Math.PI) ? 1 : 0;
+    else if (t==='gauss') u[i] = Math.exp(-Math.pow((x-Math.PI)/(0.35*Math.PI),2));
+    else u[i] = (x>=0.2*Math.PI && x<=0.5*Math.PI) ? 1 : (x>=0.9*Math.PI && x<=1.6*Math.PI ? 0.5*(1+Math.sin(4*(x-0.9*Math.PI))) : 0);
+  }
+  return u;
+}
+function stepUp(u,r){ var v=new Float64Array(N); for(var i=0;i<N;i++) v[i]=(1-r)*u[i]+r*u[(i-1+N)%N]; return v; }
+// Uncompensated antidiffusion: A(u) = 0.5*r*(1-r)*(u_{i+1} - 2*u_i + u_{i-1})
+function stepUpAnti(u, r){
+  var v = stepUp(u, r);
+  var w = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var ip=(i+1)%N, im=(i-1+N)%N;
+    w[i] = v[i] + 0.5*r*(1-r)*(v[ip] - 2*v[i] + v[im]);
+  }
+  return w;
+}
+// FCT (simplified Boris-Book): anti-diffusive flux with flux-corrected limiter
+function stepFCT(u, r){
+  // Low-order (diffusive) solution: upwind
+  var uLow = stepUp(u, r);
+  // Antidiffusive fluxes at i+1/2 (uncompensated version)
+  var A = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var ip=(i+1)%N;
+    A[i] = -0.5*r*(1-r)*(uLow[ip] - uLow[i]); // anti-diffusion flux
+  }
+  // Flux correction: limit so that adding doesn't produce new extrema
+  var Alim = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var ip=(i+1)%N, im=(i-1+N)%N, ipp=(i+2)%N;
+    var s = A[i] > 0 ? 1 : -1;
+    // bounds for cells adjacent to face i+1/2
+    var du_left  = uLow[i] - uLow[im];    // should be corrected to reflect higher-order
+    var du_right = uLow[ipp] - uLow[ip];
+    var absA = Math.abs(A[i]);
+    var bound = Math.min(s*du_left, s*du_right);
+    if (bound < 0) bound = 0;
+    Alim[i] = s * Math.min(absA, bound);
+  }
+  // Apply corrections
+  var v = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var im=(i-1+N)%N;
+    v[i] = uLow[i] - (Alim[i] - Alim[im]);
+  }
+  return v;
+}
+function shift(u,r,n){
+  var s=r*n*h, v=new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var xs=((i*h-s)%L+L)%L;
+    var j=Math.floor(xs/h), f=xs/h-j;
+    v[i]=(1-f)*u[j%N]+f*u[(j+1)%N];
+  }
+  return v;
+}
+
+var fState = { u0:null, uU:null, uA:null, uF:null, step:0, target:0, r:0.5, ic:'step', animId:null };
+function draw(stepNum){
+  var c = document.getElementById('fct_plot'); var ctx = c.getContext('2d');
+  var W=c.width, H=c.height;
+  ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+  var P={l:40,r:15,t:15,b:30}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+  var mn=-0.3, mx=1.3;
+  for (var i=0;i<N;i++){ mn=Math.min(mn,fState.uU[i],fState.uA[i],fState.uF[i]); mx=Math.max(mx,fState.uU[i],fState.uA[i],fState.uF[i]); }
+  var pad=(mx-mn)*0.08; mn-=pad; mx+=pad;
+  ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+  for (var g=0;g<=5;g++){ var gy=P.t+ph*g/5; ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke(); }
+  function xp(i){return P.l+pw*i/N;}
+  function yp(v){return P.t+ph*(1-(v-mn)/(mx-mn));}
+  var ex = shift(fState.u0, fState.r, stepNum);
+  ctx.strokeStyle='#9a8d7e'; ctx.lineWidth=2.5; ctx.setLineDash([6,3]);
+  ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(ex[i])):ctx.lineTo(xp(i),yp(ex[i])); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle='#1a6b5a'; ctx.lineWidth=1.6;
+  ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(fState.uU[i])):ctx.lineTo(xp(i),yp(fState.uU[i])); ctx.stroke();
+  ctx.strokeStyle='#b44a2d'; ctx.lineWidth=1.6;
+  ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(fState.uA[i])):ctx.lineTo(xp(i),yp(fState.uA[i])); ctx.stroke();
+  ctx.strokeStyle='#3a5ba0'; ctx.lineWidth=2;
+  ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(fState.uF[i])):ctx.lineTo(xp(i),yp(fState.uF[i])); ctx.stroke();
+  ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+  ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+  ctx.fillText('0', P.l, P.t+ph+14); ctx.fillText('π', P.l+pw/2, P.t+ph+14); ctx.fillText('2π', P.l+pw, P.t+ph+14);
+  ctx.fillText('шаг '+stepNum+' / '+fState.target, P.l+pw/2, P.t+ph+28);
+  ctx.textAlign='right';
+  for (var g=0;g<=5;g++) ctx.fillText((mx-(mx-mn)*g/5).toFixed(2), P.l-3, P.t+ph*g/5+3);
+}
+function runF(){
+  var icName = document.getElementById('fct_ic').value;
+  var r = +document.getElementById('fct_cfl').value/100;
+  var ns = +document.getElementById('fct_ns').value;
+  document.getElementById('fct_cflv').textContent = r.toFixed(2);
+  document.getElementById('fct_nsv').textContent = ns;
+  if (fState.animId){ cancelAnimationFrame(fState.animId); fState.animId=null; }
+  fState.u0 = ic(icName);
+  fState.uU = new Float64Array(fState.u0);
+  fState.uA = new Float64Array(fState.u0);
+  fState.uF = new Float64Array(fState.u0);
+  fState.step = 0; fState.target = ns; fState.r = r; fState.ic = icName;
+  var btn = document.getElementById('fct_run'); btn.textContent = '⏸ Стоп';
+  function frame(){
+    if (fState.step >= fState.target){ btn.textContent='▶ Запуск'; fState.animId=null; return; }
+    for (var k=0;k<2 && fState.step < fState.target;k++){
+      fState.uU = stepUp(fState.uU, fState.r);
+      fState.uA = stepUpAnti(fState.uA, fState.r);
+      fState.uF = stepFCT(fState.uF, fState.r);
+      fState.step++;
+    }
+    draw(fState.step);
+    fState.animId = requestAnimationFrame(frame);
+  }
+  frame();
+}
+function toggleF(){
+  if (fState.animId){ cancelAnimationFrame(fState.animId); fState.animId=null; document.getElementById('fct_run').textContent='▶ Запуск'; }
+  else runF();
+}
+document.getElementById('fct_run').addEventListener('click', toggleF);
+document.getElementById('fct_cfl').addEventListener('input', function(){ document.getElementById('fct_cflv').textContent = (this.value/100).toFixed(2); });
+document.getElementById('fct_ns').addEventListener('input', function(){ document.getElementById('fct_nsv').textContent = this.value; });
+window.addEventListener('load', function(){ setTimeout(runF, 250); });
+})();
+</script>
+
 <div class="lecture-nav">
 <a href="s1-27.html" class="nav-prev">← §27. Метод МакКормака</a>
 <a href="s1-29.html" class="nav-next">§29. Искусственная вязкость: формы →</a>

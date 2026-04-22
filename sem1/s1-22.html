@@ -124,6 +124,49 @@ v_{*L} = v_{*R} = S_*, \qquad p_{*L} = p_{*R} = p_*.
 
 <p>Метод HLLC не требует полного спектрального разложения матрицы Якоби и потому остаётся вычислительно эффективным. В то же время он не всегда обеспечивает строгую энтропийную корректность, что в ряде приложений может требовать дополнительных ограничений.</p>
 
+<h2 id="interactive">Интерактив: HLLC на тестах Торо</h2>
+
+<p>Сравните резкость контактного разрыва с методом HLL из §21 — на Sod-тесте HLLC держит контакт в 2-3 раза уже. Это ключевое преимущество трёхволновой модели.</p>
+
+<div id="hllc_container"></div>
+
+<script src="../js/gd-interactive.js"></script>
+<script>
+function hllcFlux(rL,uL,pL,rR,uR,pR,gamma,opts){
+  var gm1 = gamma-1;
+  var EL = pL/(gm1*rL) + 0.5*uL*uL;
+  var ER = pR/(gm1*rR) + 0.5*uR*uR;
+  var aL = Math.sqrt(gamma*pL/rL), aR = Math.sqrt(gamma*pR/rR);
+  var SL = Math.min(uL-aL, uR-aR);
+  var SR = Math.max(uL+aL, uR+aR);
+  var SS = (pR - pL + rL*uL*(SL-uL) - rR*uR*(SR-uR)) / (rL*(SL-uL) - rR*(SR-uR));
+  var FL = [rL*uL, rL*uL*uL+pL, uL*(rL*EL+pL)];
+  var FR = [rR*uR, rR*uR*uR+pR, uR*(rR*ER+pR)];
+  var UL = [rL, rL*uL, rL*EL], UR = [rR, rR*uR, rR*ER];
+  if (SL >= 0) return FL;
+  if (SR <= 0) return FR;
+  function starState(rho,u,E,p,S){
+    var coeff = rho*(S-u)/(S-SS);
+    return [coeff, coeff*SS, coeff*(E + (SS-u)*(SS + p/(rho*(S-u))))];
+  }
+  if (SS >= 0){
+    var USL = starState(rL,uL,EL,pL,SL);
+    return FL.map(function(f,k){ return f + SL*(USL[k] - UL[k]); });
+  } else {
+    var USR = starState(rR,uR,ER,pR,SR);
+    return FR.map(function(f,k){ return f + SR*(USR[k] - UR[k]); });
+  }
+}
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    GDI.buildInteractive(
+      document.getElementById('hllc_container'),
+      { id:'hllc', fluxFn: hllcFlux, schemeLabel: 'HLLC', withRecon: true }
+    );
+  }, 200);
+});
+</script>
+
 <div class="lecture-nav">
 <a href="s1-21.html" class="nav-prev">← §21. Метод HLL</a>
 <a href="s1-23.html" class="nav-next">§23. Метод Годунова–Колгана →</a>

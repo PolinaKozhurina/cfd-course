@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Сравнение методов · Разностные схемы</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.cmp-table{width:100%;border-collapse:collapse;margin:1rem 0;font-family:'Source Serif 4',Georgia,serif;font-size:.88rem}
+.cmp-table th{background:var(--bg2);text-align:left;padding:10px 12px;border-bottom:2px solid var(--accent);font-family:'Playfair Display',serif;font-weight:700;color:var(--accent)}
+.cmp-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+.cmp-table tr:nth-child(even) td{background:#fdfaf4}
+.cmp-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:600}
+.badge-yes{background:#d9f0e5;color:#1a6b5a}
+.badge-no{background:#fbe3dc;color:#b44a2d}
+.badge-cond{background:#fef2dc;color:#8a6b20}
+.badge-ord1{background:#e8e0d4;color:#6b5d4f}
+.badge-ord2{background:#e6f1fb;color:#3a5ba0}
+.badge-ord3{background:#f0e6fb;color:#7030a0}
+.badge-ord5{background:#ffe8d4;color:#b06020}
+.method-link{color:var(--accent);text-decoration:none;border-bottom:1px dotted var(--accent)}
+.method-link:hover{border-bottom-style:solid}
+.cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0}
+@media (max-width:800px){.cmp-grid{grid-template-columns:1fr}}
+.cmp-plot-box{background:#fff;border-radius:6px;padding:.5rem;border:1px solid var(--border)}
+.cmp-plot-title{text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.3rem;font-family:'JetBrains Mono',monospace}
+.mcheck-row{display:flex;flex-wrap:wrap;gap:.4rem 1rem;margin:.4rem 0}
+.mcheck-row label{display:flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;font-size:.82rem;cursor:pointer;padding:3px 8px;border-radius:4px;background:#fff;border:1px solid var(--border)}
+.mcheck-row label:hover{background:#fdfaf4}
+.mcheck-row input{margin:0}
+.mcheck-row .swatch{display:inline-block;width:14px;height:3px;border-radius:1px}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>Сравнение методов</h2>
+  <div class="g">Содержание</div>
+  <a href="#intro">Введение</a>
+  <a href="#table">Таблица методов</a>
+  <a href="#live-compare">Интерактив-сравнение</a>
+  <a href="#error-table">Таблица ошибок L₁/L∞</a>
+  <a href="#convergence">p-сходимость</a>
+  <a href="#recommendations">Как выбирать метод</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="s1-30.html">← §30 Свойства вязкости</a>
+  <a href="../index.html">На главную</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-riemann">Сводка</span>
+<div class="lecture-num">Обзор · Семестр 1</div>
+<h1>Сравнение численных методов разностных схем</h1>
+
+<p>В курсе рассмотрено более двадцати методов — от базовых уголков первого порядка до WENO-схем высокого порядка и лагранжевых конечно-разностных методов с искусственной вязкостью. В этой итоговой главе все методы собраны в единую таблицу, а интерактив позволяет запустить любой набор из них на одном тесте и сравнить численно.</p>
+
+<h2 id="intro">Зачем нужно сравнение</h2>
+
+<p>В лекциях каждый метод показан отдельно со своим интерактивом. Это удобно когда нужно понять <em>один</em> метод в деталях, но не помогает ответить на практический вопрос: «какой метод выбрать для моей задачи?». Здесь вы можете:</p>
+
+<ul>
+<li>видеть одновременно до 8 методов на одном графике — сравнивать резкость разрешения разрывов, амплитудные ошибки, осцилляции;</li>
+<li>смотреть числовую таблицу \(L_1\) и \(L_\infty\) ошибок всех методов на всех тестах Торо;</li>
+<li>проверить порядок сходимости каждого метода численно, на гладком тесте.</li>
+</ul>
+
+<h2 id="table">Таблица методов</h2>
+
+<p>Все методы курса упорядочены по возрастанию сложности. Для каждого указаны: теоретический порядок на гладких решениях, свойство TVD (обеспечение монотонности), энтропийная корректность, относительная стоимость одного шага, и ссылка на лекцию.</p>
+
+<table class="cmp-table">
+<thead>
+<tr><th>Метод</th><th>Порядок</th><th>TVD</th><th>Энтр. кор.</th><th>Стоимость</th><th>Особенности</th></tr>
+</thead>
+<tbody>
+
+<tr><td><a class="method-link" href="s1-06.html#interactive">Уголок</a></td>
+<td><span class="cmp-badge badge-ord1">1</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td>×1</td>
+<td>Сильная диффузия, размазывает разрывы</td></tr>
+
+<tr><td><a class="method-link" href="s1-06.html#interactive">Лакс-Вендрофф</a></td>
+<td><span class="cmp-badge badge-ord2">2</span></td>
+<td><span class="cmp-badge badge-no">нет</span></td>
+<td><span class="cmp-badge badge-cond">усл.</span></td>
+<td>×1.5</td>
+<td>Осцилляции у разрывов (дисперсия)</td></tr>
+
+<tr><td><a class="method-link" href="s1-08.html">Лакс-Фридрихс</a></td>
+<td><span class="cmp-badge badge-ord1">1</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td>×1</td>
+<td>Самый диссипативный; базовый</td></tr>
+
+<tr><td><a class="method-link" href="s1-13.html#interactive">Схема «крест» (лагранж)</a></td>
+<td><span class="cmp-badge badge-ord2">2</span></td>
+<td><span class="cmp-badge badge-cond">усл.</span></td>
+<td><span class="cmp-badge badge-cond">с иск. вязк.</span></td>
+<td>×2</td>
+<td>Требует искусственной вязкости</td></tr>
+
+<tr><td><a class="method-link" href="s1-15.html#interactive">Годунов (точный решатель)</a></td>
+<td><span class="cmp-badge badge-ord1">1</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td>×5</td>
+<td>Эталон; точное решение Римана</td></tr>
+
+<tr><td><a class="method-link" href="s1-19.html#interactive">Рое</a></td>
+<td><span class="cmp-badge badge-ord1">1</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td><span class="cmp-badge badge-cond">нужна коррекция</span></td>
+<td>×2.5</td>
+<td>Точный на контактах; треб. энтр. фикс</td></tr>
+
+<tr><td><a class="method-link" href="s1-20.html#interactive">Ошер</a></td>
+<td><span class="cmp-badge badge-ord1">1</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td>×4</td>
+<td>Энтропийно корректен по построению</td></tr>
+
+<tr><td><a class="method-link" href="s1-21.html#interactive">HLL</a></td>
+<td><span class="cmp-badge badge-ord1">1</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td>×1.5</td>
+<td>Простой; размазывает контакты</td></tr>
+
+<tr><td><a class="method-link" href="s1-22.html#interactive">HLLC</a></td>
+<td><span class="cmp-badge badge-ord1">1</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td>×2</td>
+<td>Трёхволновой; резкие контакты</td></tr>
+
+<tr><td><a class="method-link" href="s1-23.html#interactive-1">Колган (MUSCL)</a></td>
+<td><span class="cmp-badge badge-ord2">2</span></td>
+<td><span class="cmp-badge badge-yes">да*</span></td>
+<td><span class="cmp-badge badge-cond">от решателя</span></td>
+<td>×2</td>
+<td>Реконструкция + лимитер. * при TVD-лим.</td></tr>
+
+<tr><td><a class="method-link" href="s1-24.html#interactive">Колган-Родионов (предиктор-корректор)</a></td>
+<td><span class="cmp-badge badge-ord2">2</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td><span class="cmp-badge badge-cond">от решателя</span></td>
+<td>×3</td>
+<td>2-й порядок по \(t\) и \(x\); MUSCL-Hancock</td></tr>
+
+<tr><td><a class="method-link" href="s1-25.html#comparison">ENO-3</a></td>
+<td><span class="cmp-badge badge-ord3">3</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td>×4</td>
+<td>Адаптивный выбор шаблона</td></tr>
+
+<tr><td><a class="method-link" href="s1-26.html#interactive">WENO-3</a></td>
+<td><span class="cmp-badge badge-ord3">3</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td>×5</td>
+<td>Сглаженные веса; лучше ENO на гладком</td></tr>
+
+<tr><td><a class="method-link" href="s1-27.html#interactive">МакКормак</a></td>
+<td><span class="cmp-badge badge-ord2">2</span></td>
+<td><span class="cmp-badge badge-no">нет</span></td>
+<td><span class="cmp-badge badge-no">нет</span></td>
+<td>×1.5</td>
+<td>Предиктор-корректор; нужна вязкость</td></tr>
+
+<tr><td><a class="method-link" href="s1-28.html#interactive">FCT (Бориса-Бук)</a></td>
+<td><span class="cmp-badge badge-ord2">2</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td><span class="cmp-badge badge-yes">да</span></td>
+<td>×2</td>
+<td>Лимитированная антидиффузия</td></tr>
+
+</tbody>
+</table>
+
+<p style="font-size:.82rem;color:var(--text2);font-style:italic">Стоимость указана относительно уголка (×1). «Усл.» = условно, зависит от CFL / ограничителей. «От решателя» = свойство наследуется от базового потока (Годунов/Рое/HLLC/…).</p>
+
+<h2 id="live-compare">Интерактив: запуск любых методов одновременно</h2>
+
+<p>Выберите решатели и тест Торо — все выбранные методы будут запущены параллельно на одинаковой сетке с одинаковым CFL. Кнопка ▶ воспроизведёт синхронную анимацию эволюции ρ, p, v во времени.</p>
+
+<div id="liveContainer" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.2rem;margin:1rem 0">
+<div class="mcheck-row" id="methodSelector"></div>
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;align-items:end;margin-top:.6rem">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Тест</label>
+    <select id="liveTest" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <option value="sod">Sod</option>
+      <option value="123">1-2-3</option>
+      <option value="blast">Бласт</option>
+      <option value="trans">Трансзвук</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">N</label>
+    <input type="number" id="liveN" value="150" min="50" max="400" style="width:80px;background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">CFL</label>
+    <input type="number" id="liveCFL" value="0.5" min="0.1" max="0.9" step="0.05" style="width:70px;background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+  </div>
+  <button id="liveRun" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 20px;font-family:'Source Serif 4',serif;font-size:.88rem;font-weight:600;cursor:pointer">▶ Запустить</button>
+</div>
+<div id="liveStatus" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin:.5rem 0">Выберите методы и нажмите Запустить</div>
+<div id="liveAnim" style="display:none;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:.5rem">
+  <button id="livePlay" style="background:var(--accent);color:#fff;border:none;border-radius:5px;padding:5px 12px;font-family:'Source Serif 4',serif;font-size:.82rem;font-weight:600;cursor:pointer">▶ Воспроизвести</button>
+  <button id="liveReset" style="background:#6b5d4f;color:#fff;border:none;border-radius:5px;padding:5px 10px;font-family:'Source Serif 4',serif;font-size:.82rem;cursor:pointer">↻</button>
+  <span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">t = <span id="liveTv">0.000</span></span>
+  <input type="range" id="liveT" min="0" max="1000" value="1000" style="flex:1;min-width:180px">
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem">
+  <div class="cmp-plot-box"><div class="cmp-plot-title">ρ(x)</div><canvas id="live_rho" width="430" height="280" style="width:100%;height:auto"></canvas></div>
+  <div class="cmp-plot-box"><div class="cmp-plot-title">p(x)</div><canvas id="live_p" width="430" height="280" style="width:100%;height:auto"></canvas></div>
+  <div class="cmp-plot-box"><div class="cmp-plot-title">v(x)</div><canvas id="live_u" width="430" height="280" style="width:100%;height:auto"></canvas></div>
+</div>
+</div>
+
+<h2 id="error-table">Таблица ошибок \(L_1\) и \(L_\infty\)</h2>
+
+<p>Каждый метод запускается на каждом тесте при N=200, CFL=0.5. Измеряются \(L_1\)-ошибка плотности \(\|\rho_{\text{числ}} - \rho_{\text{точн}}\|_1\) и \(L_\infty\). Нажмите «Посчитать таблицу» — займёт 10-30 секунд.</p>
+
+<div style="margin:1rem 0">
+  <button id="errRun" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 20px;font-family:'Source Serif 4',serif;font-size:.88rem;font-weight:600;cursor:pointer">▶ Посчитать таблицу ошибок</button>
+  <span id="errStatus" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-left:.6rem">не запущено</span>
+</div>
+<div id="errTableWrap" style="overflow-x:auto"></div>
+
+<h2 id="convergence">Численная проверка порядка сходимости</h2>
+
+<p>На гладкой синусоидальной волне \(u_0(x) = \sin(2\pi x)\) в уравнении переноса \(u_t + u_x = 0\). После одного полного оборота (t=1) \(L_2\)-ошибка измеряется на сетках \(N = 40, 80, 160, 320\). Теоретический порядок (на гладком решении): уголок — 1, Лакс-Вендрофф и МакКормак — 2, ENO-3 / WENO-3 — 3.</p>
+
+<div style="margin:1rem 0">
+  <button id="convRun" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 20px;font-family:'Source Serif 4',serif;font-size:.88rem;font-weight:600;cursor:pointer">▶ Посчитать p-сходимость</button>
+  <span id="convStatus" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-left:.6rem">не запущено</span>
+</div>
+<div class="cmp-grid">
+  <div class="cmp-plot-box"><div class="cmp-plot-title">log(L₂-ошибка) vs log(N)</div><canvas id="convPlot" width="440" height="340" style="width:100%;height:auto"></canvas></div>
+  <div class="cmp-plot-box"><div class="cmp-plot-title">Измеренные порядки</div><div id="convTable" style="padding:.6rem;font-family:'JetBrains Mono',monospace;font-size:.82rem"></div></div>
+</div>
+
+<h2 id="recommendations">Практические рекомендации</h2>
+
+<ul>
+<li><strong>Учебный пример, задача Сода:</strong> начните с HLLC (простая реализация, резкие контакты) или Рое с энтр. коррекцией.</li>
+<li><strong>Нужна строгая монотонность:</strong> HLL (простейший вариант), HLLC, или Годунов с точным решателем. Избегайте Лакс-Вендрофф и МакКормак без вязкости.</li>
+<li><strong>Нужна высокая точность на гладких областях:</strong> Колган-Родионов (MUSCL+RK2) с HLLC — 2-й порядок без осцилляций. Для ещё большей точности — WENO-3 или WENO-5.</li>
+<li><strong>Сильные ударные волны, сложный УРС:</strong> Ошер (с энтр. фиксом) или Годунов с точным решателем. На несовершенных УРС линеаризация Рое может давать ошибки.</li>
+<li><strong>Лагранжевы задачи:</strong> схема «крест» (§13) с искусственной вязкостью фон Неймана-Рихтмайера. Формы вязкости обсуждаются в §29.</li>
+<li><strong>Трансзвуковые течения:</strong> обязателен энтропийный фикс. Рое без фикса даёт нефизический скачок разрежения (§19). Ошер — встроенная энтропийная корректность.</li>
+</ul>
+
+<div class="remark">
+<strong>Важное:</strong> все порядки, указанные в таблице — <em>теоретические на гладких решениях</em>. На разрывах любая TVD-схема падает до 1-го порядка (см. теорему Годунова §9 и проверку в §23). «Высокопорядочность» схемы — это её поведение <em>между</em> разрывами, а не везде.
+</div>
+
+<div class="lecture-nav">
+<a href="s1-30.html" class="nav-prev">← §30. Свойства искусственной вязкости</a>
+<span></span>
+</div>
+
+</div>
+</div>
+
+<script src="../js/gd-interactive.js"></script>
+<script>
+(function(){
+'use strict';
+
+// =================================================================
+// All method definitions
+// =================================================================
+var METHODS = {
+  god: { name: 'Годунов (точн.)', color: '#b44a2d', flux: godFluxExact },
+  roe: { name: 'Рое (+фикс)', color: '#3a5ba0', flux: roeFlux },
+  hll: { name: 'HLL', color: '#a0520d', flux: hllFlux },
+  hllc: { name: 'HLLC', color: '#1a6b5a', flux: hllcFlux },
+  osh: { name: 'Ошер', color: '#7030a0', flux: osherFlux }
+};
+
+var METHOD_ORDER = ['god', 'roe', 'hll', 'hllc', 'osh'];
+
+function godFluxExact(rL,uL,pL,rR,uR,pR,gamma){
+  var s = GDI.exactRiemann(rL,uL,pL,rR,uR,pR,gamma, 0);
+  var gm1 = gamma-1; var E = s.p/gm1 + 0.5*s.rho*s.u*s.u;
+  return [s.rho*s.u, s.rho*s.u*s.u + s.p, s.u*(E + s.p)];
+}
+function hllFlux(rL,uL,pL,rR,uR,pR,gamma){
+  var gm1=gamma-1;
+  var EL=pL/(gm1*rL)+.5*uL*uL, ER=pR/(gm1*rR)+.5*uR*uR;
+  var aL=Math.sqrt(gamma*pL/rL), aR=Math.sqrt(gamma*pR/rR);
+  var SL=Math.min(uL-aL,uR-aR), SR=Math.max(uL+aL,uR+aR);
+  var FL=[rL*uL,rL*uL*uL+pL,uL*(rL*EL+pL)];
+  var FR=[rR*uR,rR*uR*uR+pR,uR*(rR*ER+pR)];
+  if (SL>=0) return FL; if (SR<=0) return FR;
+  var UL=[rL,rL*uL,rL*EL], UR=[rR,rR*uR,rR*ER];
+  var F=[0,0,0];
+  for (var k=0;k<3;k++) F[k]=(SR*FL[k]-SL*FR[k]+SL*SR*(UR[k]-UL[k]))/(SR-SL);
+  return F;
+}
+function hllcFlux(rL,uL,pL,rR,uR,pR,gamma){
+  var gm1=gamma-1;
+  var EL=pL/(gm1*rL)+.5*uL*uL, ER=pR/(gm1*rR)+.5*uR*uR;
+  var aL=Math.sqrt(gamma*pL/rL), aR=Math.sqrt(gamma*pR/rR);
+  var SL=Math.min(uL-aL,uR-aR), SR=Math.max(uL+aL,uR+aR);
+  var SS=(pR-pL+rL*uL*(SL-uL)-rR*uR*(SR-uR))/(rL*(SL-uL)-rR*(SR-uR));
+  var FL=[rL*uL,rL*uL*uL+pL,uL*(rL*EL+pL)];
+  var FR=[rR*uR,rR*uR*uR+pR,uR*(rR*ER+pR)];
+  if (SL>=0) return FL; if (SR<=0) return FR;
+  var UL=[rL,rL*uL,rL*EL], UR=[rR,rR*uR,rR*ER];
+  function st(r,u,E,p,S){var c=r*(S-u)/(S-SS); return [c,c*SS,c*(E+(SS-u)*(SS+p/(r*(S-u))))];}
+  if (SS>=0){var USL=st(rL,uL,EL,pL,SL); return FL.map(function(f,k){return f+SL*(USL[k]-UL[k]);});}
+  var USR=st(rR,uR,ER,pR,SR); return FR.map(function(f,k){return f+SR*(USR[k]-UR[k]);});
+}
+function roeFlux(rL,uL,pL,rR,uR,pR,gamma){
+  var gm1=gamma-1;
+  var EL=pL/(gm1*rL)+.5*uL*uL, ER=pR/(gm1*rR)+.5*uR*uR;
+  var HL=EL+pL/rL, HR=ER+pR/rR;
+  var sqL=Math.sqrt(rL), sqR=Math.sqrt(rR), sq=sqL+sqR;
+  var uT=(sqL*uL+sqR*uR)/sq, HT=(sqL*HL+sqR*HR)/sq;
+  var aT2=gm1*(HT-0.5*uT*uT); if (aT2<1e-12) aT2=1e-12;
+  var aT=Math.sqrt(aT2);
+  var dr=rR-rL, du=uR-uL, dp=pR-pL;
+  var a2=dr-dp/aT2, a1=(dp-sqL*sqR*aT*du)/(2*aT2), a3=(dp+sqL*sqR*aT*du)/(2*aT2);
+  var lam1=uT-aT, lam2=uT, lam3=uT+aT;
+  var delta=0.1*(Math.abs(uT)+aT);
+  function fix(l){if (Math.abs(l)<delta && delta>1e-14) return (l*l+delta*delta)/(2*delta); return Math.abs(l);}
+  var L1=fix(lam1), L2=fix(lam2), L3=fix(lam3);
+  var r1=[1,uT-aT,HT-uT*aT], r2=[1,uT,0.5*uT*uT], r3=[1,uT+aT,HT+uT*aT];
+  var FL=[rL*uL,rL*uL*uL+pL,uL*(rL*EL+pL)], FR=[rR*uR,rR*uR*uR+pR,uR*(rR*ER+pR)];
+  var F=[0,0,0];
+  for (var k=0;k<3;k++) F[k]=0.5*(FL[k]+FR[k])-0.5*(L1*a1*r1[k]+L2*a2*r2[k]+L3*a3*r3[k]);
+  return F;
+}
+function osherFlux(rL,uL,pL,rR,uR,pR,gamma){
+  var gm1=gamma-1;
+  var EL=pL/(gm1*rL)+.5*uL*uL, ER=pR/(gm1*rR)+.5*uR*uR;
+  var HL=EL+pL/rL, HR=ER+pR/rR;
+  var aL=Math.sqrt(gamma*pL/rL), aR=Math.sqrt(gamma*pR/rR);
+  var sqL=Math.sqrt(rL), sqR=Math.sqrt(rR), sq=sqL+sqR;
+  var uT=(sqL*uL+sqR*uR)/sq, HT=(sqL*HL+sqR*HR)/sq;
+  var aT2=gm1*(HT-0.5*uT*uT); if (aT2<1e-12) aT2=1e-12;
+  var aT=Math.sqrt(aT2);
+  var dr=rR-rL, du=uR-uL, dp=pR-pL;
+  var a2=dr-dp/aT2, a1=(dp-sqL*sqR*aT*du)/(2*aT2), a3=(dp+sqL*sqR*aT*du)/(2*aT2);
+  var lam1=uT-aT, lam2=uT, lam3=uT+aT;
+  var delta=Math.max(Math.abs(aL-aR)+Math.abs(uR-uL), 0.3*aT);
+  function absOsh(l){if (Math.abs(l)<delta) return (l*l+delta*delta)/(2*delta); return Math.abs(l);}
+  var L1=absOsh(lam1), L2=absOsh(lam2), L3=absOsh(lam3);
+  var r1=[1,uT-aT,HT-uT*aT], r2=[1,uT,0.5*uT*uT], r3=[1,uT+aT,HT+uT*aT];
+  var FL=[rL*uL,rL*uL*uL+pL,uL*(rL*EL+pL)], FR=[rR*uR,rR*uR*uR+pR,uR*(rR*ER+pR)];
+  var F=[0,0,0];
+  for (var k=0;k<3;k++) F[k]=0.5*(FL[k]+FR[k])-0.5*(L1*a1*r1[k]+L2*a2*r2[k]+L3*a3*r3[k]);
+  return F;
+}
+
+// =================================================================
+// Generic solver (same for all methods — only flux differs)
+// =================================================================
+function runSolver(fluxFn, T, N, CFL){
+  var gamma=1.4, gm1=0.4;
+  var dx=(T.xmax-T.xmin)/N, Ng=2, Nt=N+2*Ng, tend=T.tend;
+  var U=[new Float64Array(Nt), new Float64Array(Nt), new Float64Array(Nt)];
+  for (var i=0;i<Nt;i++){
+    var x=T.xmin+(i-Ng+0.5)*dx;
+    var rr=x<T.x0?T.rL:T.rR, uu=x<T.x0?T.uL:T.uR, pp=x<T.x0?T.pL:T.pR;
+    U[0][i]=rr; U[1][i]=rr*uu; U[2][i]=pp/gm1+0.5*rr*uu*uu;
+  }
+  function bc(V){for (var g=0;g<Ng;g++) for (var k=0;k<3;k++){V[k][g]=V[k][Ng]; V[k][N+Ng+g]=V[k][N+Ng-1];}}
+  function prim(V,i){
+    var rr=V[0][i], uu=V[1][i]/rr, EE=V[2][i];
+    var pp=gm1*(EE-0.5*rr*uu*uu);
+    return {r:Math.max(rr,1e-10),u:uu,p:Math.max(pp,1e-10),a:Math.sqrt(gamma*Math.max(pp,1e-10)/Math.max(rr,1e-10))};
+  }
+  var Nsnap=60, snapInterval=tend/Nsnap;
+  var xc=[]; for (var i=Ng;i<N+Ng;i++) xc.push(T.xmin+(i-Ng+0.5)*dx);
+  var snaps=[{t:0, rc:[], uc:[], pc:[]}];
+  for (var i=Ng;i<N+Ng;i++){ var p=prim(U,i); snaps[0].rc.push(p.r); snaps[0].uc.push(p.u); snaps[0].pc.push(p.p); }
+  var nextSnap=snapInterval;
+  var t=0, ns=0, blew=false;
+  while (t<tend){
+    bc(U);
+    var mx=0, bad=false;
+    for (var i=Ng;i<N+Ng;i++){
+      var p=prim(U,i);
+      if (!isFinite(p.r)||!isFinite(p.p)||p.r<=0||p.p<=0){bad=true;break;}
+      var l=Math.abs(p.u)+p.a; if (l>mx) mx=l;
+    }
+    if (bad){ blew=true; break; }
+    var dt=CFL*dx/mx; if (t+dt>tend) dt=tend-t;
+    var RHS=[new Float64Array(Nt), new Float64Array(Nt), new Float64Array(Nt)];
+    for (var i=Ng-1;i<N+Ng;i++){
+      var pL=prim(U,i), pR=prim(U,i+1);
+      var F=fluxFn(pL.r,pL.u,pL.p, pR.r,pR.u,pR.p, gamma);
+      for (var k=0;k<3;k++){ RHS[k][i]-=F[k]/dx; RHS[k][i+1]+=F[k]/dx; }
+    }
+    for (var k=0;k<3;k++) for (var i=0;i<Nt;i++) U[k][i]+=dt*RHS[k][i];
+    t+=dt; ns++;
+    if (t>=nextSnap-1e-9 || t>=tend-1e-9){
+      var snap={t:t,rc:[],uc:[],pc:[]};
+      for (var i=Ng;i<N+Ng;i++){var p=prim(U,i); snap.rc.push(p.r); snap.uc.push(p.u); snap.pc.push(p.p);}
+      snaps.push(snap);
+      nextSnap+=snapInterval;
+    }
+    if (ns>50000) break;
+  }
+  return {xc:xc, snaps:snaps, ns:ns, blew:blew};
+}
+
+// =================================================================
+// LIVE COMPARE interactive
+// =================================================================
+(function(){
+// Build method selector checkboxes
+var selHTML = '';
+METHOD_ORDER.forEach(function(k, idx){
+  var m = METHODS[k];
+  var checked = (k==='god' || k==='roe' || k==='hllc') ? 'checked' : '';
+  selHTML += '<label><input type="checkbox" data-method="'+k+'" '+checked+'>';
+  selHTML += '<span class="swatch" style="background:'+m.color+'"></span>'+m.name+'</label>';
+});
+document.getElementById('methodSelector').innerHTML = selHTML;
+
+var liveState = {anim:null, playId:null, chosenMethods:[]};
+
+function runLive(){
+  var btn = document.getElementById('liveRun'); btn.disabled = true;
+  document.getElementById('liveStatus').textContent = 'Считаю...';
+  requestAnimationFrame(function(){ setTimeout(function(){
+    try {
+      var tkey = document.getElementById('liveTest').value;
+      var N = +document.getElementById('liveN').value;
+      var CFL = +document.getElementById('liveCFL').value;
+      var T = GDI.TESTS[tkey];
+      // Which methods selected
+      var chosen = [];
+      document.querySelectorAll('#methodSelector input:checked').forEach(function(cb){
+        chosen.push(cb.getAttribute('data-method'));
+      });
+      if (chosen.length === 0){
+        document.getElementById('liveStatus').textContent = 'Выберите хотя бы один метод';
+        btn.disabled = false; return;
+      }
+      var t0 = performance.now();
+      var results = {};
+      chosen.forEach(function(k){
+        results[k] = runSolver(METHODS[k].flux, T, N, CFL);
+      });
+      var el = (performance.now()-t0).toFixed(0);
+      liveState.anim = {T:T, N:N, CFL:CFL, results:results, chosen:chosen};
+      liveState.chosenMethods = chosen;
+      document.getElementById('liveAnim').style.display = 'flex';
+      document.getElementById('liveT').value = 1000;
+      renderLive(60);
+      var names = chosen.map(function(k){return METHODS[k].name;}).join(', ');
+      document.getElementById('liveStatus').textContent = '✓ '+T.name+', N='+N+', '+chosen.length+' методов: '+names+' ('+el+' мс)';
+    } catch(err){
+      document.getElementById('liveStatus').textContent = 'Ошибка: '+err.message;
+    }
+    btn.disabled = false;
+  }, 20); });
+}
+
+function renderLive(snapIdx){
+  if (!liveState.anim) return;
+  var A = liveState.anim;
+  // Use first method to get snap count (all are the same since same T)
+  var firstRes = A.results[A.chosen[0]];
+  var idx = Math.max(0, Math.min(snapIdx, firstRes.snaps.length-1));
+  var tt = firstRes.snaps[idx].t;
+  document.getElementById('liveTv').textContent = tt.toFixed(4);
+  // Compute exact at this time
+  var Ne = 400, xeFull=[], re=[], ue=[], pe=[];
+  var ttt = tt<1e-6?1e-6:tt;
+  for (var i=0;i<Ne;i++){
+    var x = A.T.xmin + (A.T.xmax-A.T.xmin)*(i+0.5)/Ne;
+    var s = GDI.exactRiemann(A.T.rL,A.T.uL,A.T.pL,A.T.rR,A.T.uR,A.T.pR,1.4,(x-A.T.x0)/ttt);
+    xeFull.push(x); re.push(s.rho); ue.push(s.u); pe.push(s.p);
+  }
+  plotLive('live_rho', firstRes.xc, A, idx, 'rc', xeFull, re, 'ρ');
+  plotLive('live_p',   firstRes.xc, A, idx, 'pc', xeFull, pe, 'p');
+  plotLive('live_u',   firstRes.xc, A, idx, 'uc', xeFull, ue, 'v');
+}
+
+function plotLive(cid, xc, A, snapIdx, field, xe, ye, yl){
+  var c = document.getElementById(cid);
+  var ctx = c.getContext('2d'), W=c.width, H=c.height;
+  ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+  var P={l:42,r:12,t:12,b:28}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+  var mn=1e9, mx=-1e9;
+  A.chosen.forEach(function(k){
+    var res = A.results[k];
+    if (!res.snaps[snapIdx]) return;
+    var arr = res.snaps[snapIdx][field];
+    for (var i=0;i<arr.length;i++){ if (arr[i]<mn) mn=arr[i]; if (arr[i]>mx) mx=arr[i]; }
+  });
+  for (var i=0;i<ye.length;i++){ if (ye[i]<mn) mn=ye[i]; if (ye[i]>mx) mx=ye[i]; }
+  var pad = (mx-mn)*0.08||0.1; mn-=pad; mx+=pad;
+  ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+  for (var g=0;g<=5;g++){var gy=P.t+ph*g/5; ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke();}
+  function xp(x){return P.l+pw*(x-A.T.xmin)/(A.T.xmax-A.T.xmin);}
+  function yp(v){return P.t+ph*(1-(v-mn)/(mx-mn));}
+  // Exact
+  ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=2; ctx.setLineDash([6,4]);
+  ctx.beginPath();
+  for (var i=0;i<xe.length;i++){ i===0 ? ctx.moveTo(xp(xe[i]),yp(ye[i])) : ctx.lineTo(xp(xe[i]),yp(ye[i])); }
+  ctx.stroke(); ctx.setLineDash([]);
+  // Methods
+  A.chosen.forEach(function(k){
+    var res = A.results[k];
+    var snap = res.snaps[snapIdx]; if (!snap) return;
+    ctx.strokeStyle = METHODS[k].color; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (var i=0;i<xc.length;i++){ i===0 ? ctx.moveTo(xp(xc[i]),yp(snap[field][i])) : ctx.lineTo(xp(xc[i]),yp(snap[field][i])); }
+    ctx.stroke();
+  });
+  // Axes
+  ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+  ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+  for (var i=0;i<=10;i+=2){var xv=A.T.xmin+(A.T.xmax-A.T.xmin)*i/10; ctx.fillText(xv.toFixed(1), xp(xv), P.t+ph+14);}
+  ctx.textAlign='right';
+  for (var g=0;g<=5;g++) ctx.fillText((mx-(mx-mn)*g/5).toFixed(2), P.l-3, P.t+ph*g/5+3);
+  ctx.save(); ctx.translate(9,P.t+ph/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center'; ctx.fillText(yl,0,0); ctx.restore();
+}
+
+function playLive(){
+  if (!liveState.anim) return;
+  if (liveState.playId){ cancelAnimationFrame(liveState.playId); liveState.playId=null; document.getElementById('livePlay').textContent='▶ Воспроизвести'; return;}
+  document.getElementById('livePlay').textContent='⏸ Пауза';
+  var slider = document.getElementById('liveT');
+  if (+slider.value >= 995) slider.value = 0;
+  var nSnaps = liveState.anim.results[liveState.anim.chosen[0]].snaps.length;
+  var last = performance.now(), tot = 4000;
+  function tick(now){
+    var dtMs = now-last; last = now;
+    var v = +slider.value + dtMs*1000/tot;
+    if (v >= 1000){ slider.value=1000; renderLive(nSnaps-1); liveState.playId=null; document.getElementById('livePlay').textContent='▶ Воспроизвести'; return; }
+    slider.value = v;
+    renderLive(Math.round(v/1000*(nSnaps-1)));
+    liveState.playId = requestAnimationFrame(tick);
+  }
+  liveState.playId = requestAnimationFrame(tick);
+}
+function resetLive(){
+  if (liveState.playId){ cancelAnimationFrame(liveState.playId); liveState.playId=null; document.getElementById('livePlay').textContent='▶ Воспроизвести'; }
+  document.getElementById('liveT').value = 0;
+  if (liveState.anim) renderLive(0);
+}
+
+document.getElementById('liveRun').addEventListener('click', runLive);
+document.getElementById('livePlay').addEventListener('click', playLive);
+document.getElementById('liveReset').addEventListener('click', resetLive);
+document.getElementById('liveT').addEventListener('input', function(){
+  if (liveState.playId){ cancelAnimationFrame(liveState.playId); liveState.playId=null; document.getElementById('livePlay').textContent='▶ Воспроизвести'; }
+  if (!liveState.anim) return;
+  var nSnaps = liveState.anim.results[liveState.anim.chosen[0]].snaps.length;
+  renderLive(Math.round(+this.value/1000*(nSnaps-1)));
+});
+})();
+
+// =================================================================
+// ERROR TABLE
+// =================================================================
+(function(){
+function computeErrors(){
+  var btn = document.getElementById('errRun'); btn.disabled = true;
+  document.getElementById('errStatus').textContent = 'Считаю...';
+  requestAnimationFrame(function(){ setTimeout(function(){
+    try {
+      var tests = ['sod', '123', 'trans', 'blast'];
+      var N = 200, CFL = 0.5;
+      var results = {}; // results[method][test] = { L1, Linf }
+      var t0 = performance.now();
+      METHOD_ORDER.forEach(function(k){
+        results[k] = {};
+        tests.forEach(function(tkey){
+          var T = GDI.TESTS[tkey];
+          var r = runSolver(METHODS[k].flux, T, N, CFL);
+          if (r.blew){ results[k][tkey] = {L1: NaN, Linf: NaN}; return; }
+          var snap = r.snaps[r.snaps.length-1];
+          var tt = snap.t < 1e-6 ? 1e-6 : snap.t;
+          var dx = (T.xmax - T.xmin)/N;
+          var L1 = 0, Linf = 0;
+          for (var i=0;i<r.xc.length;i++){
+            var ex = GDI.exactRiemann(T.rL,T.uL,T.pL,T.rR,T.uR,T.pR, 1.4, (r.xc[i]-T.x0)/tt);
+            var err = Math.abs(snap.rc[i] - ex.rho);
+            L1 += err * dx;
+            if (err > Linf) Linf = err;
+          }
+          results[k][tkey] = {L1: L1, Linf: Linf};
+        });
+      });
+      var el = ((performance.now()-t0)/1000).toFixed(1);
+      document.getElementById('errStatus').textContent = '✓ N='+N+', готово за '+el+' сек';
+      renderErrorTable(results, tests);
+    } catch(err){
+      document.getElementById('errStatus').textContent = 'Ошибка: '+err.message;
+    }
+    btn.disabled = false;
+  }, 20); });
+}
+function renderErrorTable(results, tests){
+  var testNames = {sod:'Sod', '123':'1-2-3', trans:'Трансзвук', blast:'Бласт'};
+  var html = '<table class="cmp-table">';
+  html += '<thead><tr><th rowspan="2">Метод</th>';
+  tests.forEach(function(t){ html += '<th colspan="2" style="text-align:center">'+testNames[t]+'</th>'; });
+  html += '</tr><tr>';
+  tests.forEach(function(){html += '<th style="text-align:right;font-size:.75rem">L₁</th><th style="text-align:right;font-size:.75rem">L∞</th>';});
+  html += '</tr></thead><tbody>';
+  METHOD_ORDER.forEach(function(k){
+    html += '<tr><td><span class="swatch" style="display:inline-block;width:12px;height:3px;margin-right:5px;background:'+METHODS[k].color+'"></span>'+METHODS[k].name+'</td>';
+    tests.forEach(function(t){
+      var r = results[k][t];
+      if (isNaN(r.L1)){
+        html += '<td colspan="2" style="text-align:center;color:#b44a2d;font-family:JetBrains Mono,monospace;font-size:.78rem">— взрыв —</td>';
+      } else {
+        html += '<td style="text-align:right;font-family:JetBrains Mono,monospace;font-size:.78rem">'+r.L1.toExponential(2)+'</td>';
+        html += '<td style="text-align:right;font-family:JetBrains Mono,monospace;font-size:.78rem">'+r.Linf.toExponential(2)+'</td>';
+      }
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  html += '<p style="font-size:.8rem;color:var(--text2);font-style:italic;margin-top:.5rem">Ошибки по плотности ρ. Чем меньше — тем точнее. Сравнивайте значения в одном столбце (одинаковый тест).</p>';
+  document.getElementById('errTableWrap').innerHTML = html;
+}
+document.getElementById('errRun').addEventListener('click', computeErrors);
+})();
+
+// =================================================================
+// p-CONVERGENCE STUDY (on scalar transport, includes upwind/LW/MacCormack/ENO3/WENO3)
+// =================================================================
+(function(){
+// Scalar methods operate on: u_t + u_x = 0, periodic BC, u0(x) = sin(2*pi*x)
+var SCALAR_METHODS = {
+  upwind: {name: 'Уголок', color: '#1a6b5a', thOrder: 1, fn: stepUpwind },
+  lw:     {name: 'Лакс-Вендрофф', color: '#b44a2d', thOrder: 2, fn: stepLW },
+  mc:     {name: 'МакКормак', color: '#a0520d', thOrder: 2, fn: stepMC },
+  eno3:   {name: 'ENO-3', color: '#3a5ba0', thOrder: 3, fn: stepENO3 },
+  weno3:  {name: 'WENO-3', color: '#7030a0', thOrder: 3, fn: stepWENO3 }
+};
+var SCALAR_ORDER = ['upwind','lw','mc','eno3','weno3'];
+
+function stepUpwind(u,r){
+  var N=u.length, v=new Float64Array(N);
+  for (var i=0;i<N;i++) v[i] = (1-r)*u[i] + r*u[(i-1+N)%N];
+  return v;
+}
+function stepLW(u,r){
+  var N=u.length, v=new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var im=(i-1+N)%N, ip=(i+1)%N;
+    v[i] = u[i] - 0.5*r*(u[ip]-u[im]) + 0.5*r*r*(u[ip]-2*u[i]+u[im]);
+  }
+  return v;
+}
+function stepMC(u,r){
+  var N=u.length, vs=new Float64Array(N), v=new Float64Array(N);
+  // Predictor: forward difference
+  for (var i=0;i<N;i++){var ip=(i+1)%N; vs[i] = u[i] - r*(u[ip]-u[i]);}
+  // Corrector: backward difference on predictor
+  for (var i=0;i<N;i++){var im=(i-1+N)%N; v[i] = 0.5*(u[i]+vs[i]) - 0.5*r*(vs[i]-vs[im]);}
+  return v;
+}
+// ENO-3 upwind flux (c=1)
+function enoFlux(u, i){
+  var N=u.length;
+  var im2=u[(i-2+N)%N], im1=u[(i-1+N)%N], ui=u[i], ip1=u[(i+1)%N];
+  var d2L = im2 - 2*im1 + ui, d2R = im1 - 2*ui + ip1;
+  var pL = (1/3)*im2 - (7/6)*im1 + (11/6)*ui;
+  var pR = -(1/6)*im1 + (5/6)*ui + (1/3)*ip1;
+  return (Math.abs(d2L) < Math.abs(d2R)) ? pL : pR;
+}
+function stepENO3(u, r){
+  var N=u.length;
+  // SSP-RK3 on ENO flux
+  function rhs(uu){
+    var rh = new Float64Array(N);
+    for (var i=0;i<N;i++){
+      var fp = enoFlux(uu, i), fm = enoFlux(uu, (i-1+N)%N);
+      rh[i] = -(fp - fm);
+    }
+    return rh;
+  }
+  var R1 = rhs(u);
+  var u1 = new Float64Array(N); for (var i=0;i<N;i++) u1[i] = u[i] + r*R1[i];
+  var R2 = rhs(u1);
+  var u2 = new Float64Array(N); for (var i=0;i<N;i++) u2[i] = 0.75*u[i] + 0.25*(u1[i] + r*R2[i]);
+  var R3 = rhs(u2);
+  var v = new Float64Array(N); for (var i=0;i<N;i++) v[i] = (1/3)*u[i] + (2/3)*(u2[i] + r*R3[i]);
+  return v;
+}
+function wenoFlux(u, i){
+  var N=u.length;
+  var im1=u[(i-1+N)%N], ui=u[i], ip1=u[(i+1)%N];
+  var p0 = -0.5*im1 + 1.5*ui;
+  var p1 =  0.5*ui  + 0.5*ip1;
+  var beta0 = (ui-im1)*(ui-im1), beta1 = (ip1-ui)*(ip1-ui);
+  var eps = 1e-6, d0 = 1/3, d1 = 2/3;
+  var a0 = d0 / Math.pow(eps+beta0, 2);
+  var a1 = d1 / Math.pow(eps+beta1, 2);
+  var w0 = a0/(a0+a1), w1 = a1/(a0+a1);
+  return w0*p0 + w1*p1;
+}
+function stepWENO3(u,r){
+  var N=u.length;
+  function rhs(uu){
+    var rh = new Float64Array(N);
+    for (var i=0;i<N;i++){ var fp = wenoFlux(uu, i), fm = wenoFlux(uu, (i-1+N)%N); rh[i] = -(fp-fm); }
+    return rh;
+  }
+  var R1 = rhs(u);
+  var u1 = new Float64Array(N); for (var i=0;i<N;i++) u1[i] = u[i] + r*R1[i];
+  var R2 = rhs(u1);
+  var u2 = new Float64Array(N); for (var i=0;i<N;i++) u2[i] = 0.75*u[i] + 0.25*(u1[i] + r*R2[i]);
+  var R3 = rhs(u2);
+  var v = new Float64Array(N); for (var i=0;i<N;i++) v[i] = (1/3)*u[i] + (2/3)*(u2[i] + r*R3[i]);
+  return v;
+}
+
+function runConv(){
+  var btn = document.getElementById('convRun'); btn.disabled = true;
+  document.getElementById('convStatus').textContent = 'Считаю p-сходимость...';
+  requestAnimationFrame(function(){ setTimeout(function(){
+    try {
+      var sizes = [40, 80, 160, 320];
+      var T = 1.0;  // one full rotation
+      var CFL = 0.5;
+      var t0 = performance.now();
+      var errors = {}; // errors[method] = [L2 for each N]
+      SCALAR_ORDER.forEach(function(k){
+        var M = SCALAR_METHODS[k];
+        errors[k] = [];
+        sizes.forEach(function(N){
+          var h = 1.0/N;
+          var u = new Float64Array(N);
+          for (var i=0;i<N;i++) u[i] = Math.sin(2*Math.PI*(i+0.5)*h);
+          var t = 0, dt = CFL*h;
+          while (t + dt/2 < T){ u = M.fn(u, CFL); t += dt; }
+          var err = 0;
+          for (var i=0;i<N;i++){
+            var xe = Math.sin(2*Math.PI*(i+0.5)*h);
+            err += (u[i]-xe)*(u[i]-xe);
+          }
+          err = Math.sqrt(err/N);
+          errors[k].push(err);
+        });
+      });
+      var el = ((performance.now()-t0)/1000).toFixed(1);
+      document.getElementById('convStatus').textContent = '✓ готово за '+el+' сек';
+      drawConvPlot(sizes, errors);
+      renderConvTable(sizes, errors);
+    } catch(err){
+      document.getElementById('convStatus').textContent = 'Ошибка: '+err.message;
+    }
+    btn.disabled = false;
+  }, 20); });
+}
+function drawConvPlot(sizes, errors){
+  var c = document.getElementById('convPlot');
+  var ctx = c.getContext('2d'), W=c.width, H=c.height;
+  ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+  var P={l:52,r:80,t:15,b:35}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+  var xs = sizes.map(function(s){return Math.log10(s);});
+  // Find min/max y
+  var allErrs = [];
+  SCALAR_ORDER.forEach(function(k){ errors[k].forEach(function(e){if (e>0) allErrs.push(Math.log10(e));}); });
+  var ymin = Math.min.apply(null, allErrs) - 0.3;
+  var ymax = Math.max.apply(null, allErrs) + 0.3;
+  var xmin = Math.min.apply(null, xs) - 0.1, xmax = Math.max.apply(null, xs) + 0.1;
+  function xp(x){return P.l+pw*(x-xmin)/(xmax-xmin);}
+  function yp(y){return P.t+ph*(1-(y-ymin)/(ymax-ymin));}
+  ctx.strokeStyle='#ede6da'; ctx.lineWidth=0.5;
+  for (var g=0;g<=4;g++){var gy=P.t+ph*g/4; ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke();}
+  // Reference slopes
+  ctx.strokeStyle='#9a8d7e'; ctx.setLineDash([4,3]); ctx.lineWidth=1;
+  ctx.fillStyle='#9a8d7e'; ctx.font='10px JetBrains Mono';
+  var anchor_y = ymax - 0.5;
+  [1,2,3].forEach(function(slope){
+    ctx.beginPath();
+    var x0 = xs[0], x1 = xmax-0.05;
+    var y0 = anchor_y - slope*0.4, y1 = y0 - slope*(x1 - x0);
+    ctx.moveTo(xp(x0), yp(y0)); ctx.lineTo(xp(x1), yp(y1)); ctx.stroke();
+    ctx.textAlign='left';
+    ctx.fillText('-'+slope, xp(x1)+3, yp(y1)+3);
+  });
+  ctx.setLineDash([]);
+  // Data
+  SCALAR_ORDER.forEach(function(k){
+    var M = SCALAR_METHODS[k];
+    ctx.strokeStyle = M.color; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (var i=0;i<xs.length;i++){
+      var y = Math.log10(errors[k][i]);
+      i===0 ? ctx.moveTo(xp(xs[i]),yp(y)) : ctx.lineTo(xp(xs[i]),yp(y));
+    }
+    ctx.stroke();
+    ctx.fillStyle = M.color;
+    for (var i=0;i<xs.length;i++){
+      var y = Math.log10(errors[k][i]);
+      ctx.beginPath(); ctx.arc(xp(xs[i]),yp(y),3,0,Math.PI*2); ctx.fill();
+    }
+  });
+  // Legend
+  ctx.font='10px JetBrains Mono'; ctx.textAlign='left';
+  SCALAR_ORDER.forEach(function(k, idx){
+    var M = SCALAR_METHODS[k];
+    var ly = P.t + 10 + idx*14;
+    ctx.strokeStyle = M.color; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(P.l+pw+5, ly); ctx.lineTo(P.l+pw+18, ly); ctx.stroke();
+    ctx.fillStyle = '#2c2419';
+    ctx.fillText(M.name, P.l+pw+22, ly+3);
+  });
+  // Axes
+  ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+  ctx.fillStyle='#6b5d4f'; ctx.textAlign='center';
+  for (var i=0;i<sizes.length;i++){ ctx.fillText('N='+sizes[i], xp(xs[i]), P.t+ph+15); }
+  ctx.textAlign='right';
+  for (var g=0;g<=4;g++){var yv = ymax-(ymax-ymin)*g/4; ctx.fillText('1e'+yv.toFixed(1), P.l-3, P.t+ph*g/4+3);}
+  ctx.save(); ctx.translate(14,P.t+ph/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center'; ctx.fillText('L₂-ошибка', 0, 0); ctx.restore();
+}
+function renderConvTable(sizes, errors){
+  var html = '<table style="width:100%;font-family:\'JetBrains Mono\',monospace;font-size:.8rem">';
+  html += '<thead><tr><th style="text-align:left;color:var(--accent)">Метод</th><th style="text-align:right;color:var(--accent)">N:40→80</th><th style="text-align:right;color:var(--accent)">80→160</th><th style="text-align:right;color:var(--accent)">160→320</th><th style="text-align:right;color:var(--accent)">теор.</th></tr></thead><tbody>';
+  SCALAR_ORDER.forEach(function(k){
+    var M = SCALAR_METHODS[k];
+    var errs = errors[k];
+    var p1 = Math.log2(errs[0]/errs[1]);
+    var p2 = Math.log2(errs[1]/errs[2]);
+    var p3 = Math.log2(errs[2]/errs[3]);
+    html += '<tr><td style="padding:3px 4px"><span style="display:inline-block;width:10px;height:3px;background:'+M.color+';margin-right:4px"></span>'+M.name+'</td>';
+    html += '<td style="text-align:right;padding:3px 4px">'+p1.toFixed(2)+'</td>';
+    html += '<td style="text-align:right;padding:3px 4px">'+p2.toFixed(2)+'</td>';
+    html += '<td style="text-align:right;padding:3px 4px">'+p3.toFixed(2)+'</td>';
+    html += '<td style="text-align:right;padding:3px 4px;color:var(--accent)">'+M.thOrder+'</td></tr>';
+  });
+  html += '</tbody></table>';
+  html += '<p style="font-size:.78rem;color:var(--text2);font-style:italic;margin-top:.4rem">Числа — измеренный порядок сходимости \\(p = \\log_2(L_2^{N}/L_2^{2N})\\). На гладкой задаче должны приближаться к теоретическому.</p>';
+  document.getElementById('convTable').innerHTML = html;
+}
+
+document.getElementById('convRun').addEventListener('click', runConv);
+})();
+
+})();
+</script>
+
+<div class="comments-wrap">
+<div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">
+<h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
+<div id="comments-list"><p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p></div>
+<div id="comment-form" style="display:none;margin-top:.8rem">
+<textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
+<button onclick="window._postComment()" style="margin-top:.4rem;background:#b44a2d;color:#fff;border:none;padding:6px 18px;border-radius:5px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer">Отправить</button>
+</div>
+<div id="comment-login"><p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p></div>
+</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/comments.js"></script>
+</body>
+</html>

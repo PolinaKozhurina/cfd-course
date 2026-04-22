@@ -362,6 +362,13 @@ $$\hat{v}_{i,j} = v_{i,j}^* - \frac{\Delta t}{\rho_{i,j}^*} \cdot \frac{p_{i,j+1
   <button class="run-btn" id="runBtn" onclick="runFLIC()">▶ Запустить FLIC</button>
   <span class="status" id="status">Готов к расчету</span>
 </div>
+<div id="flicAnimControls" style="display:none;margin-top:.5rem;gap:.6rem;align-items:center;flex-wrap:wrap">
+  <button id="flicPlay" onclick="flicPlay()" style="background:var(--accent);color:#fff;border:none;border-radius:5px;padding:5px 12px;font-family:'Source Serif 4',serif;font-size:.82rem;font-weight:600;cursor:pointer">▶ Воспроизвести</button>
+  <button id="flicReset" onclick="flicReset()" style="background:#6b5d4f;color:#fff;border:none;border-radius:5px;padding:5px 10px;font-family:'Source Serif 4',serif;font-size:.82rem;cursor:pointer">↻ В начало</button>
+  <span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">t = <span id="flicTv">0.000</span></span>
+  <input type="range" id="flicT" min="0" max="1000" value="1000" style="flex:1;min-width:200px"
+    oninput="(function(v){var A=window._flicAnim;if(!A)return;if(flicPlayId){cancelAnimationFrame(flicPlayId);flicPlayId=null;document.getElementById('flicPlay').textContent='▶ Воспроизвести'}renderFlicFrame(Math.round(+v/1000*(A.snaps.length-1)))})(this.value)">
+</div>
 </div>
 
 <div class="legend-row">
@@ -586,6 +593,10 @@ let rho=new Float64Array(N),u=new Float64Array(N),E=new Float64Array(N),p=new Fl
 for(let i=0;i<N;i++){const x=(i+.5)*dx;if(x<.5){rho[i]=rL;p[i]=pLv}else{rho[i]=rR;p[i]=pRv}u[i]=0;E[i]=p[i]/(gm1*rho[i])+.5*u[i]*u[i]}
 let t=0,ns=0;const t0=performance.now();
 let ut=new Float64Array(N),Et=new Float64Array(N);
+// Snapshots
+const Nsnap=80,snapInterval=tend/Nsnap;
+const snaps=[{t:0,rc:Array.from(rho),uc:Array.from(u),pc:Array.from(p)}];
+let nextSnap=snapInterval;
 while(t<tend){
   let mx=0;for(let i=0;i<N;i++){const e=E[i]-.5*u[i]*u[i];p[i]=gm1*rho[i]*e;if(p[i]<1e-12)p[i]=1e-12;const a=Math.sqrt(gamma*p[i]/rho[i]),l=Math.abs(u[i])+a;if(l>mx)mx=l}
   let dt=cfl*dx/mx;if(t+dt>tend)dt=tend-t;
@@ -607,20 +618,66 @@ while(t<tend){
     const dmu=rus*uh*dt;run[i]-=dmu/dx;run[i+1]+=dmu/dx;
     const dme=res*uh*dt;ren[i]-=dme/dx;ren[i+1]+=dme/dx}
   for(let i=0;i<N;i++){rho[i]=rn[i];u[i]=run[i]/rho[i];E[i]=ren[i]/rho[i]}
-  t+=dt;ns++;if(ns>1e5)break}
+  t+=dt;ns++;
+  if(t>=nextSnap-1e-9||t>=tend-1e-9){
+    const psnap=new Float64Array(N);
+    for(let i=0;i<N;i++){psnap[i]=gm1*rho[i]*(E[i]-.5*u[i]*u[i])}
+    snaps.push({t:t,rc:Array.from(rho),uc:Array.from(u),pc:Array.from(psnap)});
+    nextSnap+=snapInterval;
+  }
+  if(ns>1e5)break}
 const el=(performance.now()-t0).toFixed(1);
 for(let i=0;i<N;i++){p[i]=gm1*rho[i]*(E[i]-.5*u[i]*u[i])}
-// Exact
-const xa=[],re=[],ue=[],pe=[];
-for(let i=0;i<500;i++){const x=(i+.5)/500,xot=(x-.5)/tend,s=exactRiemann(rL,0,pLv,rR,0,pRv,gamma,xot);xa.push(x);re.push(s.rho);ue.push(s.u);pe.push(s.p)}
-const xc=[],rc=[],uc=[],pc=[];
-for(let i=0;i<N;i++){xc.push((i+.5)*dx);rc.push(rho[i]);uc.push(u[i]);pc.push(p[i])}
-plotField('c_rho',xc,rc,xa,re,'ρ',0,Math.max(rL,rR)*1.1);
-plotField('c_p',xc,pc,xa,pe,'P',0,Math.max(pLv,pRv)*1.1);
-plotField('c_u',xc,uc,xa,ue,'u',-.1,null);
-showVerification(xc,rc,uc,pc,tend,rL,pLv,rR,pRv,gamma);
-document.getElementById('status').textContent=`Готово: ${ns} шагов, ${el} мс`;
+const xc=[];for(let i=0;i<N;i++){xc.push((i+.5)*dx)}
+const Ne=500,xeFull=[];for(let i=0;i<Ne;i++) xeFull.push((i+.5)/Ne);
+function exactAt(tt){
+  if(tt<1e-6)tt=1e-6;
+  const re=[],ue=[],pe=[];
+  for(let i=0;i<Ne;i++){const s=exactRiemann(rL,0,pLv,rR,0,pRv,gamma,(xeFull[i]-.5)/tt);re.push(s.rho);ue.push(s.u);pe.push(s.p)}
+  return {re:re,ue:ue,pe:pe};
+}
+window._flicAnim={xc:xc,snaps:snaps,xeFull:xeFull,exactAt:exactAt,rL:rL,pLv:pLv,rR:rR,pRv:pRv};
+document.getElementById('flicAnimControls').style.display='flex';
+document.getElementById('flicT').value=1000;
+renderFlicFrame(snaps.length-1);
+const last=snaps[snaps.length-1];
+showVerification(xc,last.rc,last.uc,last.pc,tend,rL,pLv,rR,pRv,gamma);
+document.getElementById('status').textContent=`Готово: ${ns} шагов, ${el} мс, ${snaps.length} кадров`;
 btn.disabled=false},20)});}
+
+function renderFlicFrame(snapIdx){
+  const A=window._flicAnim;if(!A)return;
+  const idx=Math.max(0,Math.min(snapIdx,A.snaps.length-1));
+  const snap=A.snaps[idx];
+  const ex=A.exactAt(snap.t);
+  plotField('c_rho',A.xc,snap.rc,A.xeFull,ex.re,'ρ',0,Math.max(A.rL,A.rR)*1.1);
+  plotField('c_p',A.xc,snap.pc,A.xeFull,ex.pe,'P',0,Math.max(A.pLv,A.pRv)*1.1);
+  plotField('c_u',A.xc,snap.uc,A.xeFull,ex.ue,'u',-.1,null);
+  document.getElementById('flicTv').textContent=snap.t.toFixed(4);
+}
+let flicPlayId=null;
+function flicPlay(){
+  const A=window._flicAnim;if(!A)return;
+  if(flicPlayId){cancelAnimationFrame(flicPlayId);flicPlayId=null;document.getElementById('flicPlay').textContent='▶ Воспроизвести';return}
+  const slider=document.getElementById('flicT');
+  if(+slider.value>=995) slider.value=0;
+  document.getElementById('flicPlay').textContent='⏸ Пауза';
+  let last=performance.now();const totalMs=4000;
+  function tick(now){
+    const dtMs=now-last;last=now;
+    const v=+slider.value+dtMs*1000/totalMs;
+    if(v>=1000){slider.value=1000;renderFlicFrame(A.snaps.length-1);flicPlayId=null;document.getElementById('flicPlay').textContent='▶ Воспроизвести';return}
+    slider.value=v;
+    renderFlicFrame(Math.round(v/1000*(A.snaps.length-1)));
+    flicPlayId=requestAnimationFrame(tick);
+  }
+  flicPlayId=requestAnimationFrame(tick);
+}
+function flicReset(){
+  const A=window._flicAnim;if(!A)return;
+  if(flicPlayId){cancelAnimationFrame(flicPlayId);flicPlayId=null;document.getElementById('flicPlay').textContent='▶ Воспроизвести'}
+  document.getElementById('flicT').value=0;renderFlicFrame(0);
+}
 
 // ============================================================
 // PLOTTING

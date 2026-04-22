@@ -31,6 +31,7 @@ window.MathJax = {
   <a href="#densities">Плотности</a>
   <a href="#sampling">Процедура выборки</a>
   <a href="#godunov-use">Метод Годунова</a>
+  <a href="#interactive">Интерактив: анализатор волн</a>
   <div class="sep"></div>
   <div class="g">Навигация</div>
   <a href="s1-16.html">← §16 Точная задача</a>
@@ -175,6 +176,349 @@ v_* = \frac{1}{2}\bigl(v_L + v_R + f_R(p_*) - f_L(p_*)\bigr).
 <div class="remark">
 <strong>Замечание.</strong> Несмотря на высокую вычислительную стоимость (итерационное решение уравнения (17.5) на каждой грани), точный решатель задачи Римана служит <em>эталоном</em>, на основе которого строятся приближённые решатели, рассматриваемые в §18–§22. Именно сравнение с точным решением задачи Римана позволяет оценить качество приближённых методов.
 </div>
+
+<h2 id="interactive">Интерактив: анализатор волновой структуры</h2>
+
+<p>Задайте левое и правое состояния — калькулятор выполнит итерации Ньютона для уравнения (17.5), определит промежуточные \(p_*, v_*\), классифицирует волны и построит (x, t)-диаграмму. Анимация показывает как профиль \(\rho(x), p(x), v(x)\) разворачивается во времени из начального разрыва.</p>
+
+<div id="rs17" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.2rem;margin:1rem 0">
+<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.6rem">
+  <div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent2);font-weight:700;margin-bottom:3px">Левое состояние</div>
+    <div style="display:flex;gap:.3rem">
+      <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem">ρ<sub>L</sub><input id="rs17_rL" type="number" value="1.0" step="0.1" style="width:55px;margin-left:3px"></label>
+      <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem">u<sub>L</sub><input id="rs17_uL" type="number" value="0.0" step="0.1" style="width:55px;margin-left:3px"></label>
+      <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem">p<sub>L</sub><input id="rs17_pL" type="number" value="1.0" step="0.1" style="width:55px;margin-left:3px"></label>
+    </div>
+  </div>
+  <div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent);font-weight:700;margin-bottom:3px">Правое состояние</div>
+    <div style="display:flex;gap:.3rem">
+      <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem">ρ<sub>R</sub><input id="rs17_rR" type="number" value="0.125" step="0.01" style="width:55px;margin-left:3px"></label>
+      <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem">u<sub>R</sub><input id="rs17_uR" type="number" value="0.0" step="0.1" style="width:55px;margin-left:3px"></label>
+      <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem">p<sub>R</sub><input id="rs17_pR" type="number" value="0.1" step="0.1" style="width:55px;margin-left:3px"></label>
+    </div>
+  </div>
+  <div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2);margin-bottom:3px">Пресет</div>
+    <select id="rs17_preset" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-family:'JetBrains Mono',monospace;font-size:.78rem">
+      <option value="custom">—</option>
+      <option value="sod">Sod</option>
+      <option value="123">1-2-3 (двойное разрежение)</option>
+      <option value="blast">Бласт</option>
+      <option value="contact">Только контакт</option>
+      <option value="shock-shock">Две ударных волны</option>
+    </select>
+  </div>
+  <div style="align-self:end">
+    <button id="rs17_calc" style="background:var(--accent);color:#fff;border:none;border-radius:5px;padding:6px 16px;font-family:'Source Serif 4',serif;font-size:.85rem;font-weight:600;cursor:pointer">Решить</button>
+  </div>
+</div>
+<div id="rs17_out" style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:.6rem;margin-bottom:.5rem;font-size:.82rem;display:none"></div>
+<div id="rs17_animRow" style="display:none;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:.4rem">
+  <button id="rs17_play" style="background:var(--accent);color:#fff;border:none;border-radius:5px;padding:5px 12px;font-family:'Source Serif 4',serif;font-size:.82rem;font-weight:600;cursor:pointer">▶ Анимация профиля</button>
+  <button id="rs17_reset" style="background:#6b5d4f;color:#fff;border:none;border-radius:5px;padding:5px 10px;font-family:'Source Serif 4',serif;font-size:.82rem;cursor:pointer">↻</button>
+  <span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">t = <span id="rs17_tv">0.00</span></span>
+  <input type="range" id="rs17_t" min="0" max="1000" value="600" style="flex:1;min-width:180px">
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem" id="rs17_grid">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">(x, t)-диаграмма</div>
+    <canvas id="rs17_cxt" width="430" height="300" style="width:100%;height:auto"></canvas>
+  </div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Профиль ρ, p, v при t</div>
+    <canvas id="rs17_cprof" width="430" height="300" style="width:100%;height:auto"></canvas>
+  </div>
+</div>
+</div>
+
+<script>
+(function(){
+var gamma=1.4;
+function exactRiemann(rL,uL,pL,rR,uR,pR,gamma,xot){
+  var g1=gamma,g2=(g1-1)/(2*g1),g3=(g1+1)/(2*g1),g4=2/(g1-1),g5=2/(g1+1),g6=(g1-1)/(g1+1),g7=(g1-1)/2;
+  var aL=Math.sqrt(g1*pL/rL),aR=Math.sqrt(g1*pR/rR);
+  function fK(p,pk,rhok,ak){ if(p>pk){ var A=g5/rhok,B=g6*pk; return(p-pk)*Math.sqrt(A/(p+B)); } return g4*ak*(Math.pow(p/pk,g2)-1); }
+  function dfK(p,pk,rhok,ak){ if(p>pk){ var A=g5/rhok,B=g6*pk,sq=Math.sqrt(A/(p+B)); return sq*(1-(p-pk)/(2*(p+B))); } return 1/(rhok*ak)*Math.pow(p/pk,-g3); }
+  var ps=.5*(pL+pR);
+  for(var i=0;i<80;i++){ var f=fK(ps,pL,rL,aL)+fK(ps,pR,rR,aR)+(uR-uL); var df=dfK(ps,pL,rL,aL)+dfK(ps,pR,rR,aR); var dp=-f/df; ps+=dp; if(ps<1e-10)ps=1e-10; if(Math.abs(dp)<1e-12*ps)break; }
+  var us=.5*(uL+uR)+.5*(fK(ps,pR,rR,aR)-fK(ps,pL,rL,aL));
+  var S=xot, rho,u,p;
+  if(S<us){
+    if(ps<=pL){ var asL=aL*Math.pow(ps/pL,g2),sHL=uL-aL,sTL=us-asL;
+      if(S<=sHL){rho=rL;u=uL;p=pL;}
+      else if(S>=sTL){rho=rL*Math.pow(ps/pL,1/g1);u=us;p=ps;}
+      else{u=g5*(aL+g7*uL+S); var a=g5*(aL+g7*(uL-S)); rho=rL*Math.pow(a/aL,g4); p=pL*Math.pow(a/aL,2*g1/(g1-1));} }
+    else{ var sL=uL-aL*Math.sqrt(g3*ps/pL+g2); if(S<=sL){rho=rL;u=uL;p=pL;} else{rho=rL*(ps/pL+g6)/(g6*ps/pL+1);u=us;p=ps;} }
+  } else {
+    if(ps<=pR){ var asR=aR*Math.pow(ps/pR,g2),sHR=uR+aR,sTR=us+asR;
+      if(S>=sHR){rho=rR;u=uR;p=pR;}
+      else if(S<=sTR){rho=rR*Math.pow(ps/pR,1/g1);u=us;p=ps;}
+      else{u=g5*(-aR+g7*uR+S); var a=g5*(aR-g7*(uR-S)); rho=rR*Math.pow(a/aR,g4); p=pR*Math.pow(a/aR,2*g1/(g1-1));} }
+    else{ var sR=uR+aR*Math.sqrt(g3*ps/pR+g2); if(S>=sR){rho=rR;u=uR;p=pR;} else{rho=rR*(ps/pR+g6)/(g6*ps/pR+1);u=us;p=ps;} }
+  }
+  return{rho:rho,u:u,p:p,ps:ps,us:us};
+}
+function solveStar(rL,uL,pL,rR,uR,pR){
+  var aL=Math.sqrt(gamma*pL/rL),aR=Math.sqrt(gamma*pR/rR);
+  var g2=(gamma-1)/(2*gamma),g3=(gamma+1)/(2*gamma),g4=2/(gamma-1),g5=2/(gamma+1),g6=(gamma-1)/(gamma+1);
+  function fK(p,pk,rhok,ak){ if(p>pk){ var A=g5/rhok,B=g6*pk; return(p-pk)*Math.sqrt(A/(p+B)); } return g4*ak*(Math.pow(p/pk,g2)-1); }
+  function dfK(p,pk,rhok,ak){ if(p>pk){ var A=g5/rhok,B=g6*pk,sq=Math.sqrt(A/(p+B)); return sq*(1-(p-pk)/(2*(p+B))); } return 1/(rhok*ak)*Math.pow(p/pk,-g3); }
+  var ps=.5*(pL+pR);
+  for(var i=0;i<80;i++){ var f=fK(ps,pL,rL,aL)+fK(ps,pR,rR,aR)+(uR-uL); var df=dfK(ps,pL,rL,aL)+dfK(ps,pR,rR,aR); var dp=-f/df; ps+=dp; if(ps<1e-10)ps=1e-10; if(Math.abs(dp)<1e-12*ps)break; }
+  var us=.5*(uL+uR)+.5*(fK(ps,pR,rR,aR)-fK(ps,pL,rL,aL));
+  // Wave types and speeds
+  var leftShock=ps>pL, rightShock=ps>pR;
+  var SL, SHL, STL, SR, SHR, STR;
+  if(leftShock){ SL=uL-aL*Math.sqrt(g3*ps/pL+g2); }
+  else { SHL=uL-aL; STL=us-aL*Math.pow(ps/pL,g2); }
+  if(rightShock){ SR=uR+aR*Math.sqrt(g3*ps/pR+g2); }
+  else { SHR=uR+aR; STR=us+aR*Math.pow(ps/pR,g2); }
+  // Densities in star regions
+  var rsL, rsR;
+  if(leftShock) rsL=rL*(ps/pL+g6)/(g6*ps/pL+1);
+  else rsL=rL*Math.pow(ps/pL,1/gamma);
+  if(rightShock) rsR=rR*(ps/pR+g6)/(g6*ps/pR+1);
+  else rsR=rR*Math.pow(ps/pR,1/gamma);
+  return {ps:ps,us:us,leftShock:leftShock,rightShock:rightShock,
+    SL:SL,SHL:SHL,STL:STL,SR:SR,SHR:SHR,STR:STR,rsL:rsL,rsR:rsR,aL:aL,aR:aR};
+}
+
+var PRESETS={
+  sod:{rL:1,uL:0,pL:1,rR:0.125,uR:0,pR:0.1},
+  '123':{rL:1,uL:-2,pL:0.4,rR:1,uR:2,pR:0.4},
+  blast:{rL:1,uL:0,pL:1000,rR:1,uR:0,pR:0.01},
+  contact:{rL:2,uL:0.5,pL:1,rR:0.5,uR:0.5,pR:1},
+  'shock-shock':{rL:1,uL:2,pL:1,rR:1,uR:-2,pR:1}
+};
+
+var state={sol:null,rL:null,uL:null,pL:null,rR:null,uR:null,pR:null,playId:null,Tmax:1.0};
+
+function readInputs(){
+  return {
+    rL:+document.getElementById('rs17_rL').value,
+    uL:+document.getElementById('rs17_uL').value,
+    pL:+document.getElementById('rs17_pL').value,
+    rR:+document.getElementById('rs17_rR').value,
+    uR:+document.getElementById('rs17_uR').value,
+    pR:+document.getElementById('rs17_pR').value
+  };
+}
+
+function drawXT(sol, rL, uL, pL, rR, uR, pR, curT, Tmax){
+  var c=document.getElementById('rs17_cxt');
+  var ctx=c.getContext('2d');
+  var W=c.width, H=c.height;
+  ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+  var P={l:40,r:15,t:15,b:30}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+  // X axis: -Lx..Lx, T axis: 0..Tmax
+  var Lx=1.5;
+  function xp(x){ return P.l + pw*(x+Lx)/(2*Lx); }
+  function yp(tv){ return P.t + ph*(1 - tv/Tmax); }
+  // axes grid
+  ctx.strokeStyle='#ede6da'; ctx.lineWidth=0.5;
+  for (var i=-3;i<=3;i++){ var x=xp(i*0.5); ctx.beginPath(); ctx.moveTo(x,P.t); ctx.lineTo(x,P.t+ph); ctx.stroke(); }
+  for (var i=0;i<=5;i++){ var y=P.t+ph*i/5; ctx.beginPath(); ctx.moveTo(P.l,y); ctx.lineTo(P.l+pw,y); ctx.stroke(); }
+  ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+  // Origin marker
+  var ox=xp(0);
+  ctx.strokeStyle='#d9cfc0'; ctx.setLineDash([2,2]);
+  ctx.beginPath(); ctx.moveTo(ox,P.t); ctx.lineTo(ox,P.t+ph); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+  for (var i=-1;i<=1;i++) ctx.fillText(i.toFixed(1), xp(i), P.t+ph+14);
+  ctx.fillText('x', P.l+pw-8, P.t+ph+14);
+  ctx.textAlign='right';
+  ctx.fillText('0', P.l-3, P.t+ph+2); ctx.fillText(Tmax.toFixed(2), P.l-3, P.t+10);
+  ctx.save(); ctx.translate(13,P.t+ph/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center'; ctx.fillText('t',0,0); ctx.restore();
+  // Draw wave trajectories from origin
+  function drawLine(speed,color,style,label,labelSide){
+    if (!isFinite(speed)) return;
+    var xEnd = speed*Tmax;
+    if (xEnd > Lx) { xEnd = Lx; }
+    if (xEnd < -Lx) { xEnd = -Lx; }
+    var tEnd = xEnd/speed;
+    ctx.strokeStyle=color; ctx.lineWidth=2;
+    if (style==='dashed') ctx.setLineDash([5,4]);
+    else if (style==='dotted') ctx.setLineDash([2,3]);
+    ctx.beginPath(); ctx.moveTo(xp(0),yp(0)); ctx.lineTo(xp(xEnd),yp(tEnd)); ctx.stroke();
+    ctx.setLineDash([]);
+    // label
+    ctx.fillStyle=color; ctx.font='9px JetBrains Mono';
+    ctx.textAlign = labelSide==='r' ? 'left' : 'right';
+    ctx.fillText(label, xp(xEnd) + (labelSide==='r'?3:-3), yp(tEnd)+3);
+  }
+  // Left wave
+  if (sol.leftShock) drawLine(sol.SL, '#b44a2d', 'solid', 'УВ_L (S='+sol.SL.toFixed(2)+')', 'l');
+  else {
+    drawLine(sol.SHL, '#1a6b5a', 'solid', 'ВР_L голова', 'l');
+    drawLine(sol.STL, '#1a6b5a', 'dashed', 'ВР_L хвост', 'l');
+  }
+  // Contact
+  drawLine(sol.us, '#6b5d4f', 'dotted', 'КР (v*='+sol.us.toFixed(2)+')', 'r');
+  // Right wave
+  if (sol.rightShock) drawLine(sol.SR, '#b44a2d', 'solid', 'УВ_R (S='+sol.SR.toFixed(2)+')', 'r');
+  else {
+    drawLine(sol.SHR, '#1a6b5a', 'solid', 'ВР_R голова', 'r');
+    drawLine(sol.STR, '#1a6b5a', 'dashed', 'ВР_R хвост', 'r');
+  }
+  // Current time horizontal line
+  if (curT >= 0){
+    ctx.strokeStyle='#3a5ba0'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(P.l, yp(curT)); ctx.lineTo(P.l+pw, yp(curT)); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#3a5ba0'; ctx.textAlign='left'; ctx.font='10px JetBrains Mono';
+    ctx.fillText('t='+curT.toFixed(3), P.l+4, yp(curT)-3);
+  }
+}
+
+function drawProfile(rL, uL, pL, rR, uR, pR, curT){
+  var c=document.getElementById('rs17_cprof');
+  var ctx=c.getContext('2d');
+  var W=c.width, H=c.height;
+  ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+  var P={l:40,r:15,t:15,b:30}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+  var Lx=1.5, N=400;
+  var xs=[], rhos=[], us=[], ps=[];
+  var tt = curT < 1e-6 ? 1e-6 : curT;
+  for (var i=0;i<N;i++){
+    var x = -Lx + 2*Lx*i/(N-1);
+    var s = exactRiemann(rL,uL,pL,rR,uR,pR,gamma, x/tt);
+    xs.push(x); rhos.push(s.rho); us.push(s.u); ps.push(s.p);
+  }
+  // Ranges
+  var rMin=Math.min.apply(null,rhos), rMax=Math.max.apply(null,rhos);
+  var pMin=Math.min.apply(null,ps), pMax=Math.max.apply(null,ps);
+  var uMin=Math.min.apply(null,us), uMax=Math.max.apply(null,us);
+  // Normalize each to [0,1] then overlay
+  function norm(v,mn,mx){return mx-mn<1e-12?0.5:(v-mn)/(mx-mn);}
+  function xp(x){return P.l + pw*(x+Lx)/(2*Lx);}
+  function yp(f){return P.t + ph*(1-f*0.33);} // compress to upper third
+  // Grid
+  ctx.strokeStyle='#ede6da'; ctx.lineWidth=0.5;
+  for (var i=0;i<=6;i++){ var y=P.t+ph*i/6; ctx.beginPath(); ctx.moveTo(P.l,y); ctx.lineTo(P.l+pw,y); ctx.stroke(); }
+  for (var i=-3;i<=3;i++){ var x=xp(i*0.5); ctx.beginPath(); ctx.moveTo(x,P.t); ctx.lineTo(x,P.t+ph); ctx.stroke(); }
+  // Three strips: rho (top), p (middle), v (bottom)
+  function drawStrip(arr,mn,mx,yTop,yBot,color,label,lblVal){
+    ctx.strokeStyle=color; ctx.lineWidth=1.8; ctx.beginPath();
+    for (var i=0;i<N;i++){
+      var X=xp(xs[i]);
+      var f=mx-mn<1e-12?0.5:(arr[i]-mn)/(mx-mn);
+      var Y=yTop + (yBot-yTop)*(1-f);
+      i===0 ? ctx.moveTo(X,Y) : ctx.lineTo(X,Y);
+    }
+    ctx.stroke();
+    ctx.fillStyle=color; ctx.font='10px JetBrains Mono'; ctx.textAlign='left';
+    ctx.fillText(label+'∈['+mn.toFixed(2)+', '+mx.toFixed(2)+']', P.l+2, yTop+12);
+  }
+  var h3=ph/3;
+  drawStrip(rhos,rMin,rMax,P.t,P.t+h3,'#3a5ba0','ρ',true);
+  drawStrip(ps,pMin,pMax,P.t+h3,P.t+2*h3,'#b44a2d','p',true);
+  drawStrip(us,uMin,uMax,P.t+2*h3,P.t+3*h3,'#1a6b5a','v',true);
+  // separators
+  ctx.strokeStyle='#d9cfc0'; ctx.lineWidth=0.5;
+  ctx.beginPath(); ctx.moveTo(P.l,P.t+h3); ctx.lineTo(P.l+pw,P.t+h3); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(P.l,P.t+2*h3); ctx.lineTo(P.l+pw,P.t+2*h3); ctx.stroke();
+  // x axis
+  ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+  ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+  for (var i=-1;i<=1;i++) ctx.fillText(i.toFixed(1), xp(i), P.t+ph+14);
+  ctx.fillText('x (при t='+curT.toFixed(3)+')', P.l+pw/2, P.t+ph+26);
+}
+
+function writeOutput(sol, rL, uL, pL, rR, uR, pR){
+  var el = document.getElementById('rs17_out');
+  var html = '<strong>Решение задачи Римана:</strong><br>';
+  html += '<span style="font-family:JetBrains Mono,monospace;font-size:.8rem">';
+  html += 'p* = <strong style="color:#b44a2d">'+sol.ps.toFixed(4)+'</strong>, &nbsp;';
+  html += 'v* = <strong style="color:#1a6b5a">'+sol.us.toFixed(4)+'</strong>, &nbsp;';
+  html += 'ρ*_L = '+sol.rsL.toFixed(4)+', ρ*_R = '+sol.rsR.toFixed(4)+'</span><br>';
+  html += '<span style="font-size:.8rem">';
+  html += '<strong>Левая волна:</strong> ';
+  if (sol.leftShock) html += '<span style="color:#b44a2d">ударная волна</span>, скорость S_L = '+sol.SL.toFixed(3);
+  else html += '<span style="color:#1a6b5a">волна разрежения</span>, голова S_HL = '+sol.SHL.toFixed(3)+', хвост S_TL = '+sol.STL.toFixed(3);
+  html += '<br>';
+  html += '<strong>Контактный разрыв:</strong> скорость v* = '+sol.us.toFixed(3)+', плотности скачком '+sol.rsL.toFixed(3)+' → '+sol.rsR.toFixed(3);
+  html += '<br>';
+  html += '<strong>Правая волна:</strong> ';
+  if (sol.rightShock) html += '<span style="color:#b44a2d">ударная волна</span>, скорость S_R = '+sol.SR.toFixed(3);
+  else html += '<span style="color:#1a6b5a">волна разрежения</span>, голова S_HR = '+sol.SHR.toFixed(3)+', хвост S_TR = '+sol.STR.toFixed(3);
+  html += '</span>';
+  el.innerHTML = html;
+  el.style.display = '';
+}
+
+function compute(){
+  var I = readInputs();
+  if (I.rL<=0||I.rR<=0||I.pL<=0||I.pR<=0){ alert('ρ и p должны быть > 0'); return; }
+  var sol = solveStar(I.rL,I.uL,I.pL,I.rR,I.uR,I.pR);
+  state.sol = sol; state.rL=I.rL; state.uL=I.uL; state.pL=I.pL;
+  state.rR=I.rR; state.uR=I.uR; state.pR=I.pR;
+  // Choose Tmax based on wave speeds
+  var maxAbs = 0.1;
+  [sol.SL,sol.SHL,sol.STL,sol.SR,sol.SHR,sol.STR,sol.us].forEach(function(s){ if (isFinite(s) && Math.abs(s)>maxAbs) maxAbs=Math.abs(s); });
+  state.Tmax = 1.2 / maxAbs;
+  writeOutput(sol, I.rL, I.uL, I.pL, I.rR, I.uR, I.pR);
+  document.getElementById('rs17_animRow').style.display='flex';
+  document.getElementById('rs17_t').value = 600;
+  var curT = 0.6*state.Tmax;
+  drawXT(sol, I.rL, I.uL, I.pL, I.rR, I.uR, I.pR, curT, state.Tmax);
+  drawProfile(I.rL, I.uL, I.pL, I.rR, I.uR, I.pR, curT);
+  document.getElementById('rs17_tv').textContent = curT.toFixed(3);
+}
+function render(curT){
+  drawXT(state.sol, state.rL, state.uL, state.pL, state.rR, state.uR, state.pR, curT, state.Tmax);
+  drawProfile(state.rL, state.uL, state.pL, state.rR, state.uR, state.pR, curT);
+  document.getElementById('rs17_tv').textContent = curT.toFixed(3);
+}
+function play(){
+  if (!state.sol) return;
+  if (state.playId){ cancelAnimationFrame(state.playId); state.playId=null; document.getElementById('rs17_play').textContent='▶ Анимация профиля'; return; }
+  document.getElementById('rs17_play').textContent='⏸ Пауза';
+  var slider=document.getElementById('rs17_t');
+  if (+slider.value >= 995) slider.value = 0;
+  var last = performance.now();
+  var totalMs = 4000;
+  function tick(now){
+    var dtMs = now - last; last = now;
+    var v = +slider.value + dtMs * 1000/totalMs;
+    if (v >= 1000){ slider.value=1000; render(state.Tmax); state.playId=null; document.getElementById('rs17_play').textContent='▶ Анимация профиля'; return; }
+    slider.value = v;
+    render((v/1000) * state.Tmax);
+    state.playId = requestAnimationFrame(tick);
+  }
+  state.playId = requestAnimationFrame(tick);
+}
+function reset(){
+  if (state.playId){ cancelAnimationFrame(state.playId); state.playId=null; document.getElementById('rs17_play').textContent='▶ Анимация профиля'; }
+  document.getElementById('rs17_t').value=0;
+  if (state.sol) render(0);
+}
+
+document.getElementById('rs17_calc').addEventListener('click', compute);
+document.getElementById('rs17_play').addEventListener('click', play);
+document.getElementById('rs17_reset').addEventListener('click', reset);
+document.getElementById('rs17_t').addEventListener('input', function(){
+  if (state.playId){ cancelAnimationFrame(state.playId); state.playId=null; document.getElementById('rs17_play').textContent='▶ Анимация профиля'; }
+  if (state.sol) render((+this.value/1000) * state.Tmax);
+});
+document.getElementById('rs17_preset').addEventListener('change', function(){
+  var p = PRESETS[this.value]; if (!p) return;
+  document.getElementById('rs17_rL').value=p.rL;
+  document.getElementById('rs17_uL').value=p.uL;
+  document.getElementById('rs17_pL').value=p.pL;
+  document.getElementById('rs17_rR').value=p.rR;
+  document.getElementById('rs17_uR').value=p.uR;
+  document.getElementById('rs17_pR').value=p.pR;
+  compute();
+});
+
+window.addEventListener('load', function(){ setTimeout(compute, 200); });
+})();
+</script>
 
 <div class="lecture-nav">
 <a href="s1-16.html" class="nav-prev">← §16. Точная задача Римана</a>

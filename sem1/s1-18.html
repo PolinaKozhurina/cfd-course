@@ -106,6 +106,195 @@ window.MathJax = {
 
 <p><strong>Энтропийная корректность.</strong> Численное решение должно удовлетворять дискретному аналогу энтропийного неравенства, что исключает нефизические разрывы.</p>
 
+<h2 id="interactive">Интерактив: сравнение 4 решателей на Sod-тесте</h2>
+
+<p>Ниже — одновременный запуск всех четырёх решателей (точный из §15, HLL из §21, HLLC из §22, Рое из §19 с энтропийной коррекцией) на тесте Sod. Видно ключевое отличие:</p>
+<ul>
+<li><strong>Точный Годунов и Рое</strong> — резкий контактный разрыв (диссипация ~\(N^{-1/2}\)).</li>
+<li><strong>HLLC</strong> — практически неотличим от Рое на контакте.</li>
+<li><strong>HLL</strong> — заметно размазанный контакт (диссипация ~\(N^{-1/3}\)).</li>
+</ul>
+
+<div id="cmp18" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.6rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Тест</label>
+    <select id="cmp18_test" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <option value="sod">Sod</option>
+      <option value="trans">Трансзвук</option>
+      <option value="blast">Бласт</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">N</label>
+    <input type="number" id="cmp18_N" value="150" min="50" max="400" style="width:80px;background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+  </div>
+  <button id="cmp18_run" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 16px;font-family:'Source Serif 4',serif;font-size:.85rem;font-weight:600;cursor:pointer">▶ Запустить сравнение</button>
+</div>
+<div id="cmp18_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-bottom:.4rem">Готов</div>
+<div style="display:flex;gap:1.2rem;justify-content:center;margin:.4rem 0;font-size:.76rem;color:var(--text2);font-family:'JetBrains Mono',monospace;flex-wrap:wrap">
+  <span><span style="color:#6b5d4f">- -</span> точное</span>
+  <span><span style="color:#b44a2d">—</span> Годунов (точный)</span>
+  <span><span style="color:#3a5ba0">—</span> Рое</span>
+  <span><span style="color:#1a6b5a">—</span> HLLC</span>
+  <span><span style="color:#a0520d">—</span> HLL</span>
+</div>
+<canvas id="cmp18_plot" width="900" height="360" style="width:100%;height:auto;background:#fff;border-radius:6px;border:1px solid var(--border)"></canvas>
+</div>
+
+<script src="../js/gd-interactive.js"></script>
+<script>
+(function(){
+function godunovExact(rL,uL,pL,rR,uR,pR,gamma){
+  var s=GDI.exactRiemann(rL,uL,pL,rR,uR,pR,gamma,0);
+  var gm1=gamma-1; var E=s.p/gm1+0.5*s.rho*s.u*s.u;
+  return [s.rho*s.u, s.rho*s.u*s.u+s.p, s.u*(E+s.p)];
+}
+function hll(rL,uL,pL,rR,uR,pR,gamma){
+  var gm1=gamma-1; var EL=pL/(gm1*rL)+.5*uL*uL, ER=pR/(gm1*rR)+.5*uR*uR;
+  var aL=Math.sqrt(gamma*pL/rL), aR=Math.sqrt(gamma*pR/rR);
+  var SL=Math.min(uL-aL,uR-aR), SR=Math.max(uL+aL,uR+aR);
+  var FL=[rL*uL,rL*uL*uL+pL,uL*(rL*EL+pL)];
+  var FR=[rR*uR,rR*uR*uR+pR,uR*(rR*ER+pR)];
+  if (SL>=0) return FL; if (SR<=0) return FR;
+  var UL=[rL,rL*uL,rL*EL], UR=[rR,rR*uR,rR*ER];
+  var F=[0,0,0];
+  for (var k=0;k<3;k++) F[k]=(SR*FL[k]-SL*FR[k]+SL*SR*(UR[k]-UL[k]))/(SR-SL);
+  return F;
+}
+function hllc(rL,uL,pL,rR,uR,pR,gamma){
+  var gm1=gamma-1; var EL=pL/(gm1*rL)+.5*uL*uL, ER=pR/(gm1*rR)+.5*uR*uR;
+  var aL=Math.sqrt(gamma*pL/rL), aR=Math.sqrt(gamma*pR/rR);
+  var SL=Math.min(uL-aL,uR-aR), SR=Math.max(uL+aL,uR+aR);
+  var SS=(pR-pL+rL*uL*(SL-uL)-rR*uR*(SR-uR))/(rL*(SL-uL)-rR*(SR-uR));
+  var FL=[rL*uL,rL*uL*uL+pL,uL*(rL*EL+pL)];
+  var FR=[rR*uR,rR*uR*uR+pR,uR*(rR*ER+pR)];
+  if (SL>=0) return FL; if (SR<=0) return FR;
+  var UL=[rL,rL*uL,rL*EL], UR=[rR,rR*uR,rR*ER];
+  function st(r,u,E,p,S){var c=r*(S-u)/(S-SS); return [c,c*SS,c*(E+(SS-u)*(SS+p/(r*(S-u))))];}
+  if (SS>=0){var USL=st(rL,uL,EL,pL,SL); return FL.map(function(f,k){return f+SL*(USL[k]-UL[k]);});}
+  var USR=st(rR,uR,ER,pR,SR); return FR.map(function(f,k){return f+SR*(USR[k]-UR[k]);});
+}
+function roe(rL,uL,pL,rR,uR,pR,gamma){
+  var gm1=gamma-1;
+  var EL=pL/(gm1*rL)+.5*uL*uL, ER=pR/(gm1*rR)+.5*uR*uR;
+  var HL=EL+pL/rL, HR=ER+pR/rR;
+  var sqL=Math.sqrt(rL), sqR=Math.sqrt(rR), sq=sqL+sqR;
+  var uT=(sqL*uL+sqR*uR)/sq, HT=(sqL*HL+sqR*HR)/sq;
+  var aT2=gm1*(HT-0.5*uT*uT); if (aT2<1e-12) aT2=1e-12;
+  var aT=Math.sqrt(aT2);
+  var dr=rR-rL, du=uR-uL, dp=pR-pL;
+  var a2=dr-dp/aT2, a1=(dp-sqL*sqR*aT*du)/(2*aT2), a3=(dp+sqL*sqR*aT*du)/(2*aT2);
+  var lam1=uT-aT, lam2=uT, lam3=uT+aT;
+  var delta=0.1*(Math.abs(uT)+aT);
+  function fix(l){if (Math.abs(l)<delta && delta>1e-14) return (l*l+delta*delta)/(2*delta); return Math.abs(l);}
+  var L1=fix(lam1), L2=fix(lam2), L3=fix(lam3);
+  var r1=[1,uT-aT,HT-uT*aT], r2=[1,uT,0.5*uT*uT], r3=[1,uT+aT,HT+uT*aT];
+  var FL=[rL*uL,rL*uL*uL+pL,uL*(rL*EL+pL)], FR=[rR*uR,rR*uR*uR+pR,uR*(rR*ER+pR)];
+  var F=[0,0,0];
+  for (var k=0;k<3;k++) F[k]=0.5*(FL[k]+FR[k])-0.5*(L1*a1*r1[k]+L2*a2*r2[k]+L3*a3*r3[k]);
+  return F;
+}
+
+var TESTS_18 = {
+  sod: { rL:1.0, uL:0.0, pL:1.0, rR:0.125, uR:0.0, pR:0.1, tend:0.20, x0:0.5, xmin:0, xmax:1 },
+  trans: { rL:1.0, uL:0.75, pL:1.0, rR:0.125, uR:0.0, pR:0.1, tend:0.035, x0:0.3, xmin:0, xmax:1 },
+  blast: { rL:1.0, uL:0.0, pL:1000.0, rR:1.0, uR:0.0, pR:0.01, tend:0.012, x0:0.5, xmin:0, xmax:1 }
+};
+
+function runOne(fluxFn, T, N){
+  var gamma=1.4, gm1=0.4, CFL=0.5;
+  var dx=(T.xmax-T.xmin)/N, Ng=2, Nt=N+2*Ng;
+  var U=[new Float64Array(Nt), new Float64Array(Nt), new Float64Array(Nt)];
+  for (var i=0;i<Nt;i++){
+    var x=T.xmin+(i-Ng+0.5)*dx;
+    var rr=x<T.x0?T.rL:T.rR, uu=x<T.x0?T.uL:T.uR, pp=x<T.x0?T.pL:T.pR;
+    U[0][i]=rr; U[1][i]=rr*uu; U[2][i]=pp/gm1+0.5*rr*uu*uu;
+  }
+  function bc(V){for (var g=0;g<Ng;g++) for (var k=0;k<3;k++){V[k][g]=V[k][Ng]; V[k][N+Ng+g]=V[k][N+Ng-1];}}
+  function prim(V,i){var rr=V[0][i],uu=V[1][i]/rr,EE=V[2][i];var pp=gm1*(EE-0.5*rr*uu*uu);return {r:rr,u:uu,p:Math.max(pp,1e-10),a:Math.sqrt(gamma*Math.max(pp,1e-10)/Math.max(rr,1e-10))};}
+  var t=0, ns=0;
+  while (t<T.tend && ns<20000){
+    bc(U);
+    var mx=0;
+    for (var i=Ng;i<N+Ng;i++){var p=prim(U,i); var l=Math.abs(p.u)+p.a; if (l>mx) mx=l;}
+    var dt=CFL*dx/mx; if (t+dt>T.tend) dt=T.tend-t;
+    var RHS=[new Float64Array(Nt), new Float64Array(Nt), new Float64Array(Nt)];
+    for (var i=Ng-1;i<N+Ng;i++){
+      var pL=prim(U,i), pR=prim(U,i+1);
+      var F=fluxFn(pL.r,pL.u,pL.p, pR.r,pR.u,pR.p, gamma);
+      for (var k=0;k<3;k++){RHS[k][i]-=F[k]/dx; RHS[k][i+1]+=F[k]/dx;}
+    }
+    for (var k=0;k<3;k++) for (var i=0;i<Nt;i++) U[k][i]+=dt*RHS[k][i];
+    t+=dt; ns++;
+  }
+  var xc=[], rhos=[];
+  for (var i=Ng;i<N+Ng;i++){xc.push(T.xmin+(i-Ng+0.5)*dx); rhos.push(prim(U,i).r);}
+  return {xc:xc, rho:rhos};
+}
+
+function run18(){
+  var btn=document.getElementById('cmp18_run'); btn.disabled=true;
+  document.getElementById('cmp18_status').textContent='Считаю 4 решателя...';
+  requestAnimationFrame(function(){ setTimeout(function(){
+    try {
+      var tkey=document.getElementById('cmp18_test').value;
+      var N=+document.getElementById('cmp18_N').value;
+      var T=TESTS_18[tkey];
+      var t0=performance.now();
+      var rG=runOne(godunovExact, T, N);
+      var rR=runOne(roe, T, N);
+      var rC=runOne(hllc, T, N);
+      var rH=runOne(hll, T, N);
+      var el=(performance.now()-t0).toFixed(0);
+      // Exact
+      var Ne=400, xe=[], re=[];
+      for (var i=0;i<Ne;i++){var x=T.xmin+(T.xmax-T.xmin)*(i+0.5)/Ne; var s=GDI.exactRiemann(T.rL,T.uL,T.pL,T.rR,T.uR,T.pR,1.4,(x-T.x0)/T.tend); xe.push(x); re.push(s.rho);}
+      draw18(rG, rR, rC, rH, xe, re, T);
+      document.getElementById('cmp18_status').textContent='✓ N='+N+', t='+T.tend+', общее время '+el+' мс';
+    } catch(e){ document.getElementById('cmp18_status').textContent='Ошибка: '+e.message; }
+    btn.disabled=false;
+  }, 20); });
+}
+function draw18(rG, rR, rC, rH, xe, re, T){
+  var c=document.getElementById('cmp18_plot');
+  var ctx=c.getContext('2d'); var W=c.width, H=c.height;
+  ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+  var P={l:50,r:15,t:15,b:30}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+  var mn=1e9, mx=-1e9;
+  [rG.rho, rR.rho, rC.rho, rH.rho, re].forEach(function(arr){ for (var i=0;i<arr.length;i++){if (arr[i]<mn) mn=arr[i]; if (arr[i]>mx) mx=arr[i];}});
+  var pad=(mx-mn)*0.08; mn-=pad; mx+=pad;
+  ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+  for (var g=0;g<=5;g++){var gy=P.t+ph*g/5; ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke();}
+  function xp(x){return P.l+pw*(x-T.xmin)/(T.xmax-T.xmin);}
+  function yp(v){return P.t+ph*(1-(v-mn)/(mx-mn));}
+  // Exact
+  ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=2; ctx.setLineDash([6,4]);
+  ctx.beginPath(); for (var i=0;i<xe.length;i++){ i===0?ctx.moveTo(xp(xe[i]),yp(re[i])):ctx.lineTo(xp(xe[i]),yp(re[i])); } ctx.stroke();
+  ctx.setLineDash([]);
+  // Methods
+  function plot(res, col){
+    ctx.strokeStyle=col; ctx.lineWidth=1.6;
+    ctx.beginPath(); for (var i=0;i<res.xc.length;i++){ i===0?ctx.moveTo(xp(res.xc[i]),yp(res.rho[i])):ctx.lineTo(xp(res.xc[i]),yp(res.rho[i])); } ctx.stroke();
+  }
+  plot(rG, '#b44a2d');
+  plot(rR, '#3a5ba0');
+  plot(rC, '#1a6b5a');
+  plot(rH, '#a0520d');
+  // Axes
+  ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+  ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+  for (var i=0;i<=10;i+=2){ ctx.fillText((T.xmin+(T.xmax-T.xmin)*i/10).toFixed(1), xp(T.xmin+(T.xmax-T.xmin)*i/10), P.t+ph+14); }
+  ctx.fillText('ρ(x) при t='+T.tend, P.l+pw/2, P.t+ph+28);
+  ctx.textAlign='right';
+  for (var g=0;g<=5;g++) ctx.fillText((mx-(mx-mn)*g/5).toFixed(2), P.l-3, P.t+ph*g/5+3);
+}
+document.getElementById('cmp18_run').addEventListener('click', run18);
+window.addEventListener('load', function(){ setTimeout(run18, 300); });
+})();
+</script>
+
 <div class="lecture-nav">
 <a href="s1-17.html" class="nav-prev">← §17. Точный решатель</a>
 <a href="s1-19.html" class="nav-next">§19. Метод Рое →</a>

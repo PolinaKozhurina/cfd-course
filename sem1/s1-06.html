@@ -213,6 +213,14 @@ a_k^{(m)} = \frac{1}{N+1} \sum_{n=1}^{N+1} f_n^{(m)} \cdot \exp[i(kh) \cdot n].
     </select>
   </div>
   <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Схема</label>
+    <select id="scheme-type" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)">
+      <option value="both">Обе (сравнение)</option>
+      <option value="upwind">Только уголок (1-й порядок)</option>
+      <option value="lw">Только Лакс-Вендрофф (2-й порядок)</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
     <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Число Куранта r = <span id="r-val">0.80</span></label>
     <input type="range" id="r-slider" min="5" max="95" value="80" style="width:140px">
   </div>
@@ -225,10 +233,10 @@ a_k^{(m)} = \frac{1}{N+1} \sum_{n=1}^{N+1} f_n^{(m)} \cdot \exp[i(kh) \cdot n].
 </div>
 <div style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-bottom:.4rem">Шаг: <span id="step-num">0</span></div>
 <canvas id="plot-canvas" width="900" height="320" style="width:100%;height:auto;background:#fff;border-radius:6px;border:1px solid var(--border)"></canvas>
-<div style="display:flex;gap:1.5rem;justify-content:center;margin-top:.5rem;font-size:.78rem;color:var(--text2);font-family:'JetBrains Mono',monospace;flex-wrap:wrap">
+<div id="legend-row" style="display:flex;gap:1.5rem;justify-content:center;margin-top:.5rem;font-size:.78rem;color:var(--text2);font-family:'JetBrains Mono',monospace;flex-wrap:wrap">
   <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:2px;background:#9a8d7e"></span> точное решение</span>
-  <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:2px;background:#b44a2d"></span> уголок (1-й порядок)</span>
-  <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:2px;background:#3a5ba0"></span> Лакс–Вендрофф (2-й порядок)</span>
+  <span id="leg-up" style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:2px;background:#b44a2d"></span> уголок (1-й порядок)</span>
+  <span id="leg-lw" style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:2px;background:#3a5ba0"></span> Лакс–Вендрофф (2-й порядок)</span>
 </div>
 <div id="analysis-text" style="margin-top:.8rem;padding:.8rem;background:#fff;border:1px solid var(--border);border-radius:6px;font-size:.88rem;display:none"></div>
 </div>
@@ -285,10 +293,13 @@ a_k^{(m)} = \frac{1}{N+1} \sum_{n=1}^{N+1} f_n^{(m)} \cdot \exp[i(kh) \cdot n].
     var ctx = canvas.getContext('2d');
     var W = canvas.width, H = canvas.height;
     ctx.clearRect(0,0,W,H);
+    var scheme = document.getElementById('scheme-type').value;
+    var showUp = (scheme === 'both' || scheme === 'upwind');
+    var showLW = (scheme === 'both' || scheme === 'lw');
     var mn = -0.15, mx = 1.25;
     for (var i=0;i<N;i++) {
-      mn = Math.min(mn, u1arr[i], u2arr[i]);
-      mx = Math.max(mx, u1arr[i], u2arr[i]);
+      if (showUp) { mn = Math.min(mn, u1arr[i]); mx = Math.max(mx, u1arr[i]); }
+      if (showLW) { mn = Math.min(mn, u2arr[i]); mx = Math.max(mx, u2arr[i]); }
     }
     var pad = (mx-mn)*0.1; mn -= pad; mx += pad;
     var px = 45, py = 15, pw = W-65, ph = H-45;
@@ -310,17 +321,21 @@ a_k^{(m)} = \frac{1}{N+1} \sum_{n=1}^{N+1} f_n^{(m)} \cdot \exp[i(kh) \cdot n].
     for (var i=0; i<N; i++) { i===0 ? ctx.moveTo(xp(i),yp(ueArr[i])) : ctx.lineTo(xp(i),yp(ueArr[i])); }
     ctx.stroke(); ctx.setLineDash([]);
 
-    // Upwind (red)
-    ctx.strokeStyle = '#b44a2d'; ctx.lineWidth = 2;
-    ctx.beginPath();
-    for (var i=0; i<N; i++) { i===0 ? ctx.moveTo(xp(i),yp(u1arr[i])) : ctx.lineTo(xp(i),yp(u1arr[i])); }
-    ctx.stroke();
+    // Upwind (red) — only if selected
+    if (showUp){
+      ctx.strokeStyle = '#b44a2d'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (var i=0; i<N; i++) { i===0 ? ctx.moveTo(xp(i),yp(u1arr[i])) : ctx.lineTo(xp(i),yp(u1arr[i])); }
+      ctx.stroke();
+    }
 
-    // Lax-Wendroff (blue)
-    ctx.strokeStyle = '#3a5ba0'; ctx.lineWidth = 2;
-    ctx.beginPath();
-    for (var i=0; i<N; i++) { i===0 ? ctx.moveTo(xp(i),yp(u2arr[i])) : ctx.lineTo(xp(i),yp(u2arr[i])); }
-    ctx.stroke();
+    // Lax-Wendroff (blue) — only if selected
+    if (showLW){
+      ctx.strokeStyle = '#3a5ba0'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (var i=0; i<N; i++) { i===0 ? ctx.moveTo(xp(i),yp(u2arr[i])) : ctx.lineTo(xp(i),yp(u2arr[i])); }
+      ctx.stroke();
+    }
 
     // Axes labels
     ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
@@ -331,20 +346,25 @@ a_k^{(m)} = \frac{1}{N+1} \sum_{n=1}^{N+1} f_n^{(m)} \cdot \exp[i(kh) \cdot n].
 
   function analyze(type, r, steps) {
     var el = document.getElementById('analysis-text');
+    var scheme = document.getElementById('scheme-type').value;
     var txt = '<strong>Наблюдения:</strong><br>';
-    txt += '<span style="color:#b44a2d">■ Уголок (1-й порядок)</span> — сильная <em>диссипация</em>: профиль размазывается, амплитуда падает. ';
-    if (r < 0.4) txt += 'При r='+r.toFixed(2)+' диссипация максимальна для средних частот. ';
-    else if (r > 0.9) txt += 'При r≈1 диссипация минимальна (почти точный перенос). ';
-    txt += 'Дисперсии почти нет — нет осцилляций.<br>';
-    txt += '<span style="color:#3a5ba0">■ Лакс–Вендрофф (2-й порядок)</span> — малая диссипация (амплитуда сохраняется лучше), но видна <em>дисперсия</em>: ';
-    if (type === 'step' || type === 'triangle')
-      txt += 'осцилляции перед и за фронтом — гармоники движутся с разными скоростями, «пакет» разъезжается. ';
-    else
-      txt += 'при гладких условиях дисперсия мала, но при ступеньке/треугольнике будет хорошо видна. ';
-    if (r > 0.5 && (type==='step'||type==='triangle'))
-      txt += 'При r>0.5 дисперсия <em>аномальная</em>: осцилляции <em>перед</em> фронтом (предвестники). ';
-    else if (type==='step'||type==='triangle')
-      txt += 'При r<0.5 дисперсия <em>нормальная</em>: осцилляции <em>за</em> фронтом. ';
+    if (scheme === 'upwind' || scheme === 'both'){
+      txt += '<span style="color:#b44a2d">■ Уголок (1-й порядок)</span> — сильная <em>диссипация</em>: профиль размазывается, амплитуда падает. ';
+      if (r < 0.4) txt += 'При r='+r.toFixed(2)+' диссипация максимальна для средних частот. ';
+      else if (r > 0.9) txt += 'При r≈1 диссипация минимальна (почти точный перенос). ';
+      txt += 'Дисперсии почти нет — нет осцилляций.<br>';
+    }
+    if (scheme === 'lw' || scheme === 'both'){
+      txt += '<span style="color:#3a5ba0">■ Лакс–Вендрофф (2-й порядок)</span> — малая диссипация (амплитуда сохраняется лучше), но видна <em>дисперсия</em>: ';
+      if (type === 'step' || type === 'triangle')
+        txt += 'осцилляции перед и за фронтом — гармоники движутся с разными скоростями, «пакет» разъезжается. ';
+      else
+        txt += 'при гладких условиях дисперсия мала, но при ступеньке/треугольнике будет хорошо видна. ';
+      if (r > 0.5 && (type==='step'||type==='triangle'))
+        txt += 'При r>0.5 дисперсия <em>аномальная</em>: осцилляции <em>перед</em> фронтом (предвестники). ';
+      else if (type==='step'||type==='triangle')
+        txt += 'При r<0.5 дисперсия <em>нормальная</em>: осцилляции <em>за</em> фронтом. ';
+    }
     el.innerHTML = txt;
     el.style.display = '';
   }
@@ -390,6 +410,18 @@ a_k^{(m)} = \frac{1}{N+1} \sum_{n=1}^{N+1} f_n^{(m)} \cdot \exp[i(kh) \cdot n].
   document.getElementById('stop-btn').addEventListener('click', stopAnim);
   document.getElementById('r-slider').addEventListener('input', function(){ document.getElementById('r-val').textContent = (this.value/100).toFixed(2); });
   document.getElementById('steps-slider').addEventListener('input', function(){ document.getElementById('steps-val').textContent = this.value; });
+  document.getElementById('scheme-type').addEventListener('change', function(){
+    var s = this.value;
+    document.getElementById('leg-up').style.display = (s==='both'||s==='upwind') ? '' : 'none';
+    document.getElementById('leg-lw').style.display = (s==='both'||s==='lw') ? '' : 'none';
+    // Redraw current frame with new selector
+    if (u1 && u2 && u0){
+      var type = document.getElementById('ic-type').value;
+      var r = parseInt(document.getElementById('r-slider').value)/100;
+      var ue = exactShift(u0, r, animStep);
+      draw(u1, u2, ue, animStep, r, type);
+    }
+  });
 
   // Initial static draw
   setTimeout(function(){

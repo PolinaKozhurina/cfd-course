@@ -192,6 +192,208 @@ f^{\pm}(u) = \frac{1}{2}\bigl(f(u) \pm \alpha u\bigr), \qquad \alpha \ge \max|f'
 <strong>Историческая справка.</strong> WENO-схемы были предложены Liu, Osher, Chan (1994) и развиты Jiang, Shu (1996). Схема WENO5 (пятого порядка) является наиболее распространённой в практических вычислениях и стала стандартом для задач газовой динамики с сильными ударами.
 </div>
 
+<h2 id="interactive">Интерактив: WENO-3 vs ENO-3 vs уголок на скалярном переносе</h2>
+
+<p>Ниже — сравнение WENO-3 (со сглаженным выбором шаблона) с ENO-3 из §25 и простым уголком на уравнении переноса \(u_t + u_x = 0\). На гладких данных WENO-3 и ENO-3 неотличимы. На ступеньке WENO-3 обычно чуть глаже (меньше «всплесков») чем ENO-3.</p>
+
+<div id="weno_demo" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.6rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">НУ</label>
+    <select id="weno_ic" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <option value="step">Ступенька</option>
+      <option value="gauss">Гауссиан</option>
+      <option value="mixed">Смешанное</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">CFL = <span id="weno_cflv">0.40</span></label>
+    <input type="range" id="weno_cfl" min="10" max="80" value="40" style="width:120px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Шагов: <span id="weno_nsv">150</span></label>
+    <input type="range" id="weno_ns" min="20" max="400" value="150" style="width:120px">
+  </div>
+  <button id="weno_run" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 16px;font-family:'Source Serif 4',serif;font-size:.85rem;font-weight:600;cursor:pointer">▶ Запуск</button>
+</div>
+<canvas id="weno_plot" width="900" height="300" style="width:100%;height:auto;background:#fff;border-radius:6px;border:1px solid var(--border)"></canvas>
+<div style="display:flex;gap:1.2rem;justify-content:center;margin-top:.4rem;font-size:.76rem;color:var(--text2);font-family:'JetBrains Mono',monospace;flex-wrap:wrap">
+  <span><span style="color:#9a8d7e">- -</span> точное</span>
+  <span><span style="color:#1a6b5a">—</span> уголок</span>
+  <span><span style="color:#b44a2d">—</span> ENO-3</span>
+  <span><span style="color:#3a5ba0">—</span> WENO-3</span>
+</div>
+<div id="weno_msg" style="margin-top:.6rem;padding:.6rem;background:#fff;border:1px solid var(--border);border-radius:6px;font-size:.85rem;display:none"></div>
+</div>
+
+<script>
+(function(){
+var N = 150, L = 2*Math.PI, h = L/N;
+function ic(t){
+  var u = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var x = i*h;
+    if (t==='step') u[i] = (x >= 0.4*Math.PI && x <= 0.8*Math.PI) ? 1 : 0;
+    else if (t==='gauss') u[i] = Math.exp(-Math.pow((x-Math.PI)/(0.35*Math.PI),2));
+    else u[i] = (x >= 0.2*Math.PI && x <= 0.5*Math.PI) ? 1 : (x>=0.9*Math.PI && x<=1.6*Math.PI ? 0.5*(1+Math.sin(4*(x-0.9*Math.PI))) : 0);
+  }
+  return u;
+}
+function stepUp(u,r){ var v=new Float64Array(N); for(var i=0;i<N;i++) v[i]=(1-r)*u[i]+r*u[(i-1+N)%N]; return v; }
+
+// ENO-3 flux at i+1/2 (upwind, c=1)
+function enoFlux(u, i){
+  var im2=u[(i-2+N)%N], im1=u[(i-1+N)%N], ui=u[i], ip1=u[(i+1)%N];
+  var d2L = im2 - 2*im1 + ui;
+  var d2R = im1 - 2*ui + ip1;
+  var pL = (1/3)*im2 - (7/6)*im1 + (11/6)*ui;
+  var pR = -(1/6)*im1 + (5/6)*ui + (1/3)*ip1;
+  return (Math.abs(d2L) < Math.abs(d2R)) ? pL : pR;
+}
+
+// WENO-3 flux at i+1/2 (upwind, c=1)
+// Two sub-stencils of 2 points; ideal weights d0=1/3, d1=2/3.
+function wenoFlux(u, i){
+  var im1=u[(i-1+N)%N], ui=u[i], ip1=u[(i+1)%N];
+  // Stencil 0: {im1, ui} -> 1/2 * ( -ui + 3*... ) no, use standard WENO3 coefficients
+  // Reconstruct u_{i+1/2} from two 2-point stencils:
+  var p0 = -0.5*im1 + 1.5*ui;       // stencil {im1, ui}
+  var p1 =  0.5*ui  + 0.5*ip1;      // stencil {ui, ip1}
+  // Smoothness indicators (Jiang-Shu):
+  var beta0 = (ui - im1)*(ui - im1);
+  var beta1 = (ip1 - ui)*(ip1 - ui);
+  var eps = 1e-6;
+  var d0 = 1/3, d1 = 2/3;
+  var a0 = d0 / Math.pow(eps + beta0, 2);
+  var a1 = d1 / Math.pow(eps + beta1, 2);
+  var w0 = a0 / (a0+a1);
+  var w1 = a1 / (a0+a1);
+  return w0*p0 + w1*p1;
+}
+function stepENO_SSP(u, r){
+  var u1 = new Float64Array(N);
+  for (var i=0;i<N;i++){ var fp = enoFlux(u, i), fm = enoFlux(u, (i-1+N)%N); u1[i] = u[i] - r*(fp - fm); }
+  var u2 = new Float64Array(N);
+  for (var i=0;i<N;i++){ var fp = enoFlux(u1, i), fm = enoFlux(u1, (i-1+N)%N); u2[i] = 0.75*u[i] + 0.25*(u1[i] - r*(fp - fm)); }
+  var v = new Float64Array(N);
+  for (var i=0;i<N;i++){ var fp = enoFlux(u2, i), fm = enoFlux(u2, (i-1+N)%N); v[i] = (1/3)*u[i] + (2/3)*(u2[i] - r*(fp - fm)); }
+  return v;
+}
+function stepWENO_SSP(u, r){
+  var u1 = new Float64Array(N);
+  for (var i=0;i<N;i++){ var fp = wenoFlux(u, i), fm = wenoFlux(u, (i-1+N)%N); u1[i] = u[i] - r*(fp - fm); }
+  var u2 = new Float64Array(N);
+  for (var i=0;i<N;i++){ var fp = wenoFlux(u1, i), fm = wenoFlux(u1, (i-1+N)%N); u2[i] = 0.75*u[i] + 0.25*(u1[i] - r*(fp - fm)); }
+  var v = new Float64Array(N);
+  for (var i=0;i<N;i++){ var fp = wenoFlux(u2, i), fm = wenoFlux(u2, (i-1+N)%N); v[i] = (1/3)*u[i] + (2/3)*(u2[i] - r*(fp - fm)); }
+  return v;
+}
+function shift(u, r, n){
+  var s = r*n*h, v = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var xs = ((i*h - s) % L + L) % L;
+    var j = Math.floor(xs/h), f = xs/h - j;
+    v[i] = (1-f)*u[j%N] + f*u[(j+1)%N];
+  }
+  return v;
+}
+function tv(u){ var s=0; for(var i=0;i<N;i++) s+=Math.abs(u[(i+1)%N]-u[i]); return s; }
+
+var wState = { u0:null, uUp:null, uENO:null, uWENO:null, step:0, target:0, r:0.4, ic:'step', animId:null };
+
+function draw(u0arr, uUp, uENO, uWENO, stepNum){
+  var c = document.getElementById('weno_plot');
+  var ctx = c.getContext('2d');
+  var W = c.width, H = c.height;
+  ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+  var P={l:40,r:15,t:15,b:30}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+  var mn=-0.25, mx=1.3;
+  for (var i=0;i<N;i++){ mn=Math.min(mn,uUp[i],uENO[i],uWENO[i]); mx=Math.max(mx,uUp[i],uENO[i],uWENO[i]); }
+  var pad=(mx-mn)*0.08; mn-=pad; mx+=pad;
+  ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+  for (var g=0;g<=5;g++){ var gy=P.t+ph*g/5; ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke(); }
+  function xp(i){ return P.l + pw*i/N; }
+  function yp(v){ return P.t + ph*(1-(v-mn)/(mx-mn)); }
+  var ex = shift(u0arr, wState.r, stepNum);
+  ctx.strokeStyle='#9a8d7e'; ctx.lineWidth=2.5; ctx.setLineDash([6,3]);
+  ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(ex[i])):ctx.lineTo(xp(i),yp(ex[i])); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle='#1a6b5a'; ctx.lineWidth=1.6;
+  ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(uUp[i])):ctx.lineTo(xp(i),yp(uUp[i])); ctx.stroke();
+  ctx.strokeStyle='#b44a2d'; ctx.lineWidth=1.6;
+  ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(uENO[i])):ctx.lineTo(xp(i),yp(uENO[i])); ctx.stroke();
+  ctx.strokeStyle='#3a5ba0'; ctx.lineWidth=2;
+  ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(uWENO[i])):ctx.lineTo(xp(i),yp(uWENO[i])); ctx.stroke();
+  ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+  ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+  ctx.fillText('0', P.l, P.t+ph+14); ctx.fillText('π', P.l+pw/2, P.t+ph+14); ctx.fillText('2π', P.l+pw, P.t+ph+14);
+  ctx.fillText('шаг '+stepNum+' / '+wState.target, P.l+pw/2, P.t+ph+28);
+  ctx.textAlign='right';
+  for (var g=0;g<=5;g++) ctx.fillText((mx-(mx-mn)*g/5).toFixed(2), P.l-3, P.t+ph*g/5+3);
+}
+function analyze(icName, uUp, uENO, uWENO){
+  var tv0 = tv(wState.u0);
+  var tvU = tv(uUp), tvE = tv(uENO), tvW = tv(uWENO);
+  var html = '<strong>Полные вариации (было '+tv0.toFixed(3)+'):</strong> ';
+  html += 'уголок = <span style="color:#1a6b5a">'+tvU.toFixed(3)+'</span>, ';
+  html += 'ENO-3 = <span style="color:#b44a2d">'+tvE.toFixed(3)+'</span>, ';
+  html += 'WENO-3 = <span style="color:#3a5ba0">'+tvW.toFixed(3)+'</span>.<br>';
+  if (icName === 'step')
+    html += '<em>На разрыве:</em> WENO-3 даёт осцилляции близкие к ENO-3, но гладко переходит между шаблонами — нет резких «скачков» выбора в соседних ячейках.';
+  else if (icName === 'gauss')
+    html += '<em>На гладкой функции:</em> ENO-3 и WENO-3 практически неразличимы — оба дают 3-й порядок. Уголок заметно потерял амплитуду.';
+  else
+    html += '<em>Смешанный режим:</em> WENO-3 одновременно сохраняет резкость разрыва и гладкость волнового пакета — типичная ниша применимости.';
+  var el = document.getElementById('weno_msg'); el.innerHTML = html; el.style.display = '';
+}
+function runW(){
+  var icName = document.getElementById('weno_ic').value;
+  var r = +document.getElementById('weno_cfl').value/100;
+  var ns = +document.getElementById('weno_ns').value;
+  document.getElementById('weno_cflv').textContent = r.toFixed(2);
+  document.getElementById('weno_nsv').textContent = ns;
+  if (wState.animId){ cancelAnimationFrame(wState.animId); wState.animId = null; }
+  wState.u0 = ic(icName);
+  wState.uUp = new Float64Array(wState.u0);
+  wState.uENO = new Float64Array(wState.u0);
+  wState.uWENO = new Float64Array(wState.u0);
+  wState.step = 0; wState.target = ns; wState.r = r; wState.ic = icName;
+  document.getElementById('weno_msg').style.display = 'none';
+  var btn = document.getElementById('weno_run');
+  btn.textContent = '⏸ Стоп';
+  function frame(){
+    if (wState.step >= wState.target){
+      btn.textContent = '▶ Запуск';
+      analyze(wState.ic, wState.uUp, wState.uENO, wState.uWENO);
+      wState.animId = null;
+      return;
+    }
+    for (var k=0;k<2 && wState.step < wState.target;k++){
+      wState.uUp = stepUp(wState.uUp, wState.r);
+      wState.uENO = stepENO_SSP(wState.uENO, wState.r);
+      wState.uWENO = stepWENO_SSP(wState.uWENO, wState.r);
+      wState.step++;
+    }
+    draw(wState.u0, wState.uUp, wState.uENO, wState.uWENO, wState.step);
+    wState.animId = requestAnimationFrame(frame);
+  }
+  frame();
+}
+function toggleW(){
+  if (wState.animId){
+    cancelAnimationFrame(wState.animId); wState.animId = null;
+    document.getElementById('weno_run').textContent = '▶ Запуск';
+    if (wState.uWENO) analyze(wState.ic, wState.uUp, wState.uENO, wState.uWENO);
+  } else runW();
+}
+document.getElementById('weno_run').addEventListener('click', toggleW);
+document.getElementById('weno_cfl').addEventListener('input', function(){ document.getElementById('weno_cflv').textContent = (this.value/100).toFixed(2); });
+document.getElementById('weno_ns').addEventListener('input', function(){ document.getElementById('weno_nsv').textContent = this.value; });
+window.addEventListener('load', function(){ setTimeout(runW, 250); });
+})();
+</script>
+
 <div class="lecture-nav">
 <a href="s1-25.html" class="nav-prev">← §25. ENO-схемы</a>
 <a href="s1-27.html" class="nav-next">§27. Метод МакКормака →</a>

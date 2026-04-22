@@ -240,26 +240,16 @@ function shift(u, r, n){
   return v;
 }
 
-function runSel(){
-  var ic0 = ic(document.getElementById('enoSelIC').value);
-  var r = 0.5;
-  var nsteps = +document.getElementById('enoSt').value;
-  document.getElementById('enoStv').textContent = nsteps;
-  var u = new Float64Array(ic0);
-  var lastSten = new Uint8Array(N);
-  for (var s=0;s<nsteps;s++){
-    var res = stepENO(u, r);
-    u = res.u;
-    lastSten = res.sten;
-  }
-  var ex = shift(ic0, r, nsteps);
+// Animation state
+var selState = { u0:null, u:null, lastSten:null, step:0, target:0, r:0.5, animId:null };
 
+function drawSel(u0arr, u, lastSten, stepNum){
+  var ex = shift(u0arr, selState.r, stepNum);
   var c = document.getElementById('enoSelPlot');
   var ctx = c.getContext('2d');
   var W = c.width, H = c.height;
   ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
   var P={l:40,r:15,t:40,b:30}, pw=W-P.l-P.r, ph=H-P.t-P.b;
-  // color strip of stencil choice at top
   var stripY = 8, stripH = 20;
   for (var i=0;i<N;i++){
     var X = P.l + pw*i/N;
@@ -268,21 +258,17 @@ function runSel(){
     ctx.fillRect(X, stripY, Xn-X+0.5, stripH);
   }
   ctx.fillStyle='#2c2419'; ctx.font='10px JetBrains Mono'; ctx.textAlign='left';
-  ctx.fillText('Выбор шаблона в каждой ячейке ↓', P.l, stripY-2);
-  // grid
+  ctx.fillText('Выбор шаблона в каждой ячейке ↓  (шаг '+stepNum+' / '+selState.target+')', P.l, stripY-2);
   var mn = -0.1, mx = 1.15;
   ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
   for (var g=0;g<=5;g++){ var gy = P.t + ph*g/5; ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke(); }
   function xp(i){ return P.l + pw*i/N; }
   function yp(v){ return P.t + ph*(1 - (v-mn)/(mx-mn)); }
-  // exact
   ctx.strokeStyle='#9a8d7e'; ctx.lineWidth=2; ctx.setLineDash([5,3]);
   ctx.beginPath(); for (var i=0;i<N;i++) i===0 ? ctx.moveTo(xp(i),yp(ex[i])) : ctx.lineTo(xp(i),yp(ex[i])); ctx.stroke();
   ctx.setLineDash([]);
-  // ENO solution
   ctx.strokeStyle='#3a5ba0'; ctx.lineWidth=2;
   ctx.beginPath(); for (var i=0;i<N;i++) i===0 ? ctx.moveTo(xp(i),yp(u[i])) : ctx.lineTo(xp(i),yp(u[i])); ctx.stroke();
-  // axes
   ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(P.l, P.t); ctx.lineTo(P.l, P.t+ph); ctx.lineTo(P.l+pw, P.t+ph); ctx.stroke();
   ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
@@ -294,7 +280,46 @@ function runSel(){
   ctx.fillStyle='#9a8d7e'; ctx.fillText('- - точное', P.l+pw-90, P.t+22);
 }
 
-document.getElementById('enoRunSel').addEventListener('click', runSel);
+function runSel(){
+  var nsteps = +document.getElementById('enoSt').value;
+  document.getElementById('enoStv').textContent = nsteps;
+  if (selState.animId){ cancelAnimationFrame(selState.animId); selState.animId = null; }
+  selState.u0 = ic(document.getElementById('enoSelIC').value);
+  selState.u = new Float64Array(selState.u0);
+  selState.lastSten = new Uint8Array(N);
+  selState.step = 0;
+  selState.target = nsteps;
+  selState.r = 0.5;
+  var runBtn = document.getElementById('enoRunSel');
+  runBtn.textContent = '⏸ Стоп';
+  function frame(){
+    if (selState.step >= selState.target){
+      runBtn.textContent = '▶ Запуск';
+      selState.animId = null;
+      return;
+    }
+    for (var k=0;k<2 && selState.step < selState.target;k++){
+      var res = stepENO(selState.u, selState.r);
+      selState.u = res.u;
+      selState.lastSten = res.sten;
+      selState.step++;
+    }
+    drawSel(selState.u0, selState.u, selState.lastSten, selState.step);
+    selState.animId = requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+function toggleSel(){
+  if (selState.animId){
+    cancelAnimationFrame(selState.animId); selState.animId = null;
+    document.getElementById('enoRunSel').textContent = '▶ Запуск';
+  } else {
+    runSel();
+  }
+}
+
+document.getElementById('enoRunSel').addEventListener('click', toggleSel);
 document.getElementById('enoSt').addEventListener('input', function(){ document.getElementById('enoStv').textContent = this.value; });
 window.addEventListener('load', function(){ setTimeout(runSel, 150); });
 })();
@@ -410,20 +435,10 @@ function shift(u, r, n){
 }
 function tv(u){ var s=0; for (var i=0;i<N;i++) s += Math.abs(u[(i+1)%N]-u[i]); return s; }
 
-function runCmp(){
-  var icName = document.getElementById('enoCmpIC').value;
-  var r = +document.getElementById('enoCfl').value/100;
-  var ns = +document.getElementById('enoCmpSt').value;
-  document.getElementById('enoCflv').textContent = r.toFixed(2);
-  document.getElementById('enoCmpStv').textContent = ns;
-  var u0 = ic(icName);
-  var uUp = new Float64Array(u0), uLW = new Float64Array(u0), uENO = new Float64Array(u0);
-  for (var s=0;s<ns;s++){
-    uUp  = stepUp(uUp, r);
-    uLW  = stepLW(uLW, r);
-    uENO = stepENO_SSP(uENO, r);
-  }
-  var ex = shift(u0, r, ns);
+// State shared between animation invocations
+var cmpState = { u0:null, uUp:null, uLW:null, uENO:null, step:0, target:0, r:0.4, icName:'step', animId:null };
+
+function drawCmp(u0arr, uUp, uLW, uENO, stepNum){
   var c = document.getElementById('enoCmpPlot');
   var ctx = c.getContext('2d');
   var W = c.width, H = c.height;
@@ -437,27 +452,27 @@ function runCmp(){
   function xp(i){ return P.l + pw*i/N; }
   function yp(v){ return P.t + ph*(1-(v-mn)/(mx-mn)); }
   if (mn<0 && mx>0){ ctx.strokeStyle='#d9cfc0'; ctx.lineWidth=1; var y0=yp(0); ctx.beginPath(); ctx.moveTo(P.l,y0); ctx.lineTo(P.l+pw,y0); ctx.stroke(); }
-  // exact
+  // exact: shifted u0
+  var ex = shift(u0arr, cmpState.r, stepNum);
   ctx.strokeStyle='#9a8d7e'; ctx.lineWidth=2.5; ctx.setLineDash([6,3]);
   ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(ex[i])):ctx.lineTo(xp(i),yp(ex[i])); ctx.stroke();
   ctx.setLineDash([]);
-  // upwind
   ctx.strokeStyle='#1a6b5a'; ctx.lineWidth=1.8;
   ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(uUp[i])):ctx.lineTo(xp(i),yp(uUp[i])); ctx.stroke();
-  // LW
   ctx.strokeStyle='#b44a2d'; ctx.lineWidth=1.8;
   ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(uLW[i])):ctx.lineTo(xp(i),yp(uLW[i])); ctx.stroke();
-  // ENO
   ctx.strokeStyle='#3a5ba0'; ctx.lineWidth=2;
   ctx.beginPath(); for(var i=0;i<N;i++) i===0?ctx.moveTo(xp(i),yp(uENO[i])):ctx.lineTo(xp(i),yp(uENO[i])); ctx.stroke();
-  // axes
   ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
   ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
   ctx.fillText('0', P.l, P.t+ph+14); ctx.fillText('π', P.l+pw/2, P.t+ph+14); ctx.fillText('2π', P.l+pw, P.t+ph+14);
+  ctx.fillText('шаг '+stepNum+' / '+cmpState.target, P.l+pw/2, P.t+ph+28);
   ctx.textAlign='right';
   for (var g=0;g<=5;g++) ctx.fillText((mx-(mx-mn)*g/5).toFixed(2), P.l-3, P.t+ph*g/5+3);
-  // Analysis
+}
+
+function analyzeCmp(icName, u0, uUp, uLW, uENO){
   var tv0 = tv(u0), tvU = tv(uUp), tvL = tv(uLW), tvE = tv(uENO);
   var an = document.getElementById('enoCmpAn');
   var html = '<strong>Полные вариации (было '+tv0.toFixed(3)+'):</strong> ';
@@ -474,7 +489,56 @@ function runCmp(){
   an.innerHTML = html;
   an.style.display = '';
 }
-document.getElementById('enoCmpRun').addEventListener('click', runCmp);
+
+function runCmp(){
+  var icName = document.getElementById('enoCmpIC').value;
+  var r = +document.getElementById('enoCfl').value/100;
+  var ns = +document.getElementById('enoCmpSt').value;
+  document.getElementById('enoCflv').textContent = r.toFixed(2);
+  document.getElementById('enoCmpStv').textContent = ns;
+  if (cmpState.animId){ cancelAnimationFrame(cmpState.animId); cmpState.animId = null; }
+  cmpState.u0 = ic(icName);
+  cmpState.uUp = new Float64Array(cmpState.u0);
+  cmpState.uLW = new Float64Array(cmpState.u0);
+  cmpState.uENO = new Float64Array(cmpState.u0);
+  cmpState.step = 0;
+  cmpState.target = ns;
+  cmpState.r = r;
+  cmpState.icName = icName;
+  document.getElementById('enoCmpAn').style.display = 'none';
+  var runBtn = document.getElementById('enoCmpRun');
+  runBtn.textContent = '⏸ Стоп';
+  function frame(){
+    if (cmpState.step >= cmpState.target){
+      analyzeCmp(cmpState.icName, cmpState.u0, cmpState.uUp, cmpState.uLW, cmpState.uENO);
+      runBtn.textContent = '▶ Запуск';
+      cmpState.animId = null;
+      return;
+    }
+    // Do ~2 steps per frame to balance speed
+    for (var k=0;k<2 && cmpState.step < cmpState.target;k++){
+      cmpState.uUp = stepUp(cmpState.uUp, cmpState.r);
+      cmpState.uLW = stepLW(cmpState.uLW, cmpState.r);
+      cmpState.uENO = stepENO_SSP(cmpState.uENO, cmpState.r);
+      cmpState.step++;
+    }
+    drawCmp(cmpState.u0, cmpState.uUp, cmpState.uLW, cmpState.uENO, cmpState.step);
+    cmpState.animId = requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+function toggleCmp(){
+  if (cmpState.animId){
+    cancelAnimationFrame(cmpState.animId); cmpState.animId = null;
+    document.getElementById('enoCmpRun').textContent = '▶ Запуск';
+    if (cmpState.uUp) analyzeCmp(cmpState.icName, cmpState.u0, cmpState.uUp, cmpState.uLW, cmpState.uENO);
+  } else {
+    runCmp();
+  }
+}
+
+document.getElementById('enoCmpRun').addEventListener('click', toggleCmp);
 document.getElementById('enoCfl').addEventListener('input', function(){ document.getElementById('enoCflv').textContent = (this.value/100).toFixed(2); });
 document.getElementById('enoCmpSt').addEventListener('input', function(){ document.getElementById('enoCmpStv').textContent = this.value; });
 window.addEventListener('load', function(){ setTimeout(runCmp, 200); });

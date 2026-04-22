@@ -131,6 +131,44 @@ S_L = \min(v_L - a_L,\; v_R - a_R), \qquad S_R = \max(v_L + a_L,\; v_R + a_R),
 
 <p>Этот недостаток послужил мотивацией для разработки модификации <strong>HLLC</strong> (§22), которая дополнительно учитывает контактный разрыв.</p>
 
+<h2 id="interactive">Интерактив: метод HLL на тестах Торо</h2>
+
+<p>На Sod-тесте обратите внимание на контактный разрыв (\(x \approx 0.68\) при \(t=0.2\)) — у HLL он размазан заметно сильнее чем у HLLC (§22) или Рое (§19). Это прямое следствие двухволновой аппроксимации без учёта контактной волны.</p>
+
+<div id="hll_container"></div>
+
+<script src="../js/gd-interactive.js"></script>
+<script>
+function hllFlux(rL,uL,pL,rR,uR,pR,gamma,opts){
+  var gm1 = gamma-1;
+  var EL = pL/(gm1*rL) + 0.5*uL*uL;
+  var ER = pR/(gm1*rR) + 0.5*uR*uR;
+  var aL = Math.sqrt(gamma*pL/rL), aR = Math.sqrt(gamma*pR/rR);
+  var SL = Math.min(uL-aL, uR-aR);
+  var SR = Math.max(uL+aL, uR+aR);
+  var FL = [rL*uL, rL*uL*uL+pL, uL*(rL*EL+pL)];
+  var FR = [rR*uR, rR*uR*uR+pR, uR*(rR*ER+pR)];
+  if (SL >= 0) return FL;
+  if (SR <= 0) return FR;
+  // HLL star flux
+  var UL = [rL, rL*uL, rL*EL];
+  var UR = [rR, rR*uR, rR*ER];
+  var F = [0,0,0];
+  for (var k=0;k<3;k++){
+    F[k] = (SR*FL[k] - SL*FR[k] + SL*SR*(UR[k] - UL[k])) / (SR - SL);
+  }
+  return F;
+}
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    GDI.buildInteractive(
+      document.getElementById('hll_container'),
+      { id:'hll', fluxFn: hllFlux, schemeLabel: 'HLL', withRecon: true }
+    );
+  }, 200);
+});
+</script>
+
 <div class="lecture-nav">
 <a href="s1-20.html" class="nav-prev">← §20. Метод Ошера</a>
 <a href="s1-22.html" class="nav-next">§22. Метод HLLC →</a>

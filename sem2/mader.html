@@ -434,7 +434,7 @@ $$\rho_\text{det} = \rho_0 \frac{\gamma+1}{\gamma} = 2.453 \text{ г/см³}, \q
       <option value="corner">Тест 3: Corner Turning (2D)</option>
     </select></div>
   <div class="ctrl"><label>Поправка Шаргатова</label>
-    <select id="shargatov"><option value="0">Выключена</option><option value="1">Включена</option></select></div>
+    <select id="shargatov_sel"><option value="0">Выключена</option><option value="1">Включена</option></select></div>
 </div>
 
 <h3>Параметры</h3>
@@ -451,6 +451,13 @@ $$\rho_\text{det} = \rho_0 \frac{\gamma+1}{\gamma} = 2.453 \text{ г/см³}, \q
 <div style="display:flex;align-items:center;margin-top:.5rem;gap:.5rem;flex-wrap:wrap">
   <button class="run-btn" id="runBtn" onclick="runMader()">▶ Запустить 2DE</button>
   <span class="status" id="status">Готов к расчету</span>
+</div>
+<div id="maderAnimControls" style="display:none;margin-top:.5rem;gap:.6rem;align-items:center;flex-wrap:wrap">
+  <button id="maderPlay" onclick="maderPlay()" style="background:var(--accent);color:#fff;border:none;border-radius:5px;padding:5px 12px;font-family:'Source Serif 4',serif;font-size:.82rem;font-weight:600;cursor:pointer">▶ Воспроизвести</button>
+  <button id="maderReset" onclick="maderReset()" style="background:#6b5d4f;color:#fff;border:none;border-radius:5px;padding:5px 10px;font-family:'Source Serif 4',serif;font-size:.82rem;cursor:pointer">↻ В начало</button>
+  <span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">t = <span id="maderTv">0.000</span>, доступно только для Sod</span>
+  <input type="range" id="maderT" min="0" max="1000" value="1000" style="flex:1;min-width:200px"
+    oninput="(function(v){var A=window._maderAnim;if(!A)return;if(maderPlayId){cancelAnimationFrame(maderPlayId);maderPlayId=null;document.getElementById('maderPlay').textContent='▶ Воспроизвести'}renderMaderFrame(Math.round(+v/1000*(A.snaps.length-1)))})(this.value)">
 </div>
 </div>
 
@@ -664,7 +671,7 @@ const btn=document.getElementById('runBtn');btn.disabled=true;
 document.getElementById('status').textContent='Считаю...';
 requestAnimationFrame(()=>{setTimeout(()=>{
 const testCase=document.getElementById('testCase').value;
-const useShargatov=document.getElementById('shargatov').value==='1';
+const useShargatov=document.getElementById('shargatov_sel').value==='1';
 const NI=+document.getElementById('NI').value,NJ=+document.getElementById('NJ').value;
 const cfl=+document.getElementById('CFL').value,VISC=+document.getElementById('VISC').value;
 const gamma=+document.getElementById('gamma').value,tend=+document.getElementById('tend').value;
@@ -717,6 +724,17 @@ for(let i=0;i<NI;i++)for(let j=0;j<NJ;j++){
   else{rho[k]=rho0d;Wf[k]=1;if(i<5){E[k]=PCJ/(gm1*rho0d);Wf[k]=0}else{E[k]=.001}}
 }
 let t=0,ns=0;const t0=performance.now();
+// Snapshots only for Sod (1D test) to avoid memory blow-up
+const isSod=testCase==='sod';
+const Nsnap=60,snapInterval=tend/Nsnap;
+const snaps=[];
+let nextSnap=snapInterval;
+if(isSod){
+  const jc0=Math.floor(NJ/2);
+  const rs=[],us=[],ps0=[];
+  for(let i=0;i<NI;i++){const k=idx(i,jc0);rs.push(rho[k]);us.push(uu[k]);const e=E[k]-.5*(uu[k]*uu[k]+vv[k]*vv[k]);ps0.push(gm1*rho[k]*Math.max(e,0))}
+  snaps.push({t:0,rc:rs,uc:us,pc:ps0});
+}
 while(t<tend){
   let maxLam=0;
   for(let i=0;i<NI;i++)for(let j=0;j<NJ;j++){const k=idx(i,j);if(isWall(i,j))continue;const e=E[k]-.5*(uu[k]*uu[k]+vv[k]*vv[k]);pp[k]=gm1*rho[k]*Math.max(e,1e-15);if(pp[k]<1e-15)pp[k]=1e-15;const a=Math.sqrt(gamma*pp[k]/rho[k]);const lam=Math.abs(uu[k])+Math.abs(vv[k])+a;if(lam>maxLam)maxLam=lam}
@@ -735,7 +753,14 @@ while(t<tend){
     let Wd=Wf[d];if(useShargatov&&Wd>.02&&Wd<.98){const di2=i,dj2=d===kB?j:j+1;for(const[ni,nj] of[[di2-1,dj2],[di2+1,dj2],[di2,dj2-1],[di2,dj2+1]]){if(ni>=0&&ni<NI&&nj>=0&&nj<NJ&&!isWall(ni,nj)){const nw=Wf[idx(ni,nj)];if(nw>.98||nw<.02){Wd=nw>.5?1:0;break}}}}
     rwn[kB]-=rho[d]*Wd*vh*dt/dy;rwn[kT]+=rho[d]*Wd*vh*dt/dy}
   for(let k=0;k<sz;k++){if(isWall(Math.floor(k/NJ),k%NJ))continue;if(rn[k]<1e-10){rho[k]=1e-10;uu[k]=0;vv[k]=0;E[k]=1e-15;Wf[k]=0;continue}rho[k]=rn[k];uu[k]=run[k]/rn[k];vv[k]=rvn[k]/rn[k];E[k]=ren[k]/rn[k];Wf[k]=Math.max(0,Math.min(1,rwn[k]/rn[k]))}
-  t+=dt;ns++;if(ns>200000)break}
+  t+=dt;ns++;
+  if(isSod&&(t>=nextSnap-1e-9||t>=tend-1e-9)){
+    const jc0=Math.floor(NJ/2);const rs=[],us=[],ps0=[];
+    for(let i=0;i<NI;i++){const k=idx(i,jc0);rs.push(rho[k]);us.push(uu[k]);const e=E[k]-.5*(uu[k]*uu[k]+vv[k]*vv[k]);ps0.push(gm1*rho[k]*Math.max(e,0))}
+    snaps.push({t:t,rc:rs,uc:us,pc:ps0});
+    nextSnap+=snapInterval;
+  }
+  if(ns>200000)break}
 const el=(performance.now()-t0).toFixed(0);
 document.getElementById('status').textContent='Готово: '+ns+' шагов, '+el+' мс';
 if(testCase==='corner'){
@@ -748,11 +773,56 @@ if(testCase==='corner'){
   if(testCase==='sod'){
     const xa=[],re=[],ue=[],pe=[];
     for(let i=0;i<500;i++){const xn=(i+.5)/500;const s=exactRiemann(1,0,1,.125,0,.1,gamma,(xn-.5)/.2);xa.push(xn);re.push(s.rho);ue.push(s.u);pe.push(s.p)}
+    // Attach animation
+    const xcArr=[];for(let i=0;i<NI;i++) xcArr.push((i+.5)/NI);
+    const xeF=[];for(let i=0;i<500;i++) xeF.push((i+.5)/500);
+    function exactAtT(tt){if(tt<1e-6)tt=1e-6;const r=[],u=[],p=[];for(let i=0;i<500;i++){const s=exactRiemann(1,0,1,.125,0,.1,gamma,(xeF[i]-.5)/tt);r.push(s.rho);u.push(s.u);p.push(s.p)}return{re:r,ue:u,pe:p}}
+    window._maderAnim={xc:xcArr,snaps:snaps,xeFull:xeF,exactAt:exactAtT};
+    document.getElementById('maderAnimControls').style.display='flex';
+    document.getElementById('maderT').value=1000;
+    renderMaderFrame(snaps.length-1);
+    showVerification(xc,rc,uc,pc2);
+  } else {
     plotField('c_rho',xc,rc,xa,re,'ρ',0,1.1);plotField('c_p',xc,pc2,xa,pe,'P',0,1.1);plotField('c_u',xc,uc,xa,ue,'u',-.1,null);
     showVerification(xc,rc,uc,pc2);
+    document.getElementById('maderAnimControls').style.display='none';
   }
 }
 btn.disabled=false},30)});}
+
+function renderMaderFrame(snapIdx){
+  const A=window._maderAnim;if(!A)return;
+  const idx=Math.max(0,Math.min(snapIdx,A.snaps.length-1));
+  const snap=A.snaps[idx];
+  const ex=A.exactAt(snap.t);
+  plotField('c_rho',A.xc,snap.rc,A.xeFull,ex.re,'ρ',0,1.1);
+  plotField('c_p',A.xc,snap.pc,A.xeFull,ex.pe,'P',0,1.1);
+  plotField('c_u',A.xc,snap.uc,A.xeFull,ex.ue,'u',-.1,null);
+  document.getElementById('maderTv').textContent=snap.t.toFixed(4);
+}
+let maderPlayId=null;
+function maderPlay(){
+  const A=window._maderAnim;if(!A)return;
+  if(maderPlayId){cancelAnimationFrame(maderPlayId);maderPlayId=null;document.getElementById('maderPlay').textContent='▶ Воспроизвести';return}
+  const slider=document.getElementById('maderT');
+  if(+slider.value>=995) slider.value=0;
+  document.getElementById('maderPlay').textContent='⏸ Пауза';
+  let last=performance.now();const totalMs=4000;
+  function tick(now){
+    const dtMs=now-last;last=now;
+    const v=+slider.value+dtMs*1000/totalMs;
+    if(v>=1000){slider.value=1000;renderMaderFrame(A.snaps.length-1);maderPlayId=null;document.getElementById('maderPlay').textContent='▶ Воспроизвести';return}
+    slider.value=v;
+    renderMaderFrame(Math.round(v/1000*(A.snaps.length-1)));
+    maderPlayId=requestAnimationFrame(tick);
+  }
+  maderPlayId=requestAnimationFrame(tick);
+}
+function maderReset(){
+  const A=window._maderAnim;if(!A)return;
+  if(maderPlayId){cancelAnimationFrame(maderPlayId);maderPlayId=null;document.getElementById('maderPlay').textContent='▶ Воспроизвести'}
+  document.getElementById('maderT').value=0;renderMaderFrame(0);
+}
 
 function draw2D(cid,NI,NJ,idx,getVal,isW,label,cLow,cHigh){
 const c=document.getElementById(cid),ctx=c.getContext('2d'),W=c.width,H=c.height;

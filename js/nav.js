@@ -77,6 +77,9 @@
               { href: "sem1/s1-28.html", label: "§28 Диффузия" },
               { href: "sem1/s1-29.html", label: "§29 Иск. вязкость" },
               { href: "sem1/s1-30.html", label: "§30 Иск. вязкость II" }
+          ]},
+          { title: "Сводка", items: [
+              { href: "sem1/comparison.html", label: "Сравнение методов" }
           ]}
         ]
       }

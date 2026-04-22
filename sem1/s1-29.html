@@ -234,6 +234,214 @@ q_i = \begin{cases}
 <strong>Важно:</strong> Искусственная вязкость — не единственный способ стабилизации. Современные методы (решатели Римана, TVD-ограничители, WENO-схемы) обеспечивают монотонность «встроенными» средствами. Однако искусственная вязкость остаётся простым и надёжным инструментом, особенно в лагранжевых схемах (схема «крест», §13), где она вводится естественным образом как добавка к давлению.
 </div>
 
+<h2 id="interactive">Интерактив: сравнение форм искусственной вязкости</h2>
+
+<p>Ниже — задача Сода, решаемая лагранжевой схемой «крест» с разными формами искусственной вязкости:</p>
+<ul>
+<li><strong>Линейная</strong>: \(q = C_1 \rho c |\Delta u|\) — подавляет осцилляции, но сильно размывает фронт.</li>
+<li><strong>Квадратичная (Неймана-Рихтмайера)</strong>: \(q = C_2 \rho (\Delta u)^2\) — узкий фронт, но оставляет мелкие колебания.</li>
+<li><strong>Комбинированная</strong>: \(q = C_1 \rho c |\Delta u| + C_2 \rho (\Delta u)^2\) — лучший баланс.</li>
+</ul>
+
+<div id="visc_container" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.2rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.6rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Форма вязкости</label>
+    <select id="visc_form" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <option value="linear">Линейная (C₁=0.3)</option>
+      <option value="quad" selected>Квадратичная (C₂=2.0)</option>
+      <option value="both">Комбинированная (C₁=0.2, C₂=1.5)</option>
+      <option value="none">Без вязкости</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">N</label>
+    <input type="number" id="visc_N" value="200" min="50" max="400" style="width:80px;background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+  </div>
+  <button id="visc_run" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 16px;font-family:'Source Serif 4',serif;font-size:.85rem;font-weight:600;cursor:pointer">▶ Запустить</button>
+</div>
+<div id="visc_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-bottom:.4rem">Готов</div>
+<div id="visc_anim" style="display:none;margin-bottom:.5rem;gap:.6rem;align-items:center;flex-wrap:wrap">
+  <button id="visc_play" style="background:var(--accent);color:#fff;border:none;border-radius:5px;padding:5px 12px;font-family:'Source Serif 4',serif;font-size:.82rem;font-weight:600;cursor:pointer">▶ Воспроизвести</button>
+  <button id="visc_reset" style="background:#6b5d4f;color:#fff;border:none;border-radius:5px;padding:5px 10px;font-family:'Source Serif 4',serif;font-size:.82rem;cursor:pointer">↻</button>
+  <span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">t = <span id="visc_tv">0.000</span></span>
+  <input type="range" id="visc_t" min="0" max="1000" value="1000" style="flex:1;min-width:180px">
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">ρ</div><canvas id="visc_rho" width="440" height="280" style="width:100%;height:auto"></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">p</div><canvas id="visc_p" width="440" height="280" style="width:100%;height:auto"></canvas></div>
+</div>
+</div>
+
+<script src="../js/gd-interactive.js"></script>
+<script>
+(function(){
+var vState = { anim:null, playId:null };
+function runVisc(){
+  var btn = document.getElementById('visc_run'); btn.disabled=true;
+  document.getElementById('visc_status').textContent = 'Считаю...';
+  requestAnimationFrame(function(){ setTimeout(function(){
+    try {
+      var form = document.getElementById('visc_form').value;
+      var N = +document.getElementById('visc_N').value;
+      var CFL = 0.5;
+      var gamma = 1.4, gm1 = gamma-1;
+      var T = { rL:1, uL:0, pL:1, rR:0.125, uR:0, pR:0.1, tend:0.20, x0:0.5, xmin:0, xmax:1, name:'Sod' };
+
+      // Get coefs
+      var C1=0, C2=0;
+      if (form==='linear'){C1=0.3;C2=0;} else if (form==='quad'){C1=0;C2=2.0;} else if (form==='both'){C1=0.2;C2=1.5;} else {C1=0;C2=0;}
+
+      // Lagrangian "cross" scheme (same as §13)
+      var dm = new Float64Array(N);
+      var xn = new Float64Array(N+1);
+      var un = new Float64Array(N+1);
+      var rho = new Float64Array(N), p = new Float64Array(N), E = new Float64Array(N);
+      var q = new Float64Array(N);
+      for (var i=0;i<=N;i++) xn[i] = T.xmin + (T.xmax-T.xmin)*i/N;
+      for (var i=0;i<N;i++){
+        var xc = 0.5*(xn[i]+xn[i+1]);
+        var rr = xc<T.x0 ? T.rL : T.rR, pp = xc<T.x0 ? T.pL : T.pR, uu = 0;
+        rho[i]=rr; p[i]=pp; E[i]=pp/(gm1*rr)+0.5*uu*uu; dm[i]=rho[i]*(xn[i+1]-xn[i]);
+      }
+
+      var snaps = [];
+      function take(t){
+        var xc=[],rc=[],pc=[];
+        for (var i=0;i<N;i++){ xc.push(0.5*(xn[i]+xn[i+1])); rc.push(rho[i]); pc.push(p[i]); }
+        snaps.push({t:t, xc:xc, rc:rc, pc:pc});
+      }
+      take(0);
+      var Nsnap = 60, snapInt = T.tend/Nsnap, nextSnap = snapInt;
+      var t=0, ns=0, t0=performance.now();
+      while (t < T.tend){
+        var mx=0;
+        for (var i=0;i<N;i++){
+          var a=Math.sqrt(gamma*p[i]/rho[i]);
+          var dx_i=xn[i+1]-xn[i];
+          var l=(Math.abs(0.5*(un[i]+un[i+1]))+a)/dx_i;
+          if (l>mx) mx=l;
+        }
+        var dt = CFL/mx; if (t+dt>T.tend) dt = T.tend-t;
+        // Viscosity (compression only)
+        for (var i=0;i<N;i++){
+          var du = un[i+1]-un[i];
+          if (du < 0){
+            var a = Math.sqrt(gamma*p[i]/rho[i]);
+            q[i] = C1*rho[i]*a*Math.abs(du) + C2*rho[i]*du*du;
+          } else q[i] = 0;
+        }
+        var un_new = new Float64Array(N+1);
+        for (var i=1;i<N;i++){
+          var dpq = (p[i]+q[i]) - (p[i-1]+q[i-1]);
+          var dm_n = 0.5*(dm[i-1]+dm[i]);
+          un_new[i] = un[i] - dt*dpq/dm_n;
+        }
+        un_new[0]=un[0]; un_new[N]=un[N];
+        var xn_new = new Float64Array(N+1);
+        for (var i=0;i<=N;i++) xn_new[i] = xn[i] + dt*un_new[i];
+        var rho_new = new Float64Array(N);
+        for (var i=0;i<N;i++){
+          var dxN = xn_new[i+1]-xn_new[i];
+          if (dxN<1e-10) dxN=1e-10;
+          rho_new[i] = dm[i]/dxN;
+        }
+        var E_new = new Float64Array(N);
+        for (var i=0;i<N;i++){
+          var du_i = un_new[i+1]-un_new[i];
+          var dxO = xn[i+1]-xn[i];
+          E_new[i] = E[i] - dt*(p[i]+q[i])*du_i/(rho[i]*dxO);
+        }
+        for (var i=0;i<=N;i++){ un[i]=un_new[i]; xn[i]=xn_new[i]; }
+        for (var i=0;i<N;i++){
+          rho[i]=rho_new[i]; E[i]=E_new[i];
+          var u_c = 0.5*(un[i]+un[i+1]);
+          var ein = E[i]-0.5*u_c*u_c;
+          if (ein<1e-10) ein=1e-10;
+          p[i] = gm1*rho[i]*ein;
+          if (p[i]<1e-10) p[i]=1e-10;
+        }
+        t+=dt; ns++;
+        if (t>=nextSnap-1e-9 || t>=T.tend-1e-9){ take(t); nextSnap+=snapInt; }
+        if (ns>1e5) break;
+      }
+      var el = (performance.now()-t0).toFixed(1);
+      vState.anim = {snaps:snaps, T:T};
+      document.getElementById('visc_anim').style.display = 'flex';
+      document.getElementById('visc_t').value = 1000;
+      render(snaps.length-1);
+      document.getElementById('visc_status').textContent = '✓ '+ns+' шагов, '+el+' мс, '+snaps.length+' кадров ('+form+')';
+    } catch(err){
+      document.getElementById('visc_status').textContent = 'Ошибка: '+err.message;
+    }
+    btn.disabled = false;
+  }, 20); });
+}
+function drawP(cid, xc, yc, xe, ye, yl){
+  var c = document.getElementById(cid);
+  var ctx = c.getContext('2d'), W=c.width, H=c.height;
+  var P={l:40,r:15,t:12,b:28}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+  var mn=1e9, mx=-1e9;
+  for (var i=0;i<yc.length;i++){ if (yc[i]<mn) mn=yc[i]; if (yc[i]>mx) mx=yc[i]; }
+  for (var i=0;i<ye.length;i++){ if (ye[i]<mn) mn=ye[i]; if (ye[i]>mx) mx=ye[i]; }
+  var pad=(mx-mn)*0.08||0.1; mn-=pad; mx+=pad;
+  ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+  for (var i=0;i<=5;i++){ var y=P.t+ph*i/5; ctx.beginPath(); ctx.moveTo(P.l,y); ctx.lineTo(P.l+pw,y); ctx.stroke(); }
+  ctx.fillStyle='#8b7d6e'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+  for (var i=0;i<=10;i+=2) ctx.fillText((i/10).toFixed(1), P.l+pw*i/10, H-6);
+  ctx.textAlign='right';
+  for (var i=0;i<=5;i++) ctx.fillText((mx-(mx-mn)*i/5).toFixed(2), P.l-3, P.t+ph*i/5+3);
+  ctx.save(); ctx.translate(9, P.t+ph/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center'; ctx.fillText(yl, 0, 0); ctx.restore();
+  ctx.strokeStyle='#b44a2d'; ctx.lineWidth=2; ctx.setLineDash([6,4]);
+  ctx.beginPath();
+  for (var i=0;i<xe.length;i++){ var cx=P.l+xe[i]*pw, cy=P.t+(1-(ye[i]-mn)/(mx-mn))*ph; i===0?ctx.moveTo(cx,cy):ctx.lineTo(cx,cy); }
+  ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle='#3a5ba0'; ctx.lineWidth=1.8;
+  ctx.beginPath();
+  for (var i=0;i<xc.length;i++){ var cx=P.l+xc[i]*pw, cy=P.t+(1-(yc[i]-mn)/(mx-mn))*ph; i===0?ctx.moveTo(cx,cy):ctx.lineTo(cx,cy); }
+  ctx.stroke();
+}
+function render(idx){
+  if (!vState.anim) return;
+  var snap = vState.anim.snaps[Math.max(0,Math.min(idx,vState.anim.snaps.length-1))];
+  var T = vState.anim.T, gamma = 1.4, tt = snap.t<1e-6?1e-6:snap.t;
+  var Ne=300, xe=[], re=[], pe=[];
+  for (var i=0;i<Ne;i++){ var x=(i+0.5)/Ne; var s=GDI.exactRiemann(T.rL,T.uL,T.pL,T.rR,T.uR,T.pR,gamma,(x-T.x0)/tt); xe.push(x); re.push(s.rho); pe.push(s.p); }
+  drawP('visc_rho', snap.xc, snap.rc, xe, re, 'ρ');
+  drawP('visc_p',   snap.xc, snap.pc, xe, pe, 'p');
+  document.getElementById('visc_tv').textContent = snap.t.toFixed(4);
+}
+function playVisc(){
+  if (!vState.anim) return;
+  if (vState.playId){ cancelAnimationFrame(vState.playId); vState.playId=null; document.getElementById('visc_play').textContent='▶ Воспроизвести'; return; }
+  document.getElementById('visc_play').textContent='⏸';
+  var slider = document.getElementById('visc_t');
+  if (+slider.value>=995) slider.value=0;
+  var last=performance.now(), tot=4000;
+  function tick(now){
+    var dtMs=now-last; last=now;
+    var v=+slider.value+dtMs*1000/tot;
+    if (v>=1000){ slider.value=1000; render(vState.anim.snaps.length-1); vState.playId=null; document.getElementById('visc_play').textContent='▶ Воспроизвести'; return; }
+    slider.value=v; render(Math.round(v/1000*(vState.anim.snaps.length-1)));
+    vState.playId=requestAnimationFrame(tick);
+  }
+  vState.playId=requestAnimationFrame(tick);
+}
+function resetVisc(){
+  if (vState.playId){ cancelAnimationFrame(vState.playId); vState.playId=null; document.getElementById('visc_play').textContent='▶ Воспроизвести'; }
+  document.getElementById('visc_t').value=0; if (vState.anim) render(0);
+}
+document.getElementById('visc_run').addEventListener('click', runVisc);
+document.getElementById('visc_play').addEventListener('click', playVisc);
+document.getElementById('visc_reset').addEventListener('click', resetVisc);
+document.getElementById('visc_t').addEventListener('input', function(){
+  if (vState.playId){ cancelAnimationFrame(vState.playId); vState.playId=null; document.getElementById('visc_play').textContent='▶ Воспроизвести'; }
+  if (vState.anim) render(Math.round(+this.value/1000*(vState.anim.snaps.length-1)));
+});
+})();
+</script>
+
 <div class="lecture-nav">
 <a href="s1-28.html" class="nav-prev">← §28. Диффузия и антидиффузия</a>
 <a href="s1-30.html" class="nav-next">§30. Искусственная вязкость: свойства →</a>

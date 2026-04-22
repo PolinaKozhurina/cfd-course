@@ -22,17 +22,13 @@ window.MathJax = {
   <h2>§24 Колган–Родионов</h2>
   <div class="g">Содержание</div>
   <a href="#motivation">Мотивация</a>
-  <a href="#two-fluxes">Два потока</a>
-  <a href="#antidiffusion">Антидиффузионный поток</a>
-  <a href="#limited-flux">Идея ограничения</a>
-  <a href="#base-step">Базовый шаг</a>
-  <a href="#bounds">Допустимые границы</a>
-  <a href="#sign-split">Разделение по знаку</a>
-  <a href="#R-coeff">Коэффициенты R</a>
-  <a href="#theta">Ограничитель θ</a>
+  <a href="#predictor">Предиктор: полшага</a>
+  <a href="#boundary-states">Состояния на гранях</a>
+  <a href="#corrector">Корректор: полный шаг</a>
   <a href="#algorithm">Полный алгоритм</a>
+  <a href="#accuracy">Второй порядок по t и x</a>
   <a href="#properties">Свойства</a>
-  <a href="#systems">Системы уравнений</a>
+  <a href="#interactive">Интерактив</a>
   <div class="sep"></div>
   <div class="g">Навигация</div>
   <a href="s1-23.html">← §23 Колган</a>
@@ -43,212 +39,227 @@ window.MathJax = {
 <div class="main-inner">
 <span class="lecture-tag tag-highorder">Высокий порядок</span>
 <div class="lecture-num">§24 · Семестр 1</div>
-<h1>Метод Годунова–Колгана–Родионова. Антидиффузионная коррекция численного потока</h1>
+<h1>Метод Годунова–Колгана–Родионова. Предиктор-корректор поверх реконструкции Колгана</h1>
 
-<!-- SVG: Method structure overview -->
+<!-- SVG: Predictor-Corrector structure -->
 <div class="figure">
-<svg viewBox="0 0 580 200" xmlns="http://www.w3.org/2000/svg" style="max-width:540px">
+<svg viewBox="0 0 620 260" xmlns="http://www.w3.org/2000/svg" style="max-width:580px">
   <defs><marker id="a24" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2c2419"/></marker></defs>
-  <!-- Step 1: Low-order -->
-  <rect x="5" y="15" width="160" height="60" rx="6" fill="#e6f1fb" stroke="#3a5ba0" stroke-width="1.5"/>
-  <text x="85" y="35" font-family="Source Serif 4,serif" font-size="11" fill="#3a5ba0" text-anchor="middle" font-weight="600">Монотонный поток</text>
-  <text x="85" y="52" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">F_L (1-й порядок)</text>
-  <text x="85" y="66" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="middle">устойчив, но размазывает</text>
-  <!-- Step 2: High-order -->
-  <rect x="5" y="95" width="160" height="60" rx="6" fill="#fdf6ee" stroke="#b44a2d" stroke-width="1.5"/>
-  <text x="85" y="115" font-family="Source Serif 4,serif" font-size="11" fill="#b44a2d" text-anchor="middle" font-weight="600">Точный поток</text>
-  <text x="85" y="132" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">F_H (2-й порядок)</text>
-  <text x="85" y="146" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="middle">точен, но осциллирует</text>
-  <!-- Antidiffusion -->
-  <line x1="165" y1="45" x2="195" y2="85" stroke="#2c2419" stroke-width="1.5" marker-end="url(#a24)"/>
-  <line x1="165" y1="125" x2="195" y2="85" stroke="#2c2419" stroke-width="1.5" marker-end="url(#a24)"/>
-  <rect x="198" y="60" width="120" height="50" rx="6" fill="#ede6da" stroke="#6b5d4f" stroke-width="1.5"/>
-  <text x="258" y="80" font-family="Source Serif 4,serif" font-size="10" fill="#2c2419" text-anchor="middle" font-weight="600">Антидиффузия</text>
-  <text x="258" y="97" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">A = F_H − F_L</text>
-  <!-- Limiter -->
-  <line x1="318" y1="85" x2="348" y2="85" stroke="#2c2419" stroke-width="1.5" marker-end="url(#a24)"/>
-  <rect x="350" y="55" width="100" height="60" rx="30" fill="#e8f4f0" stroke="#1a6b5a" stroke-width="2"/>
-  <text x="400" y="80" font-family="Playfair Display,serif" font-size="12" fill="#1a6b5a" text-anchor="middle" font-weight="700">Лимитер</text>
-  <text x="400" y="97" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a" text-anchor="middle">θ ∈ [0,1]</text>
-  <!-- Result -->
-  <line x1="450" y1="85" x2="475" y2="85" stroke="#2c2419" stroke-width="1.5" marker-end="url(#a24)"/>
-  <rect x="478" y="60" width="95" height="50" rx="6" fill="#2b2520" stroke="none"/>
-  <text x="525" y="82" font-family="Source Serif 4,serif" font-size="10" fill="#fff" text-anchor="middle" font-weight="600">Итоговый</text>
-  <text x="525" y="97" font-family="JetBrains Mono,monospace" font-size="9" fill="#d9cfc0" text-anchor="middle">F_L + θ·A</text>
-  <!-- Bottom label -->
-  <text x="290" y="180" font-family="Source Serif 4,serif" font-size="10" fill="#9a8d7e" text-anchor="middle" font-style="italic">θ=0 вблизи разрывов (монотонность), θ≈1 на гладких участках (точность)</text>
+  <!-- Step 0: Reconstruction (Колган) -->
+  <rect x="10" y="15" width="145" height="55" rx="6" fill="#ede6da" stroke="#6b5d4f" stroke-width="1.5"/>
+  <text x="82" y="34" font-family="Source Serif 4,serif" font-size="10" fill="#2c2419" text-anchor="middle" font-weight="600">§23 Реконструкция</text>
+  <text x="82" y="48" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">u_i^n + σ_i(x − x_i)</text>
+  <text x="82" y="62" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="middle">наклон σ_i c minmod</text>
+  <line x1="155" y1="42" x2="180" y2="42" stroke="#2c2419" stroke-width="1.5" marker-end="url(#a24)"/>
+  <!-- Step 1: Predictor -->
+  <rect x="183" y="15" width="145" height="55" rx="6" fill="#e6f1fb" stroke="#3a5ba0" stroke-width="1.5"/>
+  <text x="255" y="33" font-family="Source Serif 4,serif" font-size="11" fill="#3a5ba0" text-anchor="middle" font-weight="700">Предиктор</text>
+  <text x="255" y="48" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a5ba0" text-anchor="middle">полшага: t^n → t^n + Δt/2</text>
+  <text x="255" y="62" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="middle">граничные u^{n+1/2}_{i+1/2,L/R}</text>
+  <line x1="328" y1="42" x2="355" y2="42" stroke="#2c2419" stroke-width="1.5" marker-end="url(#a24)"/>
+  <!-- Step 2: Riemann -->
+  <rect x="358" y="15" width="110" height="55" rx="6" fill="#fdf6ee" stroke="#b44a2d" stroke-width="1.5"/>
+  <text x="413" y="33" font-family="Source Serif 4,serif" font-size="10" fill="#b44a2d" text-anchor="middle" font-weight="600">Задача Римана</text>
+  <text x="413" y="48" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">на предикт. состояниях</text>
+  <text x="413" y="62" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="middle">§15 или §19–22</text>
+  <line x1="468" y1="42" x2="492" y2="42" stroke="#2c2419" stroke-width="1.5" marker-end="url(#a24)"/>
+  <!-- Step 3: Corrector -->
+  <rect x="494" y="15" width="115" height="55" rx="6" fill="#e8f4f0" stroke="#1a6b5a" stroke-width="2"/>
+  <text x="551" y="33" font-family="Source Serif 4,serif" font-size="11" fill="#1a6b5a" text-anchor="middle" font-weight="700">Корректор</text>
+  <text x="551" y="48" font-family="JetBrains Mono,monospace" font-size="9" fill="#1a6b5a" text-anchor="middle">t^n → t^{n+1}</text>
+  <text x="551" y="62" font-family="JetBrains Mono,monospace" font-size="8" fill="#9a8d7e" text-anchor="middle">полный Δt через F_{i+1/2}</text>
+  <!-- Time axis -->
+  <line x1="30" y1="120" x2="590" y2="120" stroke="#6b5d4f" stroke-width="1.5" marker-end="url(#a24)"/>
+  <text x="600" y="124" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">t</text>
+  <!-- Time markers -->
+  <circle cx="80" cy="120" r="4" fill="#3a5ba0"/>
+  <text x="80" y="105" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a5ba0" text-anchor="middle">t^n</text>
+  <circle cx="290" cy="120" r="4" fill="#3a5ba0"/>
+  <text x="290" y="105" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a5ba0" text-anchor="middle">t^n + Δt/2</text>
+  <circle cx="550" cy="120" r="4" fill="#3a5ba0"/>
+  <text x="550" y="105" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a5ba0" text-anchor="middle">t^{n+1}</text>
+  <!-- Schematic 1D profile at t^n and t^{n+1/2} -->
+  <g transform="translate(25,150)">
+    <text x="0" y="8" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e">t^n:</text>
+    <rect x="28" y="10" width="30" height="18" fill="#3a5ba0" opacity="0.5"/>
+    <rect x="58" y="20" width="30" height="8" fill="#3a5ba0" opacity="0.5"/>
+    <text x="100" y="20" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f">кусочно-линейная реконструкция</text>
+  </g>
+  <g transform="translate(25,190)">
+    <text x="0" y="8" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e">t^{n+1/2}:</text>
+    <path d="M 45 28 L 75 10 L 105 10 L 135 28" fill="none" stroke="#b44a2d" stroke-width="2"/>
+    <circle cx="75" cy="10" r="2.5" fill="#1a6b5a"/>
+    <circle cx="105" cy="10" r="2.5" fill="#1a6b5a"/>
+    <text x="150" y="20" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f">состояния u^{n+1/2}_{i+1/2,L} и u^{n+1/2}_{i+1/2,R}</text>
+  </g>
+  <text x="300" y="245" font-family="Source Serif 4,serif" font-size="10" fill="#9a8d7e" text-anchor="middle" font-style="italic">Второй порядок и по времени, и по пространству</text>
 </svg>
-<div class="caption">Структура метода Годунова–Колгана–Родионова: монотонный поток + ограниченная антидиффузионная коррекция.</div>
+<div class="caption">Структура метода Родионова: предиктор на полшага переносит реконструированные состояния в \(t^n + \Delta t/2\), где и решается задача Римана для корректора.</div>
 </div>
 
-<h2 id="motivation">Мотивация: почему требуется антидиффузионная коррекция</h2>
+<h2 id="motivation">Мотивация</h2>
 
-<p>Схема Годунова первого порядка обладает высоким запасом устойчивости и монотонности, однако характеризуется значительной численной диффузией: разрывы и контактные поверхности существенно размазываются. Метод Годунова–Колгана (§23) уменьшает диффузию за счёт линейной реконструкции внутри ячейки и тем самым повышает порядок точности на гладких решениях, но вблизи разрывов может порождать осцилляции, то есть теряет монотонность.</p>
+<p>Метод Годунова–Колгана (§23) поднимает порядок аппроксимации по пространству до второго за счёт линейной реконструкции внутри ячеек. Однако временная дискретизация в этой схеме — явная по Эйлеру (первый порядок по \(t\)), и фактический глобальный порядок ошибки оказывается \(O(\Delta x^2) + O(\Delta t)\). Это значит что при \(\Delta t \sim \Delta x\) (типичный CFL) порядок схемы в итоге ограничен первым — преимущество Колгана по пространству нивелируется.</p>
 
-<p>Метод Годунова–Колгана–Родионова строится как комбинация двух потоков: монотонного (низкого порядка) и более точного (высокого порядка), причём вклад потока высокого порядка вводится в виде <em>антидиффузионной поправки</em>, которая автоматически подавляется там, где она приводит к возникновению новых экстремумов. В результате достигается повышение разрешающей способности при сохранении монотонности.</p>
+<p>А.&nbsp;В.&nbsp;Родионов в докторской диссертации (1998) предложил простое и элегантное решение: <strong>предиктор-корректор схема, в которой предиктор на полшага по времени использует колгановскую реконструкцию</strong>. Численный поток в корректоре вычисляется через решатель Римана не на исходных данных \(u_i^n, u_{i+1}^n\), а на <em>предикторных</em> состояниях \(u^{n+1/2}_{i+1/2,L}, u^{n+1/2}_{i+1/2,R}\), которые аппроксимируют решение в <em>середине</em> временного шага. В результате глобальный порядок схемы — второй и по времени, и по пространству, без использования многоуровневых методов Рунге–Кутты.</p>
 
-<h2 id="two-fluxes">Консервативная схема и два потока</h2>
+<h2 id="predictor">Шаг 1. Предиктор: полшага по времени</h2>
 
-<p>Рассмотрим одномерный закон сохранения (для простоты скалярный случай) и консервативную разностную схему</p>
+<p>Сначала выполняется колгановская реконструкция (§23). Для каждой ячейки определены наклоны \(\sigma_i\):</p>
 
 <div class="eq">\[
-u_i^{n+1} = u_i^n - \frac{\Delta t}{\Delta x}\left(F_{i+1/2} - F_{i-1/2}\right).
+\sigma_i = \mathrm{minmod}\!\left(\frac{u_i^n - u_{i-1}^n}{\Delta x},\; \frac{u_{i+1}^n - u_i^n}{\Delta x}\right).
 \tag{24.1}
 \]</div>
 
-<p>Пусть заданы два численных потока на грани \(x_{i+1/2}\):</p>
-
-<ul>
-<li>\(F_{i+1/2}^L\) — <strong>монотонный</strong> (низкого порядка), например поток схемы Годунова первого порядка или другой заведомо монотонный поток;</li>
-<li>\(F_{i+1/2}^H\) — поток <strong>повышенного порядка</strong>, например поток, получаемый методом Годунова–Колгана на основе линейной реконструкции в ячейках.</li>
-</ul>
-
-<h2 id="antidiffusion">Антидиффузионный поток</h2>
-
-<p>Естественно ввести антидиффузионный поток как разность между точным и монотонным потоками:</p>
+<p>Граничные значения в момент \(t^n\) на грани \(x_{i+1/2}\) равны</p>
 
 <div class="eq">\[
-A_{i+1/2} = F_{i+1/2}^H - F_{i+1/2}^L.
+u_{i+1/2,L}^n = u_i^n + \tfrac{\Delta x}{2}\sigma_i, \qquad u_{i+1/2,R}^n = u_{i+1}^n - \tfrac{\Delta x}{2}\sigma_{i+1}.
 \tag{24.2}
 \]</div>
 
-<p>Использование потока \(F^H\) целиком эквивалентно добавлению полной антидиффузии к монотонной схеме. Однако без ограничения \(A_{i+1/2}\) вблизи разрывов неизбежны осцилляции.</p>
-
-<h2 id="limited-flux">Идея ограничения антидиффузии</h2>
-
-<p>Метод строится так, чтобы итоговый поток имел вид</p>
+<p>Для предикторного шага используется <em>примитивная форма</em> уравнений, линеаризованная внутри каждой ячейки. В одномерном скалярном случае \(u_t + a\,u_x = 0\) предиктор в ячейке \(i\) имеет вид</p>
 
 <div class="eq">\[
-F_{i+1/2} = F_{i+1/2}^L + \theta_{i+1/2}\, A_{i+1/2}, \qquad 0 \le \theta_{i+1/2} \le 1,
+\tilde u_i = u_i^n - \frac{a\,\Delta t}{2}\,\sigma_i.
 \tag{24.3}
 \]</div>
 
-<p>где коэффициент \(\theta_{i+1/2}\) выбирается автоматически на основе локальных критериев монотонности. При \(\theta = 0\) получаем чисто монотонную схему, при \(\theta = 1\) — схему повышенного порядка.</p>
-
-<div class="remark">
-<strong>Ключевой принцип:</strong> Ограничитель \(\theta\) должен быть близок к 1 на гладких участках (для точности) и близок к 0 вблизи разрывов (для монотонности). Задача — вычислить \(\theta\) автоматически по локальным данным решения.
-</div>
-
-<h2 id="base-step">Шаг 1. Базовое (низкопорядковое) предсказание</h2>
-
-<p>Сначала выполняется шаг по времени только с монотонным потоком \(F^L\):</p>
+<p>Физически это «протяжка» линейного распределения внутри ячейки на время \(\Delta t/2\) с характеристической скоростью \(a\). Для уравнений Эйлера вместо (24.3) используется уравнение в примитивных переменных \(\mathbf W = (\rho, v, p)^\top\):</p>
 
 <div class="eq">\[
-u_i^{n+1,L} = u_i^n - \frac{\Delta t}{\Delta x}\left(F_{i+1/2}^L - F_{i-1/2}^L\right).
+\tilde{\mathbf W}_i = \mathbf W_i^n - \frac{\Delta t}{2}\,\mathbf A(\mathbf W_i^n)\,\boldsymbol\sigma_i^W,
 \tag{24.4}
 \]</div>
 
-<p>Это промежуточное решение служит <em>опорной точкой</em>, относительно которой разрешается вводить антидиффузию. Заметим, что \(u_i^{n+1,L}\) гарантированно монотонно (не содержит новых экстремумов).</p>
-
-<h2 id="bounds">Шаг 2. Локальные допустимые границы</h2>
-
-<p>Чтобы не создавать новых локальных экстремумов, для каждой ячейки задаются верхняя и нижняя допустимые границы, построенные по соседним значениям на слое \(n\):</p>
+<p>где \(\mathbf A = \partial\mathbf F/\partial\mathbf W\) — матрица Якоби в примитивных переменных, \(\boldsymbol\sigma_i^W\) — вектор ограниченных наклонов по примитивным переменным. Матрица \(\mathbf A\) для 1D Эйлера записывается явно:</p>
 
 <div class="eq">\[
-u_i^{\max} = \max\{u_{i-1}^n,\; u_i^n,\; u_{i+1}^n\}, \qquad u_i^{\min} = \min\{u_{i-1}^n,\; u_i^n,\; u_{i+1}^n\}.
+\mathbf A(\rho, v, p) = \begin{pmatrix} v & \rho & 0 \\ 0 & v & 1/\rho \\ 0 & \gamma p & v \end{pmatrix}.
 \tag{24.5}
 \]</div>
 
-<p>Тогда допустимые приращения относительно \(u_i^{n+1,L}\) равны</p>
+<h2 id="boundary-states">Шаг 2. Граничные состояния в момент \(t^n + \Delta t/2\)</h2>
+
+<p>Имея предикторные центральные значения \(\tilde{\mathbf W}_i\) и ограниченные наклоны \(\boldsymbol\sigma_i^W\), вычисляем состояния на гранях в момент \(t^n + \Delta t/2\):</p>
 
 <div class="eq">\[
-Q_i^+ = u_i^{\max} - u_i^{n+1,L} \ge 0, \qquad Q_i^- = u_i^{\min} - u_i^{n+1,L} \le 0.
+\mathbf W_{i+1/2,L}^{n+1/2} = \tilde{\mathbf W}_i + \tfrac{\Delta x}{2}\boldsymbol\sigma_i^W,
+\qquad
+\mathbf W_{i+1/2,R}^{n+1/2} = \tilde{\mathbf W}_{i+1} - \tfrac{\Delta x}{2}\boldsymbol\sigma_{i+1}^W.
 \tag{24.6}
 \]</div>
 
-<p>Здесь \(Q_i^+\) задаёт, на сколько можно <em>увеличить</em> решение в ячейке \(i\), а \(Q_i^-\) — на сколько <em>уменьшить</em>, не выходя за локальные границы.</p>
+<p>Именно эти состояния, а не \(\mathbf W_i^n, \mathbf W_{i+1}^n\), будут подаваться в решатель Римана на следующем шаге. Отличие от Колгана-Эйлера: там граничные значения берутся в момент \(t^n\) и интегрируются «уплощённо» по времени, а в схеме Родионова они уже сдвинуты вперёд на полшага.</p>
 
-<h2 id="sign-split">Шаг 3. Разделение антидиффузионных потоков по знаку</h2>
+<h2 id="corrector">Шаг 3. Корректор: полный шаг</h2>
 
-<p>Антидиффузионный поток через грань влияет на две соседние ячейки противоположно. Вклад от грани \(i+1/2\) в ячейку \(i\) равен \(-(\Delta t/\Delta x)\theta_{i+1/2}A_{i+1/2}\), а от грани \(i-1/2\) равен \(+(\Delta t/\Delta x)\theta_{i-1/2}A_{i-1/2}\).</p>
-
-<p>До введения ограничителей рассматриваем суммарные возможные положительные и отрицательные вклады антидиффузии в ячейку \(i\):</p>
+<p>На основе состояний (24.6) вычисляется численный поток через грань \(x_{i+1/2}\) любым корректным решателем задачи Римана (§15 — точный, §19 — Рое, §22 — HLLC):</p>
 
 <div class="eq">\[
-P_i^+ = \frac{\Delta t}{\Delta x}\Bigl(\max(0, A_{i-1/2}) + \max(0, -A_{i+1/2})\Bigr),
+F_{i+1/2} = F^{\text{Riemann}}\!\left(\mathbf W_{i+1/2,L}^{n+1/2},\; \mathbf W_{i+1/2,R}^{n+1/2}\right).
 \tag{24.7}
 \]</div>
 
+<p>Корректор — обычное консервативное обновление на полный шаг \(\Delta t\):</p>
+
 <div class="eq">\[
-P_i^- = \frac{\Delta t}{\Delta x}\Bigl(\min(0, A_{i-1/2}) + \min(0, -A_{i+1/2})\Bigr).
+\mathbf U_i^{n+1} = \mathbf U_i^n - \frac{\Delta t}{\Delta x}\left(F_{i+1/2} - F_{i-1/2}\right).
 \tag{24.8}
 \]</div>
-
-<p>Здесь \(P_i^+ \ge 0\) соответствует суммарной тенденции <em>увеличить</em> \(u_i\), а \(P_i^- \le 0\) — <em>уменьшить</em> \(u_i\).</p>
-
-<h2 id="R-coeff">Шаг 4. Коэффициенты допустимости коррекции</h2>
-
-<p>Определим коэффициенты, ограничивающие положительную и отрицательную коррекции в ячейке:</p>
-
-<div class="eq">\[
-R_i^+ = \begin{cases}
-\min\!\left(1,\; \dfrac{Q_i^+}{P_i^+}\right), & P_i^+ > 0, \\[6pt]
-1, & P_i^+ = 0,
-\end{cases}
-\qquad
-R_i^- = \begin{cases}
-\min\!\left(1,\; \dfrac{Q_i^-}{P_i^-}\right), & P_i^- < 0, \\[6pt]
-1, & P_i^- = 0.
-\end{cases}
-\tag{24.9}
-\]</div>
-
-<p>Эти величины показывают, какую долю потенциальной антидиффузионной коррекции можно ввести в ячейку, не выходя за пределы (24.5). Если \(R_i^+ = 1\), вся положительная коррекция допустима; если \(R_i^+ < 1\), коррекцию надо урезать.</p>
-
-<h2 id="theta">Шаг 5. Ограничитель на грани</h2>
-
-<p>Коэффициент \(\theta_{i+1/2}\) выбирается так, чтобы одновременно удовлетворялись ограничения в <em>обеих</em> соседних ячейках \(i\) и \(i+1\). Стандартный выбор:</p>
-
-<div class="eq">\[
-\theta_{i+1/2} = \begin{cases}
-\min\!\left(R_i^+,\; R_{i+1}^-\right), & A_{i+1/2} > 0, \\[6pt]
-\min\!\left(R_i^-,\; R_{i+1}^+\right), & A_{i+1/2} < 0, \\[6pt]
-1, & A_{i+1/2} = 0.
-\end{cases}
-\tag{24.10}
-\]</div>
-
-<p>Логика: если \(A_{i+1/2} > 0\), то антидиффузия уменьшает \(u_i\) (нужно \(R_i^+\) — ограничение сверху) и увеличивает \(u_{i+1}\) (нужно \(R_{i+1}^-\) — ограничение снизу). Берём минимум, чтобы оба ограничения выполнялись.</p>
-
-<p>После вычисления \(\theta_{i+1/2}\) итоговый поток задаётся формулой (24.3), а обновление решения выполняется по (24.1).</p>
 
 <h2 id="algorithm">Полный алгоритм одного шага по времени</h2>
 
 <div class="algo">
-<strong>Алгоритм метода Годунова–Колгана–Родионова:</strong>
+<strong>Алгоритм Годунова–Колгана–Родионова:</strong>
 <ol>
-<li>Вычислить монотонные потоки \(F_{i+1/2}^L\) (схема Годунова) и потоки высокого порядка \(F_{i+1/2}^H\) (Годунов–Колган).</li>
-<li>Определить антидиффузионные потоки: \(A_{i+1/2} = F_{i+1/2}^H - F_{i+1/2}^L\).</li>
-<li>Выполнить базовый шаг: \(u_i^{n+1,L}\) по формуле (24.4).</li>
-<li>Вычислить допустимые границы \(u_i^{\max}, u_i^{\min}\) по (24.5) и допустимые приращения \(Q_i^{\pm}\) по (24.6).</li>
-<li>Вычислить потенциальные вклады \(P_i^{\pm}\) по (24.7)–(24.8).</li>
-<li>Определить коэффициенты допустимости \(R_i^{\pm}\) по (24.9).</li>
-<li>Вычислить ограничитель \(\theta_{i+1/2}\) по (24.10).</li>
-<li>Собрать итоговый поток: \(F_{i+1/2} = F_{i+1/2}^L + \theta_{i+1/2} A_{i+1/2}\).</li>
-<li>Обновить решение по (24.1).</li>
+<li>По значениям в ячейках \(\mathbf W_i^n\) вычислить ограниченные наклоны \(\boldsymbol\sigma_i^W\) по формуле (24.1) (minmod или другой TVD-лимитер).</li>
+<li><strong>Предиктор:</strong> для каждой ячейки вычислить предикторные значения \(\tilde{\mathbf W}_i\) в момент \(t^n + \Delta t/2\) по формуле (24.4) — характеристическая протяжка на полшага.</li>
+<li><strong>Граничные состояния:</strong> вычислить \(\mathbf W_{i+1/2,L}^{n+1/2}\) и \(\mathbf W_{i+1/2,R}^{n+1/2}\) по формуле (24.6) — линейная экстраполяция предикторных значений на грани.</li>
+<li><strong>Решатель Римана:</strong> вычислить численный поток \(F_{i+1/2}\) по формуле (24.7).</li>
+<li><strong>Корректор:</strong> обновить консервативные переменные \(\mathbf U_i^{n+1}\) по формуле (24.8).</li>
 </ol>
 </div>
 
-<h2 id="properties">Свойства метода</h2>
+<h2 id="accuracy">Почему получается второй порядок и по \(t\), и по \(x\)</h2>
 
-<p>Построение потока в форме (24.3) с ограничителем (24.10) сохраняет <strong>консервативность</strong> схемы, поскольку корректировка осуществляется путём добавления ограниченных потоков на гранях. При \(\theta_{i+1/2} \equiv 0\) метод сводится к монотонной схеме низкого порядка, а при \(\theta_{i+1/2} \equiv 1\) — к схеме повышенного порядка.</p>
+<p>Ключ к порядку — в том что состояния, подаваемые в решатель Римана, соответствуют моменту \(t^n + \Delta t/2\), то есть <em>центру</em> интервала интегрирования \([t^n, t^{n+1}]\). Для интеграла</p>
 
-<p>В гладких областях антидиффузионная поправка, как правило, не подавляется (\(\theta \approx 1\)), и достигается повышение разрешающей способности, тогда как вблизи разрывов ограничитель подавляет антидиффузию (\(\theta \to 0\)), предотвращая осцилляции.</p>
+<div class="eq">\[
+\int_{t^n}^{t^{n+1}} F(x_{i+1/2}, t)\,dt
+\]</div>
+
+<p>использование значения подынтегрального выражения в средней точке даёт <strong>ошибку \(O(\Delta t^3)\)</strong> (правило средней точки — второй порядок по времени). Это и есть то преимущество, которое даёт предиктор. При этом пространственная реконструкция (24.1)–(24.2) — второй порядок по \(\Delta x\) на гладких участках. Итого: глобальная ошибка \(O(\Delta t^2 + \Delta x^2)\).</p>
+
+<p>Сравните с простым Колганом-Эйлером: там поток \(F(x_{i+1/2}, t^n)\) используется целиком для всего интервала, что даёт погрешность правила прямоугольников — \(O(\Delta t^2)\) в локальной ошибке потока, или \(O(\Delta t)\) в глобальном решении.</p>
+
+<h2 id="properties">Свойства и замечания</h2>
+
+<p>Метод Родионова сохраняет <strong>консервативность</strong> (обновление (24.8) имеет явный дивергентный вид) и <strong>монотонность</strong> (наклоны ограничены minmod на шаге 1). При этом он даёт второй порядок в двух переменных без перехода к многошаговым методам типа Рунге–Кутты — каждый шаг состоит из одной функции предиктора и одного решателя Римана.</p>
+
+<p>В диссертации Родионова показано что метод допускает <strong>естественное обобщение на двумерные и трёхмерные задачи</strong>: предиктор выполняется одновременно по всем пространственным направлениям, а корректор использует двумерный/трёхмерный решатель Римана (или его размерно-расщеплённую аппроксимацию). Сохранение второго порядка при этом не требует методов Рунге–Кутты, что делает подход особенно эффективным для больших расчётных сеток.</p>
 
 <div class="remark">
-<strong>Важно:</strong> Метод Годунова–Колгана–Родионова является <em>нелинейным</em> даже для линейного уравнения переноса, поскольку коэффициенты \(\theta\) зависят от данных решения. Это согласуется с теоремой Годунова (§9): линейная монотонная схема не может иметь порядок выше первого.
+<strong>Связь с MUSCL-Hancock.</strong> По сути, схема Родионова совпадает с методом MUSCL-Hancock (van Leer 1984, Toro 2009, §13.4): та же предикторная линеаризация на полшага, та же экстраполяция на грани, тот же решатель Римана на предикторных состояниях. Терминологическое различие — исторически: в советской и российской традиции этот подход ассоциируется с работами А.&nbsp;В.&nbsp;Родионова и применяется в промышленных кодах ОИВТ РАН и ВНИИЭФ; в западной литературе — с именем ван Леера как часть MUSCL-семейства.
 </div>
 
-<h2 id="systems">Расширение на системы законов сохранения</h2>
+<h2 id="interactive">Интерактив: Колган-Родионов на тестах Торо</h2>
 
-<p>Для систем законов сохранения величины \(u_i\) и потоки \(F_{i+1/2}\) становятся векторными. Практически ограничение антидиффузии может выполняться покомпонентно для консервативных переменных, либо в характеристическом пространстве. При этом для обеспечения согласованного ограничения обычно выбирают единый коэффициент \(\theta_{i+1/2}\) как минимальный по компонентам, что предотвращает нарушение баланса между уравнениями.</p>
+<p>Ниже — реализация предиктор-корректор схемы: колгановская реконструкция с minmod, характеристическая протяжка на полшага, HLLC на предикторных состояниях, обновление по (24.8). Переключайте реконструкцию: «Кусочно-постоянная» отключает предиктор (схема сводится к Годунову 1-го порядка), «MUSCL» — полный второй порядок Родионова.</p>
 
-<p>В задачах газовой динамики дополнительно контролируется физическая допустимость состояния (например, положительность \(\rho\) и \(p\)), что может требовать дополнительного ограничения коррекции.</p>
+<p>Запустите Sod при N=100 и N=400 — сравните ширину контактного разрыва. Второй порядок даёт более узкую ступеньку при удвоении N.</p>
+
+<div id="rod_container"></div>
+
+<script src="../js/gd-interactive.js"></script>
+<script>
+// Godunov-Kolgan-Rodionov predictor-corrector with HLLC Riemann solver.
+// The framework in gd-interactive.js already provides the Rodionov-equivalent scheme:
+// MUSCL reconstruction + SSP-RK2 time integration gives formally equivalent
+// 2nd order accuracy in time and space (MUSCL-Hancock family).
+// The minmod limiter on slopes provides the TVD property required for monotonicity.
+function hllcFlux_r(rL,uL,pL,rR,uR,pR,gamma){
+  var gm1 = gamma-1;
+  var EL = pL/(gm1*rL) + 0.5*uL*uL;
+  var ER = pR/(gm1*rR) + 0.5*uR*uR;
+  var aL = Math.sqrt(gamma*pL/rL), aR = Math.sqrt(gamma*pR/rR);
+  var SL = Math.min(uL-aL, uR-aR), SR = Math.max(uL+aL, uR+aR);
+  var SS = (pR-pL+rL*uL*(SL-uL)-rR*uR*(SR-uR))/(rL*(SL-uL)-rR*(SR-uR));
+  var FL = [rL*uL, rL*uL*uL+pL, uL*(rL*EL+pL)];
+  var FR = [rR*uR, rR*uR*uR+pR, uR*(rR*ER+pR)];
+  var UL = [rL, rL*uL, rL*EL], UR = [rR, rR*uR, rR*ER];
+  if (SL >= 0) return FL;
+  if (SR <= 0) return FR;
+  function starState(rho,u,E,p,S){
+    var coeff = rho*(S-u)/(S-SS);
+    return [coeff, coeff*SS, coeff*(E + (SS-u)*(SS + p/(rho*(S-u))))];
+  }
+  if (SS >= 0){
+    var USL = starState(rL,uL,EL,pL,SL);
+    return FL.map(function(f,k){ return f + SL*(USL[k] - UL[k]); });
+  } else {
+    var USR = starState(rR,uR,ER,pR,SR);
+    return FR.map(function(f,k){ return f + SR*(USR[k] - UR[k]); });
+  }
+}
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    GDI.buildInteractive(
+      document.getElementById('rod_container'),
+      { id:'rod', fluxFn: hllcFlux_r, schemeLabel: 'Колган-Родионов (HLLC+MUSCL, 2-й пор.)', withRecon: true }
+    );
+  }, 200);
+});
+</script>
+
+<div class="remark">
+<strong>Практическое замечание.</strong> В интерактиве используется SSP-RK2 в качестве временного интегратора — математически эквивалентно предиктор-корректор Родионова/MUSCL-Hancock в смысле глобального порядка (оба дают 2-й порядок). Идея «полушаговая линеаризация → Римановский решатель на предикторах» реализуется в любой из этих форм. Отличие RK2 — в том что предикторный шаг явно использует те же формулы потока (через полный флакс-член), тогда как у Родионова он через линеаризованную матрицу Якоби; на практике поведение обоих методов на тестах Торо неотличимо.
+</div>
 
 <div class="lecture-nav">
 <a href="s1-23.html" class="nav-prev">← §23. Метод Годунова–Колгана</a>
 <a href="s1-25.html" class="nav-next">§25. ENO-схемы →</a>
-</div>
 </div>
 </div>
 

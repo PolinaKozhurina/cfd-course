@@ -326,6 +326,12 @@ window.MathJax = {
   <button id="roeRun" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 20px;font-family:'Source Serif 4',serif;font-size:.88rem;font-weight:600;cursor:pointer">▶ Запустить Рое</button>
 </div>
 <div style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-bottom:.4rem" id="roeStatus">Готов к расчёту</div>
+<div id="roeAnimControls" style="display:none;margin-bottom:.5rem;gap:.6rem;align-items:center;flex-wrap:wrap">
+  <button id="roePlay" style="background:var(--accent);color:#fff;border:none;border-radius:5px;padding:5px 12px;font-family:'Source Serif 4',serif;font-size:.82rem;font-weight:600;cursor:pointer">▶ Воспроизвести</button>
+  <button id="roeReset" style="background:#6b5d4f;color:#fff;border:none;border-radius:5px;padding:5px 10px;font-family:'Source Serif 4',serif;font-size:.82rem;cursor:pointer">↻ В начало</button>
+  <span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">t = <span id="roeTv">0.000</span></span>
+  <input type="range" id="roeT" min="0" max="1000" value="1000" style="flex:1;min-width:180px">
+</div>
 <div style="display:flex;gap:1.2rem;justify-content:center;margin:.5rem 0;font-size:.78rem;color:var(--text2);font-family:'JetBrains Mono',monospace;flex-wrap:wrap">
   <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:2px;background:#b44a2d"></span>точное</span>
   <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:2px;background:#3a5ba0"></span>Рое</span>
@@ -489,6 +495,17 @@ function runRoe(){
         return RHS;
       }
 
+      // Snapshots for animation: record roughly 80 evenly-spaced frames
+      var Nsnap = 80;
+      var snapInterval = tend / Nsnap;
+      var snaps = [{t:0, rc:[], uc:[], pc:[]}];
+      // Initial snapshot
+      for (var i=Ng;i<N+Ng;i++){
+        var p0 = prim(U,i);
+        snaps[0].rc.push(p0.r); snaps[0].uc.push(p0.u); snaps[0].pc.push(p0.p);
+      }
+      var nextSnap = snapInterval;
+
       var t=0, ns=0, t0=performance.now();
       while (t < tend){
         applyBC(U);
@@ -503,31 +520,110 @@ function runRoe(){
         var R2 = computeRHS(U1);
         for (var k=0;k<3;k++) for (var i=0;i<Nt;i++) U[k][i] = 0.5*U[k][i] + 0.5*(U1[k][i] + dt*R2[k][i]);
         t += dt; ns++;
+        // Record snapshot at fixed times
+        if (t >= nextSnap - 1e-9 || t >= tend - 1e-9){
+          var snap = {t:t, rc:[], uc:[], pc:[]};
+          for (var i=Ng;i<N+Ng;i++){
+            var p = prim(U,i);
+            snap.rc.push(p.r); snap.uc.push(p.u); snap.pc.push(p.p);
+          }
+          snaps.push(snap);
+          nextSnap += snapInterval;
+        }
         if (ns > 2e5) break;
       }
 
       var el = (performance.now()-t0).toFixed(1);
-      var xc=[], rc=[], uc=[], pc=[];
-      for (var i=Ng;i<N+Ng;i++){ var p = prim(U,i); xc.push(xmin + (i-Ng+0.5)*dx); rc.push(p.r); uc.push(p.u); pc.push(p.p); }
-      var xe=[], re=[], ue=[], pe=[];
-      var Ne = 800;
-      for (var i=0;i<Ne;i++){
-        var x = xmin + (xmax-xmin)*(i+0.5)/Ne;
-        var s = exactRiemann(T.rL, T.uL, T.pL, T.rR, T.uR, T.pR, gamma, (x - T.x0)/tend);
-        xe.push(x); re.push(s.rho); ue.push(s.u); pe.push(s.p);
+      var xc=[];
+      for (var i=Ng;i<N+Ng;i++){ xc.push(xmin + (i-Ng+0.5)*dx); }
+
+      // Precompute exact solutions at each snapshot time
+      var Ne = 400;
+      var xeFull = [];
+      for (var i=0;i<Ne;i++) xeFull.push(xmin + (xmax-xmin)*(i+0.5)/Ne);
+      var exactAtTime = {}; // cache: time -> {re, ue, pe}
+      function exactAt(tt){
+        if (tt < 1e-6) tt = 1e-6;
+        var key = tt.toFixed(6);
+        if (exactAtTime[key]) return exactAtTime[key];
+        var re=[], ue=[], pe=[];
+        for (var i=0;i<Ne;i++){
+          var s = exactRiemann(T.rL, T.uL, T.pL, T.rR, T.uR, T.pR, gamma, (xeFull[i] - T.x0)/tt);
+          re.push(s.rho); ue.push(s.u); pe.push(s.p);
+        }
+        exactAtTime[key] = {re:re, ue:ue, pe:pe};
+        return exactAtTime[key];
       }
 
-      plotField('roe_c_rho', xc, rc, xe, re, 'ρ', xmin, xmax);
-      plotField('roe_c_p',   xc, pc, xe, pe, 'P', xmin, xmax);
-      plotField('roe_c_u',   xc, uc, xe, ue, 'v', xmin, xmax);
-      verification(xc,rc,uc,pc, T, gamma, tend);
+      // Save for animation access
+      window._roeAnim = {
+        T: T, tend: tend, xmin: xmin, xmax: xmax, xc: xc, snaps: snaps,
+        Ne: Ne, xeFull: xeFull, exactAt: exactAt, gamma: gamma
+      };
 
-      document.getElementById('roeStatus').textContent = '✓ Тест «'+T.name+'»: '+ns+' шагов, '+el+' мс, '+recon+(recon!=='const'?'+SSP-RK2':'+Эйлер');
+      // Show controls, render last frame initially
+      document.getElementById('roeAnimControls').style.display = 'flex';
+      document.getElementById('roeT').value = 1000;
+      renderRoeFrame(snaps.length - 1);
+      verification(xc, snaps[snaps.length-1].rc, snaps[snaps.length-1].uc, snaps[snaps.length-1].pc, T, gamma, tend);
+
+      document.getElementById('roeStatus').textContent = '✓ Тест «'+T.name+'»: '+ns+' шагов, '+el+' мс, '+recon+(recon!=='const'?'+SSP-RK2':'+Эйлер')+', '+snaps.length+' кадров готовы';
     } catch(err){
       document.getElementById('roeStatus').textContent = 'Ошибка: '+err.message;
     }
     btn.disabled = false;
   }, 20); });
+}
+
+function renderRoeFrame(snapIdx){
+  var A = window._roeAnim;
+  if (!A) return;
+  var idx = Math.max(0, Math.min(snapIdx, A.snaps.length - 1));
+  var snap = A.snaps[idx];
+  var ex = A.exactAt(snap.t);
+  plotField('roe_c_rho', A.xc, snap.rc, A.xeFull, ex.re, 'ρ', A.xmin, A.xmax);
+  plotField('roe_c_p',   A.xc, snap.pc, A.xeFull, ex.pe, 'P', A.xmin, A.xmax);
+  plotField('roe_c_u',   A.xc, snap.uc, A.xeFull, ex.ue, 'v', A.xmin, A.xmax);
+  document.getElementById('roeTv').textContent = snap.t.toFixed(4);
+}
+
+var roePlayId = null;
+function roePlay(){
+  var A = window._roeAnim;
+  if (!A){ return; }
+  if (roePlayId){
+    cancelAnimationFrame(roePlayId); roePlayId = null;
+    document.getElementById('roePlay').textContent = '▶ Воспроизвести';
+    return;
+  }
+  var slider = document.getElementById('roeT');
+  // If at end, reset to start
+  if (+slider.value >= 995) slider.value = 0;
+  document.getElementById('roePlay').textContent = '⏸ Пауза';
+  var last = performance.now();
+  var totalMs = 4000; // 4 seconds to play through
+  function tick(now){
+    var dtMs = now - last; last = now;
+    var v = +slider.value + dtMs * 1000/totalMs;
+    if (v >= 1000){
+      slider.value = 1000;
+      renderRoeFrame(A.snaps.length - 1);
+      roePlayId = null;
+      document.getElementById('roePlay').textContent = '▶ Воспроизвести';
+      return;
+    }
+    slider.value = v;
+    var idx = Math.round(v/1000 * (A.snaps.length - 1));
+    renderRoeFrame(idx);
+    roePlayId = requestAnimationFrame(tick);
+  }
+  roePlayId = requestAnimationFrame(tick);
+}
+function roeReset(){
+  var A = window._roeAnim; if (!A) return;
+  if (roePlayId){ cancelAnimationFrame(roePlayId); roePlayId = null; document.getElementById('roePlay').textContent = '▶ Воспроизвести'; }
+  document.getElementById('roeT').value = 0;
+  renderRoeFrame(0);
 }
 
 function plotField(cid, xc, yc, xe, ye, yl, xmin, xmax){
@@ -612,6 +708,15 @@ function verification(xc,rc,uc,pc, T, gamma, tend){
 document.getElementById('roeRun').addEventListener('click', runRoe);
 document.getElementById('roeEps').addEventListener('input', function(){
   document.getElementById('roeEpsV').textContent = (this.value/100).toFixed(2);
+});
+document.getElementById('roePlay').addEventListener('click', roePlay);
+document.getElementById('roeReset').addEventListener('click', roeReset);
+document.getElementById('roeT').addEventListener('input', function(){
+  var A = window._roeAnim;
+  if (!A) return;
+  if (roePlayId){ cancelAnimationFrame(roePlayId); roePlayId = null; document.getElementById('roePlay').textContent = '▶ Воспроизвести'; }
+  var idx = Math.round(+this.value / 1000 * (A.snaps.length - 1));
+  renderRoeFrame(idx);
 });
 
 window.addEventListener('load', function(){

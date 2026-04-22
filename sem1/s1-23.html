@@ -27,6 +27,8 @@ window.MathJax = {
   <a href="#slopes">Выбор наклонов</a>
   <a href="#flux">Численный поток</a>
   <a href="#properties">Свойства</a>
+  <a href="#interactive-1">Интерактив 1: реконстр.</a>
+  <a href="#interactive-2">Интерактив 2: сравнение</a>
   <div class="sep"></div>
   <div class="g">Навигация</div>
   <a href="s1-22.html">← §22 HLLC</a>
@@ -104,6 +106,509 @@ F_{i+1/2} = F\bigl(u_{i+1/2}^L,\; u_{i+1/2}^R\bigr),
 <p>Метод Годунова–Колгана является консервативным и при корректном выборе наклонов обеспечивает второй порядок точности на гладких решениях. По сравнению с классической схемой Годунова он обладает существенно меньшей численной диффузией.</p>
 <div class="remark">
 <strong>Замечание.</strong> Линейная реконструкция сама по себе не гарантирует монотонности, что требует дальнейшего развития метода. Эта проблема послужила основой для построения метода Годунова–Колгана–Родионова, рассматриваемого в следующем параграфе.
+</div>
+
+<h2 id="interactive-1">Интерактив 1: реконструкция на разных функциях</h2>
+
+<p>Ниже — визуализация того, как выглядит реконструкция \((23.1)\) для разных типов данных. Переключайте функцию и тип ограничителя — следите за тремя вещами:</p>
+<ul>
+<li><strong>Серые ступеньки</strong> — исходные данные \(u_i^n\) (средние по ячейке).</li>
+<li><strong>Цветные наклонные отрезки</strong> — реконструкция (23.1) внутри каждой ячейки. Видно, где наклон определён уверенно (гладкая функция), а где <em>обнуляется</em> ограничителем (экстремумы, разрывы).</li>
+<li><strong>Точки на гранях</strong> — значения \(u_L\) (слева от грани) и \(u_R\) (справа), которые подаются в решатель Римана (23.3).</li>
+</ul>
+
+<div id="reconDemo" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.2rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Функция</label>
+    <select id="reconIC" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)">
+      <option value="smooth">Гладкая (sin)</option>
+      <option value="bump">Локальный максимум (гауссиан)</option>
+      <option value="linear">Линейная</option>
+      <option value="step">Ступенька (разрыв)</option>
+      <option value="mixed">Смешанная: гладкая часть + разрыв</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Наклон</label>
+    <select id="reconSlope" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)">
+      <option value="none">Без реконстр. (σ=0) — 1-й порядок</option>
+      <option value="central" selected>Центральная (σ=(u_{i+1}−u_{i−1})/2Δx)</option>
+      <option value="minmod">minmod — TVD</option>
+      <option value="superbee">superbee — агрессивный TVD</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Ячеек: <span id="reconNv">16</span></label>
+    <input type="range" id="reconN" min="8" max="40" value="16" step="2" style="width:120px">
+  </div>
+</div>
+<canvas id="reconCanvas" width="900" height="340" style="width:100%;height:auto;background:#fff;border-radius:6px;border:1px solid var(--border)"></canvas>
+<div style="display:flex;gap:1.2rem;justify-content:center;margin-top:.4rem;font-size:.76rem;color:var(--text2);font-family:'JetBrains Mono',monospace;flex-wrap:wrap">
+  <span><span style="color:#9a8d7e">- -</span> точная функция</span>
+  <span><span style="color:#6b5d4f">─</span> средние u_i по ячейкам</span>
+  <span><span style="color:#b44a2d">/</span> реконструкция с наклоном</span>
+  <span><span style="color:#3a5ba0">●</span> u_L, u_R на гранях</span>
+</div>
+<div id="reconMsg" style="margin-top:.6rem;padding:.6rem;background:#fff;border:1px solid var(--border);border-radius:6px;font-size:.85rem;display:none"></div>
+</div>
+
+<script>
+(function(){
+function sampleFunc(type, x){
+  if (type === 'smooth')  return 0.5 + 0.45*Math.sin(Math.PI*(x-0.5)*2);
+  if (type === 'bump')    return 0.1 + 0.8*Math.exp(-Math.pow((x-0.5)/0.15, 2));
+  if (type === 'linear')  return 0.1 + 0.8*x;
+  if (type === 'step')    return (x < 0.5) ? 0.8 : 0.2;
+  if (type === 'mixed'){
+    if (x < 0.45) return 0.2 + 0.5*Math.sin(2*Math.PI*x);
+    if (x < 0.55) return 0.9; // discontinuity
+    return 0.3 + 0.3*x;
+  }
+  return 0;
+}
+function minmod(a,b){ return a*b<=0 ? 0 : (Math.abs(a)<Math.abs(b) ? a : b); }
+function maxmod(a,b){ return a*b<=0 ? 0 : (Math.abs(a)>Math.abs(b) ? a : b); }
+function superbee(a,b){
+  if (a*b <= 0) return 0;
+  return maxmod(minmod(a, 2*b), minmod(2*a, b));
+}
+
+function computeSlopes(u, dx, method){
+  var N = u.length;
+  var s = new Float64Array(N);
+  if (method === 'none') return s;
+  for (var i=1;i<N-1;i++){
+    var dL = (u[i] - u[i-1])/dx;
+    var dR = (u[i+1] - u[i])/dx;
+    var dC = (u[i+1] - u[i-1])/(2*dx);
+    if (method === 'central') s[i] = dC;
+    else if (method === 'minmod') s[i] = minmod(dL, dR);
+    else if (method === 'superbee') s[i] = superbee(dL, dR);
+  }
+  return s;
+}
+
+function drawRecon(){
+  var N = +document.getElementById('reconN').value;
+  document.getElementById('reconNv').textContent = N;
+  var type = document.getElementById('reconIC').value;
+  var method = document.getElementById('reconSlope').value;
+
+  var c = document.getElementById('reconCanvas');
+  var ctx = c.getContext('2d');
+  var W = c.width, H = c.height;
+  ctx.fillStyle = '#fdf9f3'; ctx.fillRect(0, 0, W, H);
+  var P = {l: 50, r: 20, t: 20, b: 40};
+  var pw = W - P.l - P.r, ph = H - P.t - P.b;
+
+  // Cell averages (by sampling exact function at center)
+  var dx = 1.0/N;
+  var u = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    // Average over cell: use 5-point Simpson
+    var x0 = i*dx, x1 = (i+1)*dx;
+    var mid = 0.5*(x0+x1);
+    u[i] = (sampleFunc(type, x0) + 4*sampleFunc(type, mid) + sampleFunc(type, x1))/6;
+  }
+  // Slopes
+  var slopes = computeSlopes(u, dx, method);
+
+  // Y-range
+  var mn = 0, mx = 1;
+  for (var i=0;i<N;i++){
+    var uL = u[i] - 0.5*dx*slopes[i];
+    var uR = u[i] + 0.5*dx*slopes[i];
+    mn = Math.min(mn, u[i], uL, uR);
+    mx = Math.max(mx, u[i], uL, uR);
+  }
+  var pad = (mx-mn)*0.1; mn -= pad; mx += pad;
+
+  // Grid + cell dividers
+  ctx.strokeStyle = '#ede6da'; ctx.lineWidth = 0.5;
+  for (var g=0;g<=5;g++){
+    var gy = P.t + ph*g/5;
+    ctx.beginPath(); ctx.moveTo(P.l, gy); ctx.lineTo(P.l+pw, gy); ctx.stroke();
+  }
+  // Cell boundaries (light vertical lines)
+  ctx.strokeStyle = '#e8dcc8'; ctx.lineWidth = 0.7; ctx.setLineDash([2,3]);
+  for (var i=0;i<=N;i++){
+    var X = P.l + pw*i/N;
+    ctx.beginPath(); ctx.moveTo(X, P.t); ctx.lineTo(X, P.t+ph); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  function xp(x){ return P.l + pw*x; }
+  function yp(v){ return P.t + ph*(1 - (v-mn)/(mx-mn)); }
+
+  // Exact function
+  ctx.strokeStyle = '#9a8d7e'; ctx.lineWidth = 2; ctx.setLineDash([5,3]);
+  ctx.beginPath();
+  for (var k=0;k<=400;k++){
+    var x = k/400;
+    var v = sampleFunc(type, x);
+    k===0 ? ctx.moveTo(xp(x), yp(v)) : ctx.lineTo(xp(x), yp(v));
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // Cell averages as horizontal gray segments
+  ctx.strokeStyle = '#6b5d4f'; ctx.lineWidth = 1.5;
+  for (var i=0;i<N;i++){
+    var x0 = i*dx, x1 = (i+1)*dx;
+    ctx.beginPath(); ctx.moveTo(xp(x0), yp(u[i])); ctx.lineTo(xp(x1), yp(u[i])); ctx.stroke();
+  }
+
+  // Reconstruction slopes
+  if (method !== 'none'){
+    ctx.lineWidth = 2.3;
+    for (var i=0;i<N;i++){
+      var x0 = i*dx, x1 = (i+1)*dx;
+      var uL = u[i] - 0.5*dx*slopes[i];
+      var uR = u[i] + 0.5*dx*slopes[i];
+      // Color: strong red if slope non-zero, faded if zero (limiter clamped)
+      var isZero = Math.abs(slopes[i]) < 1e-10;
+      ctx.strokeStyle = isZero ? '#c4b8a8' : '#b44a2d';
+      ctx.beginPath(); ctx.moveTo(xp(x0), yp(uL)); ctx.lineTo(xp(x1), yp(uR)); ctx.stroke();
+    }
+    // uL, uR points on faces
+    ctx.fillStyle = '#3a5ba0';
+    for (var i=0;i<N;i++){
+      var x0 = i*dx, x1 = (i+1)*dx;
+      var uL = u[i] - 0.5*dx*slopes[i];
+      var uR = u[i] + 0.5*dx*slopes[i];
+      ctx.beginPath(); ctx.arc(xp(x0), yp(uL), 3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(xp(x1), yp(uR), 3, 0, Math.PI*2); ctx.fill();
+    }
+  } else {
+    // Mark cell centers for "no reconstruction" case
+    ctx.fillStyle = '#3a5ba0';
+    for (var i=0;i<N;i++){
+      ctx.beginPath(); ctx.arc(xp((i+0.5)*dx), yp(u[i]), 3, 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  // Axes labels
+  ctx.strokeStyle = '#6b5d4f'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(P.l, P.t); ctx.lineTo(P.l, P.t+ph); ctx.lineTo(P.l+pw, P.t+ph); ctx.stroke();
+  ctx.fillStyle = '#6b5d4f'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'center';
+  for (var k=0;k<=10;k+=2) ctx.fillText((k/10).toFixed(1), P.l + pw*k/10, P.t+ph+14);
+  ctx.fillText('x', P.l+pw/2, P.t+ph+30);
+  ctx.textAlign = 'right';
+  for (var g=0;g<=5;g++) ctx.fillText((mx-(mx-mn)*g/5).toFixed(2), P.l-3, P.t+ph*g/5+3);
+  ctx.save(); ctx.translate(13, P.t+ph/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center'; ctx.fillText('u', 0, 0); ctx.restore();
+
+  // Diagnostic message
+  var nz = 0;
+  for (var i=0;i<N;i++) if (Math.abs(slopes[i])>1e-10) nz++;
+  var msg = '';
+  if (method === 'none'){
+    msg = '<strong>Реконструкции нет:</strong> решение кусочно-постоянно в каждой ячейке — это метод Годунова с 1-м порядком. u_L = u_R = u_i на каждой грани — численная диффузия максимальна.';
+  } else if (method === 'central'){
+    msg = '<strong>Центральная разность:</strong> наклон определён во всех ячейках ('+nz+'/'+N+'). На гладких участках — настоящий 2-й порядок. Но на экстремумах и разрывах возникают осцилляции (нет ограничителя) — нарушение TVD.';
+  } else if (method === 'minmod'){
+    msg = '<strong>minmod:</strong> наклоны определены в '+nz+'/'+N+' ячейках. ';
+    if (type === 'step' || type === 'mixed' || type === 'bump'){
+      msg += 'В окрестности разрыва / экстремума наклон <em>обнулён</em> (серые отрезки) — там схема автоматически падает до 1-го порядка, но TVD-свойство сохраняется. Это компромисс между точностью и монотонностью.';
+    } else {
+      msg += 'На гладких участках все наклоны ненулевые — полноценный 2-й порядок.';
+    }
+  } else if (method === 'superbee'){
+    msg = '<strong>superbee:</strong> агрессивный ограничитель. Наклоны крупнее чем у minmod ('+nz+'/'+N+' ненулевых), ступеньки резче — решение ближе к оригиналу на разрывах. Плата: близко к границе TVD, может давать «лестничный» артефакт на гладких профилях.';
+  }
+  var el = document.getElementById('reconMsg');
+  el.innerHTML = msg; el.style.display = '';
+}
+document.getElementById('reconIC').addEventListener('change', drawRecon);
+document.getElementById('reconSlope').addEventListener('change', drawRecon);
+document.getElementById('reconN').addEventListener('input', drawRecon);
+window.addEventListener('load', function(){ setTimeout(drawRecon, 150); });
+})();
+</script>
+
+<h2 id="interactive-2">Интерактив 2: с реконструкцией vs без — где 2-й порядок?</h2>
+
+<p>Теперь — прямое численное сравнение: одинаковая начальная функция, одинаковый решатель Римана, одинаковое число ячеек. Разница — только в реконструкции. Слева (<span style="color:#3a5ba0">синий</span>) — Годунов без реконструкции (σ=0, 1-й порядок). Справа (<span style="color:#b44a2d">красный</span>) — Годунов-Колган с выбранным ограничителем.</p>
+
+<p>Сверху над каждой ячейкой нарисованы <strong>маркеры порядка</strong>: <span style="color:#1a6b5a;font-weight:700">═</span> зелёный горизонтальный = наклон = 0 (1-й порядок, ступенька), <span style="color:#b44a2d;font-weight:700">∕</span> красный наклонный = наклон ≠ 0 (2-й порядок, линия внутри ячейки). Таким образом видно, где лимитер «откатывает» схему к 1-му порядку.</p>
+
+<div id="cmpDemo" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.2rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">НУ</label>
+    <select id="cmpIC" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)">
+      <option value="smooth">Гауссиан (гладкий)</option>
+      <option value="step">Ступенька (разрыв)</option>
+      <option value="mixed">Смешанное: гладк. + ступ.</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Ограничитель</label>
+    <select id="cmpLim" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)">
+      <option value="minmod" selected>minmod (TVD)</option>
+      <option value="superbee">superbee (агресс. TVD)</option>
+      <option value="central">центральная (без лимит.)</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">CFL = <span id="cmpCFLv">0.50</span></label>
+    <input type="range" id="cmpCFL" min="10" max="80" value="50" style="width:120px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Шагов целевых: <span id="cmpNSv">120</span></label>
+    <input type="range" id="cmpNS" min="20" max="400" value="120" style="width:120px">
+  </div>
+  <button id="cmpRun" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 18px;font-family:'Source Serif 4',serif;font-size:.88rem;font-weight:600;cursor:pointer">▶ Старт</button>
+  <button id="cmpStop" style="background:#6b5d4f;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer;display:none">⏸ Стоп</button>
+</div>
+<div style="font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);margin-bottom:.4rem">Шаг <span id="cmpStep">0</span>. В каждой ячейке над графиками — <span style="color:#1a6b5a">═</span> если σ=0 (1-й порядок), <span style="color:#b44a2d">∕</span> если σ≠0 (2-й порядок).</div>
+<canvas id="cmpCanvas" width="900" height="360" style="width:100%;height:auto;background:#fff;border-radius:6px;border:1px solid var(--border)"></canvas>
+<div style="display:flex;gap:1.5rem;justify-content:center;margin-top:.4rem;font-size:.76rem;color:var(--text2);font-family:'JetBrains Mono',monospace;flex-wrap:wrap">
+  <span><span style="color:#9a8d7e">- -</span> точное</span>
+  <span><span style="color:#3a5ba0">—</span> Годунов (σ=0, 1-й порядок)</span>
+  <span><span style="color:#b44a2d">—</span> Годунов-Колган (с реконстр.)</span>
+</div>
+<div id="cmpMsg" style="margin-top:.6rem;padding:.6rem;background:#fff;border:1px solid var(--border);border-radius:6px;font-size:.85rem;display:none"></div>
+</div>
+
+<script>
+(function(){
+var N = 80; // cells
+var L = 1.0; // period
+var dx = L/N;
+var animId = null, animStep = 0, animTarget = 0;
+var u1 = null, u2 = null, u0 = null; // u1 = Godunov, u2 = Godunov-Kolgan
+
+function ic(type){
+  var u = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var x = (i+0.5)*dx;
+    if (type === 'smooth'){
+      u[i] = 0.1 + 0.8*Math.exp(-Math.pow((x-0.5)/0.08, 2));
+    } else if (type === 'step'){
+      u[i] = (x >= 0.25 && x <= 0.55) ? 1.0 : 0.1;
+    } else {
+      // mixed: smooth bump on left, step on right
+      if (x < 0.4) u[i] = 0.1 + 0.6*Math.exp(-Math.pow((x-0.2)/0.08, 2));
+      else u[i] = (x >= 0.5 && x <= 0.75) ? 0.9 : 0.15;
+    }
+  }
+  return u;
+}
+
+function minmod(a,b){ return a*b<=0 ? 0 : (Math.abs(a)<Math.abs(b) ? a : b); }
+function maxmod(a,b){ return a*b<=0 ? 0 : (Math.abs(a)>Math.abs(b) ? a : b); }
+function superbee(a,b){
+  if (a*b<=0) return 0;
+  return maxmod(minmod(a,2*b), minmod(2*a,b));
+}
+function computeSlopes(u, lim){
+  var s = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var im = (i-1+N)%N, ip = (i+1)%N;
+    var dL = (u[i]-u[im])/dx, dR = (u[ip]-u[i])/dx;
+    if (lim === 'central') s[i] = (u[ip]-u[im])/(2*dx);
+    else if (lim === 'minmod') s[i] = minmod(dL, dR);
+    else if (lim === 'superbee') s[i] = superbee(dL, dR);
+  }
+  return s;
+}
+
+// Advance: u_t + u_x = 0 with c=1>0. Godunov (const) uses upwind; Godunov-Kolgan uses reconstructed u_L
+function stepGodunov(u, r){
+  var v = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var im = (i-1+N)%N;
+    // F_{i+1/2} = u_i (upwind, since c>0), F_{i-1/2} = u_{i-1}
+    v[i] = u[i] - r*(u[i] - u[im]);
+  }
+  return v;
+}
+function stepKolgan(u, r, lim){
+  var s = computeSlopes(u, lim);
+  var v = new Float64Array(N);
+  // u_L at i+1/2 = u_i + 0.5*dx*s_i; upwind flux = c * u_L
+  // Compute fluxes at each face
+  var F = new Float64Array(N);
+  for (var i=0;i<N;i++) F[i] = u[i] + 0.5*dx*s[i]; // u_L at face i+1/2
+  for (var i=0;i<N;i++){
+    var im = (i-1+N)%N;
+    v[i] = u[i] - r*(F[i] - F[im]);
+  }
+  return v;
+}
+
+function shift(u0arr, r, n){
+  // period L, shift by r*n*dx
+  var s = r*n*dx, v = new Float64Array(N);
+  for (var i=0;i<N;i++){
+    var xs = (((i+0.5)*dx - s) % L + L) % L;
+    // sample u0 at xs (continuous equiv using floor)
+    var j = Math.floor(xs/dx - 0.5);
+    var jp = j+1;
+    var f = xs/dx - 0.5 - j;
+    while (j<0) j+=N; j = j%N; while (jp<0) jp+=N; jp = jp%N;
+    v[i] = (1-f)*u0arr[j] + f*u0arr[jp];
+  }
+  return v;
+}
+
+function draw(u1arr, u2arr, ueArr, slopes, step){
+  var c = document.getElementById('cmpCanvas');
+  var ctx = c.getContext('2d');
+  var W = c.width, H = c.height;
+  ctx.fillStyle = '#fdf9f3'; ctx.fillRect(0, 0, W, H);
+  var P = {l:45, r:20, t:28, b:32};
+  var pw = W - P.l - P.r, ph = H - P.t - P.b;
+
+  var mn = 0, mx = 1.1;
+  for (var i=0;i<N;i++){ mn = Math.min(mn, u1arr[i], u2arr[i]); mx = Math.max(mx, u1arr[i], u2arr[i]); }
+  var pad = (mx-mn)*0.1; mn -= pad; mx += pad;
+
+  // Grid
+  ctx.strokeStyle = '#ede6da'; ctx.lineWidth = 0.5;
+  for (var g=0;g<=5;g++){
+    var gy = P.t + ph*g/5;
+    ctx.beginPath(); ctx.moveTo(P.l, gy); ctx.lineTo(P.l+pw, gy); ctx.stroke();
+  }
+
+  // Order indicators ON TOP
+  var indY = 12;
+  for (var i=0;i<N;i++){
+    var x0 = i*dx, x1 = (i+1)*dx;
+    var X0 = P.l + pw*x0/L, X1 = P.l + pw*x1/L;
+    var isNonzero = Math.abs(slopes[i]) > 1e-10;
+    ctx.strokeStyle = isNonzero ? '#b44a2d' : '#1a6b5a';
+    ctx.lineWidth = isNonzero ? 2.2 : 1.6;
+    if (isNonzero){
+      ctx.beginPath(); ctx.moveTo(X0+1, indY+4); ctx.lineTo(X1-1, indY-4); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.moveTo(X0+1, indY); ctx.lineTo(X1-1, indY); ctx.stroke();
+    }
+  }
+
+  function xp(x){ return P.l + pw*x/L; }
+  function yp(v){ return P.t + ph*(1 - (v-mn)/(mx-mn)); }
+
+  // Exact (dashed gray)
+  ctx.strokeStyle = '#9a8d7e'; ctx.lineWidth = 2; ctx.setLineDash([5,3]);
+  ctx.beginPath();
+  for (var i=0;i<N;i++){
+    var x = (i+0.5)*dx;
+    i===0 ? ctx.moveTo(xp(x), yp(ueArr[i])) : ctx.lineTo(xp(x), yp(ueArr[i]));
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // Godunov (blue, 1st order) — show as steps (true cell averages)
+  ctx.strokeStyle = '#3a5ba0'; ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  for (var i=0;i<N;i++){
+    var x0 = i*dx, x1 = (i+1)*dx;
+    var Y = yp(u1arr[i]);
+    i===0 ? ctx.moveTo(xp(x0), Y) : ctx.lineTo(xp(x0), Y);
+    ctx.lineTo(xp(x1), Y);
+  }
+  ctx.stroke();
+
+  // Kolgan with reconstruction (red) — show linear segments within cells
+  ctx.strokeStyle = '#b44a2d'; ctx.lineWidth = 1.8;
+  for (var i=0;i<N;i++){
+    var x0 = i*dx, x1 = (i+1)*dx;
+    var uL = u2arr[i] - 0.5*dx*slopes[i];
+    var uR = u2arr[i] + 0.5*dx*slopes[i];
+    ctx.beginPath(); ctx.moveTo(xp(x0), yp(uL)); ctx.lineTo(xp(x1), yp(uR)); ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = '#6b5d4f'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(P.l, P.t); ctx.lineTo(P.l, P.t+ph); ctx.lineTo(P.l+pw, P.t+ph); ctx.stroke();
+  ctx.fillStyle = '#6b5d4f'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'center';
+  for (var k=0;k<=10;k+=2) ctx.fillText((k/10).toFixed(1), P.l + pw*k/10, P.t+ph+14);
+  ctx.fillText('шаг '+step, P.l+pw/2, P.t+ph+28);
+  ctx.textAlign = 'right';
+  for (var g=0;g<=5;g++) ctx.fillText((mx-(mx-mn)*g/5).toFixed(2), P.l-3, P.t+ph*g/5+3);
+
+  document.getElementById('cmpStep').textContent = step;
+}
+
+function analyze(icType, limType){
+  var el = document.getElementById('cmpMsg');
+  var msg = '<strong>Наблюдения:</strong> ';
+  if (icType === 'smooth'){
+    msg += 'На гладком гауссиане <span style="color:#b44a2d">Колган</span> сохраняет амплитуду значительно лучше чем <span style="color:#3a5ba0">Годунов</span> — почти все маркеры сверху красные (2-й порядок).';
+  } else if (icType === 'step'){
+    msg += 'На ступеньке у Колгана <span style="color:#1a6b5a">3-4 зелёных маркера</span> в окрестности разрыва — там лимитер обнулил наклон, и схема локально стала 1-го порядка. Это цена монотонности.';
+  } else {
+    msg += 'В смешанной задаче: гладкая часть слева — красные маркеры (2-й порядок, амплитуда сохраняется). Ступенька справа — зелёные маркеры у фронта (1-й порядок, но без осцилляций). Это и есть суть ограничителей.';
+  }
+  if (limType === 'central'){
+    msg += '<br><em>Центральная разность без ограничителя:</em> все маркеры красные, но на разрывах решение осциллирует — нарушение TVD.';
+  }
+  el.innerHTML = msg; el.style.display = '';
+}
+
+function frame(){
+  if (animStep >= animTarget){
+    document.getElementById('cmpRun').style.display = '';
+    document.getElementById('cmpStop').style.display = 'none';
+    var icType = document.getElementById('cmpIC').value;
+    var lim = document.getElementById('cmpLim').value;
+    analyze(icType, lim);
+    return;
+  }
+  var r = +document.getElementById('cmpCFL').value/100;
+  var lim = document.getElementById('cmpLim').value;
+  u1 = stepGodunov(u1, r);
+  u2 = stepKolgan(u2, r, lim);
+  animStep++;
+  var slopes = computeSlopes(u2, lim);
+  var ue = shift(u0, r, animStep);
+  draw(u1, u2, ue, slopes, animStep);
+  animId = requestAnimationFrame(frame);
+}
+
+function run(){
+  var icType = document.getElementById('cmpIC').value;
+  var r = +document.getElementById('cmpCFL').value/100;
+  animTarget = +document.getElementById('cmpNS').value;
+  document.getElementById('cmpCFLv').textContent = r.toFixed(2);
+  document.getElementById('cmpNSv').textContent = animTarget;
+  if (animId){ cancelAnimationFrame(animId); animId = null; }
+  u0 = ic(icType);
+  u1 = new Float64Array(u0);
+  u2 = new Float64Array(u0);
+  animStep = 0;
+  document.getElementById('cmpRun').style.display = 'none';
+  document.getElementById('cmpStop').style.display = '';
+  document.getElementById('cmpMsg').style.display = 'none';
+  frame();
+}
+function stop(){
+  if (animId){ cancelAnimationFrame(animId); animId = null; }
+  document.getElementById('cmpRun').style.display = '';
+  document.getElementById('cmpStop').style.display = 'none';
+  var icType = document.getElementById('cmpIC').value;
+  var lim = document.getElementById('cmpLim').value;
+  analyze(icType, lim);
+}
+
+document.getElementById('cmpRun').addEventListener('click', run);
+document.getElementById('cmpStop').addEventListener('click', stop);
+document.getElementById('cmpCFL').addEventListener('input', function(){ document.getElementById('cmpCFLv').textContent = (this.value/100).toFixed(2); });
+document.getElementById('cmpNS').addEventListener('input', function(){ document.getElementById('cmpNSv').textContent = this.value; });
+
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    u0 = ic('smooth');
+    u1 = new Float64Array(u0); u2 = new Float64Array(u0);
+    var slopes = computeSlopes(u2, 'minmod');
+    draw(u1, u2, u0, slopes, 0);
+  }, 180);
+});
+})();
+</script>
+
+<div class="exercise">
+<strong>Упражнение.</strong> Запустите интерактив 2 на смешанной задаче, затем переключите ограничитель с minmod на «центральная» — видно как на разрыве появляются осцилляции (маркеры остаются красными везде, но решение теряет монотонность). Это и доказывает тезис §8: реконструкция 2-го порядка <em>требует</em> нелинейного ограничителя.
 </div>
 
 <div class="lecture-nav">

@@ -134,6 +134,40 @@ window.MathJax = {
 <div class="caption">Идея метода Годунова: кусочно-постоянное решение в ячейках, задачи Римана на границах определяют численные потоки.</div>
 </div>
 
+<h2 id="interactive">Интерактив: метод Годунова с точным решателем Римана</h2>
+
+<p>Ниже — 1D солвер Годунова с <em>точным</em> решателем задачи Римана (без приближений). На каждой грани ячеек выполняется процедура из §17: итерации Ньютона для \(p_*\), затем выборка состояния при \(\xi = 0\). Это эталонный решатель, с которым сравниваются все приближённые (§19-22).</p>
+
+<div id="gd15_container"></div>
+
+<script src="../js/gd-interactive.js"></script>
+<script>
+// Exact Godunov flux: solve Riemann problem at interface, sample at xi=0
+function godunovExactFlux(rL,uL,pL,rR,uR,pR,gamma,opts){
+  var s = GDI.exactRiemann(rL,uL,pL,rR,uR,pR,gamma, 0);
+  var gm1 = gamma - 1;
+  var E = s.p/gm1 + 0.5*s.rho*s.u*s.u;
+  return [s.rho*s.u, s.rho*s.u*s.u + s.p, s.u*(E + s.p)];
+}
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    GDI.buildInteractive(
+      document.getElementById('gd15_container'),
+      { id:'gd15', fluxFn: godunovExactFlux, schemeLabel: 'Годунов (точн.)', withRecon: false }
+    );
+  }, 200);
+});
+</script>
+
+<div class="remark">
+<strong>Особенности метода Годунова с точным решателем:</strong>
+<ul>
+<li>Монотонность и TVD обеспечиваются автоматически — каждая точечная задача Римана физически корректна.</li>
+<li>Скорость сходимости — 1-й порядок (кусочно-постоянная реконструкция). Ударные волны разрешаются за 1-3 ячейки, контактные разрывы размазываются сильнее (\(\sim N^{-1/2}\) по шагу сетки — это стандартная слабость метода Годунова 1-го порядка на контактах).</li>
+<li>Основной недостаток — вычислительная стоимость точного решателя: итерации Ньютона на каждой грани, что делает метод в 3-5 раз дороже приближённых решателей типа Рое или HLL при одинаковом разрешении. Для практических расчётов обычно используются HLLC/Roe (§19-22), а точный решатель — как эталон.</li>
+</ul>
+</div>
+
 <div class="lecture-nav">
 <a href="s1-14.html" class="nav-prev">← §14. Устойчивость схемы «крест»</a>
 <a href="s1-16.html" class="nav-next">§16. Точная задача Римана →</a>

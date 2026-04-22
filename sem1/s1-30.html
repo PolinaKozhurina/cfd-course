@@ -120,9 +120,158 @@ window.MathJax = {
 <strong>Итог курса.</strong> В теории разностных схем мы прошли путь от базовых понятий аппроксимации и устойчивости (§1–§6) через свойства монотонности и TVD (§7–§11), лагранжевы и эйлеровы методы газовой динамики (§12–§15), задачу Римана и приближённые решатели (§16–§22) к методам повышения порядка (§23–§27) и стабилизации (§28–§30). Все эти элементы образуют единую систему, в которой каждый метод занимает своё место на «треугольнике компромиссов» между точностью, устойчивостью и монотонностью.
 </div>
 
+<h2 id="interactive">Интерактив: как вязкость влияет на порядок сходимости</h2>
+
+<p>Рассмотрим гладкую синусоидальную волну \(u_0(x) = \sin(2\pi x)\) в уравнении переноса. Будем запускать Лакса-Вендроффа на сетках \(N = 40, 80, 160, 320\) и для каждого измерять \(L_2\)-ошибку после одного полного оборота. При отсутствии искусственной вязкости схема имеет <strong>второй порядок</strong> — ошибка падает в 4 раза при удвоении N. При добавлении вязкости ошибка становится ниже <em>в абсолютном значении</em> на грубой сетке, но скорость сходимости деградирует — на гладком решении вязкость «съедает» второй порядок.</p>
+
+<div id="ord_container" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.6rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Вязкость η = <span id="ord_nv">0.00</span></label>
+    <input type="range" id="ord_n" min="0" max="100" value="0" style="width:160px">
+  </div>
+  <button id="ord_run" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 16px;font-family:'Source Serif 4',serif;font-size:.85rem;font-weight:600;cursor:pointer">Рассчитать</button>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Сходимость log(L₂) vs log(N)</div>
+    <canvas id="ord_conv" width="440" height="300" style="width:100%;height:auto"></canvas>
+  </div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Решение при N=80 после 1 оборота</div>
+    <canvas id="ord_sol" width="440" height="300" style="width:100%;height:auto"></canvas>
+  </div>
+</div>
+<div id="ord_msg" style="margin-top:.6rem;padding:.6rem;background:#fff;border:1px solid var(--border);border-radius:6px;font-size:.85rem;font-family:'JetBrains Mono',monospace;display:none"></div>
+</div>
+
+<script>
+(function(){
+// Lax-Wendroff with optional extra viscosity: u^{n+1}_i = u_i - 0.5 r (u_{i+1}-u_{i-1}) + 0.5 r^2 (u_{i+1}-2 u_i + u_{i-1}) + eta (u_{i+1}-2 u_i + u_{i-1})
+function runLW(N, r, T, eta){
+  var u = new Float64Array(N);
+  var h = 1.0/N;
+  for (var i=0;i<N;i++) u[i] = Math.sin(2*Math.PI*(i+0.5)*h);
+  var t = 0;
+  var dt = r*h;
+  while (t + dt/2 < T){
+    var v = new Float64Array(N);
+    for (var i=0;i<N;i++){
+      var im=(i-1+N)%N, ip=(i+1)%N;
+      v[i] = u[i] - 0.5*r*(u[ip]-u[im]) + 0.5*r*r*(u[ip]-2*u[i]+u[im]) + eta*(u[ip]-2*u[i]+u[im]);
+    }
+    u = v; t += dt;
+  }
+  return u;
+}
+function runExp(){
+  var eta = +document.getElementById('ord_n').value/1000; // 0..0.1
+  document.getElementById('ord_nv').textContent = eta.toFixed(3);
+  var r = 0.5, T = 1.0; // one full rotation
+  var sizes = [40, 80, 160, 320];
+  var errs = [];
+  var solN80 = null;
+  for (var s of sizes){
+    var u = runLW(s, r, T, eta);
+    var err = 0;
+    for (var i=0;i<s;i++){
+      var xe = Math.sin(2*Math.PI*(i+0.5)/s); // exact after T=1 is same as initial
+      err += (u[i]-xe)*(u[i]-xe);
+    }
+    err = Math.sqrt(err/s);
+    errs.push(err);
+    if (s===80) solN80 = u;
+  }
+  // Compute orders
+  var orders = [];
+  for (var i=1;i<errs.length;i++){
+    orders.push(Math.log(errs[i-1]/errs[i])/Math.log(2));
+  }
+  drawConv(sizes, errs);
+  drawSol(solN80, 80);
+  var el = document.getElementById('ord_msg');
+  el.innerHTML = '<strong>η = '+eta.toFixed(3)+'.</strong> Ошибки: '+errs.map(function(e){return e.toExponential(2);}).join(', ')+'<br>Порядки: '+orders.map(function(o){return o.toFixed(2);}).join(', ')+'<br><em>Выводы:</em> '+(eta<0.001?'чистый Л-В — порядок ≈ 2': eta<0.02?'добавка вязкости снижает абс. ошибку на грубых N, но порядок падает': 'сильная вязкость — схема сходится с 1-м порядком');
+  el.style.display = '';
+}
+function drawConv(sizes, errs){
+  var c = document.getElementById('ord_conv');
+  var ctx = c.getContext('2d'), W=c.width, H=c.height;
+  ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+  var P={l:50,r:15,t:15,b:30}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+  var xs = sizes.map(function(s){return Math.log10(s);});
+  var ys = errs.map(function(e){return Math.log10(e);});
+  var xmin = Math.min.apply(null, xs)-0.1, xmax = Math.max.apply(null, xs)+0.1;
+  var ymin = Math.min.apply(null, ys)-0.2, ymax = Math.max.apply(null, ys)+0.2;
+  function xp(x){return P.l + pw*(x-xmin)/(xmax-xmin);}
+  function yp(y){return P.t + ph*(1-(y-ymin)/(ymax-ymin));}
+  ctx.strokeStyle='#ede6da'; ctx.lineWidth=0.5;
+  for (var g=0;g<=4;g++){ var gy=P.t+ph*g/4; ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke(); }
+  // Reference slopes -1 and -2
+  ctx.strokeStyle='#9a8d7e'; ctx.setLineDash([4,3]); ctx.lineWidth=1;
+  // Slope -2
+  var y1 = ys[0];
+  ctx.beginPath(); ctx.moveTo(xp(xs[0]),yp(y1)); ctx.lineTo(xp(xmax),yp(y1-2*(xmax-xs[0]))); ctx.stroke();
+  ctx.fillStyle='#9a8d7e'; ctx.font='10px JetBrains Mono'; ctx.textAlign='left';
+  ctx.fillText('slope -2', xp(xmax)-40, yp(y1-2*(xmax-xs[0]))-3);
+  // Slope -1
+  ctx.beginPath(); ctx.moveTo(xp(xs[0]),yp(y1)); ctx.lineTo(xp(xmax),yp(y1-(xmax-xs[0]))); ctx.stroke();
+  ctx.fillText('slope -1', xp(xmax)-40, yp(y1-(xmax-xs[0]))-3);
+  ctx.setLineDash([]);
+  // Data
+  ctx.strokeStyle='#b44a2d'; ctx.lineWidth=2;
+  ctx.beginPath();
+  for (var i=0;i<xs.length;i++){ i===0 ? ctx.moveTo(xp(xs[i]),yp(ys[i])) : ctx.lineTo(xp(xs[i]),yp(ys[i])); }
+  ctx.stroke();
+  ctx.fillStyle='#b44a2d';
+  for (var i=0;i<xs.length;i++){ ctx.beginPath(); ctx.arc(xp(xs[i]),yp(ys[i]),4,0,Math.PI*2); ctx.fill(); }
+  // Axes
+  ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+  ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+  for (var i=0;i<xs.length;i++){ ctx.fillText('N='+sizes[i], xp(xs[i]), P.t+ph+14); }
+  ctx.fillText('log N', P.l+pw/2, P.t+ph+28);
+  ctx.textAlign='right';
+  for (var g=0;g<=4;g++){ var yv = ymax-(ymax-ymin)*g/4; ctx.fillText('1e'+yv.toFixed(1), P.l-3, P.t+ph*g/4+3); }
+  ctx.save(); ctx.translate(12, P.t+ph/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center'; ctx.fillText('L₂-ошибка', 0, 0); ctx.restore();
+}
+function drawSol(u, N){
+  var c = document.getElementById('ord_sol');
+  var ctx = c.getContext('2d'), W=c.width, H=c.height;
+  ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+  var P={l:40,r:15,t:15,b:30}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+  var mn=-1.2, mx=1.2;
+  ctx.strokeStyle='#ede6da'; ctx.lineWidth=0.5;
+  for (var g=0;g<=4;g++){ var gy=P.t+ph*g/4; ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke(); }
+  function xp(i){return P.l+pw*(i+0.5)/N;}
+  function yp(v){return P.t+ph*(1-(v-mn)/(mx-mn));}
+  // Exact
+  ctx.strokeStyle='#9a8d7e'; ctx.lineWidth=2; ctx.setLineDash([5,3]);
+  ctx.beginPath();
+  for (var i=0;i<=200;i++){ var x=i/200; var X=P.l+pw*x; var Y=yp(Math.sin(2*Math.PI*x)); i===0?ctx.moveTo(X,Y):ctx.lineTo(X,Y); }
+  ctx.stroke(); ctx.setLineDash([]);
+  // Numerical
+  ctx.strokeStyle='#3a5ba0'; ctx.lineWidth=2;
+  ctx.beginPath();
+  for (var i=0;i<N;i++){ i===0?ctx.moveTo(xp(i),yp(u[i])):ctx.lineTo(xp(i),yp(u[i])); }
+  ctx.stroke();
+  ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+  ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+  for (var i=0;i<=4;i++){ ctx.fillText((i/4).toFixed(2), P.l+pw*i/4, P.t+ph+14); }
+  ctx.textAlign='right';
+  for (var g=0;g<=4;g++) ctx.fillText((mx-(mx-mn)*g/4).toFixed(2), P.l-3, P.t+ph*g/4+3);
+}
+document.getElementById('ord_run').addEventListener('click', runExp);
+document.getElementById('ord_n').addEventListener('input', function(){
+  document.getElementById('ord_nv').textContent = (+this.value/1000).toFixed(3);
+});
+window.addEventListener('load', function(){ setTimeout(runExp, 300); });
+})();
+</script>
+
 <div class="lecture-nav">
 <a href="s1-29.html" class="nav-prev">← §29. Искусственная вязкость: формы</a>
-<span></span>
+<a href="comparison.html" class="nav-next">Сводка: сравнение методов →</a>
 </div>
 </div>
 </div>

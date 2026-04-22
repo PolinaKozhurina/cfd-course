@@ -342,6 +342,13 @@ $$U^{n+1} = L_x(\tfrac{\Delta t}{2}) \circ L_y(\Delta t) \circ L_x(\tfrac{\Delta
   <button class="run-btn" id="runBtn" onclick="runGodunov()">▶ Запустить Годунов+HLLC</button>
   <span class="status" id="status">Готов к расчету</span>
 </div>
+<div id="godAnimControls" style="display:none;margin-top:.5rem;gap:.6rem;align-items:center;flex-wrap:wrap">
+  <button id="godPlay" onclick="godPlay()" style="background:var(--accent);color:#fff;border:none;border-radius:5px;padding:5px 12px;font-family:'Source Serif 4',serif;font-size:.82rem;font-weight:600;cursor:pointer">▶ Воспроизвести</button>
+  <button id="godReset" onclick="godReset()" style="background:#6b5d4f;color:#fff;border:none;border-radius:5px;padding:5px 10px;font-family:'Source Serif 4',serif;font-size:.82rem;cursor:pointer">↻ В начало</button>
+  <span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">t = <span id="godTv">0.000</span></span>
+  <input type="range" id="godT" min="0" max="1000" value="1000" style="flex:1;min-width:200px"
+    oninput="(function(v){var A=window._godAnim;if(!A)return;if(godPlayId){cancelAnimationFrame(godPlayId);godPlayId=null;document.getElementById('godPlay').textContent='▶ Воспроизвести'}renderGodFrame(Math.round(+v/1000*(A.snaps.length-1)))})(this.value)">
+</div>
 </div>
 
 <div class="legend-row">
@@ -626,6 +633,12 @@ function computeRHS(V){
 }
 
 let t=0,ns=0;const t0=performance.now();
+// Snapshots for animation
+const Nsnap=80;
+const snapInterval=tend/Nsnap;
+const snaps=[{t:0,rc:[],uc:[],pc:[]}];
+for(let i=Ng;i<N+Ng;i++){const p0=prim(U,i);snaps[0].rc.push(p0.r);snaps[0].uc.push(p0.u);snaps[0].pc.push(p0.p)}
+let nextSnap=snapInterval;
 while(t<tend){
   applyBC(U);
   let mx=0;for(let i=Ng;i<N+Ng;i++){const p2=prim(U,i);const l=Math.abs(p2.u)+p2.a;if(l>mx)mx=l}
@@ -642,21 +655,69 @@ while(t<tend){
     const RHS=computeRHS(U);
     for(let k=0;k<3;k++)for(let i=0;i<Nt;i++)U[k][i]+=dt*RHS[k][i];
   }
-  t+=dt;ns++;if(ns>1e5)break}
+  t+=dt;ns++;
+  if(t>=nextSnap-1e-9||t>=tend-1e-9){
+    const snap={t:t,rc:[],uc:[],pc:[]};
+    for(let i=Ng;i<N+Ng;i++){const p=prim(U,i);snap.rc.push(p.r);snap.uc.push(p.u);snap.pc.push(p.p)}
+    snaps.push(snap);
+    nextSnap+=snapInterval;
+  }
+  if(ns>1e5)break}
 
 const el=(performance.now()-t0).toFixed(1);
-// Extract results
-const xc=[],rc=[],uc=[],pc=[];
-for(let i=Ng;i<N+Ng;i++){
-  const p2=prim(U,i);
-  xc.push((i-Ng+.5)*dx);rc.push(p2.r);uc.push(p2.u);pc.push(p2.p)}
-// Exact
-const xa=[],re=[],ue=[],pe=[];
-for(let i=0;i<500;i++){const x=(i+.5)/500,s=exactRiemann(1,0,1,.125,0,.1,gamma,(x-.5)/tend);xa.push(x);re.push(s.rho);ue.push(s.u);pe.push(s.p)}
-plotField('c_rho',xc,rc,xa,re,'ρ',0,1.1);plotField('c_p',xc,pc,xa,pe,'P',0,1.1);plotField('c_u',xc,uc,xa,ue,'u',-.1,null);
-showVerification(xc,rc,uc,pc,tend,gamma);
-document.getElementById('status').textContent=`Готово: ${ns} шагов, ${el} мс, ${recon}+${timeint}`;
+const xc=[];
+for(let i=Ng;i<N+Ng;i++){xc.push((i-Ng+.5)*dx)}
+const Ne=500,xeFull=[];
+for(let i=0;i<Ne;i++) xeFull.push((i+.5)/Ne);
+function exactAt(tt){
+  if(tt<1e-6) tt=1e-6;
+  const re=[],ue=[],pe=[];
+  for(let i=0;i<Ne;i++){const s=exactRiemann(1,0,1,.125,0,.1,gamma,(xeFull[i]-.5)/tt);re.push(s.rho);ue.push(s.u);pe.push(s.p)}
+  return {re:re,ue:ue,pe:pe};
+}
+window._godAnim={xc:xc,snaps:snaps,xeFull:xeFull,exactAt:exactAt};
+// Render last frame
+document.getElementById('godAnimControls').style.display='flex';
+document.getElementById('godT').value=1000;
+renderGodFrame(snaps.length-1);
+const lastSnap=snaps[snaps.length-1];
+showVerification(xc,lastSnap.rc,lastSnap.uc,lastSnap.pc,tend,gamma);
+document.getElementById('status').textContent=`Готово: ${ns} шагов, ${el} мс, ${recon}+${timeint}, ${snaps.length} кадров`;
 btn.disabled=false},20)});}
+
+function renderGodFrame(snapIdx){
+  const A=window._godAnim;if(!A)return;
+  const idx=Math.max(0,Math.min(snapIdx,A.snaps.length-1));
+  const snap=A.snaps[idx];
+  const ex=A.exactAt(snap.t);
+  plotField('c_rho',A.xc,snap.rc,A.xeFull,ex.re,'ρ',0,1.1);
+  plotField('c_p',A.xc,snap.pc,A.xeFull,ex.pe,'P',0,1.1);
+  plotField('c_u',A.xc,snap.uc,A.xeFull,ex.ue,'u',-.1,null);
+  document.getElementById('godTv').textContent=snap.t.toFixed(4);
+}
+let godPlayId=null;
+function godPlay(){
+  const A=window._godAnim;if(!A)return;
+  if(godPlayId){cancelAnimationFrame(godPlayId);godPlayId=null;document.getElementById('godPlay').textContent='▶ Воспроизвести';return}
+  const slider=document.getElementById('godT');
+  if(+slider.value>=995) slider.value=0;
+  document.getElementById('godPlay').textContent='⏸ Пауза';
+  let last=performance.now();const totalMs=4000;
+  function tick(now){
+    const dtMs=now-last;last=now;
+    const v=+slider.value+dtMs*1000/totalMs;
+    if(v>=1000){slider.value=1000;renderGodFrame(A.snaps.length-1);godPlayId=null;document.getElementById('godPlay').textContent='▶ Воспроизвести';return}
+    slider.value=v;
+    renderGodFrame(Math.round(v/1000*(A.snaps.length-1)));
+    godPlayId=requestAnimationFrame(tick);
+  }
+  godPlayId=requestAnimationFrame(tick);
+}
+function godReset(){
+  const A=window._godAnim;if(!A)return;
+  if(godPlayId){cancelAnimationFrame(godPlayId);godPlayId=null;document.getElementById('godPlay').textContent='▶ Воспроизвести'}
+  document.getElementById('godT').value=0;renderGodFrame(0);
+}
 
 // ===== PLOTTING (same as FLIC) =====
 function plotField(cid,xc,yc,xe,ye,yl,ymn,ymx){

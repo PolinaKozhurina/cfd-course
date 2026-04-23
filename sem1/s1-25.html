@@ -201,34 +201,93 @@ function ic(t){
   }
   return u;
 }
-// ENO-3 reconstruction at i+1/2 (for f+ = u when c=1). Returns chosen stencil: 'L' or 'R'
+// ENO-3 reconstruction at i+1/2 for u_t + u_x = 0 (upwind c=1 > 0).
+// Three candidate stencils of length k=3 containing cell i:
+//   r=2: {i-2, i-1, i}       (fully left)
+//   r=1: {i-1, i, i+1}       (centered-left)
+//   r=0: {i,   i+1, i+2}     (right) — included but unused unless smoother
+// Formula: u_{i+1/2}^- = Σ_{j=0..k-1} c_{rj} * u_{i-r+j}
+// Coefficients from Shu (1998) table for k=3:
+//   r=2: ( 1/3, -7/6, 11/6)
+//   r=1: (-1/6,  5/6,  1/3)
+//   r=0: (11/6, -7/6,  1/3)
+// Stencil selection: classical Shu ENO — start with 2-point stencil at {i,i+1},
+// then at each step test extending left vs right, prefer the direction with
+// smaller absolute undivided difference (smoother side).
 function eno3FluxLeft(u, i){
-  // candidate stencils containing i: {i-2,i-1,i} or {i-1,i,i+1}
-  var im2 = u[(i-2+N)%N], im1 = u[(i-1+N)%N], ui = u[i], ip1 = u[(i+1)%N];
-  // Second differences for smoothness indicators
-  var d2L = u[(i-2+N)%N] - 2*u[(i-1+N)%N] + u[i]; // {i-2,i-1,i}
-  var d2R = u[(i-1+N)%N] - 2*u[i] + u[(i+1)%N];   // {i-1,i,i+1}
-  var choice;
-  var pL, pR;
-  // Left stencil {i-2,i-1,i}: u_{i+1/2} = (1/3)u_{i-2} - (7/6)u_{i-1} + (11/6)u_i
-  pL = (1/3)*im2 - (7/6)*im1 + (11/6)*ui;
-  // Right stencil {i-1,i,i+1}: u_{i+1/2} = -(1/6)u_{i-1} + (5/6)u_i + (1/3)u_{i+1}
-  pR = -(1/6)*im1 + (5/6)*ui + (1/3)*ip1;
-  if (Math.abs(d2L) < Math.abs(d2R)){
-    return {val: pL, stencil: 'L'};
+  var U = function(k){ return u[((i+k)%N+N)%N]; };
+  // Start: k=1 stencil is {i}. Extend to k=2:
+  // Compare |U(0) - U(-1)| vs |U(1) - U(0)|  — pick smaller
+  var left  = 0; // how many points extend to the left of i
+  var right = 0; // how many to the right of i
+  // Step 1: extend to 2 points
+  if (Math.abs(U(0) - U(-1)) < Math.abs(U(1) - U(0))){
+    left = 1;   // stencil now {i-1, i}
   } else {
-    return {val: pR, stencil: 'R'};
+    right = 1;  // stencil now {i, i+1}
   }
+  // Step 2: extend to 3 points using undivided 2nd differences
+  // Candidates: grow left (add U(-left-1)) or grow right (add U(right+1))
+  var d2L, d2R;
+  if (left === 1 && right === 0){
+    // current {i-1, i}; candidate left {i-2,i-1,i}: d2 = U(-2)-2U(-1)+U(0)
+    // candidate right {i-1, i, i+1}: d2 = U(-1)-2U(0)+U(1)
+    d2L = U(-2) - 2*U(-1) + U(0);
+    d2R = U(-1) - 2*U(0) + U(1);
+  } else {
+    // current {i, i+1}; candidate left {i-1,i,i+1}: d2 = U(-1)-2U(0)+U(1)
+    // candidate right {i, i+1, i+2}: d2 = U(0)-2U(1)+U(2)
+    d2L = U(-1) - 2*U(0) + U(1);
+    d2R = U(0) - 2*U(1) + U(2);
+  }
+  if (Math.abs(d2L) < Math.abs(d2R)){
+    left += 1;  // grow to the left
+  } else {
+    right += 1; // grow to the right
+  }
+  // Now stencil is {i - left, ..., i + right} with (left + right + 1) = 3 cells.
+  // Determine r = left (shift from i)
+  var r = left;
+  var s0 = U(-r), s1 = U(-r+1), s2 = U(-r+2);
+  var val;
+  if (r === 2) val = (1/3)*s0 - (7/6)*s1 + (11/6)*s2;
+  else if (r === 1) val = -(1/6)*s0 + (5/6)*s1 + (1/3)*s2;
+  else /* r === 0 */ val = (11/6)*s0 - (7/6)*s1 + (1/3)*s2;
+  // For coloring: 'L' if fully-left (r=2), 'R' otherwise
+  return {val: val, stencil: r === 2 ? 'L' : 'R'};
 }
-function stepENO(u, r){
-  var v = new Float64Array(N), sten = new Uint8Array(N);
+// RHS of semi-discrete scheme: L(u)_i = -(f_{i+1/2} - f_{i-1/2}) / h
+// For u_t + u_x = 0, f = u (upwind c=1 > 0)
+function computeRHS(u){
+  var rhs = new Float64Array(N);
+  var sten = new Uint8Array(N);
   for (var i=0;i<N;i++){
-    var uL = eno3FluxLeft(u, i);   // flux at i+1/2 (upwind c=1)
+    var uL = eno3FluxLeft(u, i);         // flux at i+1/2
     var uLm = eno3FluxLeft(u, (i-1+N)%N); // flux at i-1/2
-    v[i] = u[i] - r*(uL.val - uLm.val);
+    rhs[i] = -(uL.val - uLm.val)/h;
     sten[i] = uL.stencil === 'L' ? 0 : 1;
   }
-  return {u: v, sten: sten};
+  return {rhs: rhs, sten: sten};
+}
+// Step: SSP-RK3 (Shu-Osher). Third-order, strong-stability-preserving.
+// r = c*dt/h, so dt = r*h (since c=1)
+function stepENO(u, r){
+  var dt = r*h;
+  var N_ = u.length;
+  // Stage 1: u^(1) = u + dt L(u)
+  var R1 = computeRHS(u);
+  var u1 = new Float64Array(N_);
+  for (var i=0;i<N_;i++) u1[i] = u[i] + dt*R1.rhs[i];
+  // Stage 2: u^(2) = (3/4)u + (1/4)u^(1) + (1/4)dt L(u^(1))
+  var R2 = computeRHS(u1);
+  var u2 = new Float64Array(N_);
+  for (var i=0;i<N_;i++) u2[i] = 0.75*u[i] + 0.25*u1[i] + 0.25*dt*R2.rhs[i];
+  // Stage 3: u^{n+1} = (1/3)u + (2/3)u^(2) + (2/3)dt L(u^(2))
+  var R3 = computeRHS(u2);
+  var v = new Float64Array(N_);
+  for (var i=0;i<N_;i++) v[i] = (1/3)*u[i] + (2/3)*u2[i] + (2/3)*dt*R3.rhs[i];
+  // Use stencil choice from last (most recent) evaluation for coloring
+  return {u: v, sten: R3.sten};
 }
 function shift(u, r, n){
   var s = r*n*h, v = new Float64Array(N);
@@ -381,14 +440,31 @@ function stepLW(u,r){
   }
   return v;
 }
-// ENO-3 reconstruction at i+1/2 for upwind (c=1, use left stencils only)
+// ENO-3 reconstruction at i+1/2 for upwind (c=1). Classical Shu (1998) algorithm:
+// start from single cell i, extend left or right by comparing undivided differences,
+// arriving at one of 3 candidate stencils with r ∈ {0, 1, 2}.
 function enoFlux(u, i){
-  var im2=u[(i-2+N)%N], im1=u[(i-1+N)%N], ui=u[i], ip1=u[(i+1)%N];
-  var d2L = im2 - 2*im1 + ui;
-  var d2R = im1 - 2*ui + ip1;
-  var pL = (1/3)*im2 - (7/6)*im1 + (11/6)*ui;
-  var pR = -(1/6)*im1 + (5/6)*ui + (1/3)*ip1;
-  return (Math.abs(d2L) < Math.abs(d2R)) ? pL : pR;
+  var U = function(k){ return u[((i+k)%N+N)%N]; };
+  var left = 0, right = 0;
+  // Step 1: 1-cell → 2-cell
+  if (Math.abs(U(0) - U(-1)) < Math.abs(U(1) - U(0))) left = 1;
+  else right = 1;
+  // Step 2: 2-cell → 3-cell
+  var d2L, d2R;
+  if (left === 1){
+    d2L = U(-2) - 2*U(-1) + U(0);
+    d2R = U(-1) - 2*U(0) + U(1);
+  } else {
+    d2L = U(-1) - 2*U(0) + U(1);
+    d2R = U(0) - 2*U(1) + U(2);
+  }
+  if (Math.abs(d2L) < Math.abs(d2R)) left += 1;
+  else right += 1;
+  var r = left;
+  var s0 = U(-r), s1 = U(-r+1), s2 = U(-r+2);
+  if (r === 2) return (1/3)*s0 - (7/6)*s1 + (11/6)*s2;
+  if (r === 1) return -(1/6)*s0 + (5/6)*s1 + (1/3)*s2;
+  return (11/6)*s0 - (7/6)*s1 + (1/3)*s2;
 }
 function rhsENO(u){
   var R = new Float64Array(N);

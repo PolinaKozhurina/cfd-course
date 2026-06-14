@@ -24,6 +24,7 @@ window.MathJax = {
   <a href="#stages">Этапы численного решения</a>
   <a href="#definition">Определение сетки</a>
   <a href="#structured">Структурированные сетки</a>
+  <a href="#mapping">Техника отображений</a>
   <a href="#block">Блочно-структурированные</a>
   <a href="#datastruct">Структуры данных регулярной сетки</a>
   <a href="#unstructured">Неструктурированные сетки</a>
@@ -31,6 +32,7 @@ window.MathJax = {
   <a href="#adjacency">Смежность и инцидентность</a>
   <a href="#proper">Правильное примыкание</a>
   <a href="#nodecell">Отношение узел–ячейка</a>
+  <a href="#dsexplorer">Проводник по структуре данных</a>
   <a href="#interactive">Интерактив</a>
   <div class="sep"></div>
   <div class="g">Навигация</div>
@@ -161,6 +163,161 @@ window.MathJax = {
 
 <div class="remark">
 <strong>Почему «топологическая эквивалентность» важна.</strong> Так как окружение каждого внутреннего узла одинаково, для перехода к соседу достаточно изменить индекс: сосед справа — это \((i{+}1,j)\), сверху — \((i,j{+}1)\). Никакие списки соседей хранить не нужно — связи вычисляются арифметически. Это и есть источник экономии памяти и скорости регулярных сеток.
+</div>
+
+<h2 id="mapping">Техника отображений: регулярная сетка в криволинейной области</h2>
+
+<p>Главная идея техники отображений — построить регулярную (логическую) сетку \((i,j)\) на простом <em>вычислительном</em> квадрате, а затем отобразить её в <em>физическую</em> область сложной формы. Узлы остаются упорядоченными по индексам \((i,j)\), поэтому шаблон аппроксимации и арифметический доступ к соседям сохраняются; геометрически же ячейки искривляются, подстраиваясь под границу. Ниже логический квадрат \([0,1]\times[0,1]\) отображается так, что верхняя и нижняя границы изгибаются, а боковые расходятся, превращая прямоугольник в криволинейный «канал».</p>
+
+<div id="l4map_box" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:1.2rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Кривизна границы: <span id="l4map_cv">0.35</span></label>
+    <input type="range" id="l4map_curv" min="-60" max="60" value="35" style="width:170px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Расширение справа: <span id="l4map_fv">0.45</span></label>
+    <input type="range" id="l4map_flare" min="0" max="80" value="45" style="width:170px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Сетка \(I{\times}J\): <span id="l4map_nv">10</span>×<span id="l4map_nv2">8</span></label>
+    <input type="range" id="l4map_n" min="4" max="16" value="10" style="width:170px">
+  </div>
+</div>
+<div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+  <canvas id="l4map_canvas" width="600" height="300" style="width:100%;height:auto"></canvas>
+</div>
+<div id="l4map_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.4rem"></div>
+</div>
+
+<script>
+(function(){
+  var canvas = document.getElementById('l4map_canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  var curv = 0.35, flare = 0.45, NI = 10, NJ = 8;
+
+  // logical square [0,1]x[0,1] -> physical region (left half: logical grid, right half: mapped)
+  function mapPoint(u, v){
+    // u: 0..1 (i-direction), v: 0..1 (j-direction)
+    var pad = 24;
+    var x0 = 320, y0 = pad, w = W - 320 - pad, h = H - 2*pad;
+    // width grows to the right with flare (channel opening)
+    var halfBase = 0.5;
+    var half = halfBase + flare * u;            // half-height at column u (in logical units, clamped below)
+    var cy = 0.5;                                // centreline
+    // curved centreline: a sine bump controlled by curv
+    var bend = curv * Math.sin(Math.PI * u);
+    cy = 0.5 + bend;
+    // vertical position within the (possibly widened) channel
+    var lo = cy - half, hi = cy + half;
+    var vv = lo + (hi - lo) * v;
+    var px = x0 + w * u;
+    var py = y0 + h * vv;
+    return {x: px, y: py};
+  }
+
+  function drawLogical(){
+    var pad = 24;
+    var x0 = pad, y0 = pad, w = 260, h = H - 2*pad;
+    ctx.strokeStyle = '#3a5ba0'; ctx.lineWidth = 0.9;
+    for (var i=0;i<=NI;i++){
+      ctx.beginPath();
+      ctx.moveTo(x0 + w*i/NI, y0);
+      ctx.lineTo(x0 + w*i/NI, y0 + h);
+      ctx.stroke();
+    }
+    for (var j=0;j<=NJ;j++){
+      ctx.beginPath();
+      ctx.moveTo(x0, y0 + h*j/NJ);
+      ctx.lineTo(x0 + w, y0 + h*j/NJ);
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#6b5d4f'; ctx.font = '11px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('логическая (i,j)', x0 + w/2, H - 6);
+    ctx.fillText('i →', x0 + w/2, y0 - 8);
+  }
+
+  function drawMapped(){
+    // j-lines (constant v)
+    ctx.strokeStyle = '#1a6b5a'; ctx.lineWidth = 0.9;
+    for (var j=0;j<=NJ;j++){
+      ctx.beginPath();
+      for (var i=0;i<=NI;i++){
+        var p = mapPoint(i/NI, j/NJ);
+        if (i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y);
+      }
+      ctx.stroke();
+    }
+    // i-lines (constant u)
+    for (var i=0;i<=NI;i++){
+      ctx.beginPath();
+      for (var j=0;j<=NJ;j++){
+        var p = mapPoint(i/NI, j/NJ);
+        if (j===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y);
+      }
+      ctx.stroke();
+    }
+    // highlight boundary
+    ctx.strokeStyle = '#b44a2d'; ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    for (var i2=0;i2<=NI;i2++){ var pt=mapPoint(i2/NI,0); if(i2===0)ctx.moveTo(pt.x,pt.y);else ctx.lineTo(pt.x,pt.y); }
+    ctx.stroke();
+    ctx.beginPath();
+    for (var i3=0;i3<=NI;i3++){ var pb=mapPoint(i3/NI,1); if(i3===0)ctx.moveTo(pb.x,pb.y);else ctx.lineTo(pb.x,pb.y); }
+    ctx.stroke();
+    // mark a single logical node and its image
+    ctx.fillStyle = '#b44a2d';
+    var nm = mapPoint(3/NI, 2/NJ);
+    ctx.beginPath(); ctx.arc(nm.x, nm.y, 3.5, 0, Math.PI*2); ctx.fill();
+    var pad = 24, x0 = pad, h = H - 2*pad, w = 260;
+    var nl_x = x0 + w*3/NI, nl_y = pad + h*2/NJ;
+    ctx.beginPath(); ctx.arc(nl_x, nl_y, 3.5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#6b5d4f'; ctx.font = '11px JetBrains Mono'; ctx.textAlign = 'center';
+    ctx.fillText('физическая область', 320 + (W-320-24)/2, H - 6);
+  }
+
+  function drawArrow(){
+    ctx.strokeStyle = '#9a8d7e'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(292, H/2); ctx.lineTo(314, H/2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(314, H/2); ctx.lineTo(307, H/2-4); ctx.lineTo(307, H/2+4); ctx.closePath();
+    ctx.fillStyle = '#9a8d7e'; ctx.fill();
+    ctx.fillStyle = '#9a8d7e'; ctx.font = '9px JetBrains Mono'; ctx.textAlign = 'center';
+    ctx.fillText('x(i,j)', 303, H/2 - 8);
+  }
+
+  function draw(){
+    ctx.fillStyle = '#fdf9f3'; ctx.fillRect(0,0,W,H);
+    drawLogical();
+    drawArrow();
+    drawMapped();
+    var st = document.getElementById('l4map_status');
+    if (st) st.innerHTML = 'Узлов: <b>'+((NI+1)*(NJ+1))+'</b> · ячеек: <b>'+(NI*NJ)+
+      '</b> · логическая адресация (i,j) сохраняется; меняется только геометрия (отображение x=x(i,j), y=y(i,j)).';
+  }
+
+  document.getElementById('l4map_curv').addEventListener('input', function(){
+    curv = (+this.value)/100; document.getElementById('l4map_cv').textContent = curv.toFixed(2); draw();
+  });
+  document.getElementById('l4map_flare').addEventListener('input', function(){
+    flare = (+this.value)/100; document.getElementById('l4map_fv').textContent = flare.toFixed(2); draw();
+  });
+  document.getElementById('l4map_n').addEventListener('input', function(){
+    var v = +this.value; NI = v; NJ = Math.max(4, Math.round(v*0.8));
+    document.getElementById('l4map_nv').textContent = NI;
+    document.getElementById('l4map_nv2').textContent = NJ;
+    draw();
+  });
+
+  window.addEventListener('load', function(){ setTimeout(draw, 120); });
+  draw();
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> Слева — логическая (вычислительная) сетка на квадрате с индексами \((i,j)\); справа — её образ в физической области. Меняя кривизну границы и расширение «канала», вы деформируете физическую область, но топология сетки не меняется: число узлов и ячеек постоянно, а соседи каждого узла по-прежнему задаются индексами \((i{\pm}1,j)\), \((i,j{\pm}1)\). Терракотовые точки показывают, как один и тот же логический узел \((i{=}3,j{=}2)\) переносится в искривлённую сетку. Именно так регулярная структура применяется к областям сложной формы без хранения таблиц смежности.
 </div>
 
 <h2 id="block">Блочно-структурированные сетки</h2>
@@ -539,6 +696,283 @@ window.MathJax = {
 
 <div class="remark">
 <strong>Связь с разреженными матрицами.</strong> Аппроксимации на сетке линейных операторов приводят к СЛАУ с <em>разреженными</em> матрицами (заполненность ненулевыми элементами — проценты и меньше). Структура такой матрицы повторяет структуру шаблонов сетки, поэтому те же идеи указателей и списков переменной длины лежат в основе разреженного строчного формата (<code>iaja</code>: массивы <code>IA</code>, <code>JA</code>, <code>A</code>), где <code>IA</code> играет роль, аналогичную <code>NE_P</code> / <code>EN_P</code>.
+</div>
+
+<p>Наглядно это видно на фрагменте матрицы смежности узлов. Каждой строке \(K\) соответствует узел; ненулевые элементы стоят в столбцах смежных с ним узлов. В разреженном строчном формате <code>iaja</code> хранится только перечень столбцов ненулей (массив <code>JA</code>) и указатели начала каждой строки (массив <code>IA</code>) — ровно та же конструкция «указатель + список переменной длины», что и в паре <code>NE_P/NE</code>.</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 290" xmlns="http://www.w3.org/2000/svg" style="max-width:540px">
+  <!-- sparse adjacency matrix 6x6 with diagonal + a few off-diagonals -->
+  <g font-family="JetBrains Mono,monospace" font-size="10">
+    <text x="95" y="30" fill="#2c2419" font-weight="600" text-anchor="middle">матрица смежности (6×6)</text>
+    <!-- grid -->
+    <g stroke="#d9cfc0" stroke-width="0.8">
+      <rect x="40" y="45" width="180" height="180" fill="none"/>
+      <line x1="70" y1="45" x2="70" y2="225"/><line x1="100" y1="45" x2="100" y2="225"/>
+      <line x1="130" y1="45" x2="130" y2="225"/><line x1="160" y1="45" x2="160" y2="225"/>
+      <line x1="190" y1="45" x2="190" y2="225"/>
+      <line x1="40" y1="75" x2="220" y2="75"/><line x1="40" y1="105" x2="220" y2="105"/>
+      <line x1="40" y1="135" x2="220" y2="135"/><line x1="40" y1="165" x2="220" y2="165"/>
+      <line x1="40" y1="195" x2="220" y2="195"/>
+    </g>
+    <!-- nonzeros: row r (0..5) cols. diagonal terracotta, off-diag teal -->
+    <!-- row0: 0,1 ; row1: 0,1,2 ; row2: 1,2,3 ; row3: 2,3,4 ; row4: 3,4,5 ; row5: 4,5 -->
+    <g>
+      <rect x="40"  y="45"  width="30" height="30" fill="#b44a2d" fill-opacity="0.55"/>
+      <rect x="70"  y="45"  width="30" height="30" fill="#1a6b5a" fill-opacity="0.45"/>
+      <rect x="40"  y="75"  width="30" height="30" fill="#1a6b5a" fill-opacity="0.45"/>
+      <rect x="70"  y="75"  width="30" height="30" fill="#b44a2d" fill-opacity="0.55"/>
+      <rect x="100" y="75"  width="30" height="30" fill="#1a6b5a" fill-opacity="0.45"/>
+      <rect x="70"  y="105" width="30" height="30" fill="#1a6b5a" fill-opacity="0.45"/>
+      <rect x="100" y="105" width="30" height="30" fill="#b44a2d" fill-opacity="0.55"/>
+      <rect x="130" y="105" width="30" height="30" fill="#1a6b5a" fill-opacity="0.45"/>
+      <rect x="100" y="135" width="30" height="30" fill="#1a6b5a" fill-opacity="0.45"/>
+      <rect x="130" y="135" width="30" height="30" fill="#b44a2d" fill-opacity="0.55"/>
+      <rect x="160" y="135" width="30" height="30" fill="#1a6b5a" fill-opacity="0.45"/>
+      <rect x="130" y="165" width="30" height="30" fill="#1a6b5a" fill-opacity="0.45"/>
+      <rect x="160" y="165" width="30" height="30" fill="#b44a2d" fill-opacity="0.55"/>
+      <rect x="190" y="165" width="30" height="30" fill="#1a6b5a" fill-opacity="0.45"/>
+      <rect x="160" y="195" width="30" height="30" fill="#1a6b5a" fill-opacity="0.45"/>
+      <rect x="190" y="195" width="30" height="30" fill="#b44a2d" fill-opacity="0.55"/>
+    </g>
+    <!-- row labels -->
+    <g fill="#6b5d4f" font-size="9" text-anchor="end">
+      <text x="36" y="64">K=1</text><text x="36" y="94">2</text><text x="36" y="124">3</text>
+      <text x="36" y="154">4</text><text x="36" y="184">5</text><text x="36" y="214">6</text>
+    </g>
+  </g>
+  <!-- iaja arrays -->
+  <g font-family="JetBrains Mono,monospace" font-size="9">
+    <text x="300" y="55" fill="#2c2419" font-weight="600">IA (указатели строк)</text>
+    <g text-anchor="middle">
+      <rect x="300" y="62" width="28" height="22" fill="#e9ebf7" stroke="#3a4a8a"/>
+      <rect x="328" y="62" width="28" height="22" fill="#e9ebf7" stroke="#3a4a8a"/>
+      <rect x="356" y="62" width="28" height="22" fill="#e9ebf7" stroke="#3a4a8a"/>
+      <rect x="384" y="62" width="28" height="22" fill="#e9ebf7" stroke="#3a4a8a"/>
+      <rect x="412" y="62" width="28" height="22" fill="#e9ebf7" stroke="#3a4a8a"/>
+      <rect x="440" y="62" width="28" height="22" fill="#e9ebf7" stroke="#3a4a8a"/>
+      <rect x="468" y="62" width="28" height="22" fill="#e9ebf7" stroke="#3a4a8a"/>
+      <text x="314" y="77" fill="#3a4a8a">1</text><text x="342" y="77" fill="#3a4a8a">3</text>
+      <text x="370" y="77" fill="#3a4a8a">6</text><text x="398" y="77" fill="#3a4a8a">9</text>
+      <text x="426" y="77" fill="#3a4a8a">12</text><text x="454" y="77" fill="#3a4a8a">15</text>
+      <text x="482" y="77" fill="#3a4a8a">17</text>
+    </g>
+    <text x="300" y="120" fill="#2c2419" font-weight="600">JA (столбцы ненулей)</text>
+    <g text-anchor="middle" fill="#1a6b5a">
+      <rect x="300" y="127" width="22" height="22" fill="#e8f4f0" stroke="#1a6b5a"/>
+      <rect x="322" y="127" width="22" height="22" fill="#e8f4f0" stroke="#1a6b5a"/>
+      <rect x="344" y="127" width="22" height="22" fill="#e8f4f0" stroke="#1a6b5a"/>
+      <rect x="366" y="127" width="22" height="22" fill="#e8f4f0" stroke="#1a6b5a"/>
+      <rect x="388" y="127" width="22" height="22" fill="#e8f4f0" stroke="#1a6b5a"/>
+      <rect x="410" y="127" width="22" height="22" fill="#e8f4f0" stroke="#1a6b5a"/>
+      <rect x="432" y="127" width="22" height="22" fill="#e8f4f0" stroke="#1a6b5a"/>
+      <rect x="454" y="127" width="22" height="22" fill="#e8f4f0" stroke="#1a6b5a"/>
+      <rect x="476" y="127" width="22" height="22" fill="#e8f4f0" stroke="#1a6b5a"/>
+      <text x="311" y="142">1</text><text x="333" y="142">2</text><text x="355" y="142">1</text>
+      <text x="377" y="142">2</text><text x="399" y="142">3</text><text x="421" y="142">2</text>
+      <text x="443" y="142">3</text><text x="465" y="142">4</text><text x="487" y="142">…</text>
+    </g>
+    <text x="300" y="185" fill="#6b5d4f">Строка K: столбцы хранятся в</text>
+    <text x="300" y="200" fill="#6b5d4f">JA[ IA(K) … IA(K+1)−1 ].</text>
+    <text x="300" y="220" fill="#6b5d4f">Число ненулей строки K:</text>
+    <text x="300" y="235" fill="#6b5d4f">IA(K+1) − IA(K).</text>
+    <text x="300" y="258" fill="#b44a2d">диагональ — сам узел K</text>
+    <text x="300" y="273" fill="#1a6b5a">вне диагонали — смежные узлы</text>
+  </g>
+</svg>
+<div class="caption">Фрагмент разреженной матрицы смежности узлов и её хранение в формате <code>iaja</code> (CSR). Массив <code>IA</code> указывает начало каждой строки в массиве <code>JA</code>, где перечислены номера столбцов ненулевых элементов. Конструкция «указатель <code>IA</code> + список <code>JA</code> переменной длины» полностью аналогична паре <code>NE_P/NE</code> для отношения узел→ячейки.</div>
+</div>
+
+<h2 id="dsexplorer">Проводник по структуре данных неструктурированной сетки</h2>
+
+<p>Чтобы «потрогать» массивы инцидентности и смежности, рассмотрим маленькую фиксированную треугольную сетку из шести узлов и четырёх ячеек. Кликните по <strong>ячейке</strong> — будут показаны её узлы (массив <code>EN</code>) и смежные по ребру ячейки. Кликните по <strong>узлу</strong> — будут показаны инцидентные ему ячейки (массив <code>NE</code>) и его координационное число.</p>
+
+<div id="l4ds_box" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem">
+  <button id="l4ds_reset" style="background:#fff;color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:.78rem;cursor:pointer">сбросить выделение</button>
+</div>
+<div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+  <canvas id="l4ds_canvas" width="560" height="360" style="width:100%;height:auto;cursor:pointer"></canvas>
+</div>
+<div id="l4ds_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.5rem;white-space:pre-wrap;line-height:1.5;min-height:5.2em">Кликните по ячейке или узлу…</div>
+</div>
+
+<script>
+(function(){
+  var canvas = document.getElementById('l4ds_canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+
+  // fixed mesh: 6 nodes, 4 triangles (a small fan/strip)
+  var nodes = [
+    {x:80,  y:300, id:1},
+    {x:230, y:320, id:2},
+    {x:380, y:300, id:3},
+    {x:150, y:170, id:4},
+    {x:300, y:160, id:5},
+    {x:440, y:200, id:6}
+  ];
+  // triangles by node-id (1-based). EN array.
+  var cells = [
+    {id:1, n:[1,2,4]},
+    {id:2, n:[2,5,4]},
+    {id:3, n:[2,3,5]},
+    {id:4, n:[3,6,5]}
+  ];
+
+  function nodeIndex(id){ return id-1; }
+  function centroid(c){
+    var a=nodes[nodeIndex(c.n[0])], b=nodes[nodeIndex(c.n[1])], d=nodes[nodeIndex(c.n[2])];
+    return {x:(a.x+b.x+d.x)/3, y:(a.y+b.y+d.y)/3};
+  }
+
+  // adjacency: cells sharing an edge
+  function ekey(p,q){ return Math.min(p,q)+'-'+Math.max(p,q); }
+  var cellAdj = {};
+  (function(){
+    var emap = {};
+    for (var ci=0;ci<cells.length;ci++){
+      cellAdj[cells[ci].id] = [];
+      var v = cells[ci].n;
+      var edges = [[v[0],v[1]],[v[1],v[2]],[v[2],v[0]]];
+      for (var e=0;e<3;e++){
+        var k = ekey(edges[e][0], edges[e][1]);
+        if (!emap[k]) emap[k]=[];
+        emap[k].push(cells[ci].id);
+      }
+    }
+    for (var k in emap){
+      if (emap[k].length===2){
+        cellAdj[emap[k][0]].push(emap[k][1]);
+        cellAdj[emap[k][1]].push(emap[k][0]);
+      }
+    }
+  })();
+
+  // NE: cells incident to a node; coordination number (neighbour nodes)
+  function cellsOfNode(id){
+    var r=[]; for (var ci=0;ci<cells.length;ci++){ if (cells[ci].n.indexOf(id)>=0) r.push(cells[ci].id); } return r;
+  }
+  function neighbourNodes(id){
+    var set={};
+    for (var ci=0;ci<cells.length;ci++){
+      var v=cells[ci].n;
+      if (v.indexOf(id)>=0){ for (var t=0;t<3;t++){ if (v[t]!==id) set[v[t]]=true; } }
+    }
+    var arr=[]; for (var s in set) arr.push(+s); arr.sort(function(a,b){return a-b;}); return arr;
+  }
+
+  var selCell = -1, selNode = -1;
+
+  function pointInTri(px,py,c){
+    var a=nodes[nodeIndex(c.n[0])], b=nodes[nodeIndex(c.n[1])], d=nodes[nodeIndex(c.n[2])];
+    var s1=(px-b.x)*(a.y-b.y)-(a.x-b.x)*(py-b.y);
+    var s2=(px-d.x)*(b.y-d.y)-(b.x-d.x)*(py-d.y);
+    var s3=(px-a.x)*(d.y-a.y)-(d.x-a.x)*(py-a.y);
+    var neg=(s1<0)||(s2<0)||(s3<0), pos=(s1>0)||(s2>0)||(s3>0);
+    return !(neg&&pos);
+  }
+
+  function fillCell(c, color){
+    var a=nodes[nodeIndex(c.n[0])], b=nodes[nodeIndex(c.n[1])], d=nodes[nodeIndex(c.n[2])];
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(d.x,d.y); ctx.closePath();
+    ctx.fillStyle=color; ctx.fill();
+  }
+
+  function draw(){
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+    // highlight fills
+    if (selCell>=0){
+      var c=cells[selCell];
+      var nb=cellAdj[c.id];
+      for (var i=0;i<nb.length;i++){
+        for (var ci=0;ci<cells.length;ci++) if (cells[ci].id===nb[i]) fillCell(cells[ci],'rgba(58,91,160,0.28)');
+      }
+      fillCell(c,'rgba(180,74,45,0.38)');
+    }
+    if (selNode>=0){
+      var nid=nodes[selNode].id;
+      var inc=cellsOfNode(nid);
+      for (var k=0;k<inc.length;k++){
+        for (var cj=0;cj<cells.length;cj++) if (cells[cj].id===inc[k]) fillCell(cells[cj],'rgba(26,107,90,0.22)');
+      }
+    }
+    // edges
+    ctx.strokeStyle='#2c2419'; ctx.lineWidth=1.1;
+    for (var ci2=0;ci2<cells.length;ci2++){
+      var cc=cells[ci2];
+      var a=nodes[nodeIndex(cc.n[0])], b=nodes[nodeIndex(cc.n[1])], d=nodes[nodeIndex(cc.n[2])];
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(d.x,d.y); ctx.closePath(); ctx.stroke();
+    }
+    // cell labels
+    ctx.fillStyle='#3a5ba0'; ctx.font='12px JetBrains Mono'; ctx.textAlign='center';
+    for (var ci3=0;ci3<cells.length;ci3++){
+      var cen=centroid(cells[ci3]);
+      ctx.fillText('L'+cells[ci3].id, cen.x, cen.y+4);
+    }
+    // nodes
+    for (var v=0;v<nodes.length;v++){
+      var isSel = (selNode===v);
+      ctx.beginPath(); ctx.arc(nodes[v].x,nodes[v].y, isSel?7:5, 0, Math.PI*2);
+      ctx.fillStyle = isSel ? '#b44a2d' : '#2c2419'; ctx.fill();
+      ctx.fillStyle='#6b5d4f'; ctx.font='11px JetBrains Mono'; ctx.textAlign='left';
+      ctx.fillText('K'+nodes[v].id, nodes[v].x+8, nodes[v].y-7);
+    }
+  }
+
+  function report(){
+    var st=document.getElementById('l4ds_status');
+    if (selCell>=0){
+      var c=cells[selCell];
+      var nb=cellAdj[c.id].slice().sort(function(a,b){return a-b;});
+      st.textContent =
+        'Ячейка L'+c.id+'  (инцидентность EN):\n'+
+        '  EN(L'+c.id+') = {K'+c.n.join(', K')+'}   — узлы ячейки\n'+
+        'Смежные по ребру ячейки (смежность):\n'+
+        '  {'+(nb.length? 'L'+nb.join(', L') : '—')+'}   — '+nb.length+' соседа(ей)';
+    } else if (selNode>=0){
+      var nid=nodes[selNode].id;
+      var inc=cellsOfNode(nid);
+      var nn=neighbourNodes(nid);
+      st.textContent =
+        'Узел K'+nid+'  (инцидентность NE):\n'+
+        '  NE(K'+nid+') = {L'+inc.join(', L')+'}   — '+inc.length+' инцидентных ячеек\n'+
+        'Смежные узлы: {K'+nn.join(', K')+'}\n'+
+        '  координационное число = '+nn.length;
+    } else {
+      st.textContent='Кликните по ячейке или узлу…';
+    }
+  }
+
+  canvas.addEventListener('click', function(ev){
+    var r=canvas.getBoundingClientRect();
+    var px=(ev.clientX-r.left)*(W/r.width);
+    var py=(ev.clientY-r.top)*(H/r.height);
+    // node hit-test first
+    var hitNode=-1, best=1e9;
+    for (var v=0;v<nodes.length;v++){
+      var dx=px-nodes[v].x, dy=py-nodes[v].y, d2=dx*dx+dy*dy;
+      if (d2<14*14 && d2<best){ best=d2; hitNode=v; }
+    }
+    if (hitNode>=0){ selNode=hitNode; selCell=-1; draw(); report(); return; }
+    var hitCell=-1;
+    for (var ci=0;ci<cells.length;ci++){ if (pointInTri(px,py,cells[ci])){ hitCell=ci; break; } }
+    if (hitCell>=0){ selCell=hitCell; selNode=-1; } else { selCell=-1; selNode=-1; }
+    draw(); report();
+  });
+
+  document.getElementById('l4ds_reset').addEventListener('click', function(){
+    selCell=-1; selNode=-1; draw(); report();
+  });
+
+  window.addEventListener('load', function(){ setTimeout(draw, 120); });
+  draw();
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> При выборе ячейки выводится её строка массива инцидентности <code>EN</code> (номера трёх узлов) и список смежных по ребру ячеек — это в точности то, что хранится в таблицах <code>EN_P/EN</code> и в матрице смежности ячеек. При выборе узла выводится его строка массива <code>NE</code> (инцидентные ячейки) и координационное число — число смежных узлов. Обратите внимание: у разных узлов это число <em>разное</em> (например, у внутреннего узла больше, чем у углового), поэтому списки имеют переменную длину и хранятся через указатели <code>NE_P</code> — ровно так, как обсуждалось выше. В регулярной сетке всё это вычислялось бы по индексам без всякого хранения.
 </div>
 
 <h2 id="interactive">Интерактив: структура и смежность ячеек</h2>

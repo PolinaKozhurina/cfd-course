@@ -29,7 +29,9 @@ window.MathJax = {
   <a href="#transform">Переход к декартовым координатам</a>
   <a href="#interp">Интерполяция на симплексах</a>
   <a href="#shape">Функции форм P1, P2, P3</a>
+  <a href="#sf-heat">↳ Тепловая карта Nᵢ</a>
   <a href="#accuracy">Точность интерполяции</a>
+  <a href="#hp-conv">↳ h- против p-сходимости</a>
   <a href="#interactive">Интерактив</a>
   <div class="sep"></div>
   <div class="g">Навигация</div>
@@ -495,6 +497,214 @@ N^{\text{внутр}} = 27\,L_1\,L_2\,L_3.
 \tag{P3-внутр}
 \]</div>
 
+<div class="figure">
+<svg viewBox="0 0 580 280" xmlns="http://www.w3.org/2000/svg" style="max-width:560px">
+  <!-- Pascal triangle of monomials with node-count braces -->
+  <text x="290" y="22" font-family="Source Serif 4,serif" font-size="13" fill="#2c2419" text-anchor="middle" font-weight="600">Треугольник Паскаля мономов и число функций форм</text>
+  <!-- rows of monomials -->
+  <g font-family="JetBrains Mono,monospace" font-size="14" fill="#2c2419" text-anchor="middle">
+    <!-- row 0 (P0): 1 -->
+    <text x="290" y="60">1</text>
+    <!-- row 1 (P1): x  y -->
+    <text x="250" y="98">x</text><text x="330" y="98">y</text>
+    <!-- row 2 (P2): x²  xy  y² -->
+    <text x="210" y="136">x²</text><text x="290" y="136">xy</text><text x="370" y="136">y²</text>
+    <!-- row 3 (P3): x³ x²y xy² y³ -->
+    <text x="170" y="174">x³</text><text x="250" y="174">x²y</text><text x="330" y="174">xy²</text><text x="410" y="174">y³</text>
+  </g>
+  <!-- coloured separators marking the complete polynomial space for each order -->
+  <g stroke-width="1.4" fill="none">
+    <path d="M 273 50 L 307 50" stroke="#9a8d7e"/>
+    <path d="M 233 88 L 347 88" stroke="#b44a2d"/>
+    <path d="M 193 126 L 387 126" stroke="#3a5ba0"/>
+    <path d="M 153 164 L 427 164" stroke="#1a6b5a"/>
+  </g>
+  <!-- right-side labels: node counts -->
+  <g font-family="JetBrains Mono,monospace" font-size="11" text-anchor="start">
+    <text x="470" y="64" fill="#9a8d7e">P0 → 1 узел</text>
+    <text x="470" y="102" fill="#b44a2d">P1 → 3 узла</text>
+    <text x="470" y="140" fill="#3a5ba0">P2 → 6 узлов</text>
+    <text x="470" y="178" fill="#1a6b5a">P3 → 10 узлов</text>
+  </g>
+  <!-- formula -->
+  <text x="290" y="232" font-family="JetBrains Mono,monospace" font-size="13" fill="#2c2419" text-anchor="middle">N(n) = (n+1)(n+2)/2</text>
+  <text x="290" y="254" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">= число мономов степени ≤ n = число узлов элемента Pn</text>
+</svg>
+<div class="caption">«Треугольник Паскаля» базисных мономов. Полное полиномиальное пространство степени \(\le n\) содержит \((n+1)(n+2)/2\) мономов — ровно столько же, сколько узлов у элемента \(Pn\). Поэтому функции форм \(\{\alpha_a\}\) образуют <em>полный</em> базис этого пространства, а не его подмножество: элемент \(Pn\) точно воспроизводит любой полином степени \(\le n\).</div>
+</div>
+
+<p id="sf-heat">Чтобы увидеть форму каждой базисной функции \(N_i\) на самом треугольнике, ниже приведён интерактив с тепловой картой. Он явно демонстрирует свойство интерполяции \(N_i(\text{узел}_j)=\delta_{ij}\) для любого порядка.</p>
+
+<div id="l6sf_box" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:1.2rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:center">
+  <div style="display:flex;gap:.4rem;align-items:center">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.74rem;color:var(--text2)">Порядок:</label>
+    <button id="l6sf_p1" style="background:#b44a2d;color:#fff;border:none;border-radius:4px;padding:5px 12px;font-family:'JetBrains Mono',monospace;font-size:.8rem;cursor:pointer">P1</button>
+    <button id="l6sf_p2" style="background:#fff;color:#2c2419;border:1px solid var(--border);border-radius:4px;padding:5px 12px;font-family:'JetBrains Mono',monospace;font-size:.8rem;cursor:pointer">P2</button>
+    <button id="l6sf_p3" style="background:#fff;color:#2c2419;border:1px solid var(--border);border-radius:4px;padding:5px 12px;font-family:'JetBrains Mono',monospace;font-size:.8rem;cursor:pointer">P3</button>
+  </div>
+  <div style="display:flex;gap:.4rem;align-items:center">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.74rem;color:var(--text2)">Узел:</label>
+    <select id="l6sf_node" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.8rem"></select>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1.15fr .85fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Тепловая карта Nᵢ(L₁,L₂,L₃)</div>
+    <canvas id="l6sf_canvas" width="440" height="380" style="width:100%;height:auto"></canvas>
+  </div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Шкала и формула</div>
+    <canvas id="l6sf_legend" width="240" height="380" style="width:100%;height:auto"></canvas>
+  </div>
+</div>
+<div id="l6sf_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.4rem"></div>
+</div>
+
+<script>
+(function(){
+  var cv=document.getElementById('l6sf_canvas'), lg=document.getElementById('l6sf_legend');
+  var sel=document.getElementById('l6sf_node'), status=document.getElementById('l6sf_status');
+  var ctx=cv.getContext('2d'), lx=lg.getContext('2d');
+  var order=1, nodeIdx=0;
+  // Reference triangle vertices on canvas (L1=v0, L2=v1, L3=v2)
+  var V=[ {x:70,y:330}, {x:380,y:340}, {x:225,y:55} ];
+
+  // Build node list for a given order: each node has barycentric (L1,L2,L3), label, type
+  function nodes(n){
+    var out=[];
+    for (var i=n;i>=0;i--) for (var j=n-i;j>=0;j--){
+      var k=n-i-j;
+      var L=[i/n, j/n, k/n];
+      var nz=(i>0?1:0)+(j>0?1:0)+(k>0?1:0);
+      var type = nz===1?'вершина' : (nz===2?'на стороне':'внутренний');
+      out.push({L:L, i:i, j:j, k:k, type:type, label:'N('+i+','+j+','+k+')'});
+    }
+    return out;
+  }
+  // Lagrange shape function for node with multi-index (i,j,k), order n, evaluated at bary L
+  function Rm(n, m, xi){ // R_m(n, xi)
+    var p=1;
+    for (var t=0;t<m;t++) p *= (n*xi - t)/(m - t);
+    return p;
+  }
+  function shapeVal(node, n, L){
+    return Rm(n,node.i,L[0]) * Rm(n,node.j,L[1]) * Rm(n,node.k,L[2]);
+  }
+  // diverging colormap: negative -> blue accent3, 0 -> light, positive -> accent
+  function color(v){
+    // v expected in [-0.3, 1]
+    var t;
+    if (v>=0){ t=Math.min(v,1);
+      var r=Math.round(245+(180-245)*t), g=Math.round(243+(74-243)*t), b=Math.round(238+(45-238)*t);
+      return 'rgb('+r+','+g+','+b+')';
+    } else { t=Math.min(-v/0.35,1);
+      var r=Math.round(245+(58-245)*t), g=Math.round(243+(91-243)*t), b=Math.round(238+(160-238)*t);
+      return 'rgb('+r+','+g+','+b+')';
+    }
+  }
+  function baryOf(px,py){
+    var d=(V[1].y-V[2].y)*(V[0].x-V[2].x)+(V[2].x-V[1].x)*(V[0].y-V[2].y);
+    var a=((V[1].y-V[2].y)*(px-V[2].x)+(V[2].x-V[1].x)*(py-V[2].y))/d;
+    var b=((V[2].y-V[0].y)*(px-V[2].x)+(V[0].x-V[2].x)*(py-V[2].y))/d;
+    return [a,b,1-a-b];
+  }
+  function posOf(L){ return { x:L[0]*V[0].x+L[1]*V[1].x+L[2]*V[2].x, y:L[0]*V[0].y+L[1]*V[1].y+L[2]*V[2].y }; }
+
+  function draw(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,cv.width,cv.height);
+    var ns=nodes(order); var node=ns[nodeIdx];
+    var minx=Math.min(V[0].x,V[1].x,V[2].x), maxx=Math.max(V[0].x,V[1].x,V[2].x);
+    var miny=Math.min(V[0].y,V[1].y,V[2].y), maxy=Math.max(V[0].y,V[1].y,V[2].y);
+    var step=3;
+    for (var yy=miny; yy<maxy; yy+=step){
+      for (var xx=minx; xx<maxx; xx+=step){
+        var b=baryOf(xx+step/2, yy+step/2);
+        if (b[0]<-0.001||b[1]<-0.001||b[2]<-0.001) continue;
+        var v=shapeVal(node, order, b);
+        ctx.fillStyle=color(v);
+        ctx.fillRect(xx,yy,step,step);
+      }
+    }
+    // outline
+    ctx.beginPath(); ctx.moveTo(V[0].x,V[0].y); ctx.lineTo(V[1].x,V[1].y); ctx.lineTo(V[2].x,V[2].y); ctx.closePath();
+    ctx.strokeStyle='#2c2419'; ctx.lineWidth=2; ctx.stroke();
+    // all nodes
+    ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+    for (var a=0;a<ns.length;a++){
+      var p=posOf(ns[a].L);
+      var sv=shapeVal(ns[a], order, ns[a].L); // should be delta
+      var isSel=(a===nodeIdx);
+      ctx.beginPath(); ctx.arc(p.x,p.y,isSel?7:4.5,0,Math.PI*2);
+      ctx.fillStyle=isSel?'#2c2419':'#fff'; ctx.fill();
+      ctx.strokeStyle='#2c2419'; ctx.lineWidth=1.3; ctx.stroke();
+      if (isSel){ ctx.fillStyle='#fff'; ctx.fillText('1', p.x, p.y+3.5); }
+      else { ctx.fillStyle='#6b5d4f'; ctx.fillText('0', p.x, p.y-9); }
+    }
+    // vertices labels
+    ctx.fillStyle='#2c2419'; ctx.font='12px JetBrains Mono';
+    ctx.fillText('1', V[0].x-14, V[0].y+16); ctx.fillText('2', V[1].x+14, V[1].y+16); ctx.fillText('3', V[2].x, V[2].y-12);
+  }
+
+  function drawLegend(){
+    lx.clearRect(0,0,lg.width,lg.height);
+    lx.fillStyle='#fdf9f3'; lx.fillRect(0,0,lg.width,lg.height);
+    // vertical colorbar from +1 (top) to -0.3 (bottom)
+    var bx0=30, bw=26, by0=40, bh=220;
+    for (var s=0;s<bh;s++){
+      var v=1 - (1.35)*(s/bh); // 1 .. -0.35
+      lx.fillStyle=color(v); lx.fillRect(bx0,by0+s,bw,1);
+    }
+    lx.strokeStyle='#d9cfc0'; lx.strokeRect(bx0,by0,bw,bh);
+    lx.fillStyle='#6b5d4f'; lx.font='10px JetBrains Mono'; lx.textAlign='left';
+    lx.fillText('+1', bx0+bw+6, by0+5);
+    lx.fillText(' 0', bx0+bw+6, by0+bh*(1/1.35)+3);
+    lx.fillText('-0.35', bx0+bw+6, by0+bh-2);
+    lx.fillStyle='#2c2419'; lx.font='11px JetBrains Mono'; lx.textAlign='left';
+    var ns=nodes(order); var node=ns[nodeIdx];
+    lx.fillText('Узел '+node.label, 10, 24);
+    lx.fillText('тип: '+node.type, 10, by0+bh+26);
+    lx.fillText('Nᵢ(узел_i)=1', 10, by0+bh+46);
+    lx.fillText('Nᵢ(узел_j)=0', 10, by0+bh+62);
+  }
+
+  function rebuildSelect(){
+    var ns=nodes(order); sel.innerHTML='';
+    for (var a=0;a<ns.length;a++){
+      var o=document.createElement('option'); o.value=a; o.textContent=(a+1)+': '+ns[a].label+' ('+ns[a].type+')';
+      sel.appendChild(o);
+    }
+    if (nodeIdx>=ns.length) nodeIdx=0;
+    sel.value=nodeIdx;
+  }
+  function update(){
+    draw(); drawLegend();
+    var ns=nodes(order); var node=ns[nodeIdx];
+    status.innerHTML='Порядок P'+order+' · узлов '+ns.length+' · выбран '+node.label+' ('+node.type+') · проверка δ: Nᵢ в своём узле = '+shapeVal(node,order,node.L).toFixed(2);
+  }
+  function setOrder(o){
+    order=o; nodeIdx=0;
+    var ids=['l6sf_p1','l6sf_p2','l6sf_p3'];
+    ids.forEach(function(id,k){ var b=document.getElementById(id);
+      if (k+1===o){ b.style.background='#b44a2d'; b.style.color='#fff'; b.style.border='none'; }
+      else { b.style.background='#fff'; b.style.color='#2c2419'; b.style.border='1px solid #d9cfc0'; } });
+    rebuildSelect(); update();
+  }
+  document.getElementById('l6sf_p1').addEventListener('click',function(){setOrder(1);});
+  document.getElementById('l6sf_p2').addEventListener('click',function(){setOrder(2);});
+  document.getElementById('l6sf_p3').addEventListener('click',function(){setOrder(3);});
+  sel.addEventListener('change',function(){ nodeIdx=+this.value; update(); });
+  rebuildSelect();
+  window.addEventListener('load', function(){ setTimeout(update, 180); });
+  update();
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> Тепловая карта показывает значение выбранной функции формы \(N_i\) по всему треугольнику. В <em>своём</em> узле она равна \(1\) (тёмная точка с подписью «1»), а во <em>всех</em> остальных узлах — ровно \(0\) (подпись «0»): это и есть свойство дельты Кронекера \(N_i(\text{узел}_j)=\delta_{ij}\). Для \(P1\) карта линейна. Для \(P2/P3\) вершинные функции уходят в <em>синюю</em> (отрицательную) зону внутри элемента — высокий порядок жертвует знакопостоянством ради точности; «рёберные» и внутренняя функции остаются положительными. Переключайте порядок и узел, чтобы сравнить формы базиса.
+</div>
+
 <div class="theorem">
 <strong>Свойство интерполяции (свойство дельты Кронекера).</strong> Каждая функция формы \(\alpha_{ijk}\) обращается в нуль во всех узловых точках, кроме связанного с ней узла, где она равна единице:
 \[
@@ -544,6 +754,174 @@ T_{mn} = \int_\Omega \alpha_m\,\alpha_n\,d\Omega.
 \]</div>
 
 <p>и в норме \(L^2\) на порядок лучше, \(\|u-I_h u\|_{L^2}\le C\,h^{p+1}\,|u|_{H^{p+1}}\). Это и есть теоретическое обоснование h-сходимости со скоростью \(\sim h^p\) (наклон \(p\) на лог-лог-графике). При фиксированной крупной сетке и росте \(p\) на аналитически гладких решениях сходимость становится экспоненциальной — отсюда выгода p-метода, отмеченная в начале лекции.</p>
+
+<p id="hp-conv">Интерактив ниже численно подтверждает обе картины на модельной задаче — кусочно-полиномиальной интерполяции гладкой функции \(u(x)\) на \([0,1]\) (одномерный аналог симплекс-интерполяции). Сравниваются две стратегии: <strong>h</strong> — фиксируем порядок \(p\) и измельчаем сетку из \(M\) элементов; <strong>p</strong> — фиксируем одну крупную сетку и повышаем порядок \(p\).</p>
+
+<div id="l6hp_box" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:1.2rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Функция u(x)</label>
+    <select id="l6hp_fn" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <option value="smooth">гладкая: sin(4x)·e^(x/2)</option>
+      <option value="gauss">гладкая: exp(−12(x−0.5)²)</option>
+      <option value="kink">негладкая: |x−0.5|</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">h-метод: порядок p = <span id="l6hp_pv">2</span></label>
+    <input type="range" id="l6hp_p" min="1" max="4" value="2" style="width:150px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">p-метод: число элементов M = <span id="l6hp_mv">2</span></label>
+    <input type="range" id="l6hp_m" min="1" max="4" value="2" style="width:150px">
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">log-log: ошибка от числа степеней свободы</div>
+    <canvas id="l6hp_plot" width="440" height="340" style="width:100%;height:auto"></canvas>
+  </div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">u(x) и интерполянт</div>
+    <canvas id="l6hp_fnc" width="440" height="340" style="width:100%;height:auto"></canvas>
+  </div>
+</div>
+<div id="l6hp_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.4rem"></div>
+</div>
+
+<script>
+(function(){
+  var plot=document.getElementById('l6hp_plot'), fnc=document.getElementById('l6hp_fnc');
+  var status=document.getElementById('l6hp_status');
+  var px=plot.getContext('2d'), fx=fnc.getContext('2d');
+  var ph=2, pm=2;
+  function fn(name,x){
+    if (name==='smooth') return Math.sin(4*x)*Math.exp(x/2);
+    if (name==='gauss') return Math.exp(-12*(x-0.5)*(x-0.5));
+    return Math.abs(x-0.5);
+  }
+  // Lagrange interpolation error (sup-norm) of fn by piecewise-degree-p polys on M elements over [0,1]
+  function interpErr(name, M, p){
+    var errMax=0; var samples=2000;
+    for (var s=0;s<=samples;s++){
+      var x=s/samples;
+      // element index
+      var he=1/M; var e=Math.min(M-1, Math.floor(x/he));
+      var x0=e*he;
+      // p+1 equispaced nodes on element
+      var ipt=[]; for (var a=0;a<=p;a++) ipt.push(x0 + he*a/p);
+      // Lagrange value
+      var val=0;
+      for (var a=0;a<=p;a++){
+        var Lc=1;
+        for (var b2=0;b2<=p;b2++){ if(b2===a) continue; Lc*=(x-ipt[b2])/(ipt[a]-ipt[b2]); }
+        val += fn(name,ipt[a])*Lc;
+      }
+      var e2=Math.abs(val-fn(name,x));
+      if (e2>errMax) errMax=e2;
+    }
+    return Math.max(errMax,1e-16);
+  }
+  function ndof(M,p){ return M*p+1; }
+
+  function draw(){
+    var name=document.getElementById('l6hp_fn').value;
+    // h-series: fixed order ph, M = 1,2,4,8,16
+    var hM=[1,2,4,8,16], hpts=[];
+    for (var i=0;i<hM.length;i++){ hpts.push({ndof:ndof(hM[i],ph), err:interpErr(name,hM[i],ph), M:hM[i]}); }
+    // p-series: fixed mesh pm, p = 1..8
+    var ppts=[];
+    for (var p=1;p<=8;p++){ ppts.push({ndof:ndof(pm,p), err:interpErr(name,pm,p), p:p}); }
+
+    // log-log plot
+    px.fillStyle='#fdf9f3'; px.fillRect(0,0,plot.width,plot.height);
+    var Wp=plot.width,Hp=plot.height, P={l:50,r:18,t:18,b:34};
+    var all=hpts.concat(ppts);
+    var lx=[],ly=[];
+    for (var i=0;i<all.length;i++){ lx.push(Math.log10(all[i].ndof)); ly.push(Math.log10(all[i].err)); }
+    var xmn=Math.min.apply(null,lx), xmx=Math.max.apply(null,lx);
+    var ymn=Math.min.apply(null,ly), ymx=Math.max.apply(null,ly);
+    if (xmx-xmn<0.3) xmx=xmn+0.3; ymn-=0.3; ymx+=0.3;
+    function X(v){ return P.l+(Wp-P.l-P.r)*(Math.log10(v)-xmn)/(xmx-xmn); }
+    function Y(v){ var lv=Math.log10(v); return P.t+(Hp-P.t-P.b)*(1-(lv-ymn)/(ymx-ymn)); }
+    // grid
+    px.strokeStyle='#e8e0d4'; px.lineWidth=0.5;
+    for (var g=0;g<=4;g++){ var gy=P.t+(Hp-P.t-P.b)*g/4; px.beginPath(); px.moveTo(P.l,gy); px.lineTo(Wp-P.r,gy); px.stroke(); }
+    // axes
+    px.strokeStyle='#6b5d4f'; px.lineWidth=1;
+    px.beginPath(); px.moveTo(P.l,P.t); px.lineTo(P.l,Hp-P.b); px.lineTo(Wp-P.r,Hp-P.b); px.stroke();
+    px.fillStyle='#6b5d4f'; px.font='9px JetBrains Mono'; px.textAlign='center';
+    px.fillText('log₁₀ N (степени свободы)', (P.l+Wp-P.r)/2, Hp-6);
+    px.save(); px.translate(12,(P.t+Hp-P.b)/2); px.rotate(-Math.PI/2); px.fillText('log₁₀ ‖ошибка‖∞',0,0); px.restore();
+    // y ticks
+    px.textAlign='right';
+    for (var g=0;g<=4;g++){ var lv=ymx-(ymx-ymn)*g/4; px.fillText(lv.toFixed(1), P.l-4, P.t+(Hp-P.t-P.b)*g/4+3); }
+    // h-line (blue)
+    px.strokeStyle='#3a5ba0'; px.lineWidth=2.4; px.beginPath();
+    for (var i=0;i<hpts.length;i++){ var xx=X(hpts[i].ndof),yy=Y(hpts[i].err); i===0?px.moveTo(xx,yy):px.lineTo(xx,yy); }
+    px.stroke();
+    px.fillStyle='#3a5ba0';
+    for (var i=0;i<hpts.length;i++){ px.beginPath(); px.arc(X(hpts[i].ndof),Y(hpts[i].err),3.4,0,Math.PI*2); px.fill(); }
+    // p-line (terracotta)
+    px.strokeStyle='#b44a2d'; px.lineWidth=2.4; px.beginPath();
+    for (var i=0;i<ppts.length;i++){ var xx=X(ppts[i].ndof),yy=Y(ppts[i].err); i===0?px.moveTo(xx,yy):px.lineTo(xx,yy); }
+    px.stroke();
+    px.fillStyle='#b44a2d';
+    for (var i=0;i<ppts.length;i++){ px.beginPath(); px.arc(X(ppts[i].ndof),Y(ppts[i].err),3.4,0,Math.PI*2); px.fill(); }
+    // legend
+    px.font='10px JetBrains Mono'; px.textAlign='left';
+    px.fillStyle='#3a5ba0'; px.fillText('● h-метод (p='+ph+' фикс.)', P.l+8, P.t+12);
+    px.fillStyle='#b44a2d'; px.fillText('● p-метод (M='+pm+' фикс.)', P.l+8, P.t+26);
+
+    // function plot: show u and interpolant for the p-method largest case (M=pm, p=4)
+    fx.fillStyle='#fdf9f3'; fx.fillRect(0,0,fnc.width,fnc.height);
+    var Wf=fnc.width,Hf=fnc.height, Q={l:38,r:14,t:14,b:26};
+    var ymn2=1e9,ymx2=-1e9; var N2=400;
+    var us=[]; for (var s=0;s<=N2;s++){ var x=s/N2; var u=fn(name,x); us.push(u); if(u<ymn2)ymn2=u; if(u>ymx2)ymx2=u; }
+    var pad=(ymx2-ymn2)*0.12||0.2; ymn2-=pad; ymx2+=pad;
+    function Xf(x){ return Q.l+(Wf-Q.l-Q.r)*x; }
+    function Yf(v){ return Q.t+(Hf-Q.t-Q.b)*(1-(v-ymn2)/(ymx2-ymn2)); }
+    fx.strokeStyle='#e8e0d4'; fx.lineWidth=0.5;
+    for (var g=0;g<=4;g++){ var gy=Q.t+(Hf-Q.t-Q.b)*g/4; fx.beginPath(); fx.moveTo(Q.l,gy); fx.lineTo(Wf-Q.r,gy); fx.stroke(); }
+    fx.strokeStyle='#6b5d4f'; fx.lineWidth=1; fx.beginPath(); fx.moveTo(Q.l,Q.t); fx.lineTo(Q.l,Hf-Q.b); fx.lineTo(Wf-Q.r,Hf-Q.b); fx.stroke();
+    fx.fillStyle='#6b5d4f'; fx.font='9px JetBrains Mono'; fx.textAlign='center';
+    fx.fillText('0',Q.l,Hf-8); fx.fillText('1',Wf-Q.r,Hf-8); fx.fillText('x',(Q.l+Wf-Q.r)/2,Hf-8);
+    // exact
+    fx.strokeStyle='#6b5d4f'; fx.lineWidth=2; fx.setLineDash([6,4]); fx.beginPath();
+    for (var s=0;s<=N2;s++){ var x=s/N2; s===0?fx.moveTo(Xf(x),Yf(us[s])):fx.lineTo(Xf(x),Yf(us[s])); }
+    fx.stroke(); fx.setLineDash([]);
+    // interpolant for chosen p (h-slider) on chosen M (p-slider): use M=pm elements, degree ph
+    var Mi=pm, pp=ph, he=1/Mi;
+    fx.strokeStyle='#b44a2d'; fx.lineWidth=1.8; fx.beginPath();
+    for (var s=0;s<=N2;s++){
+      var x=s/N2; var e=Math.min(Mi-1,Math.floor(x/he)); var x0=e*he;
+      var ipt=[]; for (var a=0;a<=pp;a++) ipt.push(x0+he*a/pp);
+      var val=0; for (var a=0;a<=pp;a++){ var Lc=1; for (var b2=0;b2<=pp;b2++){ if(b2===a)continue; Lc*=(x-ipt[b2])/(ipt[a]-ipt[b2]); } val+=fn(name,ipt[a])*Lc; }
+      s===0?fx.moveTo(Xf(x),Yf(val)):fx.lineTo(Xf(x),Yf(val));
+    }
+    fx.stroke();
+    // element boundaries
+    fx.strokeStyle='#d9cfc0'; fx.lineWidth=0.8; fx.setLineDash([2,3]);
+    for (var e=0;e<=Mi;e++){ var xb=Xf(e*he); fx.beginPath(); fx.moveTo(xb,Q.t); fx.lineTo(xb,Hf-Q.b); fx.stroke(); }
+    fx.setLineDash([]);
+    fx.font='9px JetBrains Mono'; fx.textAlign='left';
+    fx.fillStyle='#6b5d4f'; fx.fillText('- - точное u(x)', Q.l+6, Q.t+10);
+    fx.fillStyle='#b44a2d'; fx.fillText('— интерполянт (M='+Mi+', p='+pp+')', Q.l+6, Q.t+22);
+
+    var eShown=interpErr(name,Mi,pp);
+    status.innerHTML='h-метод: p='+ph+' фикс., M=1…16 (синий). p-метод: M='+pm+' фикс., p=1…8 (терракота). · текущий интерполянт справа: M='+Mi+', p='+pp+', ‖ошибка‖∞='+eShown.toExponential(2);
+  }
+  document.getElementById('l6hp_fn').addEventListener('change',draw);
+  document.getElementById('l6hp_p').addEventListener('input',function(){ ph=+this.value; document.getElementById('l6hp_pv').textContent=ph; draw(); });
+  document.getElementById('l6hp_m').addEventListener('input',function(){ pm=+this.value; document.getElementById('l6hp_mv').textContent=pm; draw(); });
+  window.addEventListener('load', function(){ setTimeout(draw, 200); });
+  draw();
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> На <em>гладких</em> функциях (sin, гаусс) синяя h-кривая в лог-лог-осях — почти прямая с наклоном \(\approx -(p+1)\) (алгебраическая сходимость \(\sim h^{p+1}\)), а терракотовая p-кривая загибается <em>круче и вниз</em> — это экспоненциальная p-сходимость: при том же числе степеней свободы повышение порядка точнее измельчения сетки. На <em>негладкой</em> функции \(|x-0.5|\) преимущество p-метода исчезает: излом не разрешается полиномами высокого порядка, и обе кривые сходятся медленно и одинаково степенным образом. Это ключевой практический вывод: p-метод выгоден ровно там, где решение аналитически гладко.
+</div>
 
 <div class="algo">
 <strong>Алгоритм построения элемента порядка \(n\).</strong>

@@ -27,6 +27,7 @@ window.MathJax = {
   <a href="#lax-milgram">Теорема Лакса–Мильграма</a>
   <a href="#justification">Обоснование МКЭ</a>
   <a href="#cea">Лемма Сеа</a>
+  <a href="#cea-rate">Скорость сходимости (h)</a>
   <a href="#galerkin">Метод Галёркина и МКЭ</a>
   <a href="#bc">Главные и естественные ГУ</a>
   <a href="#example">Пример: 1D краевая задача</a>
@@ -335,6 +336,397 @@ a(u_h, v_h) = f(v_h)\quad \forall v_h \in V_h.
 
 <div class="remark">
 <strong>Оценка ошибки на практике.</strong> Лемма Сеа сводит оценку ошибки МКЭ к чисто аппроксимационному вопросу: как хорошо точное решение приближается элементами \(V_h\). Для кусочно-линейных элементов на сетке шага \(h\) теория интерполяции даёт \(\inf_{v_h}\|u-v_h\|_{H^1} \le C\,h\,\|u''\|_{L^2}\), откуда \(\|u - u_h\|_{H^1} = O(h)\) — линейная сходимость в энергетической норме. Точность тем выше, чем глаже решение (в смысле Соболева, \(u \in H^{k+1}\)).
+</div>
+
+<div class="figure">
+<svg viewBox="0 0 600 320" xmlns="http://www.w3.org/2000/svg" style="max-width:560px">
+  <defs>
+    <marker id="arrWell" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#6b5d4f"/></marker>
+  </defs>
+  <!-- axes -->
+  <line x1="60" y1="280" x2="560" y2="280" stroke="#2c2419" stroke-width="1" marker-end="url(#arrWell)"/>
+  <line x1="310" y1="290" x2="310" y2="25" stroke="#2c2419" stroke-width="1" marker-end="url(#arrWell)"/>
+  <text x="556" y="300" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="end">‖u‖</text>
+  <text x="318" y="32" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419">энергия a(u,u)</text>
+  <!-- upper bound parabola M||u||^2 : y = 280 - 1.1*(x-310)^2/100 ... use path -->
+  <path d="M 110 278 Q 310 -120 510 278" fill="none" stroke="#3a5ba0" stroke-width="2" stroke-dasharray="6,4"/>
+  <text x="120" y="80" font-family="JetBrains Mono,monospace" font-size="12" fill="#3a5ba0" font-weight="600">M‖u‖²  (потолок)</text>
+  <!-- coercive lower bound parabola alpha||u||^2 -->
+  <path d="M 160 278 Q 310 150 460 278" fill="none" stroke="#1a6b5a" stroke-width="2" stroke-dasharray="6,4"/>
+  <text x="372" y="200" font-family="JetBrains Mono,monospace" font-size="12" fill="#1a6b5a" font-weight="600">α‖u‖²  (дно)</text>
+  <!-- actual energy in between -->
+  <path d="M 135 278 Q 310 20 485 278" fill="none" stroke="#b44a2d" stroke-width="2.6"/>
+  <text x="430" y="120" font-family="JetBrains Mono,monospace" font-size="12" fill="#b44a2d" font-weight="700">a(u,u)</text>
+  <!-- shaded admissible band hint via vertical line -->
+  <line x1="410" y1="278" x2="410" y2="120" stroke="#9a8d7e" stroke-width="0.8" stroke-dasharray="2,3"/>
+  <circle cx="410" cy="200" r="3.5" fill="#1a6b5a"/>
+  <circle cx="410" cy="120" r="3.5" fill="#3a5ba0"/>
+  <text x="270" y="305" font-family="Source Serif 4,serif" font-size="11" fill="#9a8d7e" text-anchor="middle" font-style="italic">энергия зажата между двумя параболами: α‖u‖² ≤ a(u,u) ≤ M‖u‖²</text>
+</svg>
+<div class="caption">«Энергетический колодец». Коэрцитивность \(a(u,u)\ge\alpha\|u\|^2\) задаёт выпуклое дно (нет вырождения, минимум единствен), а ограниченность \(a(u,u)\le M\|u\|^2\) — потолок (нет «ухода в бесконечность»). Зажатость энергии между двумя параболами и есть гарантия Лакса–Мильграма; отношение \(M/\alpha\) («кривизна колодца») — это число обусловленности задачи и множитель квазиоптимальности в лемме Сеа.</div>
+</div>
+
+<p>Чтобы «увидеть» лемму Сеа на реальных кусочно-линейных элементах, решим модельную задачу \(-u''=f\), \(u(0)=u(1)=0\) методом Галёркина на сетке из \(N\) внутренних узлов и сравним полученное \(u_h\) с любой <em>соседней</em> функцией \(v_h\) из того же подпространства \(V_h\) — со сдвинутыми узловыми значениями. Энергетическая норма здесь \(\|w\|_E^2 = a(w,w) = \int_0^1 (w')^2\,dx\).</p>
+
+<div id="l2cea_box" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Правая часть f(x)</label>
+    <select id="l2cea_fn" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <option value="one">f = 1 (полка)</option>
+      <option value="x">f = x</option>
+      <option value="bump">f = всплеск</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">N внутренних узлов: <span id="l2cea_Nv">7</span></label>
+    <input type="range" id="l2cea_N" min="2" max="20" value="7" style="width:170px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Сдвиг соседа vₕ: <span id="l2cea_pv">0.30</span></label>
+    <input type="range" id="l2cea_p" min="-100" max="100" value="30" style="width:170px">
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">u точное · uₕ Галёркин · vₕ сосед</div><canvas id="l2cea_u" width="440" height="280" style="width:100%;height:auto"></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Энергетич. ошибка ‖u−v‖ₑ при сдвиге всех узлов</div><canvas id="l2cea_e" width="440" height="280" style="width:100%;height:auto"></canvas></div>
+</div>
+<div id="l2cea_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.4rem"></div>
+</div>
+
+<script>
+(function(){
+  var NQ = 1200;
+  function fval(name,x){
+    if(name==='one') return 1.0;
+    if(name==='x')   return x;
+    return Math.exp(-120*(x-0.35)*(x-0.35));
+  }
+  // Точное решение -u''=f, u(0)=u(1)=0, через двойное интегрирование (трапеции).
+  function exactSolution(name){
+    // u'(x) = C - F1(x), где F1 = ∫_0^x f ; u(x)=∫_0^x u' ; C выбираем так, что u(1)=0.
+    var n=NQ, h=1/n;
+    var F1=new Float64Array(n+1); F1[0]=0;
+    for(var i=1;i<=n;i++){ var xa=(i-1)*h, xb=i*h; F1[i]=F1[i-1]+0.5*(fval(name,xa)+fval(name,xb))*h; }
+    // u' = C - F1 ; u(x)=∫(C-F1) = C x - G(x). u(1)=C - G(1)=0 => C=G(1).
+    var G=new Float64Array(n+1); G[0]=0;
+    for(var i=1;i<=n;i++){ G[i]=G[i-1]+0.5*(F1[i-1]+F1[i])*h; }
+    var C=G[n];
+    var u=new Float64Array(n+1);
+    for(var i=0;i<=n;i++){ u[i]=C*(i*h)-G[i]; }
+    return u; // на сетке NQ
+  }
+  function exactAt(uGrid,x){ var t=x*NQ, i=Math.floor(t); if(i>=NQ)return uGrid[NQ]; var f=t-i; return uGrid[i]*(1-f)+uGrid[i+1]*f; }
+
+  // Галёркин с кусочно-линейными КЭ, равномерная сетка N внутренних узлов (h=1/(N+1)).
+  // K трёхдиагональна: диаг 2/h, внедиаг -1/h. F_i = ∫ f φ_i (трапеции/симпсон).
+  function galerkin(name,N){
+    var h=1/(N+1);
+    var a=new Float64Array(N), b=new Float64Array(N), c=new Float64Array(N), F=new Float64Array(N);
+    for(var i=0;i<N;i++){ b[i]=2/h; if(i>0)a[i]=-1/h; if(i<N-1)c[i]=-1/h; }
+    // нагрузка: F_i = ∫ f φ_i, φ_i — крышечка на узле x_i=(i+1)h
+    var sub=40;
+    for(var i=0;i<N;i++){
+      var xi=(i+1)*h, s=0;
+      // левый отрезок [xi-h,xi]: φ=(x-(xi-h))/h
+      for(var k=0;k<sub;k++){ var x=(xi-h)+(k+0.5)/sub*h; s+=fval(name,x)*((x-(xi-h))/h)*(h/sub); }
+      for(var k=0;k<sub;k++){ var x=xi+(k+0.5)/sub*h; s+=fval(name,x)*((xi+h-x)/h)*(h/sub); }
+      F[i]=s;
+    }
+    // прогонка (Thomas)
+    var cp=new Float64Array(N), dp=new Float64Array(N);
+    cp[0]=c[0]/b[0]; dp[0]=F[0]/b[0];
+    for(var i=1;i<N;i++){ var m=b[i]-a[i]*cp[i-1]; cp[i]=c[i]/m; dp[i]=(F[i]-a[i]*dp[i-1])/m; }
+    var U=new Float64Array(N); U[N-1]=dp[N-1];
+    for(var i=N-2;i>=0;i--){ U[i]=dp[i]-cp[i]*U[i+1]; }
+    return {U:U,h:h,N:N};
+  }
+  // Энергетическая норма ошибки между точным u и кусочно-линейной функцией с узловыми знач. Uin (внутр).
+  // ||u-v||_E^2 = ∫ (u'-v')^2. На каждом элементе v' постоянна; u' аппроксимируем точным решением на сетке.
+  function energyErrPL(uGrid,Uin,N){
+    var h=1/(N+1), full=new Float64Array(N+2); // узлы 0..N+1
+    for(var i=0;i<N;i++) full[i+1]=Uin[i];
+    var sub=20, s=0;
+    for(var e=0;e<=N;e++){ // элемент [e*h,(e+1)*h]
+      var vp=(full[e+1]-full[e])/h, xa=e*h;
+      for(var k=0;k<sub;k++){
+        var x=xa+(k+0.5)/sub*h;
+        // u'(x) численно из uGrid
+        var t=x*NQ, ii=Math.floor(t); if(ii>=NQ)ii=NQ-1;
+        var up=(uGrid[ii+1]-uGrid[ii])*NQ;
+        var d=up-vp; s+=d*d*(h/sub);
+      }
+    }
+    return Math.sqrt(s);
+  }
+
+  function plotU(name,N,shift){
+    var c=document.getElementById('l2cea_u'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:42,r:12,t:14,b:26},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var uGrid=exactSolution(name), gk=galerkin(name,N), h=gk.h;
+    // соседняя функция: сдвигаем каждое узловое значение синусоидальной добавкой
+    var Vin=new Float64Array(N);
+    for(var i=0;i<N;i++){ Vin[i]=gk.U[i]+shift*Math.sin((i+1)*Math.PI/(N+1))*0.1; }
+    // диапазон
+    var mn=1e9,mx=-1e9;
+    for(var i=0;i<=NQ;i++){ if(uGrid[i]<mn)mn=uGrid[i]; if(uGrid[i]>mx)mx=uGrid[i]; }
+    for(var i=0;i<N;i++){ var a=gk.U[i],b=Vin[i]; if(a<mn)mn=a;if(a>mx)mx=a;if(b<mn)mn=b;if(b>mx)mx=b; }
+    var pad=(mx-mn)*0.15||0.1; mn-=pad;mx+=pad;
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var g=0;g<=4;g++){var gy=P.t+ph*g/4;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    function xp(x){return P.l+pw*x;} function yp(v){return P.t+ph*(1-(v-mn)/(mx-mn));}
+    // точное (пунктир серый)
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1.8;ctx.setLineDash([6,4]);ctx.beginPath();
+    for(var i=0;i<=NQ;i++){ var x=i/NQ; i===0?ctx.moveTo(xp(x),yp(uGrid[i])):ctx.lineTo(xp(x),yp(uGrid[i])); }
+    ctx.stroke();ctx.setLineDash([]);
+    function plPath(arr,color,wdt){
+      ctx.strokeStyle=color;ctx.lineWidth=wdt;ctx.beginPath();
+      ctx.moveTo(xp(0),yp(0));
+      for(var i=0;i<N;i++) ctx.lineTo(xp((i+1)*h),yp(arr[i]));
+      ctx.lineTo(xp(1),yp(0));ctx.stroke();
+    }
+    // сосед v_h (синий)
+    plPath(Vin,'#3a5ba0',1.6);
+    // галёркин u_h (терракота) поверх
+    plPath(gk.U,'#b44a2d',2.4);
+    // узлы галёркина
+    ctx.fillStyle='#b44a2d';
+    for(var i=0;i<N;i++){ ctx.beginPath();ctx.arc(xp((i+1)*h),yp(gk.U[i]),2.6,0,Math.PI*2);ctx.fill(); }
+    // оси
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('0',P.l,P.t+ph+14);ctx.fillText('0.5',P.l+pw/2,P.t+ph+14);ctx.fillText('1',P.l+pw,P.t+ph+14);
+    ctx.textAlign='left';ctx.font='9px JetBrains Mono';
+    ctx.fillStyle='#6b5d4f';ctx.fillText('- - u точное',P.l+6,P.t+11);
+    ctx.fillStyle='#b44a2d';ctx.fillText('— uₕ Галёркин',P.l+6,P.t+23);
+    ctx.fillStyle='#3a5ba0';ctx.fillText('— vₕ сосед',P.l+6,P.t+35);
+  }
+
+  function plotE(name,N,shift){
+    var c=document.getElementById('l2cea_e'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:50,r:12,t:14,b:30},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var uGrid=exactSolution(name), gk=galerkin(name,N);
+    // ошибка как функция масштаба сдвига s in [-1,1]
+    var M=80, ss=new Float64Array(M+1), ee=new Float64Array(M+1), mx=0, mn=1e9;
+    var prof=new Float64Array(N); for(var i=0;i<N;i++) prof[i]=Math.sin((i+1)*Math.PI/(N+1))*0.1;
+    for(var m=0;m<=M;m++){
+      var s=-1+2*m/M; ss[m]=s;
+      var Vin=new Float64Array(N); for(var i=0;i<N;i++) Vin[i]=gk.U[i]+s*prof[i];
+      ee[m]=energyErrPL(uGrid,Vin,N);
+      if(ee[m]>mx)mx=ee[m]; if(ee[m]<mn)mn=ee[m];
+    }
+    var lo=0, hi=mx*1.08; if(hi<=0)hi=1;
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var g=0;g<=4;g++){var gy=P.t+ph*g/4;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    function xp(s){return P.l+pw*(s+1)/2;} function yp(v){return P.t+ph*(1-(v-lo)/(hi-lo));}
+    // кривая ошибки
+    ctx.strokeStyle='#1a6b5a';ctx.lineWidth=2;ctx.beginPath();
+    for(var m=0;m<=M;m++){ m===0?ctx.moveTo(xp(ss[m]),yp(ee[m])):ctx.lineTo(xp(ss[m]),yp(ee[m])); }
+    ctx.stroke();
+    // минимум при s=0 (Галёркин) — вертикаль
+    ctx.strokeStyle='#b44a2d';ctx.lineWidth=1;ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(xp(0),P.t);ctx.lineTo(xp(0),P.t+ph);ctx.stroke();ctx.setLineDash([]);
+    var e0=energyErrPL(uGrid,gk.U,N);
+    ctx.fillStyle='#b44a2d';ctx.beginPath();ctx.arc(xp(0),yp(e0),4,0,Math.PI*2);ctx.fill();
+    // текущий сдвиг (синяя точка)
+    var Vc=new Float64Array(N); for(var i=0;i<N;i++) Vc[i]=gk.U[i]+shift*prof[i];
+    var ec=energyErrPL(uGrid,Vc,N);
+    ctx.fillStyle='#3a5ba0';ctx.beginPath();ctx.arc(xp(shift),yp(ec),4,0,Math.PI*2);ctx.fill();
+    // оси
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('-1',P.l,P.t+ph+14);ctx.fillText('0 (uₕ)',P.l+pw/2,P.t+ph+14);ctx.fillText('+1',P.l+pw,P.t+ph+14);
+    ctx.fillText('сдвиг узлов vₕ',P.l+pw/2,P.t+ph+25);
+    ctx.textAlign='right';
+    for(var g=0;g<=4;g++) ctx.fillText((hi*(1-g/4)).toFixed(3),P.l-4,P.t+ph*g/4+3);
+  }
+
+  function run(){
+    var name=document.getElementById('l2cea_fn').value;
+    var N=+document.getElementById('l2cea_N').value;
+    var shift=+document.getElementById('l2cea_p').value/100;
+    document.getElementById('l2cea_Nv').textContent=N;
+    document.getElementById('l2cea_pv').textContent=shift.toFixed(2);
+    plotU(name,N,shift); plotE(name,N,shift);
+    var uGrid=exactSolution(name), gk=galerkin(name,N);
+    var prof=new Float64Array(N); for(var i=0;i<N;i++) prof[i]=Math.sin((i+1)*Math.PI/(N+1))*0.1;
+    var Vc=new Float64Array(N); for(var i=0;i<N;i++) Vc[i]=gk.U[i]+shift*prof[i];
+    var eh=energyErrPL(uGrid,gk.U,N), ev=energyErrPL(uGrid,Vc,N);
+    var msg='N='+N+' · ‖u−uₕ‖ₑ = '+eh.toFixed(4)+' (Галёркин) · ‖u−vₕ‖ₑ = '+ev.toFixed(4)+' (сосед)';
+    if(Math.abs(shift)<1e-9) msg+=' · vₕ=uₕ';
+    else msg+=' — сосед '+(ev>=eh?'хуже':'лучше?!')+', минимум всегда при uₕ';
+    document.getElementById('l2cea_status').innerHTML=msg;
+  }
+  document.getElementById('l2cea_fn').addEventListener('change',run);
+  document.getElementById('l2cea_N').addEventListener('input',run);
+  document.getElementById('l2cea_p').addEventListener('input',run);
+  window.addEventListener('load',function(){ setTimeout(run,250); });
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> Галёркинское \(u_h\) (терракота) проходит почти по точному решению, а любой <em>сосед</em> \(v_h\) (синий) со сдвинутыми узловыми значениями уклоняется от него. На правом графике энергетическая ошибка \(\|u-v_h\|_E\) как функция величины сдвига — это парабола с <strong>минимумом ровно при сдвиге 0</strong>, то есть при \(v_h=u_h\). Это и есть утверждение леммы Сеа в чистом виде: среди всех функций подпространства \(V_h\) именно \(u_h\) даёт наименьшую энергетическую ошибку (в данной задаче \(M=\alpha\), и \(u_h\) — точная энергетическая проекция).
+</div>
+
+<h3 id="cea-rate">Скорость сходимости при h-измельчении</h3>
+
+<p>Лемма Сеа предсказывает порядок сходимости через интерполяционную оценку. Для кусочно-линейных элементов теория даёт \(\|u-u_h\|_E = O(h)\) в энергетической норме и \(\|u-u_h\|_{L^2} = O(h^2)\) в \(L^2\) (эффект Обена–Нитше). Проверим это численно: измельчая сетку (увеличивая \(N\)), считаем обе ошибки и строим их в двойном логарифмическом масштабе — наклон прямой и есть измеренный порядок \(p\).</p>
+
+<div id="l2conv_box" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Правая часть f(x)</label>
+    <select id="l2conv_fn" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <option value="one">f = 1 (полка)</option>
+      <option value="x">f = x</option>
+      <option value="bump">f = всплеск</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Число уровней сетки: <span id="l2conv_Lv">7</span></label>
+    <input type="range" id="l2conv_L" min="3" max="9" value="7" style="width:170px">
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">log‖ошибка‖ от log h</div><canvas id="l2conv_p" width="440" height="280" style="width:100%;height:auto"></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">u и uₕ на самой грубой сетке</div><canvas id="l2conv_u" width="440" height="280" style="width:100%;height:auto"></canvas></div>
+</div>
+<div id="l2conv_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.4rem"></div>
+</div>
+
+<script>
+(function(){
+  var NQ=1600;
+  function fval(name,x){
+    if(name==='one') return 1.0;
+    if(name==='x')   return x;
+    return Math.exp(-120*(x-0.35)*(x-0.35));
+  }
+  function exactSolution(name){
+    var n=NQ,h=1/n;
+    var F1=new Float64Array(n+1);
+    for(var i=1;i<=n;i++){ var xa=(i-1)*h,xb=i*h; F1[i]=F1[i-1]+0.5*(fval(name,xa)+fval(name,xb))*h; }
+    var G=new Float64Array(n+1);
+    for(var i=1;i<=n;i++){ G[i]=G[i-1]+0.5*(F1[i-1]+F1[i])*h; }
+    var C=G[n], u=new Float64Array(n+1);
+    for(var i=0;i<=n;i++){ u[i]=C*(i*h)-G[i]; }
+    return u;
+  }
+  function galerkin(name,N){
+    var h=1/(N+1);
+    var a=new Float64Array(N),b=new Float64Array(N),c=new Float64Array(N),F=new Float64Array(N);
+    for(var i=0;i<N;i++){ b[i]=2/h; if(i>0)a[i]=-1/h; if(i<N-1)c[i]=-1/h; }
+    var sub=30;
+    for(var i=0;i<N;i++){
+      var xi=(i+1)*h,s=0;
+      for(var k=0;k<sub;k++){ var x=(xi-h)+(k+0.5)/sub*h; s+=fval(name,x)*((x-(xi-h))/h)*(h/sub); }
+      for(var k=0;k<sub;k++){ var x=xi+(k+0.5)/sub*h; s+=fval(name,x)*((xi+h-x)/h)*(h/sub); }
+      F[i]=s;
+    }
+    var cp=new Float64Array(N),dp=new Float64Array(N);
+    cp[0]=c[0]/b[0]; dp[0]=F[0]/b[0];
+    for(var i=1;i<N;i++){ var m=b[i]-a[i]*cp[i-1]; cp[i]=c[i]/m; dp[i]=(F[i]-a[i]*dp[i-1])/m; }
+    var U=new Float64Array(N); U[N-1]=dp[N-1];
+    for(var i=N-2;i>=0;i--) U[i]=dp[i]-cp[i]*U[i+1];
+    return {U:U,h:h,N:N};
+  }
+  function errs(name,N){
+    var uGrid=exactSolution(name), gk=galerkin(name,N), h=gk.h;
+    var full=new Float64Array(N+2); for(var i=0;i<N;i++) full[i+1]=gk.U[i];
+    var sub=24, eE=0, eL=0;
+    for(var e=0;e<=N;e++){
+      var xa=e*h, vL=full[e], vR=full[e+1], vp=(vR-vL)/h;
+      for(var k=0;k<sub;k++){
+        var x=xa+(k+0.5)/sub*h;
+        var t=x*NQ, ii=Math.floor(t); if(ii>=NQ)ii=NQ-1; var f=t-ii;
+        var uv=uGrid[ii]*(1-f)+uGrid[ii+1]*f;
+        var up=(uGrid[ii+1]-uGrid[ii])*NQ;
+        var vv=vL+vp*(x-xa);
+        eE+=(up-vp)*(up-vp)*(h/sub);
+        eL+=(uv-vv)*(uv-vv)*(h/sub);
+      }
+    }
+    return {h:h, eE:Math.sqrt(eE), eL:Math.sqrt(eL)};
+  }
+  function plotConv(name,L){
+    var c=document.getElementById('l2conv_p'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:48,r:12,t:14,b:30},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var Ns=[], r=[];
+    for(var l=0;l<L;l++){ Ns.push(Math.round(3*Math.pow(1.7,l))); }
+    var lh=[], lE=[], lL=[];
+    for(var l=0;l<L;l++){ var e=errs(name,Ns[l]); lh.push(Math.log10(e.h)); lE.push(Math.log10(e.eE)); lL.push(Math.log10(e.eL)); r.push(e); }
+    var xmn=Math.min.apply(null,lh), xmx=Math.max.apply(null,lh);
+    var ally=lE.concat(lL), ymn=Math.min.apply(null,ally), ymx=Math.max.apply(null,ally);
+    var xp=function(v){return P.l+pw*(v-xmn)/(xmx-xmn);}, yp=function(v){return P.t+ph*(1-(v-ymn)/(ymx-ymn));};
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var g=0;g<=4;g++){var gy=P.t+ph*g/4;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    // линии тренда
+    function drawSet(la,color){
+      ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();
+      for(var l=0;l<L;l++){ l===0?ctx.moveTo(xp(lh[l]),yp(la[l])):ctx.lineTo(xp(lh[l]),yp(la[l])); }
+      ctx.stroke();
+      ctx.fillStyle=color;
+      for(var l=0;l<L;l++){ ctx.beginPath();ctx.arc(xp(lh[l]),yp(la[l]),3,0,Math.PI*2);ctx.fill(); }
+    }
+    drawSet(lE,'#b44a2d'); drawSet(lL,'#3a5ba0');
+    // наклоны методом наименьших квадратов
+    function slope(ly){ var n=L,sx=0,sy=0,sxx=0,sxy=0; for(var i=0;i<n;i++){sx+=lh[i];sy+=ly[i];sxx+=lh[i]*lh[i];sxy+=lh[i]*ly[i];} return (n*sxy-sx*sy)/(n*sxx-sx*sx); }
+    var pE=slope(lE), pL=slope(lL);
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('log₁₀ h',P.l+pw/2,P.t+ph+24);
+    ctx.fillText(xmn.toFixed(2),P.l,P.t+ph+14); ctx.fillText(xmx.toFixed(2),P.l+pw,P.t+ph+14);
+    ctx.textAlign='right';
+    for(var g=0;g<=4;g++) ctx.fillText((ymx-(ymx-ymn)*g/4).toFixed(1),P.l-4,P.t+ph*g/4+3);
+    ctx.textAlign='left';ctx.font='9px JetBrains Mono';
+    ctx.fillStyle='#b44a2d';ctx.fillText('— энергетич. p≈'+pE.toFixed(2),P.l+6,P.t+11);
+    ctx.fillStyle='#3a5ba0';ctx.fillText('— L₂ p≈'+pL.toFixed(2),P.l+6,P.t+23);
+    return {pE:pE,pL:pL,r:r,Ns:Ns};
+  }
+  function plotCoarse(name){
+    var c=document.getElementById('l2conv_u'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:42,r:12,t:14,b:26},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var uGrid=exactSolution(name), N=3, gk=galerkin(name,N), h=gk.h;
+    var mn=1e9,mx=-1e9;
+    for(var i=0;i<=NQ;i++){ if(uGrid[i]<mn)mn=uGrid[i]; if(uGrid[i]>mx)mx=uGrid[i]; }
+    var pad=(mx-mn)*0.15||0.1; mn-=pad;mx+=pad;
+    var xp=function(x){return P.l+pw*x;}, yp=function(v){return P.t+ph*(1-(v-mn)/(mx-mn));};
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var g=0;g<=4;g++){var gy=P.t+ph*g/4;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1.8;ctx.setLineDash([6,4]);ctx.beginPath();
+    for(var i=0;i<=NQ;i++){ var x=i/NQ; i===0?ctx.moveTo(xp(x),yp(uGrid[i])):ctx.lineTo(xp(x),yp(uGrid[i])); }
+    ctx.stroke();ctx.setLineDash([]);
+    ctx.strokeStyle='#b44a2d';ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(xp(0),yp(0));
+    for(var i=0;i<N;i++) ctx.lineTo(xp((i+1)*h),yp(gk.U[i]));
+    ctx.lineTo(xp(1),yp(0));ctx.stroke();
+    ctx.fillStyle='#b44a2d';
+    for(var i=0;i<N;i++){ ctx.beginPath();ctx.arc(xp((i+1)*h),yp(gk.U[i]),3,0,Math.PI*2);ctx.fill(); }
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('0',P.l,P.t+ph+14);ctx.fillText('0.5',P.l+pw/2,P.t+ph+14);ctx.fillText('1',P.l+pw,P.t+ph+14);
+    ctx.textAlign='left';ctx.font='9px JetBrains Mono';
+    ctx.fillStyle='#6b5d4f';ctx.fillText('- - u точное',P.l+6,P.t+11);
+    ctx.fillStyle='#b44a2d';ctx.fillText('— uₕ (N=3)',P.l+6,P.t+23);
+  }
+  function run(){
+    var name=document.getElementById('l2conv_fn').value;
+    var L=+document.getElementById('l2conv_L').value;
+    document.getElementById('l2conv_Lv').textContent=L;
+    var res=plotConv(name,L); plotCoarse(name);
+    var last=res.r[res.r.length-1];
+    document.getElementById('l2conv_status').innerHTML='Сетки N='+res.Ns.join(', ')+' · измеренный порядок: энергетич. p≈'+res.pE.toFixed(2)+' (теория 1), L₂ p≈'+res.pL.toFixed(2)+' (теория 2) · мельчайшая h='+last.h.toExponential(2);
+  }
+  document.getElementById('l2conv_fn').addEventListener('change',run);
+  document.getElementById('l2conv_L').addEventListener('input',run);
+  window.addEventListener('load',function(){ setTimeout(run,300); });
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> Обе ошибки на log-log графике ложатся на прямые: терракотовая (энергетическая) имеет наклон \(p\approx 1\), синяя (\(L^2\)) — наклон \(p\approx 2\). Это ровно та скорость, что предсказывает лемма Сеа вместе с интерполяционной оценкой: линейные элементы дают первый порядок в энергии и второй в \(L^2\). Чем больше уровней сетки задействовано, тем чище выходит асимптотический наклон; для негладкого всплеска предасимптотическая зона длиннее, но наклон в пределе тот же.
 </div>
 
 <h2 id="galerkin">Метод Галёркина и МКЭ как его частный случай</h2>

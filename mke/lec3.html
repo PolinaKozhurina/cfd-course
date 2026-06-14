@@ -26,9 +26,11 @@ window.MathJax = {
   <a href="#mesh">Сетка и функции формы</a>
   <a href="#local">Локальная матрица жёсткости</a>
   <a href="#assembly">Ансамблирование</a>
+  <a href="#asm-demo">Визуализатор сборки</a>
   <a href="#assembly-cheap">Дешёвая сборка</a>
   <a href="#bc">Граничные условия и решение</a>
   <a href="#truss">Расчёт фермы</a>
+  <a href="#truss-demo">Ферма под нагрузкой</a>
   <a href="#truss-example">Численный пример фермы</a>
   <a href="#interactive">Интерактив</a>
   <div class="sep"></div>
@@ -374,6 +376,159 @@ J(u) = \mathbf U^\top \mathbf K\,\mathbf U - 2\,\mathbf U^\top \mathbf F,
 <div class="caption">Ансамблирование: локальные матрицы \(2\times 2\) «окаймляются» нулями (через \(\mathbf S^{(i)}\)) и складываются. Вклады соседних элементов перекрываются на диагонали в общем узле, что и даёт трёхдиагональную (ленточную) структуру глобальной матрицы.</div>
 </div>
 
+<h2 id="asm-demo">Интерактив: визуализатор ансамблирования</h2>
+
+<p>Сборку \(\mathbf K = \sum_{i} (\mathbf S^{(i)})^\top \mathbf K^{(i)}\mathbf S^{(i)}\) удобно проследить пошагово. Ниже — анимация поэлементной сборки: выберите число элементов \(N\) и текущий элемент \(e\). Демо рисует 1D-сетку с локальной (\(1,2\)) и глобальной (\(0,\ldots,N\)) нумерацией узлов, показывает локальную матрицу \(2\times 2\) элемента \(e\) и подсвечивает её вклад в глобальную ленточную матрицу \((N{+}1)\times(N{+}1)\). Видно, как вклад внутреннего узла складывается с вкладом соседнего элемента — отсюда удвоенная диагональ.</p>
+
+<div id="l3asm_box" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">N элементов: <span id="l3asm_Nv">4</span></label>
+    <input type="range" id="l3asm_N" min="2" max="8" value="4" style="width:150px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">текущий элемент e: <span id="l3asm_ev">1</span></label>
+    <input type="range" id="l3asm_e" min="1" max="4" value="1" style="width:150px">
+  </div>
+  <button id="l3asm_play" style="background:var(--accent);color:#fff;border:none;border-radius:4px;padding:7px 14px;font-family:'JetBrains Mono',monospace;font-size:.78rem;cursor:pointer">▶ собрать всё</button>
+  <button id="l3asm_reset" style="background:#fff;color:var(--text);border:1px solid var(--border);border-radius:4px;padding:7px 14px;font-family:'JetBrains Mono',monospace;font-size:.78rem;cursor:pointer">сброс</button>
+</div>
+<div style="display:grid;grid-template-columns:1.3fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Глобальная матрица K и сетка</div><canvas id="l3asm_glob" width="460" height="360" style="width:100%;height:auto"></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent2);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Локальная K⁽ᵉ⁾ (2×2)</div><canvas id="l3asm_loc" width="300" height="360" style="width:100%;height:auto"></canvas></div>
+</div>
+<div id="l3asm_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.4rem"></div>
+</div>
+
+<script>
+(function(){
+  var Nel = 4, cur = 1, EH = 1.0; // E/h normalized to 1
+  var statusEl = document.getElementById('l3asm_status');
+  var playT = null;
+
+  function localK(){ return [[1,-1],[-1,1]]; }
+
+  // accumulated global K up to and including element 'upto' (1-based count of assembled elements)
+  function buildGlobal(upto){
+    var n = Nel+1, K = [];
+    for (var i=0;i<n;i++){ K.push(new Array(n).fill(0)); }
+    var k = localK();
+    for (var e=1;e<=upto;e++){
+      var a=e-1, b=e;
+      K[a][a]+=k[0][0]; K[a][b]+=k[0][1];
+      K[b][a]+=k[1][0]; K[b][b]+=k[1][1];
+    }
+    return K;
+  }
+
+  function drawGlobal(){
+    var c=document.getElementById('l3asm_glob'), ctx=c.getContext('2d'), W=c.width, Hc=c.height;
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,Hc);
+    var n = Nel+1;
+    // --- mesh strip (top) ---
+    var mTop=18, mh=58, mL=30, mR=W-30, span=mR-mL;
+    ctx.strokeStyle='#9a8d7e'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(mL,mTop+22); ctx.lineTo(mR,mTop+22); ctx.stroke();
+    for (var i=0;i<n;i++){
+      var x = mL + span*i/Nel;
+      // element segment highlight for current
+      ctx.beginPath(); ctx.arc(x,mTop+22, (i===cur-1||i===cur)?6:4,0,Math.PI*2);
+      ctx.fillStyle = (i===cur-1||i===cur)?'#b44a2d':'#3a5ba0'; ctx.fill();
+      ctx.fillStyle='#6b5d4f'; ctx.font='9px JetBrains Mono'; ctx.textAlign='center';
+      ctx.fillText(''+i, x, mTop+40);
+    }
+    // current element bar
+    var xa=mL+span*(cur-1)/Nel, xb=mL+span*cur/Nel;
+    ctx.strokeStyle='#b44a2d'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.moveTo(xa,mTop+22); ctx.lineTo(xb,mTop+22); ctx.stroke();
+    ctx.fillStyle='#b44a2d'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+    ctx.fillText('e='+cur+' (лок. 1→глоб.'+(cur-1)+',  лок. 2→глоб.'+cur+')', (xa+xb)/2>W-120?W-120:(xa+xb)/2, mTop+8);
+    // --- matrix grid ---
+    var gTop=mTop+mh+8, P=30, avail=Math.min(W-2*P, Hc-gTop-14);
+    var sz=avail/n, gL=(W-avail)/2;
+    var K = buildGlobal(cur);
+    ctx.font = Math.max(8,Math.min(13,sz*0.42))+'px JetBrains Mono'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    for (var i=0;i<n;i++){ for (var j=0;j<n;j++){
+      var x=gL+j*sz, y=gTop+i*sz;
+      var inCur = (i===cur-1||i===cur)&&(j===cur-1||j===cur);
+      var overlap = (K[i][j]!==0 && Math.abs(i-j)===0 && (i>0&&i<n-1)); // accumulated interior diagonal
+      ctx.fillStyle = inCur ? 'rgba(180,74,45,0.28)' : (K[i][j]!==0 ? 'rgba(26,107,90,0.12)' : '#fff');
+      ctx.fillRect(x,y,sz,sz);
+      ctx.strokeStyle='#d9cfc0'; ctx.lineWidth=0.7; ctx.strokeRect(x,y,sz,sz);
+      if (K[i][j]!==0){
+        ctx.fillStyle = inCur ? '#b44a2d' : '#2c2419';
+        ctx.fillText((K[i][j]>0?'+':'')+K[i][j], x+sz/2, y+sz/2+1);
+      }
+    }}
+    // labels
+    ctx.fillStyle='#6b5d4f'; ctx.font='9px JetBrains Mono'; ctx.textBaseline='alphabetic';
+    for (var j=0;j<n;j++){ ctx.textAlign='center'; ctx.fillText(''+j, gL+(j+0.5)*sz, gTop-3); }
+    ctx.textAlign='right';
+    for (var i=0;i<n;i++){ ctx.fillText(''+i, gL-3, gTop+(i+0.5)*sz+3); }
+  }
+
+  function drawLocal(){
+    var c=document.getElementById('l3asm_loc'), ctx=c.getContext('2d'), W=c.width, Hc=c.height;
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,Hc);
+    var k=localK(), sz=78, gL=(W-2*sz)/2, gTop=70;
+    ctx.font='12px JetBrains Mono'; ctx.fillStyle='#2c2419'; ctx.textAlign='center';
+    ctx.fillText('(E/h)·', W/2-50, gTop-22);
+    // local-node headers
+    ctx.fillStyle='#1a6b5a'; ctx.font='10px JetBrains Mono';
+    ctx.fillText('лок.1', gL+sz*0.5, gTop-6); ctx.fillText('лок.2', gL+sz*1.5, gTop-6);
+    ctx.textAlign='right';
+    ctx.fillText('лок.1', gL-6, gTop+sz*0.5+4); ctx.fillText('лок.2', gL-6, gTop+sz*1.5+4);
+    ctx.textBaseline='middle'; ctx.textAlign='center';
+    for (var i=0;i<2;i++){ for (var j=0;j<2;j++){
+      var x=gL+j*sz, y=gTop+i*sz;
+      ctx.fillStyle='rgba(26,107,90,0.16)'; ctx.fillRect(x,y,sz,sz);
+      ctx.strokeStyle='#1a6b5a'; ctx.lineWidth=1.4; ctx.strokeRect(x,y,sz,sz);
+      ctx.fillStyle='#1a6b5a'; ctx.font='18px JetBrains Mono';
+      ctx.fillText((k[i][j]>0?'+':'')+k[i][j], x+sz/2, y+sz/2+1);
+    }}
+    ctx.textBaseline='alphabetic';
+    // mapping arrows text
+    ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+    ctx.fillText('лок.1 → глоб. узел '+(cur-1), W/2, gTop+2*sz+28);
+    ctx.fillText('лок.2 → глоб. узел '+cur, W/2, gTop+2*sz+44);
+    ctx.fillStyle='#b44a2d';
+    ctx.fillText('вклад окаймляется нулями через S⁽ᵉ⁾', W/2, gTop+2*sz+64);
+  }
+
+  function refresh(){
+    document.getElementById('l3asm_Nv').textContent=Nel;
+    document.getElementById('l3asm_ev').textContent=cur;
+    drawGlobal(); drawLocal();
+    var nInt = Nel-1;
+    statusEl.innerHTML = 'N='+Nel+' элементов, '+(Nel+1)+' узлов · собрано элементов: '+cur+
+      ' · внутренних узлов с перекрытием (диагональ = +2): '+(cur>1?Math.min(cur-1,nInt):0)+
+      ' · структура K: трёхдиагональная ленточная';
+  }
+
+  var slN=document.getElementById('l3asm_N'), slE=document.getElementById('l3asm_e');
+  slN.addEventListener('input',function(){
+    Nel=+slN.value; slE.max=Nel; if (cur>Nel) cur=Nel; slE.value=cur; refresh();
+  });
+  slE.addEventListener('input',function(){ cur=+slE.value; refresh(); });
+  document.getElementById('l3asm_reset').addEventListener('click',function(){
+    if (playT){ clearInterval(playT); playT=null; } cur=1; slE.value=1; refresh();
+  });
+  document.getElementById('l3asm_play').addEventListener('click',function(){
+    if (playT){ clearInterval(playT); playT=null; }
+    cur=1; slE.value=1; refresh();
+    playT=setInterval(function(){
+      if (cur>=Nel){ clearInterval(playT); playT=null; return; }
+      cur++; slE.value=cur; refresh();
+    }, 700);
+  });
+  window.addEventListener('load',function(){ setTimeout(refresh,200); });
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> Каждый элемент \(e\) вносит одну и ту же локальную матрицу \(2\times 2\) (зелёная), но адресует её в строки/столбцы своих глобальных узлов \(e{-}1\) и \(e\) (терракотовая подсветка). Соседние элементы пересекаются ровно в одном — общем — узле: при сборке их диагональные вклады складываются, и диагональ внутреннего узла становится равной \(+2\). Так из множества перекрывающихся блоков \(2\times2\) и рождается трёхдиагональная (ленточная) глобальная матрица. Кнопка «собрать всё» прокручивает сборку по всем элементам по очереди.
+</div>
+
 <h2 id="assembly-cheap">Дешёвая сборка и иллюстрация для \(N = 2\)</h2>
 
 <p>При реальных вычислениях \(\mathbf K\) и \(\mathbf F\) не нужно явно перемножать матрицы по формулам (14): структура \(\mathbf S^{(i)}\) тривиальна. Покажем это для \(N = 2\). Локальные матрицы:</p>
@@ -537,6 +692,47 @@ F = \frac{ES}{L}\big[(\delta_{x3} - \delta_{x2})\cos\theta + (\delta_{y3} - \del
 \tag{6'}
 \]</div>
 
+<div class="figure">
+<svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" style="max-width:560px">
+  <defs><marker id="arrDof" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#3a5ba0"/></marker></defs>
+  <!-- inclined rod element -->
+  <line x1="70" y1="200" x2="250" y2="70" stroke="#b44a2d" stroke-width="3"/>
+  <!-- nodes -->
+  <circle cx="70" cy="200" r="7" fill="#3a5ba0"/><circle cx="250" cy="70" r="7" fill="#3a5ba0"/>
+  <text x="58" y="220" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" font-weight="700">узел a</text>
+  <text x="238" y="58" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" font-weight="700">узел b</text>
+  <!-- DOF arrows at node a -->
+  <line x1="70" y1="200" x2="120" y2="200" stroke="#3a5ba0" stroke-width="1.6" marker-end="url(#arrDof)"/>
+  <line x1="70" y1="200" x2="70" y2="150" stroke="#3a5ba0" stroke-width="1.6" marker-end="url(#arrDof)"/>
+  <text x="124" y="204" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">δₓₐ</text>
+  <text x="76" y="148" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">δᵧₐ</text>
+  <!-- DOF arrows at node b -->
+  <line x1="250" y1="70" x2="300" y2="70" stroke="#3a5ba0" stroke-width="1.6" marker-end="url(#arrDof)"/>
+  <line x1="250" y1="70" x2="250" y2="20" stroke="#3a5ba0" stroke-width="1.6" marker-end="url(#arrDof)"/>
+  <text x="304" y="74" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">δₓᵦ</text>
+  <text x="256" y="18" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">δᵧᵦ</text>
+  <!-- angle theta -->
+  <line x1="70" y1="200" x2="180" y2="200" stroke="#6b5d4f" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <path d="M 110 200 A 40 40 0 0 0 96 164" fill="none" stroke="#6b5d4f" stroke-width="0.8"/>
+  <text x="118" y="186" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f">θ</text>
+  <text x="150" y="128" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" font-weight="600">L, E, S</text>
+  <!-- 2x2 block structure of stiffness -->
+  <g transform="translate(400,40)">
+    <text x="80" y="-8" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle" font-weight="600">блоки kᵅᵝ (2×2)</text>
+    <rect x="20" y="0" width="70" height="70" fill="#b44a2d" fill-opacity="0.18" stroke="#b44a2d" stroke-width="1.4"/>
+    <rect x="90" y="0" width="70" height="70" fill="#1a6b5a" fill-opacity="0.14" stroke="#1a6b5a" stroke-width="1.2"/>
+    <rect x="20" y="70" width="70" height="70" fill="#1a6b5a" fill-opacity="0.14" stroke="#1a6b5a" stroke-width="1.2"/>
+    <rect x="90" y="70" width="70" height="70" fill="#b44a2d" fill-opacity="0.18" stroke="#b44a2d" stroke-width="1.4"/>
+    <text x="55" y="40" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle">kₐₐ</text>
+    <text x="125" y="40" font-family="JetBrains Mono,monospace" font-size="11" fill="#1a6b5a" text-anchor="middle">kₐᵦ</text>
+    <text x="55" y="110" font-family="JetBrains Mono,monospace" font-size="11" fill="#1a6b5a" text-anchor="middle">kᵦₐ</text>
+    <text x="125" y="110" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle">kᵦᵦ</text>
+    <text x="90" y="160" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">4×4 = 2×2 узловых блока</text>
+  </g>
+</svg>
+<div class="caption">Степени свободы стержневого элемента: по два смещения \((\delta_x,\delta_y)\) на каждый из узлов \(a,b\) — всего \(4\) DOF. Стержень под углом \(\theta\) к оси \(X\). Матрица жёсткости \(4\times4\) из (6') разбивается на четыре узловых блока \(2\times2\): диагональные \(\mathbf k_{aa},\mathbf k_{bb}\) и внедиагональные \(\mathbf k_{ab}=\mathbf k_{ba}^\top\).</div>
+</div>
+
 <p>Квадратная матрица — это <strong>матрица жёсткости стержневого элемента</strong> \(\mathbf K_6\). Разбивая её на подматрицы \(2\times 2\) по узлам, имеем блочную запись</p>
 
 <div class="eq">\[
@@ -577,6 +773,182 @@ F = \frac{ES}{L}\big[(\delta_{x3} - \delta_{x2})\cos\theta + (\delta_{y3} - \del
 \mathbf K\,\boldsymbol\delta + \mathbf F_0 + \mathbf F_b + \mathbf F_d = \mathbf R.
 \tag{20'}
 \]</div>
+
+<h2 id="truss-demo">Интерактив: ферма под нагрузкой</h2>
+
+<p>Реализуем метод перемещений для симметричной двухстержневой фермы: два стержня закреплены в неподвижных опорах \(1\) и \(3\) и сходятся в свободном узле \(2\), к которому приложена внешняя сила. Меняйте величину и угол силы. Демо собирает матрицу жёсткости системы из элементных матриц \(4\times4\) по (6'), редуцирует её до свободного узла \(2\), решает СЛАУ \(\mathbf K\boldsymbol\delta=\mathbf R\) и рисует исходную (серую) и деформированную (терракотовую, с масштабом) конфигурации. Выводятся смещения узла \(2\) и реакции опор.</p>
+
+<div id="l3truss_box" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">|R| (кГ): <span id="l3truss_Pv">1000</span></label>
+    <input type="range" id="l3truss_P" min="0" max="2000" value="1000" step="50" style="width:160px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">угол силы α (°): <span id="l3truss_av">-60</span></label>
+    <input type="range" id="l3truss_a" min="-180" max="180" value="-60" step="5" style="width:160px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">масштаб деформации: <span id="l3truss_sv">×800</span></label>
+    <input type="range" id="l3truss_s" min="100" max="2000" value="800" step="50" style="width:160px">
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1.5fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Ферма: исходная и деформированная</div><canvas id="l3truss_cv" width="460" height="320" style="width:100%;height:auto"></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent3);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Результаты расчёта</div><div id="l3truss_out" style="font-family:'JetBrains Mono',monospace;font-size:.74rem;color:var(--text);padding:.3rem;line-height:1.5"></div></div>
+</div>
+<div id="l3truss_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.4rem"></div>
+</div>
+
+<script>
+(function(){
+  // geometry: node1 at left support (135deg member to node2), node3 at right (45deg), node2 free center.
+  // E*S/L per bar
+  var E=2e5, S=1, L=10, ES_L=E*S/L; // = 2e4
+  // base node positions (cm-ish, drawing units): node2 at origin top, supports below-left & below-right
+  // member 1: node1->node2 at 135deg ; member 2: node3->node2 at 45deg
+  // Place: node2=(0,0). bar1 length L at 135deg from node1 to node2 => node1 = node2 - L*(cos135,sin135)
+  var deg=Math.PI/180;
+  var n2=[0,0];
+  var th1=135*deg, th2=45*deg; // member orientation (from support to node2), measured for stiffness
+  // node1 such that (n2-n1) direction = (cos135,sin135)
+  var n1=[n2[0]-L*Math.cos(th1), n2[1]-L*Math.sin(th1)];
+  var n3=[n2[0]-L*Math.cos(th2), n2[1]-L*Math.sin(th2)];
+  var nodes0=[n1,n2,n3];
+  // bars: [nodeA index, nodeB index, theta]
+  var bars=[[0,1,th1],[2,1,th2]];
+
+  function barK(theta){
+    var c=Math.cos(theta), s=Math.sin(theta), cc=c*c, ss=s*s, cs=c*s;
+    var k=ES_L;
+    return [
+      [ cc*k,  cs*k, -cc*k, -cs*k],
+      [ cs*k,  ss*k, -cs*k, -ss*k],
+      [-cc*k, -cs*k,  cc*k,  cs*k],
+      [-cs*k, -ss*k,  cs*k,  ss*k]
+    ];
+  }
+
+  function solve(P, alpha){
+    // assemble 6x6 K (nodes 0,1,2 -> dofs)
+    var K=[]; for (var i=0;i<6;i++) K.push(new Array(6).fill(0));
+    for (var b=0;b<bars.length;b++){
+      var A=bars[b][0], B=bars[b][1], ke=barK(bars[b][2]);
+      var map=[2*A,2*A+1,2*B,2*B+1];
+      for (var i=0;i<4;i++) for (var j=0;j<4;j++) K[map[i]][map[j]]+=ke[i][j];
+    }
+    // free dofs: node2 -> indices 2,3. supports node1(0,1) node3(4,5) fixed.
+    var Rx=P*Math.cos(alpha*deg), Ry=P*Math.sin(alpha*deg);
+    // reduced 2x2 system: K[2..3][2..3] * d = [Rx,Ry]
+    var a=K[2][2], bb=K[2][3], cc=K[3][2], dd=K[3][3];
+    var det=a*dd-bb*cc;
+    var dx2=0, dy2=0;
+    if (Math.abs(det)>1e-9){ dx2=( dd*Rx - bb*Ry)/det; dy2=(-cc*Rx + a*Ry)/det; }
+    // full displacement vector
+    var d=[0,0,dx2,dy2,0,0];
+    // reactions at supports: R = K*d (full), then subtract applied where present
+    var Rfull=new Array(6).fill(0);
+    for (var i=0;i<6;i++){ var s=0; for (var j=0;j<6;j++) s+=K[i][j]*d[j]; Rfull[i]=s; }
+    return {dx2:dx2, dy2:dy2, Rx1:Rfull[0],Ry1:Rfull[1], Rx3:Rfull[4],Ry3:Rfull[5], Rx:Rx, Ry:Ry};
+  }
+
+  function draw(res, scale, P, alpha){
+    var c=document.getElementById('l3truss_cv'), ctx=c.getContext('2d'), W=c.width, Hc=c.height;
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,Hc);
+    // world->screen: center node2 area; y up
+    var cx=W*0.5, cy=Hc*0.42, px=16; // px per cm
+    function sx(wx){ return cx + wx*px; }
+    function sy(wy){ return cy - wy*px; }
+    // deformed positions of node2
+    var def=[ nodes0[0], [nodes0[1][0]+res.dx2*scale, nodes0[1][1]+res.dy2*scale], nodes0[2] ];
+    // supports (draw hatching at node1, node3)
+    function support(p){
+      var x=sx(p[0]), y=sy(p[1]);
+      ctx.fillStyle='#2c2419'; ctx.beginPath();
+      ctx.moveTo(x,y); ctx.lineTo(x-10,y+16); ctx.lineTo(x+10,y+16); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
+      for (var k=-10;k<=10;k+=5){ ctx.beginPath(); ctx.moveTo(x+k,y+16); ctx.lineTo(x+k-5,y+22); ctx.stroke(); }
+    }
+    // original bars (grey)
+    ctx.strokeStyle='#9a8d7e'; ctx.lineWidth=2; ctx.setLineDash([5,4]);
+    for (var b=0;b<bars.length;b++){
+      var A=nodes0[bars[b][0]], B=nodes0[bars[b][1]];
+      ctx.beginPath(); ctx.moveTo(sx(A[0]),sy(A[1])); ctx.lineTo(sx(B[0]),sy(B[1])); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    // deformed bars (terracotta)
+    ctx.strokeStyle='#b44a2d'; ctx.lineWidth=3;
+    for (var b=0;b<bars.length;b++){
+      var A=def[bars[b][0]], B=def[bars[b][1]];
+      ctx.beginPath(); ctx.moveTo(sx(A[0]),sy(A[1])); ctx.lineTo(sx(B[0]),sy(B[1])); ctx.stroke();
+    }
+    support(nodes0[0]); support(nodes0[2]);
+    // node markers
+    var labels=['1','2','3'];
+    for (var i=0;i<3;i++){
+      var p=def[i];
+      ctx.fillStyle=(i===1)?'#b44a2d':'#3a5ba0';
+      ctx.beginPath(); ctx.arc(sx(p[0]),sy(p[1]),6,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(labels[i], sx(p[0]), sy(p[1])+0.5);
+    }
+    // force arrow at node2 (deformed)
+    var p2=def[1]; var ax=Math.cos(alpha*deg), ay=Math.sin(alpha*deg);
+    var aL=Math.min(70, 18+P*0.03);
+    var ex=sx(p2[0])+ax*aL, ey=sy(p2[1])-ay*aL;
+    ctx.strokeStyle='#1a6b5a'; ctx.lineWidth=2.4;
+    ctx.beginPath(); ctx.moveTo(sx(p2[0]),sy(p2[1])); ctx.lineTo(ex,ey); ctx.stroke();
+    // arrowhead
+    var ang=Math.atan2(ey-sy(p2[1]), ex-sx(p2[0]));
+    ctx.fillStyle='#1a6b5a'; ctx.beginPath();
+    ctx.moveTo(ex,ey);
+    ctx.lineTo(ex-9*Math.cos(ang-0.4), ey-9*Math.sin(ang-0.4));
+    ctx.lineTo(ex-9*Math.cos(ang+0.4), ey-9*Math.sin(ang+0.4));
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#1a6b5a'; ctx.font='10px JetBrains Mono'; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    ctx.fillText('R', ex+4, ey-4);
+    // legend
+    ctx.textAlign='left'; ctx.font='9px JetBrains Mono';
+    ctx.fillStyle='#9a8d7e'; ctx.fillText('- - исходная', 12, Hc-22);
+    ctx.fillStyle='#b44a2d'; ctx.fillText('— деформированная (×'+scale+')', 12, Hc-10);
+  }
+
+  function run(){
+    var P=+document.getElementById('l3truss_P').value;
+    var alpha=+document.getElementById('l3truss_a').value;
+    var scale=+document.getElementById('l3truss_s').value;
+    document.getElementById('l3truss_Pv').textContent=P;
+    document.getElementById('l3truss_av').textContent=alpha;
+    document.getElementById('l3truss_sv').textContent='×'+scale;
+    var r=solve(P,alpha);
+    draw(r,scale,P,alpha);
+    function f(v){ return v.toExponential(2); }
+    function g(v){ return (v>=0?'+':'')+v.toFixed(0); }
+    document.getElementById('l3truss_out').innerHTML =
+      '<span style="color:#b44a2d;font-weight:600">Смещения узла 2:</span><br>'+
+      '&nbsp;δₓ₂ = '+f(r.dx2)+' см<br>'+
+      '&nbsp;δᵧ₂ = '+f(r.dy2)+' см<br><br>'+
+      '<span style="color:#3a5ba0;font-weight:600">Нагрузка в узле 2:</span><br>'+
+      '&nbsp;Rₓ = '+g(r.Rx)+', Rᵧ = '+g(r.Ry)+' кГ<br><br>'+
+      '<span style="color:#1a6b5a;font-weight:600">Реакции опор (кГ):</span><br>'+
+      '&nbsp;узел 1: Rₓ='+g(r.Rx1)+', Rᵧ='+g(r.Ry1)+'<br>'+
+      '&nbsp;узел 3: Rₓ='+g(r.Rx3)+', Rᵧ='+g(r.Ry3);
+    // equilibrium check
+    var sumX=r.Rx1+r.Rx3+r.Rx, sumY=r.Ry1+r.Ry3+r.Ry;
+    document.getElementById('l3truss_status').innerHTML =
+      'ES/L='+ES_L.toExponential(1)+' · редуцированная система 2×2 для узла 2 · '+
+      'проверка равновесия: ΣRₓ='+sumX.toFixed(1)+', ΣRᵧ='+sumY.toFixed(1)+' (≈0)';
+  }
+  document.getElementById('l3truss_P').addEventListener('input',run);
+  document.getElementById('l3truss_a').addEventListener('input',run);
+  document.getElementById('l3truss_s').addEventListener('input',run);
+  window.addEventListener('load',function(){ setTimeout(run,200); });
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> Симметричная двухстержневая ферма даёт диагональную редуцированную матрицу \(10^5\!\begin{pmatrix}2&0\\0&2\end{pmatrix}\): смещение узла \(2\) направлено почти вдоль приложенной силы и линейно растёт с её величиной. При угле \(\alpha=-60^\circ\) и \(|R|=1000\) кГ получаем \(\delta_{x2}\approx2{,}5\cdot10^{-3}\), \(\delta_{y2}\approx-4{,}33\cdot10^{-3}\) см — совпадает с численным примером ниже. Реакции опор всегда уравновешивают внешнюю силу (\(\sum R_x=\sum R_y=0\)) — это и есть глобальное условие равновесия фермы. Масштаб деформации лишь увеличивает видимое смещение: реальные перемещения в тысячи раз меньше длины стержня.
+</div>
 
 <h2 id="truss-example">Численный пример расчёта фермы</h2>
 

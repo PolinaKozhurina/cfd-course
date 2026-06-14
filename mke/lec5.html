@@ -31,7 +31,9 @@ window.MathJax = {
   <a href="#assembly">Объединение элементов</a>
   <a href="#solution">Решение задачи</a>
   <a href="#poisson">Уравнение Пуассона</a>
+  <a href="#poisson-interactive">Интерактив: Пуассон с источником</a>
   <a href="#interactive">Интерактив</a>
+  <a href="#conv-interactive">Сходимость итераций</a>
   <div class="sep"></div>
   <div class="g">Навигация</div>
   <a href="lec4.html">← Лекция 4</a>
@@ -580,6 +582,160 @@ S_{ff}\,\mathbf A_f = \mu_0\, C^{\mathsf T} T_d\, \mathbf J_d - S_{fp}\,\mathbf 
 <strong>Единство постановки.</strong> Правая часть (50) объединяет вклад источника (неоднородность уравнения (33)) и заданных граничных значений (неоднородность граничных условий). Принципиального различия между однородным уравнением с неоднородными ГУ и неоднородным уравнением с однородными ГУ нет — обе сводятся к одной матричной системе.
 </div>
 
+<h3>Геометрический смысл принципа минимума энергии</h3>
+
+<p>Соотношения (5) и (38) показывают, что вдоль любого допустимого «направления возмущения» \(h\) (или \(v\)) функционал энергии есть <strong>парабола</strong> по параметру \(\theta\) с вершиной (минимумом) при \(\theta = 0\), то есть точно на истинном решении. Метод Ритца ищет именно эту нижнюю точку: варьируя узловые потенциалы, мы «скатываемся» по чаше функционала \(J(u)\) в её единственный минимум.</p>
+
+<div class="figure">
+<svg viewBox="0 0 480 300" xmlns="http://www.w3.org/2000/svg" style="max-width:440px">
+  <defs>
+    <marker id="arrPar" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2c2419"/></marker>
+  </defs>
+  <!-- Axes -->
+  <line x1="60" y1="250" x2="450" y2="250" stroke="#2c2419" stroke-width="1" marker-end="url(#arrPar)"/>
+  <line x1="240" y1="270" x2="240" y2="25" stroke="#2c2419" stroke-width="1" marker-end="url(#arrPar)"/>
+  <text x="455" y="255" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419">θ</text>
+  <text x="248" y="22" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419">J(u+θh)</text>
+  <!-- Parabola: vertex at (240,200), J = Jmin + k θ² -->
+  <path d="M 80 55 Q 240 345 400 55" fill="none" stroke="#b44a2d" stroke-width="2.5"/>
+  <!-- minimum marker -->
+  <circle cx="240" cy="200" r="5" fill="#1a6b5a"/>
+  <line x1="240" y1="200" x2="60" y2="200" stroke="#1a6b5a" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <text x="55" y="204" font-family="JetBrains Mono,monospace" font-size="11" fill="#1a6b5a" text-anchor="end">J(u)</text>
+  <text x="246" y="222" font-family="JetBrains Mono,monospace" font-size="11" fill="#1a6b5a">θ=0 (точное решение)</text>
+  <!-- sample point off-minimum -->
+  <circle cx="330" cy="118" r="4" fill="#3a5ba0"/>
+  <line x1="330" y1="118" x2="330" y2="250" stroke="#3a5ba0" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <text x="336" y="113" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">J(u)+θ²W(h)</text>
+  <text x="330" y="265" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0" text-anchor="middle">θ</text>
+  <!-- quadratic note -->
+  <text x="150" y="80" font-family="Source Serif 4,serif" font-size="12" fill="#6b5d4f" font-style="italic" text-anchor="middle">ошибка ~ θ²</text>
+</svg>
+<div class="caption">Рис. 5. Функционал энергии \(J\) как функция параметра возмущения \(\theta\) вдоль допустимого направления \(h\). Согласно (5) и (38) это парабола \(J(u)+\theta^2 W(h)\) с минимумом точно на истинном решении (\(\theta=0\)). Квадратичность объясняет, почему энергия вычисляется значительно точнее самого потенциала.</div>
+</div>
+
+<h3 id="poisson-interactive">Интерактив: уравнение Пуассона с точечным источником</h3>
+
+<p>Ниже на квадратной области (заземлённая рамка \(u=0\)) решается уравнение \(-\Delta u = f\). Ползунками задаётся положение \((x_0,y_0)\) и интенсивность \(Q\) точечного источника (заряда). При \(Q=0\) источник отсутствует и решение тождественно нулевое — это «чистый» Лаплас; при \(Q\ne 0\) возникает «холм» (или «яма») потенциала. Решение получается итерациями Гаусса–Зейделя и при каждом изменении источника обновляется вместе с цветовой картой потенциала и изолиниями.</p>
+
+<div id="l5pois" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">x₀: <span id="l5pois_xv">0.50</span></label>
+    <input type="range" id="l5pois_x" min="0.15" max="0.85" step="0.01" value="0.5" style="width:150px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">y₀: <span id="l5pois_yv">0.50</span></label>
+    <input type="range" id="l5pois_y" min="0.15" max="0.85" step="0.01" value="0.5" style="width:150px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Интенсивность Q: <span id="l5pois_qv">+1.0</span></label>
+    <input type="range" id="l5pois_q" min="-1" max="1" step="0.05" value="1" style="width:170px">
+  </div>
+</div>
+<div style="display:flex;justify-content:center">
+  <canvas id="l5pois_c" width="420" height="420" style="width:100%;max-width:420px;height:auto;background:#fff;border:1px solid var(--border);border-radius:6px"></canvas>
+</div>
+<div id="l5pois_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.5rem;text-align:center"></div>
+</div>
+
+<script>
+(function(){
+  var cvs = document.getElementById('l5pois_c');
+  if(!cvs) return;
+  var ctx = cvs.getContext('2d');
+  var N = 64, S = N+1;
+  // diverging colour map: blue (neg) -> white (0) -> terracotta (pos)
+  function colour(t){
+    // t in [-1,1]
+    t = Math.max(-1, Math.min(1, t));
+    var r,g,b;
+    if (t<0){ var s=-t; r=255+(58-255)*s; g=255+(91-255)*s; b=255+(160-255)*s; } // white->#3a5ba0
+    else { var s=t; r=255+(180-255)*s; g=255+(74-255)*s; b=255+(45-255)*s; }      // white->#b44a2d
+    return 'rgb('+(r|0)+','+(g|0)+','+(b|0)+')';
+  }
+  function solve(x0,y0,Q){
+    var u = new Float64Array(S*S);
+    var f = new Float64Array(S*S);
+    // point source spread over the nearest node, scaled by Q
+    var gi = Math.round(y0*N), gj = Math.round(x0*N);
+    gi=Math.max(1,Math.min(N-1,gi)); gj=Math.max(1,Math.min(N-1,gj));
+    f[gi*S+gj] = Q * N * N * 0.0012; // -Δu = f ; grid-scaled magnitude
+    var h2 = 1.0/(N*N);
+    // Gauss-Seidel: u_k = 0.25*(neighbours + h²·f)
+    var iters = 600, resid=0;
+    for (var it=0; it<iters; it++){
+      var sum=0, cnt=0;
+      for (var i=1;i<N;i++) for (var j=1;j<N;j++){
+        var k=i*S+j;
+        var nv = 0.25*(u[k-S]+u[k+S]+u[k-1]+u[k+1] + h2*f[k]*N*N);
+        var d=nv-u[k]; sum+=d*d; cnt++; u[k]=nv;
+      }
+      resid = Math.sqrt(sum/cnt);
+      if (resid<1e-8) { iters=it+1; break; }
+    }
+    return {u:u, resid:resid, gi:gi, gj:gj};
+  }
+  function draw(st){
+    var u=st.u, W=cvs.width, H=cvs.height, cell=W/N;
+    // normalise for colour scale
+    var amax=1e-9;
+    for (var t=0;t<u.length;t++){ var a=Math.abs(u[t]); if(a>amax) amax=a; }
+    ctx.clearRect(0,0,W,H);
+    for (var i=0;i<N;i++) for (var j=0;j<N;j++){
+      var v=0.25*(u[i*S+j]+u[(i+1)*S+j]+u[i*S+j+1]+u[(i+1)*S+j+1]);
+      ctx.fillStyle=colour(v/amax);
+      ctx.fillRect(j*cell, i*cell, cell+1, cell+1);
+    }
+    // isolines (marching squares) at fractions of amax
+    var fr=[-0.8,-0.6,-0.4,-0.2,0.2,0.4,0.6,0.8];
+    ctx.lineWidth=1; ctx.strokeStyle='rgba(44,36,25,0.5)';
+    for (var L=0;L<fr.length;L++){
+      var lv=fr[L]*amax;
+      ctx.beginPath();
+      for (var i=0;i<N;i++) for (var j=0;j<N;j++){
+        var a=u[i*S+j], b=u[i*S+j+1], c=u[(i+1)*S+j+1], d=u[(i+1)*S+j];
+        var x0=j*cell, y0=i*cell, pts=[];
+        if ((a<lv)!=(b<lv)){ var t=(lv-a)/(b-a); pts.push([x0+t*cell, y0]); }
+        if ((b<lv)!=(c<lv)){ var t=(lv-b)/(c-b); pts.push([x0+cell, y0+t*cell]); }
+        if ((d<lv)!=(c<lv)){ var t=(lv-d)/(c-d); pts.push([x0+t*cell, y0+cell]); }
+        if ((a<lv)!=(d<lv)){ var t=(lv-a)/(d-a); pts.push([x0, y0+t*cell]); }
+        if (pts.length>=2){ ctx.moveTo(pts[0][0],pts[0][1]); ctx.lineTo(pts[1][0],pts[1][1]); }
+      }
+      ctx.stroke();
+    }
+    // source marker
+    var sx=st.gj*cell, sy=st.gi*cell;
+    ctx.fillStyle='#2c2419'; ctx.beginPath(); ctx.arc(sx,sy,4,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1.2; ctx.stroke();
+    // frame (grounded boundary u=0)
+    ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=2; ctx.strokeRect(1,1,W-2,H-2);
+  }
+  function run(){
+    var x0=+document.getElementById('l5pois_x').value;
+    var y0=+document.getElementById('l5pois_y').value;
+    var Q=+document.getElementById('l5pois_q').value;
+    document.getElementById('l5pois_xv').textContent=x0.toFixed(2);
+    document.getElementById('l5pois_yv').textContent=y0.toFixed(2);
+    document.getElementById('l5pois_qv').textContent=(Q>=0?'+':'')+Q.toFixed(1);
+    var st=solve(x0,y0,Q);
+    draw(st);
+    var umax=0; for(var t=0;t<st.u.length;t++){ if(Math.abs(st.u[t])>umax) umax=Math.abs(st.u[t]); }
+    document.getElementById('l5pois_status').innerHTML =
+      (Q===0?'f = 0 (уравнение Лапласа, u ≡ 0)':'−Δu = f, источник в ('+x0.toFixed(2)+','+y0.toFixed(2)+')')+
+      ' · max|u| = '+umax.toFixed(4)+' · невязка: '+st.resid.toExponential(2);
+  }
+  ['l5pois_x','l5pois_y','l5pois_q'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', run);
+  });
+  window.addEventListener('load', function(){ setTimeout(run, 250); });
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> При \(Q=0\) карта полностью белая, а статус сообщает \(u\equiv0\): без источника решение Пуассона вырождается в тривиальное решение Лапласа с заземлённой границей. Включая источник (\(Q>0\) — терракотовый «холм», \(Q<0\) — синяя «яма»), мы видим локальный пик потенциала с замкнутыми изолиниями вокруг точки источника; к заземлённой рамке потенциал плавно спадает к нулю. Сдвигая источник к границе, замечаем, что пик «прижимается» и уменьшается по амплитуде — близкая заземлённая стенка «коротит» поле. Это прямая иллюстрация различия Лаплас (\(f=0\)) ↔ Пуассон (\(f\ne0\)): неоднородность в правой части (33)–(34) порождает поле там, где его иначе не было бы.
+</div>
+
 <h3 id="bc-impl">Практическая реализация граничных условий</h3>
 
 <p>Перенумерация (свободные узлы первыми, заданные последними) нужна лишь для объяснения; на практике в неё нет необходимости. Заданные потенциалы включаются в систему формальным тождеством с диагональной матрицей \(D\) (часто \(D = I\)): для узлов с фиксированным значением соответствующая строка заменяется уравнением \(u_k = \text{const}\). Так конечно-элементная система собирается и решается при <em>произвольной</em> нумерации узлов.</p>
@@ -751,6 +907,136 @@ S_{ff}\,\mathbf A_f = \mu_0\, C^{\mathsf T} T_d\, \mathbf J_d - S_{fp}\,\mathbf 
 
 <div class="remark">
 <strong>Что видно в интерактиве.</strong> Потенциал плавно убывает от \(u=1\) на внешней рамке к \(u=0\) на внутреннем проводнике; изолинии сгущаются у углов внутреннего выреза (там поле сильнее). Сравнивая методы при одном числе итераций, видно, что Гаусс–Зейдель сходится примерно вдвое быстрее Якоби, а SOR с \(\omega\approx1.8\) — заметно быстрее обоих: невязка \(\|\Delta u\|\) падает на порядки. Это итерационное решение разностной задачи — наглядный аналог минимизации функционала энергии (2) в МКЭ.
+</div>
+
+<h2 id="conv-interactive">Интерактив: сходимость итерационных методов</h2>
+
+<p>Все три метода — Якоби, Гаусс–Зейдель, SOR — приводят к одному и тому же решению, но с разной скоростью. Ниже на одной задаче (та же квадратная область с заземлённой рамкой и точечным источником в центре, \(-\Delta u=f\)) строится график невязки \(\|r_k\|\) в логарифмическом масштабе от номера итерации \(k\). Ползунок задаёт параметр релаксации \(\omega\) для SOR; при оптимальном \(\omega\) (для такой сетки \(\omega_{\text{opt}}\approx1.9\)) кривая SOR падает в разы круче остальных.</p>
+
+<div id="l5iter" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Сетка N: <span id="l5iter_nv">40</span></label>
+    <input type="range" id="l5iter_n" min="16" max="64" step="8" value="40" style="width:150px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">ω (SOR): <span id="l5iter_wv">1.80</span></label>
+    <input type="range" id="l5iter_w" min="1.0" max="1.95" step="0.01" value="1.8" style="width:170px">
+  </div>
+  <button id="l5iter_run" style="background:var(--accent);color:#fff;border:none;border-radius:5px;padding:8px 16px;font-family:'JetBrains Mono',monospace;font-size:.82rem;cursor:pointer">Пересчитать</button>
+</div>
+<div style="display:flex;justify-content:center">
+  <canvas id="l5iter_c" width="560" height="360" style="width:100%;max-width:560px;height:auto;background:#fff;border:1px solid var(--border);border-radius:6px"></canvas>
+</div>
+<div id="l5iter_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.5rem;text-align:center"></div>
+</div>
+
+<script>
+(function(){
+  var cvs = document.getElementById('l5iter_c');
+  if(!cvs) return;
+  var ctx = cvs.getContext('2d');
+  // run one method on the Poisson problem (centre source, grounded frame); record residual history
+  function history(N, method, omega, maxIt){
+    var S=N+1;
+    var u=new Float64Array(S*S);
+    var f=new Float64Array(S*S);
+    f[(N>>1)*S+(N>>1)] = N*N; // strong central source
+    var hist=new Float64Array(maxIt);
+    var h2=1.0/(N*N);
+    for (var it=0; it<maxIt; it++){
+      var sum=0, cnt=0;
+      if (method==='jacobi'){
+        var un=u.slice();
+        for (var i=1;i<N;i++) for (var j=1;j<N;j++){
+          var k=i*S+j;
+          var nv=0.25*(u[k-S]+u[k+S]+u[k-1]+u[k+1]+h2*f[k]);
+          var d=nv-u[k]; sum+=d*d; cnt++; un[k]=nv;
+        }
+        u=un;
+      } else {
+        for (var i=1;i<N;i++) for (var j=1;j<N;j++){
+          var k=i*S+j;
+          var nv=0.25*(u[k-S]+u[k+S]+u[k-1]+u[k+1]+h2*f[k]);
+          var d=nv-u[k]; sum+=d*d; cnt++;
+          u[k]=u[k]+omega*(nv-u[k]);
+        }
+      }
+      hist[it]=Math.sqrt(sum/cnt);
+    }
+    return hist;
+  }
+  function draw(N, omega){
+    var maxIt=300;
+    var hJ=history(N,'jacobi',1.0,maxIt);
+    var hG=history(N,'gs',1.0,maxIt);
+    var hS=history(N,'sor',omega,maxIt);
+    var W=cvs.width, H=cvs.height;
+    var P={l:58,r:120,t:18,b:38}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+    // log scale bounds
+    var lmax=Math.log10(Math.max(hJ[0],hG[0],hS[0])+1e-30);
+    var lmin=-10;
+    function xp(k){ return P.l + pw*k/(maxIt-1); }
+    function yp(r){ var l=Math.log10(Math.max(r,1e-30)); return P.t + ph*(1-(l-lmin)/(lmax-lmin)); }
+    // grid: decades
+    ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.6;
+    ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='right';
+    for (var e=Math.ceil(lmin); e<=Math.floor(lmax); e++){
+      var gy=P.t+ph*(1-(e-lmin)/(lmax-lmin));
+      ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke();
+      ctx.fillText('1e'+e, P.l-5, gy+3);
+    }
+    // x ticks
+    ctx.textAlign='center';
+    for (var k=0;k<=maxIt;k+=50){
+      var gx=xp(k); ctx.beginPath(); ctx.moveTo(gx,P.t+ph); ctx.lineTo(gx,P.t+ph+4); ctx.strokeStyle='#6b5d4f'; ctx.stroke();
+      ctx.fillText(k, gx, P.t+ph+16);
+    }
+    // axes
+    ctx.strokeStyle='#2c2419'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+    ctx.fillStyle='#2c2419'; ctx.font='11px JetBrains Mono';
+    ctx.textAlign='center'; ctx.fillText('итерация k', P.l+pw/2, H-6);
+    ctx.save(); ctx.translate(14,P.t+ph/2); ctx.rotate(-Math.PI/2);
+    ctx.fillText('невязка ‖r‖ (log)', 0,0); ctx.restore();
+    function curve(h,col){
+      ctx.strokeStyle=col; ctx.lineWidth=2; ctx.beginPath();
+      for (var k=0;k<maxIt;k++){ var X=xp(k),Y=yp(h[k]); k===0?ctx.moveTo(X,Y):ctx.lineTo(X,Y); }
+      ctx.stroke();
+    }
+    curve(hJ,'#3a5ba0'); curve(hG,'#1a6b5a'); curve(hS,'#b44a2d');
+    // legend
+    var lx=P.l+pw+12, ly=P.t+10;
+    var items=[['Якоби','#3a5ba0'],['Гаусс–Зейдель','#1a6b5a'],['SOR ω='+omega.toFixed(2),'#b44a2d']];
+    ctx.font='10px JetBrains Mono'; ctx.textAlign='left';
+    for (var m=0;m<items.length;m++){
+      ctx.strokeStyle=items[m][1]; ctx.lineWidth=2.5; ctx.beginPath();
+      ctx.moveTo(lx,ly+m*18); ctx.lineTo(lx+18,ly+m*18); ctx.stroke();
+      ctx.fillStyle='#2c2419'; ctx.fillText(items[m][1]===null?'':items[m][0], lx+22, ly+m*18+3);
+    }
+    // count iterations to reach 1e-6
+    function reach(h){ for(var k=0;k<maxIt;k++) if(h[k]<1e-6) return k+1; return '>'+maxIt; }
+    return {jac:reach(hJ), gs:reach(hG), sor:reach(hS)};
+  }
+  function run(){
+    var N=+document.getElementById('l5iter_n').value;
+    var omega=+document.getElementById('l5iter_w').value;
+    document.getElementById('l5iter_nv').textContent=N;
+    document.getElementById('l5iter_wv').textContent=omega.toFixed(2);
+    var r=draw(N,omega);
+    document.getElementById('l5iter_status').innerHTML =
+      'Итераций до ‖r‖<1e-6 — Якоби: '+r.jac+' · Гаусс–Зейдель: '+r.gs+' · SOR(ω='+omega.toFixed(2)+'): '+r.sor;
+  }
+  document.getElementById('l5iter_run').addEventListener('click', run);
+  document.getElementById('l5iter_n').addEventListener('input', function(){ document.getElementById('l5iter_nv').textContent=this.value; });
+  document.getElementById('l5iter_w').addEventListener('input', run);
+  window.addEventListener('load', function(){ setTimeout(run, 300); });
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> Все три кривые невязки монотонно падают, но с разным наклоном. Якоби (синий) сходится медленнее всех; Гаусс–Зейдель (зелёный) — примерно вдвое быстрее (его наклон вдвое круче). SOR (терракота) при умеренном \(\omega\) близок к Гауссу–Зейделю, но по мере приближения \(\omega\) к оптимуму (\(\approx1.9\) для этой сетки) кривая резко «обваливается» — для достижения той же точности нужно в несколько раз меньше итераций. Если задрать \(\omega\) слишком близко к 2, сходимость снова портится (метод теряет устойчивость). Счётчик внизу показывает число итераций до невязки \(10^{-6}\) — численное подтверждение выигрыша SOR.
 </div>
 
 <div class="lecture-nav">

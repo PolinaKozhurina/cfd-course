@@ -26,9 +26,11 @@ window.MathJax = {
   <a href="#iso">Идея изопараметрического элемента</a>
   <a href="#general">Общая формулировка</a>
   <a href="#quad">Квадратичные элементы</a>
+  <a href="#shapes">Интерактив: функции формы</a>
   <a href="#mapping">Отображение и якобиан</a>
   <a href="#gauss">Численное интегрирование</a>
-  <a href="#interactive">Интерактив</a>
+  <a href="#gaussdemo">Интерактив: квадратура Гаусса</a>
+  <a href="#interactive">Интерактив: якобиан</a>
   <div class="sep"></div>
   <div class="g">Навигация</div>
   <a href="lec6.html">← Лекция 6</a>
@@ -419,6 +421,150 @@ N_4^{(e)} &= 4\xi_1\xi_2, & N_5^{(e)} &= 4\xi_2\xi_3, & N_6^{(e)} &= 4\xi_3\xi_1
 
 <p>Базовые определяющие уравнения элемента построены. Рассмотренная методика легко распространяется на трёхмерные элементы сложной геометрии (тетраэдр, пентаэдр, гексаэдр); при этом термин «треугольные барицентрические координаты» заменяется на более общее понятие <em>естественных локальных координат</em>, также представимых посредством изопараметрических отображений.</p>
 
+<h2 id="shapes">Интерактив: функции формы изопараметрического элемента</h2>
+
+<p>Самый наглядный объект изопараметрической теории — сами функции формы \(N_i\) на опорном квадрате \([-1,1]^2\). Ниже строится тепловая карта выбранной функции \(N_i\) для билинейного четырёхузлового элемента (Q1) и для серендипова восьмиузлового элемента (Q2). Узлы отмечены кружками; обратите внимание, как \(N_i\) равна единице в «своём» узле и нулю во всех остальных — это интерполяционное свойство Кронекера \(N_i(\text{узел}_j)=\delta_{ij}\), на котором держится вся конструкция (3)–(5).</p>
+
+<p>Функции формы 8-узлового серендипова элемента (Q2): для угловых узлов \((\xi_i,\eta_i)=\pm1\)</p>
+
+<div class="eq">\[
+N_i = \tfrac14(1+\xi_i\xi)(1+\eta_i\eta)(\xi_i\xi+\eta_i\eta-1),\qquad i=1,\dots,4,
+\tag{14'}
+\]</div>
+
+<p>для срединных узлов сторон — при \(\xi_i=0\): \(N_i=\tfrac12(1-\xi^2)(1+\eta_i\eta)\); при \(\eta_i=0\): \(N_i=\tfrac12(1+\xi_i\xi)(1-\eta^2)\).</p>
+
+<div id="l7sf_box" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#6b5d4f">Тип элемента</label>
+    <select id="l7sf_type" style="background:#fff;border:1px solid #d9cfc0;border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <option value="q1">Q1 — билинейный, 4 узла</option>
+      <option value="q2">Q2 — серендипов, 8 узлов</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#6b5d4f">Узел i: <span id="l7sf_nodev">1</span></label>
+    <input type="range" id="l7sf_node" min="1" max="4" value="1" style="width:160px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#6b5d4f">Показ</label>
+    <select id="l7sf_mode" style="background:#fff;border:1px solid #d9cfc0;border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <option value="heat">тепловая карта</option>
+      <option value="iso">изолинии</option>
+    </select>
+  </div>
+</div>
+<div style="display:flex;justify-content:center"><canvas id="l7sf_cv" width="360" height="360" style="width:100%;max-width:360px;height:auto;background:#fff;border-radius:6px;border:1px solid #d9cfc0"></canvas></div>
+<div id="l7sf_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:#6b5d4f;margin-top:.5rem"></div>
+</div>
+
+<script>
+(function(){
+  var cv=document.getElementById('l7sf_cv'), ctx=cv.getContext('2d');
+  var typeSel=document.getElementById('l7sf_type'), nodeSl=document.getElementById('l7sf_node');
+  var modeSel=document.getElementById('l7sf_mode');
+  var nodeV=document.getElementById('l7sf_nodev'), status=document.getElementById('l7sf_status');
+  // node coords on reference square
+  var Q1=[[-1,-1],[1,-1],[1,1],[-1,1]];
+  var Q2=[[-1,-1],[1,-1],[1,1],[-1,1],[0,-1],[1,0],[0,1],[-1,0]];
+
+  function Nq1(i,xi,eta){ var c=Q1[i]; return 0.25*(1+c[0]*xi)*(1+c[1]*eta); }
+  function Nq2(i,xi,eta){
+    var c=Q2[i], x0=c[0], y0=c[1];
+    if (i<4) return 0.25*(1+x0*xi)*(1+y0*eta)*(x0*xi+y0*eta-1);
+    if (x0===0) return 0.5*(1-xi*xi)*(1+y0*eta);
+    return 0.5*(1+x0*xi)*(1-eta*eta);
+  }
+  function shape(i,xi,eta){ return typeSel.value==='q1'?Nq1(i,xi,eta):Nq2(i,xi,eta); }
+
+  // diverging colormap blue(-) -> cream(0) -> terracotta(+)
+  function color(v){
+    // v in roughly [-0.3,1]; normalize symmetric around 0
+    var t=Math.max(-1,Math.min(1, v));
+    if (t>=0){ // 0..1 cream -> terracotta
+      var r=Math.round(253+(180-253)*t), g=Math.round(249+(74-249)*t), b=Math.round(243+(45-243)*t);
+      return 'rgb('+r+','+g+','+b+')';
+    } else { var s=-t; // 0..1 cream -> blue
+      var r=Math.round(253+(58-253)*s), g=Math.round(249+(91-249)*s), b=Math.round(243+(160-243)*s);
+      return 'rgb('+r+','+g+','+b+')';
+    }
+  }
+
+  var M=30, S=300; // canvas margins, plot size
+  function px(xi){ return M+(xi+1)/2*S; }
+  function py(eta){ return M+(1-(eta+1)/2)*S; }
+
+  function draw(){
+    var node=+nodeSl.value, i=node-1;
+    ctx.clearRect(0,0,360,360);
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,360,360);
+    var step=4;
+    if (modeSel.value==='heat'){
+      for (var sx=0;sx<S;sx+=step) for (var sy=0;sy<S;sy+=step){
+        var xi=-1+2*sx/S, eta=1-2*sy/S;
+        ctx.fillStyle=color(shape(i,xi,eta));
+        ctx.fillRect(M+sx,M+sy,step+1,step+1);
+      }
+    } else {
+      // isolines: sample and draw contour bands via thresholds
+      for (var sx=0;sx<S;sx+=step) for (var sy=0;sy<S;sy+=step){
+        var xi=-1+2*sx/S, eta=1-2*sy/S;
+        var v=shape(i,xi,eta);
+        // banding every 0.1
+        var band=Math.round(v*10)/10;
+        ctx.fillStyle=color(band);
+        ctx.fillRect(M+sx,M+sy,step+1,step+1);
+      }
+    }
+    // frame
+    ctx.strokeStyle='#3a5ba0'; ctx.lineWidth=1.6;
+    ctx.strokeRect(px(-1),py(1),S,S);
+    // nodes
+    var nodes=typeSel.value==='q1'?Q1:Q2;
+    for (var k=0;k<nodes.length;k++){
+      var c=nodes[k];
+      ctx.beginPath(); ctx.arc(px(c[0]),py(c[1]),k===i?7:5,0,7);
+      ctx.fillStyle= k===i?'#b44a2d':'#1a6b5a'; ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.4; ctx.stroke();
+      ctx.fillStyle='#fff'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+      ctx.fillText(''+(k+1), px(c[0]), py(c[1])+3.5);
+    }
+    // axes labels
+    ctx.fillStyle='#6b5d4f'; ctx.font='11px JetBrains Mono'; ctx.textAlign='center';
+    ctx.fillText('ξ', px(1)+16, py(0)+4); ctx.fillText('η', px(0), py(1)-12);
+    // verify Kronecker
+    var ok=true, vals=[];
+    for (var k=0;k<nodes.length;k++){
+      var vv=shape(i,nodes[k][0],nodes[k][1]);
+      vals.push(vv);
+      if (Math.abs(vv-(k===i?1:0))>1e-9) ok=false;
+    }
+    var vmax=-1e9,vmin=1e9;
+    for (var sx=0;sx<=S;sx+=8) for (var sy=0;sy<=S;sy+=8){
+      var v=shape(i,-1+2*sx/S,1-2*sy/S); if(v>vmax)vmax=v; if(v<vmin)vmin=v;
+    }
+    status.innerHTML='N<sub>'+node+'</sub> на опорном квадрате · диапазон ['+vmin.toFixed(2)+', '+vmax.toFixed(2)+'] · '+
+      (ok?'<span style="color:#1a6b5a;font-weight:600">N'+node+'(узел j)=δ'+node+'j выполнено ✓</span>':'<span style="color:#b44a2d">нарушение δ</span>');
+  }
+
+  function syncRange(){
+    var max=typeSel.value==='q1'?4:8;
+    nodeSl.max=max;
+    if (+nodeSl.value>max) nodeSl.value=max;
+    nodeV.textContent=nodeSl.value;
+  }
+  typeSel.addEventListener('change', function(){ syncRange(); draw(); });
+  nodeSl.addEventListener('input', function(){ nodeV.textContent=nodeSl.value; draw(); });
+  modeSel.addEventListener('change', draw);
+  syncRange(); draw();
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> Карта \(N_i\) поднимается до \(+1\) (терракота) ровно в выбранном узле \(i\) и обращается в \(0\) во всех остальных узлах — статус подтверждает свойство Кронекера \(N_i(\text{узел}_j)=\delta_{ij}\). У билинейного Q1 форма всюду неотрицательна (плавный «холм» над одним углом). У серендипова Q2 угловые функции \(N_i\) уходят в <em>отрицательные</em> значения (синие зоны) у соседних сторон — это нормально для квадратичных серендиповых элементов и не нарушает разбиения единицы \(\sum_i N_i=1\). Срединные узлы 5–8 дают симметричные «гребни» над серединами сторон.
+</div>
+
 <h2 id="mapping">Изопараметрическое отображение и якобиан</h2>
 
 <p>Изопараметрические формулы (3)–(5) — это, по сути, гладкое <strong>отображение</strong> опорного (канонического) элемента на физический. Для четырёхугольного билинейного элемента опорной областью служит квадрат \(\boldsymbol\xi=(\xi,\eta)\in[-1,1]^2\) с четырьмя узлами и функциями форм</p>
@@ -522,6 +668,51 @@ dA = \left|\frac{\partial\mathbf r}{\partial\xi}\times\frac{\partial\mathbf r}{\
 \]
 При сохранении ориентации \(\det\mathbf J>0\), и модуль снимается. \(\square\)</p>
 
+<div class="figure">
+<svg viewBox="0 0 580 250" xmlns="http://www.w3.org/2000/svg" style="max-width:560px">
+  <defs>
+    <marker id="arrCov" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#b44a2d"/></marker>
+  </defs>
+  <!-- reference square with one small cell dξ dη -->
+  <text x="120" y="28" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">опорная область (ξ,η)</text>
+  <rect x="50" y="50" width="150" height="150" fill="#3a5ba0" fill-opacity="0.05" stroke="#3a5ba0" stroke-width="1.6"/>
+  <!-- grid -->
+  <g stroke="#d9cfc0" stroke-width="0.6">
+    <line x1="100" y1="50" x2="100" y2="200"/><line x1="150" y1="50" x2="150" y2="200"/>
+    <line x1="50" y1="100" x2="200" y2="100"/><line x1="50" y1="150" x2="200" y2="150"/>
+  </g>
+  <!-- highlighted cell -->
+  <rect x="100" y="100" width="50" height="50" fill="#1a6b5a" fill-opacity="0.18" stroke="#1a6b5a" stroke-width="1.4"/>
+  <text x="125" y="128" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a" text-anchor="middle">dξ·dη</text>
+  <!-- side labels -->
+  <text x="125" y="218" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">dξ</text>
+  <text x="88" y="129" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="end">dη</text>
+  <!-- arrow -->
+  <line x1="215" y1="125" x2="320" y2="125" stroke="#b44a2d" stroke-width="2" marker-end="url(#arrCov)"/>
+  <text x="267" y="116" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle">r(ξ,η)</text>
+  <text x="267" y="142" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">отображение</text>
+  <!-- physical region with mapped parallelogram cell -->
+  <text x="455" y="28" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">физическая область (x,y)</text>
+  <path d="M 345 195 Q 410 210 480 195 Q 500 130 488 70 Q 420 58 358 78 Q 340 135 345 195 Z"
+        fill="#1a6b5a" fill-opacity="0.05" stroke="#1a6b5a" stroke-width="1.6"/>
+  <!-- mapped grid (curved) -->
+  <g stroke="#d9cfc0" stroke-width="0.6" fill="none">
+    <path d="M 388 188 Q 396 132 391 76"/><path d="M 432 195 Q 440 132 435 68"/>
+    <path d="M 350 152 Q 418 166 490 154"/><path d="M 352 112 Q 420 124 488 114"/>
+  </g>
+  <!-- mapped highlighted cell as parallelogram -->
+  <polygon points="396,132 440,132 437,166 393,166" fill="#b44a2d" fill-opacity="0.22" stroke="#b44a2d" stroke-width="1.4"/>
+  <!-- tangent vectors -->
+  <defs><marker id="arrCov2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#3a5ba0"/></marker></defs>
+  <line x1="396" y1="149" x2="440" y2="149" stroke="#3a5ba0" stroke-width="1.6" marker-end="url(#arrCov2)"/>
+  <line x1="416" y1="166" x2="414" y2="128" stroke="#3a5ba0" stroke-width="1.6" marker-end="url(#arrCov2)"/>
+  <text x="448" y="146" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a5ba0">∂r/∂ξ·dξ</text>
+  <text x="420" y="122" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a5ba0">∂r/∂η·dη</text>
+  <text x="455" y="232" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d" text-anchor="middle">dx·dy = det J · dξ·dη</text>
+</svg>
+<div class="caption">Замена переменных \(\iint_\Omega f\,dx\,dy=\iint_{\hat\Omega} f\,\det\mathbf J\,d\xi\,d\eta\). Квадратная ячейка \(d\xi\times d\eta\) опорной области переходит в параллелограмм, натянутый на касательные векторы \(\partial_\xi\mathbf r\,d\xi\) и \(\partial_\eta\mathbf r\,d\eta\); его площадь равна \(\det\mathbf J\,d\xi\,d\eta\). Множитель \(\det\mathbf J\) — локальный коэффициент растяжения площади.</div>
+</div>
+
 <div class="remark">
 <strong>Роль знака якобиана.</strong> Величина \(\det\mathbf J\) — локальный коэффициент растяжения площади при отображении. Если элемент сильно искажён (узел «заехал» за противоположную сторону, или образуется невыпуклый четырёхугольник), \(\det\mathbf J\) может обратиться в ноль или сменить знак — отображение становится <em>вырожденным</em> (необратимым), и формула замены переменных теряет смысл. На практике следят, чтобы \(\det\mathbf J>0\) во всех точках Гаусса. Это интерактивно показано ниже.
 </div>
@@ -602,6 +793,154 @@ n & \xi_g & w_g \\\hline
   <text x="280" y="178" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">точки Гаусса лежат внутри опорного квадрата [−1,1]², не на границе</text>
 </svg>
 <div class="caption">Точки квадратуры Гаусса на опорном квадрате для тензорных правил \(1\times1\), \(2\times2\), \(3\times3\). Правило \(n\times n\) точно интегрирует полиномы степени до \(2n-1\) по каждой переменной.</div>
+</div>
+
+<h3 id="gaussdemo">Интерактив: квадратура Гаусса на опорном элементе</h3>
+
+<p>Демонстрация двумерного правила Гаусса по квадрату \([-1,1]^2\). Выберите число точек \(n\times n\) и подынтегральную функцию. Слева рисуются точки Гаусса на опорном квадрате (размер кружка пропорционален весу \(w_g w_h\)), справа выводится приближённое значение интеграла (19), точное значение и относительная ошибка. Проверьте ключевое свойство: правило с \(n\) точками <em>точно</em> интегрирует полиномы степени до \(2n-1\) по каждой переменной.</p>
+
+<div id="l7gq_box" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#6b5d4f">Число точек</label>
+    <select id="l7gq_n" style="background:#fff;border:1px solid #d9cfc0;border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <option value="1">1×1 (точно до степ. 1)</option>
+      <option value="2" selected>2×2 (точно до степ. 3)</option>
+      <option value="3">3×3 (точно до степ. 5)</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#6b5d4f">Функция F(ξ,η)</label>
+    <select id="l7gq_fn" style="background:#fff;border:1px solid #d9cfc0;border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <option value="p2">ξ²+η² (полином, степ. 2)</option>
+      <option value="p3">ξ³+η³+1 (полином, степ. 3)</option>
+      <option value="p4">ξ⁴+η⁴ (полином, степ. 4)</option>
+      <option value="p6">ξ⁶ (полином, степ. 6)</option>
+      <option value="smooth">cos(ξ)·cos(η) (гладкая)</option>
+      <option value="exp">exp(ξ·η) (гладкая)</option>
+    </select>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid #d9cfc0"><div style="text-align:center;font-size:.78rem;font-weight:600;color:#b44a2d;margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">точки Гаусса на [−1,1]²</div><canvas id="l7gq_cv" width="320" height="320" style="width:100%;height:auto"></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.6rem;border:1px solid #d9cfc0;display:flex;flex-direction:column;justify-content:center"><div id="l7gq_out" style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:#2c2419;line-height:1.7"></div></div>
+</div>
+<div id="l7gq_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:#6b5d4f;margin-top:.5rem"></div>
+</div>
+
+<script>
+(function(){
+  var cv=document.getElementById('l7gq_cv'), ctx=cv.getContext('2d');
+  var nSel=document.getElementById('l7gq_n'), fnSel=document.getElementById('l7gq_fn');
+  var out=document.getElementById('l7gq_out'), status=document.getElementById('l7gq_status');
+  // Gauss-Legendre nodes/weights on [-1,1]
+  var GL={
+    1:{x:[0], w:[2]},
+    2:{x:[-1/Math.sqrt(3),1/Math.sqrt(3)], w:[1,1]},
+    3:{x:[-Math.sqrt(3/5),0,Math.sqrt(3/5)], w:[5/9,8/9,5/9]}
+  };
+  // high-order reference rule for "exact" of non-polynomials
+  var REF=(function(){
+    // 10-point Gauss-Legendre
+    var x=[-0.9739065285,-0.8650633667,-0.6794095683,-0.4333953941,-0.1488743390,
+            0.1488743390,0.4333953941,0.6794095683,0.8650633667,0.9739065285];
+    var w=[0.0666713443,0.1494513492,0.2190863625,0.2692667193,0.2955242247,
+           0.2955242247,0.2692667193,0.2190863625,0.1494513492,0.0666713443];
+    return {x:x,w:w};
+  })();
+
+  function F(name,xi,eta){
+    switch(name){
+      case 'p2': return xi*xi+eta*eta;
+      case 'p3': return xi*xi*xi+eta*eta*eta+1;
+      case 'p4': return Math.pow(xi,4)+Math.pow(eta,4);
+      case 'p6': return Math.pow(xi,6);
+      case 'smooth': return Math.cos(xi)*Math.cos(eta);
+      case 'exp': return Math.exp(xi*eta);
+    }
+    return 0;
+  }
+  // analytic exact integrals over [-1,1]^2 where available
+  var EXACT={
+    p2: 8/3,            // ∫(ξ²+η²) = 2*(2/3*2)=8/3
+    p3: 4,              // odd terms vanish, ∫1 =4
+    p4: 8/5,            // 2*(2/5*2)=8/5
+    p6: 2*(2/7),        // ∫ξ⁶ over square = (2/7)*2 = 4/7
+  };
+  function exactVal(name){
+    if (EXACT[name]!==undefined) return EXACT[name];
+    // numeric reference (tensor 10x10)
+    var s=0;
+    for (var a=0;a<REF.x.length;a++) for (var b=0;b<REF.x.length;b++)
+      s+=REF.w[a]*REF.w[b]*F(name,REF.x[a],REF.x[b]);
+    return s;
+  }
+
+  function quad(n,name){
+    var g=GL[n], s=0;
+    for (var a=0;a<n;a++) for (var b=0;b<n;b++)
+      s+=g.w[a]*g.w[b]*F(name,g.x[a],g.x[b]);
+    return s;
+  }
+
+  var M=30,S=260;
+  function px(xi){ return M+(xi+1)/2*S; }
+  function py(eta){ return M+(1-(eta+1)/2)*S; }
+
+  function draw(){
+    var n=+nSel.value, name=fnSel.value, g=GL[n];
+    ctx.clearRect(0,0,320,320);
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,320,320);
+    // grid
+    ctx.strokeStyle='#d9cfc0'; ctx.lineWidth=0.7;
+    for (var k=-1;k<=1.001;k+=0.5){
+      ctx.beginPath(); ctx.moveTo(px(k),py(-1)); ctx.lineTo(px(k),py(1)); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px(-1),py(k)); ctx.lineTo(px(1),py(k)); ctx.stroke();
+    }
+    ctx.strokeStyle='#3a5ba0'; ctx.lineWidth=1.8;
+    ctx.strokeRect(px(-1),py(1),S,S);
+    // gauss points, radius ∝ weight
+    var wmax=0; for (var a=0;a<n;a++) for (var b=0;b<n;b++){ var ww=g.w[a]*g.w[b]; if(ww>wmax)wmax=ww; }
+    ctx.fillStyle='#b44a2d';
+    for (var a=0;a<n;a++) for (var b=0;b<n;b++){
+      var ww=g.w[a]*g.w[b], r=4+8*(ww/wmax);
+      ctx.beginPath(); ctx.arc(px(g.x[a]),py(g.x[b]),r,0,7); ctx.fill();
+    }
+    ctx.fillStyle='#6b5d4f'; ctx.font='11px JetBrains Mono'; ctx.textAlign='center';
+    ctx.fillText('ξ', px(1)+14, py(0)+4); ctx.fillText('η', px(0), py(1)-12);
+    ctx.fillText('−1', px(-1), py(-1)+16); ctx.fillText('+1', px(1), py(-1)+16);
+
+    var approx=quad(n,name), ex=exactVal(name);
+    var err=Math.abs(approx-ex), rel=Math.abs(ex)>1e-12?err/Math.abs(ex):err;
+    var deg=2*n-1;
+    var isPoly=name.charAt(0)==='p';
+    var polyDeg={p2:2,p3:3,p4:4,p6:6}[name];
+    out.innerHTML=
+      '<div>точек: <b>'+n+'×'+n+'</b> = '+(n*n)+'</div>'+
+      '<div>точно до степени <b>2n−1 = '+deg+'</b></div>'+
+      '<hr style="border:none;border-top:1px solid #d9cfc0;margin:.4rem 0">'+
+      '<div>приближённо: <b style="color:#b44a2d">'+approx.toFixed(6)+'</b></div>'+
+      '<div>точно: <b style="color:#1a6b5a">'+ex.toFixed(6)+'</b></div>'+
+      '<div>ошибка: <b>'+err.toExponential(2)+'</b></div>'+
+      (Math.abs(ex)>1e-12?'<div>отн. ошибка: '+rel.toExponential(2)+'</div>':'');
+
+    var msg;
+    if (isPoly){
+      if (polyDeg<=deg) msg='<span style="color:#1a6b5a;font-weight:600">полином степени '+polyDeg+' ≤ '+deg+' — интегрируется ТОЧНО ✓</span>';
+      else msg='<span style="color:#b44a2d;font-weight:600">полином степени '+polyDeg+' &gt; '+deg+' — есть ошибка квадратуры</span>';
+    } else {
+      msg='гладкая функция: ошибка убывает экспоненциально с ростом числа точек.';
+    }
+    status.innerHTML=msg;
+  }
+  nSel.addEventListener('change', draw);
+  fnSel.addEventListener('change', draw);
+  draw();
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> Для полинома степени \(\le 2n-1\) приближённый интеграл совпадает с точным до машинной точности (ошибка \(\sim10^{-16}\)) — статус подтверждает точность. Стоит взять полином степени выше \(2n-1\) (например, \(\xi^6\) при правиле \(2\times2\), где \(2n-1=3\)) — появляется ненулевая ошибка квадратуры, которая исчезает при переходе к \(3\times3\), как только степень укладывается в \(2n-1=5\). Для гладких неполиномиальных функций (cos, exp) ошибка не зануляется, но быстро (экспоненциально) убывает с числом точек. Радиус кружка пропорционален весу \(w_g w_h\): у правила \(3\times3\) центральная точка тяжелее угловых (\(8/9\) против \(5/9\)).
 </div>
 
 <div class="algo">

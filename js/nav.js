@@ -132,7 +132,8 @@
           ]}
         ],
         extras: [
-          { href: "mke/index.html", label: "Обзор курса" }
+          { href: "mke/index.html", label: "Обзор курса" },
+          { href: "mke/practice.html", label: "Практикум" }
         ]
       }
     ],

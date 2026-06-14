@@ -4,6 +4,9 @@
 (function() {
   "use strict";
 
+  // Apply saved theme as early as possible to minimise flash
+  try { if (localStorage.getItem('cfd-theme') === 'dark') document.documentElement.classList.add('dark'); } catch (e) {}
+
   var NAV = {
     brand: { label: "CFD", href: "index.html" },
     courses: [
@@ -199,7 +202,31 @@
     '  #cfd-nav .l1{position:static;box-shadow:none;border:none;border-radius:0;padding:0 0 0 12px;background:transparent;min-width:auto}',
     '  #cfd-nav .l2{position:static;box-shadow:none;border:none;border-radius:0;padding:0 0 0 12px;background:transparent;min-width:auto}',
     '  #cfd-nav .grp-btn{padding:6px 8px}',
-    '}'
+    '}',
+    // Theme toggle button
+    '#cfd-nav .theme-btn{background:none;border:none;cursor:pointer;color:#6b5d4f;padding:4px 7px;border-radius:4px;font-size:13px;line-height:1;transition:all .15s;flex-shrink:0}',
+    '#cfd-nav .theme-btn:hover{background:#ede6da;color:#2c2419}',
+    // Dark theme overrides for the nav bar
+    'html.dark #cfd-nav{background:#1a1611;border-bottom-color:#39322a}',
+    'html.dark #cfd-nav .nav-brand{color:#e07a52}',
+    'html.dark #cfd-nav .dd-btn,html.dark #cfd-nav .nav-link{color:#bcb0a0}',
+    'html.dark #cfd-nav .dd-btn:hover,html.dark #cfd-nav .dd-btn.open,html.dark #cfd-nav .nav-link:hover{background:#2c261f;color:#ece3d6}',
+    'html.dark #cfd-nav .dd-btn.has-active,html.dark #cfd-nav .grp-btn.grp-active{color:#e07a52}',
+    'html.dark #cfd-nav .l1,html.dark #cfd-nav .l2{background:#231e18;border-color:#39322a;box-shadow:0 8px 32px rgba(0,0,0,.45)}',
+    'html.dark #cfd-nav .grp-btn{color:#ece3d6}',
+    'html.dark #cfd-nav .grp-btn:hover,html.dark #cfd-nav .grp-btn.grp-open{background:#2c261f;color:#e07a52}',
+    'html.dark #cfd-nav .l2 a{color:#cabfae}',
+    'html.dark #cfd-nav .l2 a:hover{background:#2c261f;color:#e07a52}',
+    'html.dark #cfd-nav .l2 a.active{background:#e07a52;color:#1a1611}',
+    'html.dark #cfd-nav .l1 .sem{color:#8d8173;border-bottom-color:#2c261f}',
+    'html.dark #cfd-nav .l1-sep{background:#2c261f}',
+    'html.dark #cfd-nav .l1 .ext a{color:#bcb0a0}',
+    'html.dark #cfd-nav .l1 .ext a:hover{background:#2c261f;color:#e07a52}',
+    'html.dark #cfd-nav .nav-link.active{background:#e07a52;color:#1a1611}',
+    'html.dark #cfd-nav .nav-items{background:#1a1611;border-bottom-color:#39322a}',
+    'html.dark #cfd-nav .ham{color:#bcb0a0}',
+    'html.dark #cfd-nav .theme-btn{color:#bcb0a0}',
+    'html.dark #cfd-nav .theme-btn:hover{background:#2c261f;color:#ece3d6}'
   ].join("\n");
   document.head.appendChild(css);
 
@@ -250,7 +277,10 @@
     h += '<a href="' + p(it.href) + '" class="nav-link' + (it.href === currentPageFull ? ' active' : '') + '">' + it.label + '</a>';
   });
 
-  h += '</div></div>';
+  h += '</div>'; // close .nav-items
+  var darkNow = document.documentElement.classList.contains('dark');
+  h += '<button class="theme-btn" onclick="window._navTheme()" aria-label="Переключить тему" title="Светлая / тёмная тема">' + (darkNow ? '☀' : '☾') + '</button>';
+  h += '</div>'; // close .nav-inner
   nav.innerHTML = h;
   document.body.insertBefore(nav, document.body.firstChild);
   document.body.style.paddingTop = "38px";
@@ -272,6 +302,12 @@
   };
   window._navMob = function() {
     document.querySelector("#cfd-nav .nav-items").classList.toggle("mob-open");
+  };
+  window._navTheme = function() {
+    var dark = document.documentElement.classList.toggle("dark");
+    try { localStorage.setItem("cfd-theme", dark ? "dark" : "light"); } catch (e) {}
+    var btn = document.querySelector("#cfd-nav .theme-btn");
+    if (btn) btn.textContent = dark ? "☀" : "☾";
   };
 
   // Touch support for groups (tap to toggle L2 on mobile)

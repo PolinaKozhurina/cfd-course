@@ -916,8 +916,8 @@ S_{ff}\,\mathbf A_f = \mu_0\, C^{\mathsf T} T_d\, \mathbf J_d - S_{fp}\,\mathbf 
 <div id="l5iter" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
 <div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
   <div style="display:flex;flex-direction:column;gap:3px">
-    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Сетка N: <span id="l5iter_nv">40</span></label>
-    <input type="range" id="l5iter_n" min="16" max="64" step="8" value="40" style="width:150px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Сетка N: <span id="l5iter_nv">24</span></label>
+    <input type="range" id="l5iter_n" min="16" max="48" step="8" value="24" style="width:150px">
   </div>
   <div style="display:flex;flex-direction:column;gap:3px">
     <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">ω (SOR): <span id="l5iter_wv">1.80</span></label>
@@ -967,7 +967,9 @@ S_{ff}\,\mathbf A_f = \mu_0\, C^{\mathsf T} T_d\, \mathbf J_d - S_{fp}\,\mathbf 
     return hist;
   }
   function draw(N, omega){
-    var maxIt=300;
+    // iterations needed grows ~ N^2 for Jacobi/GS; scale the window so the
+    // slowest method (Jacobi) actually reaches the floor and curves separate
+    var maxIt=Math.round(3.0*N*N);
     var hJ=history(N,'jacobi',1.0,maxIt);
     var hG=history(N,'gs',1.0,maxIt);
     var hS=history(N,'sor',omega,maxIt);
@@ -987,9 +989,10 @@ S_{ff}\,\mathbf A_f = \mu_0\, C^{\mathsf T} T_d\, \mathbf J_d - S_{fp}\,\mathbf 
       ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke();
       ctx.fillText('1e'+e, P.l-5, gy+3);
     }
-    // x ticks
+    // x ticks (step chosen so ~6-8 labels fit regardless of maxIt)
     ctx.textAlign='center';
-    for (var k=0;k<=maxIt;k+=50){
+    var xstep=Math.max(50, Math.round(maxIt/6/100)*100);
+    for (var k=0;k<=maxIt;k+=xstep){
       var gx=xp(k); ctx.beginPath(); ctx.moveTo(gx,P.t+ph); ctx.lineTo(gx,P.t+ph+4); ctx.strokeStyle='#6b5d4f'; ctx.stroke();
       ctx.fillText(k, gx, P.t+ph+16);
     }

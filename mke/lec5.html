@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>МКЭ-Лекция 5. Лаплас и Пуассон</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>МКЭ · Лекция 5</h2>
+  <div class="g">Содержание</div>
+  <a href="#variation">Вариационный принцип</a>
+  <a href="#setup">Постановка: коаксиальная линия</a>
+  <a href="#functional">Функционал энергии Лапласа</a>
+  <a href="#minimum">Доказательство минимума</a>
+  <a href="#discretization">Конечно-элементная аппроксимация</a>
+  <a href="#shape">Функции формы элемента</a>
+  <a href="#element-matrix">Матрица элемента</a>
+  <a href="#assembly">Объединение элементов</a>
+  <a href="#solution">Решение задачи</a>
+  <a href="#poisson">Уравнение Пуассона</a>
+  <a href="#interactive">Интерактив</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="lec4.html">← Лекция 4</a>
+  <a href="index.html">Обзор курса</a>
+  <a href="lec6.html">→ Лекция 6</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-fem">МКЭ</span>
+<div class="lecture-num">Лекция 5 · Метод конечных элементов</div>
+<h1>Решение уравнений Лапласа и Пуассона вариационным методом Ритца</h1>
+
+<h2 id="variation">Вариационный принцип: от фермы к континууму</h2>
+
+<p>Рассмотренный в предыдущих лекциях расчёт фермовой конструкции был выполнен в предположении её равновесного, стационарного состояния. Как известно, в таком состоянии механическая система имеет <strong>минимум потенциальной энергии</strong>. Можно считать, что решение задачи было получено применением вариационного принципа Лагранжа: потенциальная энергия системы приобретает стационарное значение на таких возможных перемещениях её элементов, которые удовлетворяют заданным граничным условиям и условиям равновесия сил.</p>
+
+<p>Принцип минимизации энергии распространяется и на системы с распределёнными параметрами, которые описываются дифференциальными уравнениями. Минимизация энергии — это своеобразный «мост», соединяющий инженерные КЭ-методы расчёта конструкций с <em>конечным</em> числом степеней свободы и КЭ-методы решения краевых задач математической физики, связанных с «континуальными» моделями объектов: сплошных сред, представленных пространственными распределениями — «полями» температуры, плотности, скорости, электромагнитного поля, — то есть объектами с <em>бесконечным</em> числом степеней свободы.</p>
+
+<div class="remark">
+<strong>Идея метода Ритца.</strong> Искомое поле \(u\) приближают комбинацией простых базисных функций с неопределёнными коэффициентами. Эти коэффициенты находят не из самого дифференциального уравнения, а из условия минимума <em>функционала энергии</em>. Минимум функционала и решение краевой задачи оказываются эквивалентны — это и есть содержание вариационного метода.
+</div>
+
+<h2 id="setup">Постановка задачи: коаксиальная линия прямоугольного сечения</h2>
+
+<p>Рассмотрим двумерную задачу анализа свойств электромагнитного поля в коаксиальной передающей линии, составленной из проводников прямоугольного поперечного сечения. В упрощённом стационарном варианте задача состоит в нахождении электрического потенциала в пространстве между проводниками.</p>
+
+<p>Благодаря симметрии структуры при анализе можно ограничиться <strong>четвёртой частью</strong> исследуемой области. Соответственно возникают два типа граничных условий:</p>
+
+<ul>
+<li><strong>Условие Дирихле</strong> — заданные значения потенциалов на проводящих металлических поверхностях: на внешнем проводнике \(u = 1\), на внутреннем \(u = 0\).</li>
+<li><strong>Условие Неймана</strong> — равенство нулю нормальной производной потенциала на плоскостях симметрии: \(\mathbf n\cdot\nabla u = 0\).</li>
+</ul>
+
+<p>Данные граничные условия используются при нахождении потенциала \(u(x,y)\), удовлетворяющего уравнению Лапласа:</p>
+
+<div class="eq">\[
+\Delta u = 0.
+\tag{1}
+\]</div>
+
+<div class="figure">
+<svg viewBox="0 0 520 400" xmlns="http://www.w3.org/2000/svg" style="max-width:480px">
+  <!-- L-shaped quarter domain. Outer rectangle corner top-left, inner conductor block cut -->
+  <!-- Domain polygon: big top rectangle + tall right rectangle forming an L (rotated) -->
+  <!-- Coordinates: domain is region between outer (top + right) and inner conductor (small bar) -->
+  <!-- Outer boundary -->
+  <polygon points="60,40 460,40 460,360 250,360 250,150 60,150"
+           fill="#1a6b5a" fill-opacity="0.05" stroke="none"/>
+  <!-- Top conductor (external u=1) -->
+  <line x1="60" y1="40" x2="460" y2="40" stroke="#b44a2d" stroke-width="4"/>
+  <text x="260" y="30" font-family="JetBrains Mono,monospace" font-size="12" fill="#b44a2d" text-anchor="middle" font-weight="600">Внешний проводник  u = 1</text>
+  <!-- Inner conductor (u=0): horizontal bar -->
+  <line x1="60" y1="150" x2="250" y2="150" stroke="#3a5ba0" stroke-width="4"/>
+  <line x1="250" y1="150" x2="250" y2="360" stroke="#3a5ba0" stroke-width="4"/>
+  <text x="155" y="170" font-family="JetBrains Mono,monospace" font-size="12" fill="#3a5ba0" text-anchor="middle" font-weight="600">Внутренний проводник  u = 0</text>
+  <!-- Symmetry planes (Neumann) -->
+  <!-- left edge -->
+  <line x1="60" y1="40" x2="60" y2="150" stroke="#9a8d7e" stroke-width="2" stroke-dasharray="6,4"/>
+  <!-- right edge -->
+  <line x1="460" y1="40" x2="460" y2="360" stroke="#9a8d7e" stroke-width="2" stroke-dasharray="6,4"/>
+  <!-- bottom edge -->
+  <line x1="250" y1="360" x2="460" y2="360" stroke="#9a8d7e" stroke-width="2" stroke-dasharray="6,4"/>
+  <!-- Neumann labels -->
+  <text x="50" y="98" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">n·∇u = 0</text>
+  <text x="470" y="205" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f">n·∇u = 0</text>
+  <text x="355" y="378" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">n·∇u = 0</text>
+  <!-- L dimension marker -->
+  <line x1="430" y1="155" x2="430" y2="355" stroke="#6b5d4f" stroke-width="0.7"/>
+  <line x1="426" y1="155" x2="434" y2="155" stroke="#6b5d4f" stroke-width="0.7"/>
+  <line x1="426" y1="355" x2="434" y2="355" stroke="#6b5d4f" stroke-width="0.7"/>
+  <text x="438" y="260" font-family="JetBrains Mono,monospace" font-size="12" fill="#6b5d4f" font-style="italic">L</text>
+  <!-- Field hint -->
+  <text x="300" y="105" font-family="Source Serif 4,serif" font-size="12" fill="#1a6b5a" font-style="italic">область решения  Δu = 0</text>
+  <!-- Legend -->
+  <g transform="translate(60,388)">
+    <line x1="0" y1="-2" x2="22" y2="-2" stroke="#b44a2d" stroke-width="4"/>
+    <text x="27" y="2" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419">Дирихле u=1</text>
+    <line x1="140" y1="-2" x2="162" y2="-2" stroke="#3a5ba0" stroke-width="4"/>
+    <text x="167" y="2" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419">Дирихле u=0</text>
+    <line x1="280" y1="-2" x2="302" y2="-2" stroke="#9a8d7e" stroke-width="2" stroke-dasharray="6,4"/>
+    <text x="307" y="2" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419">Нейман (симметрия)</text>
+  </g>
+</svg>
+<div class="caption">Рис. 1, а. Поперечное сечение одной четвёртой части коаксиальной линии и граничные условия. Сплошные толстые линии — «границы Дирихле» (заданы потенциалы \(u=1\) и \(u=0\)); штриховые линии — плоскости симметрии, на которых нормальная производная потенциала обращается в нуль (условие Неймана). Заштрихованная зона — область решения уравнения Лапласа.</div>
+</div>
+
+<h2 id="functional">Функционал энергии для уравнения Лапласа</h2>
+
+<p>В соответствии с принципом минимума потенциальной энергии распределение потенциала в линии передачи (или в зазоре электромашины) должно быть таким, чтобы минимизировать запасённую энергию. С точностью до постоянного множителя эта энергия определяется как функционал</p>
+
+<div class="eq">\[
+W(u) = \frac{1}{2}\int_S |\nabla u|^2 \, dS,
+\tag{2}
+\]</div>
+
+<p>где интегрирование проводится по всей двумерной области расчёта \(S\). Принцип минимума энергии математически эквивалентен уравнению Лапласа: распределение потенциала, удовлетворяющее уравнению Лапласа, минимизирует запасённую энергию; и наоборот, функция \(u\), на которой функционал (2) достигает минимума и обладающая достаточной гладкостью, удовлетворяет уравнению Лапласа.</p>
+
+<h2 id="minimum">Доказательство минимальности истинного решения</h2>
+
+<p>Пусть \(u(x,y)\) — истинное решение задачи, а \(h(x,y)\) — произвольная, достаточное число раз дифференцируемая функция, определённая в области решения и обращающаяся в нуль в каждой точке границы, где решение \(u\) задано граничными условиями. Тогда «возмущённое» решение \((u + \theta h)\), где \(\theta\) — скалярный параметр, имеет на границе те же заданные значения, что и \(u\). Энергия такого распределения равна</p>
+
+<div class="eq">\[
+W(u + \theta h) = W(u) + \theta\int_S (\nabla u)\cdot(\nabla h)\, dS + \frac{1}{2}\theta^2\int_S |\nabla h|^2 \, dS.
+\tag{3}
+\]</div>
+
+<p>Воспользуемся формулой (теоремой) Грина и запишем второе слагаемое правой части (3) в виде</p>
+
+<div class="eq">\[
+\int_S (\nabla u\cdot\nabla h)\, dS = -\int_S h\,\Delta u\, dS + \oint_{L(S)} h\,\frac{\partial u}{\partial n}\, dL.
+\]</div>
+
+<p>В результате получаем выражение для интеграла энергии от «возмущённого» решения \(u + \theta h\):</p>
+
+<div class="eq">\[
+W(u + \theta h) = W(u) + \theta^2 W(h) - \theta\int_S h\,\Delta u\, dS + \theta\oint_{L(S)} h\,\frac{\partial u}{\partial n}\, dL.
+\tag{4}
+\]</div>
+
+<p>Поскольку функция \(u\) удовлетворяет уравнению Лапласа, третье слагаемое правой части (4) обращается в нуль. Четвёртое слагаемое также обращается в нуль, потому что в любой точке границы (см. рис. 1) либо \(h\), либо нормальная компонента градиента</p>
+
+<div class="eq">\[
+\frac{\partial u}{\partial n} = (\nabla u, \mathbf n)
+\]</div>
+
+<p>обращается в нуль. Следовательно,</p>
+
+<div class="eq">\[
+W(u + \theta h) = W(u) + \theta^2 W(h).
+\tag{5}
+\]</div>
+
+<div class="theorem">
+<strong>Принцип минимума энергии.</strong> Поскольку последнее слагаемое правой части (5) положительно, \(W(u)\) действительно является <em>минимальным</em> значением энергии, достигаемым при \(\theta = 0\) для любой допустимой функции \(h\). Допустимость означает два условия: 1) функция \(h\) обращается в нуль на границах, где задана функция \(u\); 2) функция \(h\) по крайней мере один раз дифференцируема.
+</div>
+
+<div class="remark">
+<strong>Квадратичность ошибки по энергии.</strong> Из (5) следует, что энергия \(W(u+\theta h)\) отличается от минимального значения \(W(u)\) на величину, пропорциональную \(\theta^2\). Если распределение потенциала мало отличается от истинного (\(\theta\) мало), то ошибка в вычислении энергии существенно меньше, чем ошибка в потенциале. Это имеет огромную практическую важность: потери мощности и запасённые энергии можно рассчитать довольно точно даже при сравнительно невысокой точности расчёта потенциала.
+</div>
+
+<h2 id="discretization">Конечно-элементная аппроксимация</h2>
+
+<p>Рассмотрим основные этапы численной минимизации функционала энергии \(W(u)\) методом конечных элементов. Воспользуемся представлением решения в виде комбинации так называемых <strong>симплекс-элементов</strong>, аппроксимирующих решение кусочно-линейной функцией. Область решения разбиваем на треугольные элементы (рис. 1, б). Метод основан на унифицированной аппроксимации потенциала внутри каждого элемента и подборе таких распределений, при которых сохраняется непрерывность потенциала во всей области.</p>
+
+<div class="figure">
+<svg viewBox="0 0 520 400" xmlns="http://www.w3.org/2000/svg" style="max-width:480px">
+  <!-- Same L-shaped domain triangulated -->
+  <polygon points="60,40 460,40 460,360 250,360 250,150 60,150"
+           fill="#1a6b5a" fill-opacity="0.04" stroke="none"/>
+  <!-- Triangulation: nodes -->
+  <!-- Define node coordinates for an unstructured-looking mesh -->
+  <g stroke="#6b5d4f" stroke-width="0.9" fill="none">
+    <!-- top band triangles (between y=40 and y=150, x 60..460) -->
+    <path d="M60,40 L160,40 L60,150 Z"/>
+    <path d="M160,40 L160,150 L60,150 Z"/>
+    <path d="M160,40 L260,40 L160,150 Z"/>
+    <path d="M260,40 L250,150 L160,150 Z"/>
+    <path d="M260,40 L360,40 L250,150 Z"/>
+    <path d="M360,40 L360,150 L250,150 Z"/>
+    <path d="M360,40 L460,40 L360,150 Z"/>
+    <path d="M460,40 L460,150 L360,150 Z"/>
+    <!-- right band triangles (between x=250 and x=460, y 150..360) -->
+    <path d="M250,150 L360,150 L250,255 Z"/>
+    <path d="M360,150 L360,255 L250,255 Z"/>
+    <path d="M360,150 L460,150 L360,255 Z"/>
+    <path d="M460,150 L460,255 L360,255 Z"/>
+    <path d="M250,255 L360,255 L250,360 Z"/>
+    <path d="M360,255 L360,360 L250,360 Z"/>
+    <path d="M360,255 L460,255 L360,360 Z"/>
+    <path d="M460,255 L460,360 L360,360 Z"/>
+  </g>
+  <!-- Boundaries -->
+  <line x1="60" y1="40" x2="460" y2="40" stroke="#b44a2d" stroke-width="3.5"/>
+  <line x1="60" y1="150" x2="250" y2="150" stroke="#3a5ba0" stroke-width="3.5"/>
+  <line x1="250" y1="150" x2="250" y2="360" stroke="#3a5ba0" stroke-width="3.5"/>
+  <line x1="60" y1="40" x2="60" y2="150" stroke="#9a8d7e" stroke-width="2" stroke-dasharray="6,4"/>
+  <line x1="460" y1="40" x2="460" y2="360" stroke="#9a8d7e" stroke-width="2" stroke-dasharray="6,4"/>
+  <line x1="250" y1="360" x2="460" y2="360" stroke="#9a8d7e" stroke-width="2" stroke-dasharray="6,4"/>
+  <!-- Nodes -->
+  <g fill="#2c2419">
+    <circle cx="60" cy="40" r="3"/><circle cx="160" cy="40" r="3"/><circle cx="260" cy="40" r="3"/><circle cx="360" cy="40" r="3"/><circle cx="460" cy="40" r="3"/>
+    <circle cx="60" cy="150" r="3"/><circle cx="160" cy="150" r="3"/><circle cx="250" cy="150" r="3"/><circle cx="360" cy="150" r="3"/><circle cx="460" cy="150" r="3"/>
+    <circle cx="250" cy="255" r="3"/><circle cx="360" cy="255" r="3"/><circle cx="460" cy="255" r="3"/>
+    <circle cx="250" cy="360" r="3"/><circle cx="360" cy="360" r="3"/><circle cx="460" cy="360" r="3"/>
+  </g>
+  <text x="260" y="28" font-family="JetBrains Mono,monospace" font-size="12" fill="#b44a2d" text-anchor="middle" font-weight="600">u = 1</text>
+  <text x="148" y="168" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0" text-anchor="middle" font-weight="600">u = 0</text>
+</svg>
+<div class="caption">Рис. 1, б. Сетка конечных элементов в той же L-образной области. Каждый треугольный (симплекс) элемент несёт линейную аппроксимацию потенциала; в совпадающих вершинах соседних треугольников потенциалы равны, что обеспечивает непрерывность решения.</div>
+</div>
+
+<h2 id="shape">Линейные функции формы треугольного элемента</h2>
+
+<p>Примем, что внутри достаточно малого треугольного элемента потенциал аппроксимируется линейной (планарной) функцией:</p>
+
+<div class="eq">\[
+u = a + bx + cy.
+\tag{6}
+\]</div>
+
+<p>Гладкая поверхность фактического распределения потенциала заменяется многогранной аппроксимирующей поверхностью. Распределение потенциала вдоль любой стороны треугольника определяется линейной интерполяцией между значениями в двух его вершинах. Поэтому если два треугольника имеют общую сторону (общие вершины), то на границе между ними потенциал непрерывен (но не его производные!). Таким образом, решение \(u(x,y)\) непрерывно и кусочно-гладко.</p>
+
+<div class="figure">
+<svg viewBox="0 0 480 320" xmlns="http://www.w3.org/2000/svg" style="max-width:440px">
+  <defs>
+    <marker id="arrFem" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2c2419"/></marker>
+  </defs>
+  <!-- Axes -->
+  <line x1="40" y1="280" x2="450" y2="280" stroke="#2c2419" stroke-width="1" marker-end="url(#arrFem)"/>
+  <line x1="40" y1="280" x2="40" y2="25" stroke="#2c2419" stroke-width="1" marker-end="url(#arrFem)"/>
+  <text x="455" y="285" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419">x</text>
+  <text x="33" y="22" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419" text-anchor="end">y</text>
+  <!-- Triangle with nodes 1 (top), 2 (left), 3 (lower right) -->
+  <polygon points="320,55 110,175 360,230"
+           fill="#b44a2d" fill-opacity="0.08" stroke="#b44a2d" stroke-width="2"/>
+  <!-- Nodes -->
+  <circle cx="320" cy="55" r="5" fill="#b44a2d"/>
+  <circle cx="110" cy="175" r="5" fill="#1a6b5a"/>
+  <circle cx="360" cy="230" r="5" fill="#3a5ba0"/>
+  <!-- Node labels -->
+  <text x="332" y="50" font-family="JetBrains Mono,monospace" font-size="14" fill="#b44a2d" font-weight="700">1</text>
+  <text x="92" y="173" font-family="JetBrains Mono,monospace" font-size="14" fill="#1a6b5a" font-weight="700">2</text>
+  <text x="372" y="240" font-family="JetBrains Mono,monospace" font-size="14" fill="#3a5ba0" font-weight="700">3</text>
+  <!-- coordinate ticks -->
+  <text x="320" y="298" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">x₁</text>
+  <text x="110" y="298" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">x₂</text>
+  <text x="360" y="298" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">x₃</text>
+  <line x1="320" y1="280" x2="320" y2="285" stroke="#6b5d4f" stroke-width="0.7"/>
+  <line x1="110" y1="280" x2="110" y2="285" stroke="#6b5d4f" stroke-width="0.7"/>
+  <line x1="360" y1="280" x2="360" y2="285" stroke="#6b5d4f" stroke-width="0.7"/>
+  <!-- centroid / shape note -->
+  <text x="263" y="160" font-family="Source Serif 4,serif" font-size="12" fill="#6b5d4f" font-style="italic" text-anchor="middle">u = a + bx + cy</text>
+  <text x="263" y="178" font-family="JetBrains Mono,monospace" font-size="10" fill="#9a8d7e" text-anchor="middle">площадь A</text>
+</svg>
+<div class="caption">Рис. 2. Треугольный конечный элемент (симплекс-элемент) в плоскости \((x,y)\) с узлами 1, 2, 3. Внутри элемента потенциал линеен; узловые значения \(u_1, u_2, u_3\) однозначно определяют коэффициенты \(a, b, c\).</div>
+</div>
+
+<p>Коэффициенты \(a, b, c\) находятся из условий, что потенциалы в вершинах равны \(u_1, u_2, u_3\). Подставляя поочерёдно координаты вершин в (6), получаем систему</p>
+
+<div class="eq">\[
+\begin{pmatrix} u_1 \\ u_2 \\ u_3 \end{pmatrix}
+= \begin{pmatrix} 1 & x_1 & y_1 \\ 1 & x_2 & y_2 \\ 1 & x_3 & y_3 \end{pmatrix}
+\begin{pmatrix} a \\ b \\ c \end{pmatrix}.
+\tag{7}
+\]</div>
+
+<p>Детерминант матрицы коэффициентов (7) равен удвоенной площади треугольника \(2A\) (вычисляется как векторное произведение пары векторов на сторонах). Для невырожденного треугольника \(A \ne 0\), поэтому коэффициенты определяются однозначно. Подставляя решение (7) в (6), получаем приближённое решение в пределах треугольника:</p>
+
+<div class="eq">\[
+u = \begin{pmatrix} 1 & x & y \end{pmatrix}
+\begin{pmatrix} 1 & x_1 & y_1 \\ 1 & x_2 & y_2 \\ 1 & x_3 & y_3 \end{pmatrix}^{-1}
+\begin{pmatrix} u_1 \\ u_2 \\ u_3 \end{pmatrix}.
+\tag{8}
+\]</div>
+
+<p>Комбинируя \(x, y\) и элементы обратной матрицы в новые функции, приближённое решение представляется в виде</p>
+
+<div class="eq">\[
+u = \sum_{i=1}^{3} u_i\,\alpha_i(x,y).
+\tag{9}
+\]</div>
+
+<p>Здесь функция формы первого узла</p>
+
+<div class="eq">\[
+\alpha_1 = \frac{1}{2A}\bigl[(x_2 y_3 - x_3 y_2) + (y_2 - y_3)x + (x_3 - x_2)y\bigr]
+\tag{10}
+\]</div>
+
+<p>есть линейная функция, зависящая только от положения вершин треугольника площади \(A\). Функции \(\alpha_2(x,y)\) и \(\alpha_3(x,y)\) получаются циклической перестановкой индексов.</p>
+
+<div class="definition">
+<strong>Интерполяционное свойство функций формы.</strong> Каждая функция \(\alpha_i(x,y)\) обращается в нуль во всех вершинах треугольника, кроме одной, где равна единице:
+\[ \alpha_i(x_j, y_j) = 0,\ i \ne j; \qquad \alpha_i(x_j, y_j) = 1,\ i = j. \tag{11}\]
+</div>
+
+<h2 id="element-matrix">Матрица элемента</h2>
+
+<p>Энергию единичного треугольного элемента определяем по формуле (2), считая областью интегрирования область данного элемента. Градиент потенциала в пределах элемента из (9):</p>
+
+<div class="eq">\[
+\nabla u = \sum_{i=1}^{3} u_i\,\nabla\alpha_i.
+\tag{12}
+\]</div>
+
+<p>Поэтому энергия элемента</p>
+
+<div class="eq">\[
+W^{(e)} = \frac{1}{2}\int |\nabla u|^2 \, dS
+\tag{13}
+\]</div>
+
+<p>с учётом (12) приобретает вид</p>
+
+<div class="eq">\[
+W^{(e)} = \frac{1}{2}\sum_{i=1}^{3}\sum_{j=1}^{3} u_i u_j \int (\nabla\alpha_i\cdot\nabla\alpha_j)\, dS.
+\tag{14}
+\]</div>
+
+<p>Для компактной записи введём матричные элементы</p>
+
+<div class="eq">\[
+S_{ij}^{(e)} = \int (\nabla\alpha_i\cdot\nabla\alpha_j)\, dS,
+\tag{15}
+\]</div>
+
+<p>где верхний индекс обозначает треугольный элемент. Тогда вклад в интеграл энергии от отдельного элемента (14) записывается в виде квадратичной формы:</p>
+
+<div class="eq">\[
+W^{(e)} = \frac{1}{2}\,\mathbf u^{\mathsf T} S^{(e)} \mathbf u.
+\tag{16}
+\]</div>
+
+<p>Здесь \(\mathbf u\) — вектор узловых потенциалов из левой части (7), индекс \(\mathsf T\) означает транспонирование. Матрицу \(S^{(e)}\) нетрудно вычислить для любого заданного треугольника. Например, подстановкой (10) и его циклических перестановок в (15) после преобразований получаем</p>
+
+<div class="eq">\[
+S_{12}^{(e)} = \frac{1}{4A}\bigl[(y_2 - y_3)(y_3 - y_1) + (x_3 - x_2)(x_1 - x_3)\bigr].
+\tag{17}
+\]</div>
+
+<p>Аналогичные выражения находятся и для остальных элементов матрицы \(S^{(e)}\).</p>
+
+<h2 id="assembly">Объединение элементов</h2>
+
+<p>Полная энергия совокупности элементов равна сумме энергий отдельных элементов:</p>
+
+<div class="eq">\[
+W = \sum_e W^{(e)}.
+\tag{18}
+\]</div>
+
+<p>Модель собирается последовательным добавлением треугольников. Рассмотрим простейший случай: к треугольнику с вершинами \((1,2,3)\) присоединяется треугольник с вершинами \((4,5,6)\). Все состояния пары изолированных элементов описываются вектором-столбцом из шести узловых потенциалов:</p>
+
+<div class="eq">\[
+\mathbf u_d^{\mathsf T} = \begin{pmatrix} u_1 & u_2 & u_3 & u_4 & u_5 & u_6 \end{pmatrix}_d.
+\tag{19}
+\]</div>
+
+<div class="figure">
+<svg viewBox="0 0 520 260" xmlns="http://www.w3.org/2000/svg" style="max-width:480px">
+  <!-- a) two disjoint triangles -->
+  <text x="130" y="22" font-family="Source Serif 4,serif" font-size="12" fill="#6b5d4f" text-anchor="middle">а) изолированные</text>
+  <polygon points="40,200 150,200 60,70" fill="#b44a2d" fill-opacity="0.07" stroke="#b44a2d" stroke-width="1.6"/>
+  <polygon points="160,80 250,200 130,210" fill="#3a5ba0" fill-opacity="0.07" stroke="#3a5ba0" stroke-width="1.6"/>
+  <g font-family="JetBrains Mono,monospace" font-size="12" font-weight="700">
+    <circle cx="60" cy="70" r="4" fill="#b44a2d"/><text x="52" y="64" fill="#b44a2d">1</text>
+    <circle cx="40" cy="200" r="4" fill="#b44a2d"/><text x="28" y="205" fill="#b44a2d">2</text>
+    <circle cx="150" cy="200" r="4" fill="#b44a2d"/><text x="156" y="205" fill="#b44a2d">3</text>
+    <circle cx="160" cy="80" r="4" fill="#3a5ba0"/><text x="166" y="76" fill="#3a5ba0">4</text>
+    <circle cx="250" cy="200" r="4" fill="#3a5ba0"/><text x="256" y="205" fill="#3a5ba0">5</text>
+    <circle cx="130" cy="210" r="4" fill="#3a5ba0"/><text x="116" y="224" fill="#3a5ba0">6</text>
+  </g>
+  <!-- b) merged quadrilateral -->
+  <text x="400" y="22" font-family="Source Serif 4,serif" font-size="12" fill="#6b5d4f" text-anchor="middle">б) объединённые</text>
+  <polygon points="320,70 440,80 470,200 350,210" fill="#1a6b5a" fill-opacity="0.06" stroke="none"/>
+  <polygon points="320,70 350,210 440,80" fill="none" stroke="#2c2419" stroke-width="1.6"/>
+  <polygon points="440,80 350,210 470,200" fill="none" stroke="#2c2419" stroke-width="1.6"/>
+  <g font-family="JetBrains Mono,monospace" font-size="12" font-weight="700" fill="#2c2419">
+    <circle cx="320" cy="70" r="4"/><text x="306" y="66">1</text>
+    <circle cx="350" cy="210" r="4"/><text x="338" y="226">2</text>
+    <circle cx="470" cy="200" r="4"/><text x="476" y="205">3</text>
+    <circle cx="440" cy="80" r="4"/><text x="446" y="76">4</text>
+  </g>
+  <text x="395" y="150" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a" text-anchor="middle" font-style="italic">u₁=u₆, u₂=u₄</text>
+</svg>
+<div class="caption">Рис. 3. а) Смежные треугольные элементы, рассматриваемые вначале как изолированные (локальная нумерация 1–6). б) Объединение элементов с непрерывным потенциалом и общей (глобальной) нумерацией узлов: совпадающие вершины отождествляются \(u_1 = u_6\), \(u_2 = u_4\).</div>
+</div>
+
+<p>Полная энергия пары изолированных элементов</p>
+
+<div class="eq">\[
+W = \frac{1}{2}\,\mathbf u_d^{\mathsf T} S_d \,\mathbf u_d,
+\tag{20}
+\]</div>
+
+<p>где \(S_d\) — блочно-диагональная «матрица Дирихле» разъединённой пары элементов:</p>
+
+<div class="eq">\[
+S_d = \begin{pmatrix} S^{(1)} & 0 \\ 0 & S^{(2)} \end{pmatrix}.
+\tag{22}
+\]</div>
+
+<p>Непрерывность потенциала требует равенства узловых значений в совпадающих вершинах: для рис. 3, а) — \(u_1 = u_6\), \(u_2 = u_4\). Это выражается прямоугольной «матрицей связей» \(C\), связывающей потенциалы разъединённых элементов \(\mathbf u_d\) с потенциалами объединённой системы \(\mathbf u_c\):</p>
+
+<div class="eq">\[
+\mathbf u_d = C\,\mathbf u_c.
+\tag{23}
+\]</div>
+
+<p>Подставляя (23) в (20), находим энергию связанной системы</p>
+
+<div class="eq">\[
+W = \frac{1}{2}\,\mathbf u_c^{\mathsf T} S\, \mathbf u_c,
+\qquad S = C^{\mathsf T} S_d\, C.
+\tag{25–26}
+\]</div>
+
+<div class="remark">
+<strong>Правило ассемблирования.</strong> Глобальная матрица \(S\) получается сложением матричных коэффициентов \(S_d\) для общих вершин объединённых треугольников — узлов расчётной сетки. Для каждого элемента вычисляются «вклады» в соответствующие узлы; если узел принадлежит нескольким элементам, вклады суммируются. Нумерации разъединённых и объединённых элементов называют соответственно <em>локальной</em> и <em>глобальной</em>.
+</div>
+
+<h2 id="solution">Решение задачи: учёт граничных условий</h2>
+
+<p>Энергия приближённого распределения представлена квадратичной формой (25). Чтобы получить решение уравнения Лапласа, остаётся минимизировать запасённую энергию. Поскольку (25) квадратично относительно узловых потенциалов, минимум по каждой компоненте даёт систему</p>
+
+<div class="eq">\[
+\frac{\partial W}{\partial u_k} = 0.
+\tag{28}
+\]</div>
+
+<p>Система (28) имеет тривиальное решение \(u_k = 0\), соответствующее нулевой энергии. Но неограниченная минимизация не соответствует краевой задаче рис. 1, где на части границы потенциалы заданы. Перенумеруем узлы так, чтобы <em>свободные</em> (варьируемые) потенциалы шли первыми, а <em>заданные</em> — последними. Тогда (28) записывается в блочной форме</p>
+
+<div class="eq">\[
+\frac{\partial}{\partial}\!\begin{pmatrix} \mathbf u_f^{\mathsf T} & \mathbf u_p^{\mathsf T} \end{pmatrix}
+\begin{pmatrix} S_{ff} & S_{fp} \\ S_{pf} & S_{pp} \end{pmatrix}
+\begin{pmatrix} \mathbf u_f \\ \mathbf u_p \end{pmatrix} = 0,
+\tag{29}
+\]</div>
+
+<p>где индексы \(f\) и \(p\) относятся к узлам со свободными и заданными потенциалами. Выполняя дифференцирование, получаем</p>
+
+<div class="eq">\[
+\begin{pmatrix} S_{ff} & S_{fp} \end{pmatrix}
+\begin{pmatrix} \mathbf u_f \\ \mathbf u_p \end{pmatrix} = 0,
+\tag{30}
+\]</div>
+
+<p>откуда разрешающая система</p>
+
+<div class="eq">\[
+S_{ff}\,\mathbf u_f = -S_{fp}\,\mathbf u_p.
+\tag{31}
+\]</div>
+
+<p>Матрица \(S_{ff}\) квадратная и, вообще говоря, неособенная. Формальное решение задачи:</p>
+
+<div class="eq">\[
+\mathbf u = \bigl(\, -S_{ff}^{-1} S_{fp}\,\mathbf u_p,\ \ \mathbf u_p\, \bigr)^{\mathsf T}.
+\tag{32}
+\]</div>
+
+<div class="remark">
+<strong>Главные и естественные условия.</strong> Решение МКЭ единственно и определено везде, а не только в вершинах: минимизация энергии задаёт форму поверхности решения. Граничные условия Дирихле (главные) удовлетворяются <em>точно</em>, поскольку узловые значения на границе задаются явно. Однородное условие Неймана (естественное) удовлетворяется не точно, а лишь «в среднем» — за счёт обращения в нуль контурного интеграла в (4). Строгое выполнение Неймана увеличило бы энергию поля, сделав решение фактически менее точным.
+</div>
+
+<div class="figure">
+<svg viewBox="0 0 520 400" xmlns="http://www.w3.org/2000/svg" style="max-width:480px">
+  <polygon points="60,40 460,40 460,360 250,360 250,150 60,150"
+           fill="#fdf9f3" stroke="#d9cfc0" stroke-width="1"/>
+  <!-- Equipotential contours from u=1 (top) to u=0 (inner conductor), L-shaped -->
+  <g fill="none" stroke-width="1.8">
+    <path d="M60,70 Q230,72 250,150 L460,80" stroke="#b44a2d"/>
+    <path d="M60,95 Q250,100 280,180 Q320,260 460,140" stroke="#c25a3a"/>
+    <path d="M60,118 Q255,128 300,210 Q340,300 460,210" stroke="#9a7a4a"/>
+    <path d="M75,140 Q250,150 320,250 Q350,330 460,290" stroke="#3a8a6a"/>
+    <path d="M250,180 Q330,270 360,360" stroke="#1a6b5a"/>
+  </g>
+  <!-- conductors -->
+  <line x1="60" y1="40" x2="460" y2="40" stroke="#b44a2d" stroke-width="3.5"/>
+  <line x1="60" y1="150" x2="250" y2="150" stroke="#3a5ba0" stroke-width="3.5"/>
+  <line x1="250" y1="150" x2="250" y2="360" stroke="#3a5ba0" stroke-width="3.5"/>
+  <line x1="60" y1="40" x2="60" y2="150" stroke="#9a8d7e" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="460" y1="40" x2="460" y2="360" stroke="#9a8d7e" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="250" y1="360" x2="460" y2="360" stroke="#9a8d7e" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <text x="260" y="30" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle">u = 1</text>
+  <text x="150" y="168" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0" text-anchor="middle">u = 0</text>
+  <text x="345" y="120" font-family="Source Serif 4,serif" font-size="11" fill="#6b5d4f" font-style="italic">эквипотенциали</text>
+</svg>
+<div class="caption">Рис. 4. Контуры сечения эквипотенциальных поверхностей в коаксиальной линии (постановка рис. 1, а). Линии плавно переходят от \(u=1\) на внешнем проводнике к \(u=0\) на внутреннем; вблизи плоскостей симметрии линии подходят ортогонально (условие Неймана выполнено «в среднем»).</div>
+</div>
+
+<h2 id="poisson">Уравнение Пуассона: учёт источников</h2>
+
+<p>Если в области имеются распределённые источники, применяется аналогичный подход, но с явным включением источников. Пример — проводник электрической машины, лежащий в пазе. Магнитное поле выражается через векторный потенциал \(\mathbf A\); при «бесконечной» длине паза ток \(J\) и потенциал \(A\) имеют только продольные компоненты, и векторное уравнение Пуассона сводится к скалярному:</p>
+
+<div class="eq">\[
+\Delta A = -\mu_0 J.
+\tag{33}
+\]</div>
+
+<p>Вариационной задачей, эквивалентной (33), является минимизация функционала</p>
+
+<div class="eq">\[
+F(u) = \frac{1}{2}\int_S |\nabla u|^2 \, dS - \mu_0\int_S u\,J \, dS.
+\tag{34}
+\]</div>
+
+<p>Чтобы показать, что \(F\) достигает минимума при \(u = A\), положим \(u = A + \theta v\), где \(v\) обращается в нуль на границах с заданным \(A\). Тогда</p>
+
+<div class="eq">\[
+F(A + \theta v) = F(A) + \theta\int_S (\nabla A)\cdot(\nabla v)\, dS - \theta\mu_0\int_S v\,J\, dS + \frac{1}{2}\theta^2\int_S |\nabla v|^2 \, dS.
+\tag{35}
+\]</div>
+
+<p>По теореме Грина второе слагаемое преобразуется к виду</p>
+
+<div class="eq">\[
+\int_S (\nabla A)\cdot(\nabla v)\, dS = \oint_L v\,\frac{\partial A}{\partial n}\, dL - \int_S v\,\Delta A \, dS.
+\tag{36}
+\]</div>
+
+<p>Контурный интеграл обращается в нуль (на границе либо \(v\), либо \(\partial A/\partial n\) равны нулю). Поскольку \(A\) — точное решение (33), \(-\int v\,\Delta A\, dS = \mu_0\int v\,J\, dS\), и линейные по \(\theta\) слагаемые в (35) взаимно уничтожаются:</p>
+
+<div class="eq">\[
+F(A + \theta v) = F(A) + \frac{1}{2}\theta^2\int_S |\nabla v|^2 \, dS.
+\tag{38}
+\]</div>
+
+<p>Интеграл положителен, значит минимум достигается при \(\theta = 0\), то есть \(F(u)\) минимален при \(u = A\). Энергия поля</p>
+
+<div class="eq">\[
+W = \frac{1}{2}\int_S |\nabla A|^2 \, dS = \frac{\mu_0}{2}\int_S A\,J \, dS.
+\tag{39–40}
+\]</div>
+
+<div class="remark">
+<strong>Отличие от Лапласа.</strong> В функционале \(F(u)\) учитывается работа внешнего источника. В минимуме \(F(A)\) отрицателен и по величине равен полной энергии \(W\). Как и раньше, поправка к \(F\) пропорциональна \(\theta^2\), поэтому энергия находится с высокой точностью даже при неточных локальных потенциалах.
+</div>
+
+<h3 id="poisson-source">Моделирование источника</h3>
+
+<p>В каждом элементе плотность тока \(J(x,y)\) аппроксимируется так же, как потенциал:</p>
+
+<div class="eq">\[
+J(x,y) = \sum_{i=1}^{3} J_i\,\alpha_i(x,y).
+\tag{41}
+\]</div>
+
+<p>Тогда интеграл источника записывается через матрицу элемента</p>
+
+<div class="eq">\[
+T_{ij}^{(e)} = \int \alpha_i\,\alpha_j \, dS, \qquad
+\int A\,J \, dS = \mathbf A^{\mathsf T} T^{(e)} \mathbf J.
+\tag{43–44}
+\]</div>
+
+<p>После ассемблирования и минимизации \(F(A)\) по варьируемым потенциалам получается разрешающая система (аналог (31)):</p>
+
+<div class="eq">\[
+S_{ff}\,\mathbf A_f = \mu_0\, C^{\mathsf T} T_d\, \mathbf J_d - S_{fp}\,\mathbf A_p.
+\tag{50}
+\]</div>
+
+<div class="remark">
+<strong>Единство постановки.</strong> Правая часть (50) объединяет вклад источника (неоднородность уравнения (33)) и заданных граничных значений (неоднородность граничных условий). Принципиального различия между однородным уравнением с неоднородными ГУ и неоднородным уравнением с однородными ГУ нет — обе сводятся к одной матричной системе.
+</div>
+
+<h3 id="bc-impl">Практическая реализация граничных условий</h3>
+
+<p>Перенумерация (свободные узлы первыми, заданные последними) нужна лишь для объяснения; на практике в неё нет необходимости. Заданные потенциалы включаются в систему формальным тождеством с диагональной матрицей \(D\) (часто \(D = I\)): для узлов с фиксированным значением соответствующая строка заменяется уравнением \(u_k = \text{const}\). Так конечно-элементная система собирается и решается при <em>произвольной</em> нумерации узлов.</p>
+
+<div class="algo">
+<strong>Пять этапов МКЭ-решения.</strong>
+<ol>
+<li>Построение сетки конечных элементов — разбиение области на треугольники.</li>
+<li>Определение источников и граничных значений задачи.</li>
+<li>Построение матрицы \(S^{(e)}\) (и \(T^{(e)}\) для Пуассона) для каждого элемента по координатам его вершин.</li>
+<li>Объединение элементов в ансамбль (накопление глобальной матрицы \(S\)) и наложение граничных условий.</li>
+<li>Решение результирующей СЛАУ и вывод/оценка результатов.</li>
+</ol>
+</div>
+
+<p>Главное достоинство МКЭ — «геометрическая» гибкость: треугольными элементами аппроксимируется любая двумерная область, граница которой приближается ломаной. Сетка структурно нерегулярна (неструктурирована): размеры и формы треугольников произвольны. Топология хранится массивом \(3\times N\) глобальных номеров вершин элементов; глобальная матрица собирается «накоплением» девяти вкладов от каждого элемента в соответствующие узлы.</p>
+
+<h2 id="interactive">Интерактив: решение задачи Лапласа итерациями</h2>
+
+<p>Ниже — решение уравнения \(\Delta u = 0\) на квадратной области с условиями типа коаксиальной линии: внешняя граница \(u = 1\), внутренний вырез \(u = 0\), плоскости симметрии — нулевой нормальный поток (реализован отражением). Используется итерационный метод (Якоби / Гаусс–Зейдель / SOR) на регулярной сетке как приближение к КЭ-решению. Регулируйте размер сетки, метод и число итераций; показаны цветовая карта потенциала, изолинии и невязка.</p>
+
+<div id="lap" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Метод</label>
+    <select id="lapMethod" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <option value="jacobi">Якоби</option>
+      <option value="gs" selected>Гаусс–Зейдель</option>
+      <option value="sor">SOR (ω=1.8)</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Сетка N: <span id="lapNv">48</span></label>
+    <input type="range" id="lapN" min="16" max="96" step="8" value="48" style="width:150px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Итераций: <span id="lapItv">400</span></label>
+    <input type="range" id="lapIt" min="20" max="2000" step="20" value="400" style="width:150px">
+  </div>
+  <button id="lapRun" style="background:var(--accent);color:#fff;border:none;border-radius:5px;padding:8px 16px;font-family:'JetBrains Mono',monospace;font-size:.82rem;cursor:pointer">Решить</button>
+</div>
+<div style="display:flex;justify-content:center">
+  <canvas id="lapC" width="420" height="420" style="width:100%;max-width:420px;height:auto;background:#fff;border:1px solid var(--border);border-radius:6px"></canvas>
+</div>
+<div id="lapStatus" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.5rem;text-align:center"></div>
+</div>
+
+<script>
+(function(){
+  var cvs = document.getElementById('lapC');
+  var ctx = cvs.getContext('2d');
+
+  // map potential value [0,1] to a warm-to-cool colour
+  function colour(v){
+    v = Math.max(0, Math.min(1, v));
+    // 0 -> teal (accent2), 0.5 -> sand, 1 -> terracotta (accent)
+    var c0=[26,107,90], c1=[210,190,150], c2=[180,74,45];
+    var r,g,b;
+    if (v<0.5){ var t=v/0.5; r=c0[0]+(c1[0]-c0[0])*t; g=c0[1]+(c1[1]-c0[1])*t; b=c0[2]+(c1[2]-c0[2])*t; }
+    else { var t=(v-0.5)/0.5; r=c1[0]+(c2[0]-c1[0])*t; g=c1[1]+(c2[1]-c1[1])*t; b=c1[2]+(c2[2]-c1[2])*t; }
+    return 'rgb('+(r|0)+','+(g|0)+','+(b|0)+')';
+  }
+
+  // mask: 0 = interior (free), 1 = Dirichlet u=1 (outer), 2 = Dirichlet u=0 (inner cutout)
+  // Domain: full square [0,N]. Outer boundary ring = u=1. Inner square block (corner) = u=0.
+  function build(N){
+    var u = new Float64Array((N+1)*(N+1));
+    var mask = new Uint8Array((N+1)*(N+1));
+    var inLo = Math.floor(N*0.35), inHi = Math.floor(N*0.65); // central conductor block u=0
+    for (var i=0;i<=N;i++) for (var j=0;j<=N;j++){
+      var k=i*(N+1)+j;
+      if (i===0||i===N||j===0||j===N){ mask[k]=1; u[k]=1; }       // outer = u=1
+      else if (i>=inLo&&i<=inHi&&j>=inLo&&j<=inHi){ mask[k]=2; u[k]=0; } // inner conductor = u=0
+      else { mask[k]=0; u[k]=0.5; }
+    }
+    return {u:u, mask:mask, N:N};
+  }
+
+  function solve(st, method, iters){
+    var N=st.N, u=st.u, mask=st.mask, S=N+1;
+    var omega = method==='sor'?1.8:1.0;
+    var resid=1;
+    for (var it=0; it<iters; it++){
+      var sum=0, cnt=0;
+      if (method==='jacobi'){
+        var un=u.slice();
+        for (var i=1;i<N;i++) for (var j=1;j<N;j++){
+          var k=i*S+j; if (mask[k]) continue;
+          var nv=0.25*(u[k-S]+u[k+S]+u[k-1]+u[k+1]);
+          var d=nv-u[k]; sum+=d*d; cnt++; un[k]=nv;
+        }
+        u=un; st.u=u;
+      } else {
+        for (var i=1;i<N;i++) for (var j=1;j<N;j++){
+          var k=i*S+j; if (mask[k]) continue;
+          var nv=0.25*(u[k-S]+u[k+S]+u[k-1]+u[k+1]);
+          var d=nv-u[k]; sum+=d*d; cnt++;
+          u[k]=u[k]+omega*(nv-u[k]);
+        }
+      }
+      resid = cnt? Math.sqrt(sum/cnt) : 0;
+      if (resid<1e-9) { return {resid:resid, iters:it+1}; }
+    }
+    return {resid:resid, iters:iters};
+  }
+
+  function draw(st){
+    var N=st.N, u=st.u, mask=st.mask, S=N+1;
+    var W=cvs.width, H=cvs.height, cell=W/N;
+    ctx.clearRect(0,0,W,H);
+    // colour map cells
+    for (var i=0;i<N;i++) for (var j=0;j<N;j++){
+      var v=0.25*(u[i*S+j]+u[(i+1)*S+j]+u[i*S+j+1]+u[(i+1)*S+j+1]);
+      ctx.fillStyle=colour(v);
+      ctx.fillRect(j*cell, i*cell, cell+1, cell+1);
+    }
+    // isolines via marching threshold on the node grid
+    var levels=[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9];
+    ctx.lineWidth=1; ctx.strokeStyle='rgba(44,36,25,0.55)';
+    for (var L=0;L<levels.length;L++){
+      var lv=levels[L];
+      ctx.beginPath();
+      for (var i=0;i<N;i++) for (var j=0;j<N;j++){
+        var a=u[i*S+j], b=u[i*S+j+1], c=u[(i+1)*S+j+1], d=u[(i+1)*S+j];
+        var x0=j*cell, y0=i*cell;
+        // simple marching squares (linear interp on edges)
+        function ip(p,q,va,vb,horiz,base){ var t=(lv-va)/(vb-va); return horiz?[x0+(base?cell:0)*0+t*cell, y0+(base? cell:0)]:[x0+(base?cell:0), y0+t*cell]; }
+        // edges: top(a-b), right(b-c), bottom(d-c), left(a-d)
+        var pts=[];
+        if ((a<lv)!=(b<lv)){ var t=(lv-a)/(b-a); pts.push([x0+t*cell, y0]); }
+        if ((b<lv)!=(c<lv)){ var t=(lv-b)/(c-b); pts.push([x0+cell, y0+t*cell]); }
+        if ((d<lv)!=(c<lv)){ var t=(lv-d)/(c-d); pts.push([x0+t*cell, y0+cell]); }
+        if ((a<lv)!=(d<lv)){ var t=(lv-a)/(d-a); pts.push([x0, y0+t*cell]); }
+        if (pts.length>=2){ ctx.moveTo(pts[0][0],pts[0][1]); ctx.lineTo(pts[1][0],pts[1][1]); }
+      }
+      ctx.stroke();
+    }
+    // draw conductors outline
+    var inLo=Math.floor(N*0.35), inHi=Math.floor(N*0.65);
+    ctx.strokeStyle='#3a5ba0'; ctx.lineWidth=2.5;
+    ctx.strokeRect(inLo*cell, inLo*cell, (inHi-inLo)*cell, (inHi-inLo)*cell);
+    ctx.strokeStyle='#b44a2d'; ctx.lineWidth=3;
+    ctx.strokeRect(1.5,1.5,W-3,H-3);
+  }
+
+  function run(){
+    var N=+document.getElementById('lapN').value;
+    var iters=+document.getElementById('lapIt').value;
+    var method=document.getElementById('lapMethod').value;
+    document.getElementById('lapNv').textContent=N;
+    document.getElementById('lapItv').textContent=iters;
+    var st=build(N);
+    var t0=performance.now();
+    var r=solve(st, method, iters);
+    var dt=(performance.now()-t0).toFixed(0);
+    draw(st);
+    document.getElementById('lapStatus').innerHTML =
+      'N='+N+'×'+N+' · метод: '+method+' · итераций: '+r.iters+
+      ' · невязка ‖Δu‖: '+r.resid.toExponential(2)+' · '+dt+' мс';
+  }
+
+  document.getElementById('lapRun').addEventListener('click', run);
+  document.getElementById('lapN').addEventListener('input', function(){ document.getElementById('lapNv').textContent=this.value; });
+  document.getElementById('lapIt').addEventListener('input', function(){ document.getElementById('lapItv').textContent=this.value; });
+  document.getElementById('lapMethod').addEventListener('change', run);
+  window.addEventListener('load', function(){ setTimeout(run, 200); });
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> Потенциал плавно убывает от \(u=1\) на внешней рамке к \(u=0\) на внутреннем проводнике; изолинии сгущаются у углов внутреннего выреза (там поле сильнее). Сравнивая методы при одном числе итераций, видно, что Гаусс–Зейдель сходится примерно вдвое быстрее Якоби, а SOR с \(\omega\approx1.8\) — заметно быстрее обоих: невязка \(\|\Delta u\|\) падает на порядки. Это итерационное решение разностной задачи — наглядный аналог минимизации функционала энергии (2) в МКЭ.
+</div>
+
+<div class="lecture-nav">
+<a href="lec4.html" class="nav-prev">← Лекция 4</a>
+<a href="lec6.html" class="nav-next">Лекция 6 →</a>
+</div>
+</div>
+</div>
+
+</body>
+</html>

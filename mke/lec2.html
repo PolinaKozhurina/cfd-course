@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>МКЭ-Лекция 2. Теоретические основы</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>МКЭ · Лекция 2</h2>
+  <div class="g">Содержание</div>
+  <a href="#strong-weak">Сильная и слабая формы</a>
+  <a href="#spaces">Пространства функций</a>
+  <a href="#variational">Вариационная задача</a>
+  <a href="#lax-milgram">Теорема Лакса–Мильграма</a>
+  <a href="#justification">Обоснование МКЭ</a>
+  <a href="#cea">Лемма Сеа</a>
+  <a href="#galerkin">Метод Галёркина и МКЭ</a>
+  <a href="#bc">Главные и естественные ГУ</a>
+  <a href="#example">Пример: 1D краевая задача</a>
+  <a href="#interactive">Интерактив</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="lec1.html">← Лекция 1</a>
+  <a href="index.html">Обзор курса</a>
+  <a href="lec3.html">→ Лекция 3</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-fem">МКЭ</span>
+<div class="lecture-num">Лекция 2 · Метод конечных элементов</div>
+<h1>Теоретические основы МКЭ: вариационная постановка и обоснование</h1>
+
+<h2 id="strong-weak">Сильная и слабая формулировки краевой задачи</h2>
+
+<p>Метод конечных элементов решает дифференциальные уравнения не в <strong>«сильной»</strong> форме (через производные исходного порядка), а в <strong>«слабой»</strong> (вариационной) форме. Эта замена — не технический трюк, а фундамент всего метода: именно слабая форма позволяет работать с негладкими (кусочно-полиномиальными) приближениями и переносит часть производных с искомой функции на пробную.</p>
+
+<p>Рассмотрим в качестве модельной задачи одномерное стационарное уравнение теплопроводности на отрезке \(\Omega = (0,1)\) с граничными условиями Дирихле. <strong>Сильная постановка</strong> требует существования второй производной всюду:</p>
+
+<div class="eq">\[
+\begin{cases}
+-u''(x) = f(x), & x \in (0,1), \\
+u(0) = 0,\ u(1) = 0.
+\end{cases}
+\tag{2.1}
+\]</div>
+
+<p>Чтобы перейти к слабой форме, умножим уравнение на произвольную <em>пробную (тестовую)</em> функцию \(v \in H_0^1(0,1)\), обращающуюся в ноль на концах, и проинтегрируем по отрезку:</p>
+
+<div class="eq">\[
+\int_0^1 -u''(x)\,v(x)\,dx = \int_0^1 f(x)\,v(x)\,dx.
+\tag{2.2}
+\]</div>
+
+<p>Интегрируя левую часть по частям, переносим одну производную с \(u\) на \(v\):</p>
+
+<div class="eq">\[
+\underbrace{\bigl[-u'(x)\,v(x)\bigr]_0^1}_{=\,0\ \text{т.к. }v(0)=v(1)=0}
++ \int_0^1 u'(x)\,v'(x)\,dx = \int_0^1 f(x)\,v(x)\,dx.
+\tag{2.3}
+\]</div>
+
+<p>Граничные члены исчезают, и мы получаем <strong>вариационную (слабую) форму</strong>: найти \(u \in H_0^1(0,1)\) такую, что</p>
+
+<div class="eq">\[
+\boxed{\;\int_0^1 u'(x)\,v'(x)\,dx = \int_0^1 f(x)\,v(x)\,dx\quad \forall v \in H_0^1(0,1).\;}
+\tag{2.4}
+\]</div>
+
+<div class="remark">
+<strong>Зачем это нужно.</strong> В сильной форме (2.1) от \(u\) требуется два раза дифференцируемость (\(u \in C^2\)). В слабой форме (2.4) под интегралом стоит лишь первая производная — достаточно, чтобы \(u'\) была интегрируема с квадратом. Это расширяет класс допустимых решений и, главное, делает законными кусочно-линейные базисные функции МКЭ, у которых вторая производная не существует в узлах.
+</div>
+
+<div class="figure">
+<svg viewBox="0 0 600 250" xmlns="http://www.w3.org/2000/svg" style="max-width:560px">
+  <defs>
+    <marker id="arrSW" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#6b5d4f"/></marker>
+  </defs>
+  <!-- Strong form box -->
+  <rect x="20" y="70" width="170" height="100" rx="8" fill="#b44a2d" fill-opacity="0.07" stroke="#b44a2d" stroke-width="1.4"/>
+  <text x="105" y="95" font-family="JetBrains Mono,monospace" font-size="13" fill="#b44a2d" text-anchor="middle" font-weight="600">Сильная форма</text>
+  <text x="105" y="122" font-family="JetBrains Mono,monospace" font-size="13" fill="#2c2419" text-anchor="middle">−u″ = f</text>
+  <text x="105" y="145" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">требует u ∈ C²</text>
+  <text x="105" y="160" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">u″ всюду</text>
+  <!-- Weak form box -->
+  <rect x="410" y="70" width="180" height="100" rx="8" fill="#1a6b5a" fill-opacity="0.07" stroke="#1a6b5a" stroke-width="1.4"/>
+  <text x="500" y="95" font-family="JetBrains Mono,monospace" font-size="13" fill="#1a6b5a" text-anchor="middle" font-weight="600">Слабая форма</text>
+  <text x="500" y="122" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419" text-anchor="middle">∫u′v′ = ∫fv</text>
+  <text x="500" y="145" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">требует u ∈ H¹₀</text>
+  <text x="500" y="160" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">лишь u′ ∈ L²</text>
+  <!-- Arrow -->
+  <line x1="195" y1="120" x2="405" y2="120" stroke="#6b5d4f" stroke-width="1.4" marker-end="url(#arrSW)"/>
+  <text x="300" y="108" font-family="Source Serif 4,serif" font-size="12" fill="#3a5ba0" text-anchor="middle" font-weight="600">×v, ∫, по частям</text>
+  <text x="300" y="140" font-family="Source Serif 4,serif" font-size="10" fill="#6b5d4f" text-anchor="middle" font-style="italic">производная переносится на v</text>
+  <!-- Annotation under -->
+  <text x="300" y="200" font-family="Source Serif 4,serif" font-size="11" fill="#9a8d7e" text-anchor="middle">класс допустимых решений расширяется</text>
+</svg>
+<div class="caption">Переход от сильной формы к слабой. Умножение на пробную функцию, интегрирование и интегрирование по частям понижают порядок производной с двух до одного. Это расширяет пространство решений и легализует кусочно-полиномиальные базисы МКЭ.</div>
+</div>
+
+<h2 id="spaces">Пространства функций: от линейного до гильбертова и Соболева</h2>
+
+<p>Слабая постановка живёт в специальных функциональных пространствах. Кратко напомним иерархию структур, в которых работает математический анализ функций.</p>
+
+<div class="definition">
+<strong>Иерархия пространств.</strong> Каждое следующее пространство наследует свойства предыдущего:
+<ul>
+<li><strong>Линейное (векторное)</strong> — определены сложение функций и умножение на число; результат остаётся внутри множества. Пример: многочлены степени не выше \(n\).</li>
+<li><strong>Метрическое</strong> — определено расстояние \(d(f,g)\), что позволяет говорить о сходимости. Пример: \(C[a,b]\) с равномерной метрикой \(d(f,g)=\max|f-g|\).</li>
+<li><strong>Нормированное</strong> — определена норма \(\|f\|\) (аналог длины); порождает метрику \(d(f,g)=\|f-g\|\). Пример: \(L^p\) с нормой \(\|f\|_p = \bigl(\int |f|^p\,dx\bigr)^{1/p}\).</li>
+<li><strong>Гильбертово</strong> — нормированное и <em>полное</em> пространство со скалярным произведением \(\langle f,g\rangle\), что позволяет измерять углы и ортогональность. Пример: \(L^2\) со скалярным произведением \(\langle f,g\rangle = \int f g\,dx\).</li>
+</ul>
+</div>
+
+<div class="figure">
+<svg viewBox="0 0 480 300" xmlns="http://www.w3.org/2000/svg" style="max-width:420px">
+  <!-- Nested ellipses -->
+  <ellipse cx="240" cy="160" rx="225" ry="125" fill="#3a5ba0" fill-opacity="0.05" stroke="#9a8d7e" stroke-width="1"/>
+  <ellipse cx="240" cy="165" rx="180" ry="100" fill="#3a5ba0" fill-opacity="0.06" stroke="#9a8d7e" stroke-width="1"/>
+  <ellipse cx="240" cy="172" rx="130" ry="72" fill="#1a6b5a" fill-opacity="0.08" stroke="#1a6b5a" stroke-width="1.2"/>
+  <ellipse cx="240" cy="180" rx="78" ry="42" fill="#b44a2d" fill-opacity="0.10" stroke="#b44a2d" stroke-width="1.4"/>
+  <text x="240" y="55" font-family="JetBrains Mono,monospace" font-size="12" fill="#6b5d4f" text-anchor="middle">Линейное</text>
+  <text x="240" y="92" font-family="JetBrains Mono,monospace" font-size="12" fill="#6b5d4f" text-anchor="middle">Нормированное</text>
+  <text x="240" y="135" font-family="JetBrains Mono,monospace" font-size="12" fill="#1a6b5a" text-anchor="middle" font-weight="600">Гильбертово (L², H^k)</text>
+  <text x="240" y="183" font-family="JetBrains Mono,monospace" font-size="13" fill="#b44a2d" text-anchor="middle" font-weight="700">Соболево H¹₀</text>
+  <text x="240" y="200" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">слабые произв. ∈ L²</text>
+</svg>
+<div class="caption">Вложение функциональных пространств. Пространство Соболева \(H_0^1\), в котором ставится слабая задача, есть гильбертово пространство функций со слабыми производными в \(L^2\), обращающихся в ноль на границе.</div>
+</div>
+
+<div class="definition">
+<strong>Определение 2.1 (пространство Соболева).</strong> Пространство Соболева \(W^{k,p}(\Omega)\) — это пространство функций из \(L^p(\Omega)\), у которых существуют обобщённые (слабые) производные до порядка \(k\) включительно, также принадлежащие \(L^p(\Omega)\). При \(p=2\) оно становится гильбертовым и обозначается \(H^k(\Omega) = W^{k,2}(\Omega)\).
+</div>
+
+<p>Норма в \(H^k\) (на примере \(W^{2,2}=H^2\)) задаётся через корень из суммы квадратов \(L^2\)-норм функции и всех её производных до порядка \(k\):</p>
+
+<div class="eq">\[
+\|u\|_{W^{2,2}} = \left(\sum_{|\boldsymbol\alpha|\le 2}\int_\Omega |D^{\boldsymbol\alpha} u(x)|^2\,dx\right)^{1/2}
+= \left(\int_\Omega \bigl(|u|^2 + |\nabla u|^2 + |D^2 u|^2\bigr)\,dx\right)^{1/2},
+\tag{2.5}
+\]</div>
+
+<p>где \(\boldsymbol\alpha\) — мультииндекс, \(|\nabla u|^2 = \sum_{i=1}^n |\partial u/\partial x_i|^2\), а \(|D^2 u|^2 = \sum_{i,j=1}^n |\partial^2 u/\partial x_i\partial x_j|^2\). В одномерном случае формула упрощается до \(\|u\|_{H^2} = \bigl(\int_\Omega (|u|^2 + |u'|^2 + |u''|^2)\,dt\bigr)^{1/2}\).</p>
+
+<div class="remark">
+<strong>Ключевое для МКЭ.</strong> Базисные функции МКЭ (кусочно-линейные «крышечки») принадлежат \(H^1\), но <em>не</em> \(C^1\): у них есть изломы в узлах. Классическое решение \(C^2\) может вообще не существовать, тогда как обобщённое решение в \(H^1\) существует. Вариационная постановка в \(H^1\) идеально согласуется с таким базисом.
+</div>
+
+<h3 id="cauchy">Неравенство Коши–Буняковского</h3>
+
+<p>Главный рабочий инструмент для оценок билинейных форм — <strong>неравенство Коши–Буняковского</strong> (Коши–Шварца). В любом пространстве со скалярным произведением и порождённой им нормой \(\|x\|=\sqrt{\langle x,x\rangle}\) для любых элементов справедливо</p>
+
+<div class="eq">\[
+|\langle x, y\rangle| \le \|x\|\cdot\|y\|,
+\tag{2.6}
+\]</div>
+
+<p>причём равенство достигается тогда и только тогда, когда \(x\) и \(y\) линейно зависимы. В интегральной форме для \(f,g \in L^2(\Omega)\):</p>
+
+<div class="eq">\[
+\left|\int_\Omega f(x)\,g(x)\,dx\right| \le \sqrt{\int_\Omega |f(x)|^2\,dx}\,\cdot\,\sqrt{\int_\Omega |g(x)|^2\,dx}.
+\tag{2.7}
+\]</div>
+
+<p>Именно эта оценка позволяет в дальнейшем доказать ограниченность билинейной формы \(a(u,v)\).</p>
+
+<h2 id="variational">Абстрактная вариационная задача</h2>
+
+<p>Слабая форма (2.4) — частный случай общей абстрактной постановки. Пусть \(H\) — вещественное гильбертово пространство со скалярным произведением \((\cdot,\cdot)\) и нормой \(\|\cdot\|\). Рассмотрим задачу: найти \(u \in H\) такую, что</p>
+
+<div class="eq">\[
+a(u,v) = f(v)\quad \forall v \in H,
+\tag{2.8}
+\]</div>
+
+<p>где:</p>
+
+<ul>
+<li>\(a(\cdot,\cdot): H \times H \to \mathbb R\) — <strong>билинейная форма</strong> (линейна по каждому аргументу);</li>
+<li>\(f(\cdot): H \to \mathbb R\) — <strong>линейный непрерывный функционал</strong> (элемент сопряжённого пространства \(H'\)).</li>
+</ul>
+
+<p>Для модельной задачи (2.4) имеем конкретный вид этих объектов:</p>
+
+<div class="eq">\[
+a(u,v) = \int_0^1 u'(x)\,v'(x)\,dx,\qquad f(v) = \int_0^1 f(x)\,v(x)\,dx.
+\tag{2.9}
+\]</div>
+
+<h2 id="lax-milgram">Теорема Лакса–Мильграма</h2>
+
+<p>Теорема Лакса–Мильграма — фундаментальный результат функционального анализа, гарантирующий существование и единственность решения для широкого класса вариационных задач. Именно на ней строится строгое математическое обоснование МКЭ для эллиптических уравнений.</p>
+
+<div class="theorem">
+<strong>Теорема 2.1 (Лакса–Мильграма).</strong> Пусть \(H\) — вещественное гильбертово пространство, \(a(\cdot,\cdot)\) — билинейная форма, \(f \in H'\) — ограниченный линейный функционал. Если форма \(a\) удовлетворяет двум условиям:
+<ol>
+<li><strong>Ограниченность (непрерывность).</strong> Существует константа \(M > 0\) такая, что
+\[ |a(u,v)| \le M\,\|u\|\,\|v\| \quad \forall u,v \in H. \]</li>
+<li><strong>Коэрцитивность (эллиптичность).</strong> Существует константа \(\alpha > 0\) такая, что
+\[ a(u,u) \ge \alpha\,\|u\|^2 \quad \forall u \in H. \]</li>
+</ol>
+то вариационная задача (2.8) имеет <em>единственное</em> решение \(u \in H\) при любом ограниченном функционале \(f\). Более того, решение устойчиво зависит от данных:
+\[ \|u\| \le \frac{1}{\alpha}\,\|f\|_{H'}. \]
+</div>
+
+<p><em>Краткое обоснование устойчивости.</em> Подставим \(v = u\) в (2.8) и применим коэрцитивность и определение нормы функционала:</p>
+
+<div class="eq">\[
+\alpha\,\|u\|^2 \le a(u,u) = f(u) \le \|f\|_{H'}\,\|u\|.
+\]</div>
+
+<p>Сократив на \(\|u\|\) (при \(u \ne 0\)), получаем оценку устойчивости \(\|u\| \le \|f\|_{H'}/\alpha\). \(\square\)</p>
+
+<div class="figure">
+<svg viewBox="0 0 600 230" xmlns="http://www.w3.org/2000/svg" style="max-width:560px">
+  <defs>
+    <marker id="arrLM" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#6b5d4f"/></marker>
+  </defs>
+  <!-- conditions -->
+  <rect x="20" y="30" width="200" height="55" rx="6" fill="#3a5ba0" fill-opacity="0.07" stroke="#3a5ba0" stroke-width="1.2"/>
+  <text x="120" y="52" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0" text-anchor="middle" font-weight="600">Ограниченность</text>
+  <text x="120" y="72" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">|a(u,v)| ≤ M‖u‖‖v‖</text>
+  <rect x="20" y="135" width="200" height="55" rx="6" fill="#1a6b5a" fill-opacity="0.07" stroke="#1a6b5a" stroke-width="1.2"/>
+  <text x="120" y="157" font-family="JetBrains Mono,monospace" font-size="11" fill="#1a6b5a" text-anchor="middle" font-weight="600">Коэрцитивность</text>
+  <text x="120" y="177" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">a(u,u) ≥ α‖u‖²</text>
+  <!-- arrows -->
+  <line x1="225" y1="58" x2="350" y2="95" stroke="#6b5d4f" stroke-width="1.3" marker-end="url(#arrLM)"/>
+  <line x1="225" y1="162" x2="350" y2="125" stroke="#6b5d4f" stroke-width="1.3" marker-end="url(#arrLM)"/>
+  <!-- result -->
+  <rect x="360" y="65" width="220" height="90" rx="8" fill="#b44a2d" fill-opacity="0.08" stroke="#b44a2d" stroke-width="1.5"/>
+  <text x="470" y="90" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle" font-weight="700">Корректность по Адамару</text>
+  <text x="470" y="112" font-family="Source Serif 4,serif" font-size="11" fill="#2c2419" text-anchor="middle">∃ решение, единственно,</text>
+  <text x="470" y="130" font-family="Source Serif 4,serif" font-size="11" fill="#2c2419" text-anchor="middle">устойчиво:</text>
+  <text x="470" y="148" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">‖u‖ ≤ ‖f‖/α</text>
+</svg>
+<div class="caption">Теорема Лакса–Мильграма: два условия на билинейную форму (ограниченность сверху и коэрцитивность снизу) гарантируют корректность вариационной задачи по Адамару — существование, единственность и устойчивость решения.</div>
+</div>
+
+<h2 id="justification">Обоснование метода конечных элементов</h2>
+
+<p>Теорема Лакса–Мильграма играет в обосновании МКЭ ключевую роль на <strong>двух этапах</strong>.</p>
+
+<h3 id="cont-problem">1. Корректность непрерывной задачи</h3>
+
+<p>Прежде чем дискретизировать задачу, нужно убедиться, что исходная дифференциальная задача вообще разрешима. Проверка условий Лакса–Мильграма (ограниченность и коэрцитивность) гарантирует, что «непрерывная» задача корректно поставлена по Адамару: решение существует, единственно и устойчиво. Проверим оба условия для модельной формы (2.9):</p>
+
+<ul>
+<li><strong>Ограниченность.</strong> По неравенству Коши–Буняковского
+\[ |a(u,v)| = \left|\int_0^1 u'v'\,dx\right| \le \|u'\|_{L^2}\,\|v'\|_{L^2} \le \|u\|_{H^1}\,\|v\|_{H^1}, \]
+то есть \(M = 1\).</li>
+<li><strong>Коэрцитивность.</strong> \(a(u,u) = \|u'\|_{L^2}^2\). Благодаря <em>неравенству Пуанкаре</em> \(\|u\|_{L^2} \le C\,\|u'\|_{L^2}\) полунорма \(\|u'\|_{L^2}\) эквивалентна полной норме в \(H_0^1\), поэтому \(a(u,u) \ge \alpha\,\|u\|_{H^1}^2\) при некотором \(\alpha > 0\).</li>
+</ul>
+
+<h3 id="disc-problem">2. Корректность дискретной задачи</h3>
+
+<p>В МКЭ бесконечномерное пространство \(H\) заменяется конечномерным подпространством \(V_h \subset H\). Дискретная задача: найти \(u_h \in V_h\) такую, что</p>
+
+<div class="eq">\[
+a(u_h, v_h) = f(v_h)\quad \forall v_h \in V_h.
+\tag{2.10}
+\]</div>
+
+<p>Поскольку \(V_h \subset H\), условия ограниченности и коэрцитивности <strong>автоматически наследуются</strong> подпространством (они выполнены для всех элементов \(H\), значит и для подмножества \(V_h\)). Следовательно, по теореме Лакса–Мильграма дискретная задача также имеет единственное решение, а возникающая в МКЭ система линейных алгебраических уравнений (СЛАУ) однозначно разрешима. На практике это означает: матрица жёсткости \(K_{ij} = \int_0^1 \phi'_j \phi'_i\,dx\) положительно определена благодаря коэрцитивности, что гарантирует обратимость системы \(KU = F\).</p>
+
+<h2 id="cea">Лемма Сеа: квазиоптимальность Галёркина</h2>
+
+<p>Корректность — это полдела. Главный вопрос практики: насколько приближение \(u_h\) близко к точному \(u\)? Ответ даёт <strong>лемма Сеа</strong>, оценивающая ошибку метода Галёркина (МКЭ).</p>
+
+<div class="theorem">
+<strong>Лемма 2.1 (Сеа).</strong> Пусть выполнены условия теоремы Лакса–Мильграма (ограниченность \(M\) и коэрцитивность \(\alpha\)). Пусть \(u \in H\) — точное решение, \(u_h \in V_h \subset H\) — приближение МКЭ. Тогда
+\[ \|u - u_h\|_H \le \frac{M}{\alpha}\,\inf_{v_h \in V_h}\|u - v_h\|_H. \]
+</div>
+
+<p>Смысл: ошибка приближения \(u_h\) отличается от <em>наилучшего возможного</em> приближения в подпространстве \(V_h\) не более чем в \(M/\alpha\) раз. Метод Галёркина <strong>квазиоптимален</strong>.</p>
+
+<div class="proof">
+<strong>Доказательство.</strong>
+<p><em>Шаг 1. Ортогональность Галёркина.</em> Точное решение удовлетворяет \(a(u, v_h) = f(v_h)\) для всех \(v_h \in V_h\) (поскольку \(V_h \subset H\)), а приближение — \(a(u_h, v_h) = f(v_h)\). Вычитая второе из первого, получаем фундаментальное свойство:
+\[ a(u - u_h,\, v_h) = 0 \quad \forall v_h \in V_h. \tag{\ast} \]
+Ошибка \(u - u_h\) ортогональна (в смысле формы \(a\)) всему подпространству \(V_h\).</p>
+
+<p><em>Шаг 2. Оценка снизу через коэрцитивность.</em> Возьмём произвольную \(v_h \in V_h\) и представим ошибку как \(u - u_h = (u - v_h) + (v_h - u_h)\), где \(v_h - u_h \in V_h\). Тогда
+\[ \alpha\,\|u - u_h\|_H^2 \le a(u - u_h,\, u - u_h) = a(u - u_h,\, u - v_h) + \underbrace{a(u - u_h,\, v_h - u_h)}_{=\,0\ \text{в силу }(*)}. \]
+Второе слагаемое обнуляется по ортогональности Галёркина.</p>
+
+<p><em>Шаг 3. Оценка сверху через ограниченность.</em>
+\[ \alpha\,\|u - u_h\|_H^2 \le a(u - u_h,\, u - v_h) \le M\,\|u - u_h\|_H\,\|u - v_h\|_H. \]
+Сокращая на \(\|u - u_h\|_H\), получаем \(\|u - u_h\|_H \le \tfrac{M}{\alpha}\,\|u - v_h\|_H\). Так как \(v_h \in V_h\) произвольна, переходим к точной нижней грани и получаем требуемое неравенство.</p>
+</div>
+
+<div class="figure">
+<svg viewBox="0 0 540 300" xmlns="http://www.w3.org/2000/svg" style="max-width:500px">
+  <defs>
+    <marker id="arrCea" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2c2419"/></marker>
+  </defs>
+  <!-- Subspace plane V_h as a parallelogram -->
+  <polygon points="40,230 360,230 460,160 140,160" fill="#1a6b5a" fill-opacity="0.07" stroke="#1a6b5a" stroke-width="1.2"/>
+  <text x="420" y="222" font-family="JetBrains Mono,monospace" font-size="13" fill="#1a6b5a" font-weight="600">Vₕ ⊂ H</text>
+  <!-- foot of perpendicular (u_h) -->
+  <circle cx="250" cy="195" r="5" fill="#1a6b5a"/>
+  <text x="248" y="218" font-family="JetBrains Mono,monospace" font-size="12" fill="#1a6b5a" text-anchor="middle">uₕ</text>
+  <!-- exact solution u above plane -->
+  <circle cx="290" cy="60" r="5" fill="#b44a2d"/>
+  <text x="305" y="58" font-family="JetBrains Mono,monospace" font-size="12" fill="#b44a2d">u</text>
+  <!-- another v_h point in plane -->
+  <circle cx="160" cy="200" r="4" fill="#3a5ba0"/>
+  <text x="150" y="218" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0" text-anchor="middle">vₕ</text>
+  <!-- error u - u_h (perpendicular-ish) -->
+  <line x1="250" y1="195" x2="290" y2="60" stroke="#b44a2d" stroke-width="1.8" marker-end="url(#arrCea)"/>
+  <text x="280" y="130" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d">u−uₕ</text>
+  <!-- error u - v_h -->
+  <line x1="160" y1="200" x2="290" y2="60" stroke="#3a5ba0" stroke-width="1.3" stroke-dasharray="5,3" marker-end="url(#arrCea)"/>
+  <text x="200" y="120" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0">u−vₕ</text>
+  <!-- in-plane segment u_h - v_h -->
+  <line x1="250" y1="195" x2="160" y2="200" stroke="#6b5d4f" stroke-width="1.1"/>
+  <!-- right-angle marker at u_h -->
+  <path d="M 250 195 L 256 182 L 244 178" fill="none" stroke="#b44a2d" stroke-width="1"/>
+  <text x="270" y="285" font-family="Source Serif 4,serif" font-size="11" fill="#6b5d4f" text-anchor="middle">a(u−uₕ, vₕ) = 0  —  ортогональная проекция Галёркина</text>
+</svg>
+<div class="caption">Геометрия леммы Сеа. Ошибка \(u - u_h\) ортогональна (в энергетическом скалярном произведении \(a\)) подпространству \(V_h\): \(u_h\) есть проекция точного решения \(u\) на \(V_h\). Поэтому \(u_h\) — наилучшее приближение с точностью до множителя \(M/\alpha\), а любое другое \(v_h\) даёт ошибку \(u - v_h\) не меньше.</div>
+</div>
+
+<div class="remark">
+<strong>Оценка ошибки на практике.</strong> Лемма Сеа сводит оценку ошибки МКЭ к чисто аппроксимационному вопросу: как хорошо точное решение приближается элементами \(V_h\). Для кусочно-линейных элементов на сетке шага \(h\) теория интерполяции даёт \(\inf_{v_h}\|u-v_h\|_{H^1} \le C\,h\,\|u''\|_{L^2}\), откуда \(\|u - u_h\|_{H^1} = O(h)\) — линейная сходимость в энергетической норме. Точность тем выше, чем глаже решение (в смысле Соболева, \(u \in H^{k+1}\)).
+</div>
+
+<h2 id="galerkin">Метод Галёркина и МКЭ как его частный случай</h2>
+
+<p>Рассмотрим общую схему. Дано дифференциальное уравнение \(\mathcal L u = f\) в области \(\Omega\). Ищем приближение \(u_h\) в виде линейной комбинации базисных функций \(\{\phi_j\}_{j=1}^N\):</p>
+
+<div class="eq">\[
+u_h(x) = \sum_{j=1}^N U_j\,\phi_j(x),
+\tag{2.11}
+\]</div>
+
+<p>где \(U_j\) — неизвестные коэффициенты. <strong>Проекционное условие Галёркина</strong> требует, чтобы невязка \(R = \mathcal L u_h - f\) была ортогональна всем тестовым функциям \(v\) из некоторого пространства \(V_0\):</p>
+
+<div class="eq">\[
+\int_\Omega (\mathcal L u_h - f)\cdot v\,dx = 0\quad \forall v \in V_0.
+\tag{2.12}
+\]</div>
+
+<p><strong>Метод конечных элементов</strong> отличается от общего метода Галёркина тремя особенностями:</p>
+
+<ol>
+<li><strong>Дискретизация области.</strong> \(\Omega\) разбивается на конечные элементы (отрезки, треугольники, тетраэдры и т.д.).</li>
+<li><strong>Локальные базисные функции.</strong> \(\phi_j(x)\) отличны от нуля лишь в небольшой окрестности узла \(j\) (обычно кусочно-полиномиальные «крышечки»), что делает матрицу системы разреженной.</li>
+<li><strong>Слабая формулировка.</strong> Перед применением (2.12) уравнение приводится к интегральной форме с пониженным порядком производных.</li>
+</ol>
+
+<h2 id="bc">Главные и естественные граничные условия</h2>
+
+<p>В вариационной постановке граничные условия делятся на два принципиально разных класса в зависимости от способа их учёта.</p>
+
+<div class="definition">
+<strong>Определение 2.2 (главные условия).</strong> Главные (условия Дирихле) граничные условия задают значение самой искомой функции на части границы \(\Gamma_D \subset \partial\Omega\):
+\[ u(x) = g(x),\quad x \in \Gamma_D. \]
+Физический смысл — кинематические ограничения (закрепление, заданная температура, потенциал). В слабой форме пространство пробных функций \(V_0\) выбирается так, что \(v(x) = 0\) на \(\Gamma_D\). В МКЭ реализуются <strong>до</strong> решения системы — фиксацией узловых значений или исключением степеней свободы; выполняются <em>точно</em> в узлах сетки.
+</div>
+
+<div class="definition">
+<strong>Определение 2.3 (естественные условия).</strong> Естественные (натуральные, условия Неймана или Робена) граничные условия задают значение производной (потока, напряжения) на части границы \(\Gamma_N \subset \partial\Omega\):
+\[ \frac{\partial u}{\partial n}(x) = h(x),\quad x \in \Gamma_N, \]
+где \(\partial/\partial n\) — производная по внешней нормали. Физический смысл — силовые воздействия (приложенная сила, тепловой поток, ток). В слабой форме возникают <strong>автоматически</strong> после интегрирования по частям как граничные слагаемые и учитываются <strong>при сборке правой части</strong> (добавляются в вектор нагрузки). Выполняются приближённо, в интегральном смысле; точность растёт с измельчением сетки.
+</div>
+
+<div class="remark">
+<strong>Происхождение терминов.</strong> Названия «главные» и «естественные» отражают способ учёта в вариационной постановке: первые накладываются на пространство функций <em>априори</em> (ограничивают базис), вторые «естественным образом» следуют из самого уравнения после интегрирования по частям. Путаница в их обработке приводит либо к численной неустойчивости, либо к физически неверным результатам.
+</div>
+
+<h2 id="example">Пример: одномерная краевая задача со смешанными ГУ</h2>
+
+<p>Соберём всё вместе на полной задаче. Рассмотрим на \(\Omega = (0,1)\):</p>
+
+<div class="eq">\[
+-u''(x) = f(x),\quad x \in (0,1),
+\tag{2.13}
+\]</div>
+
+<p>со смешанными граничными условиями:</p>
+
+<div class="eq">\[
+\underbrace{u(0) = 0}_{\text{закрепл. левый конец} \;\to\; \text{главное}},
+\qquad
+\underbrace{u'(1) = \alpha}_{\text{сила/поток справа} \;\to\; \text{естественное}}.
+\tag{2.14}
+\]</div>
+
+<h3 id="weak-derivation">Переход к слабой форме</h3>
+
+<p>Умножим (2.13) на тестовую функцию \(v(x)\), проинтегрируем и проинтегрируем по частям:</p>
+
+<div class="eq">\[
+\bigl[-u'(x)v(x)\bigr]_0^1 + \int_0^1 u'(x)\,v'(x)\,dx = \int_0^1 f(x)\,v(x)\,dx.
+\tag{2.15}
+\]</div>
+
+<p>Раскроем граничные члены: \(-u'(1)v(1) + u'(0)v(0)\). Теперь учтём условия:</p>
+
+<ul>
+<li><strong>Главное условие \(u(0)=0\):</strong> требуем \(v(0)=0\) для всех тестовых функций (вариация в закреплённой точке невозможна). Тогда слагаемое \(u'(0)v(0)\) обнуляется, а неизвестная реакция опоры \(u'(0)\) <em>не входит</em> в слабую форму (её можно вычислить постфактум).</li>
+<li><strong>Естественное условие \(u'(1)=\alpha\):</strong> на \(v(1)\) ограничений нет. Подставляем известное значение: \(-u'(1)v(1) = -\alpha\,v(1)\) и переносим в правую часть как \(+\alpha\,v(1)\).</li>
+</ul>
+
+<p><strong>Итоговая слабая формулировка:</strong> найти \(u \in V = \{w \in H^1(0,1):\ w(0)=0\}\) такую, что для всех \(v \in V_0 = \{w \in H^1(0,1):\ w(0)=0\}\):</p>
+
+<div class="eq">\[
+\boxed{\;\int_0^1 u'(x)\,v'(x)\,dx = \int_0^1 f(x)\,v(x)\,dx + \alpha\cdot v(1).\;}
+\tag{2.16}
+\]</div>
+
+<p>Структура (2.16): левая часть \(\int u'v'\) — билинейная форма (матрица жёсткости \(K\)); первый интеграл справа — линейный функционал от \(f\) (вектор объёмной нагрузки \(F^{\text{vol}}\)); слагаемое \(\alpha\,v(1)\) — граничный функционал (вклад в вектор нагрузки \(F^{\text{bound}}\)).</p>
+
+<h3 id="discretization">Дискретизация методом конечных элементов</h3>
+
+<p>Разобьём \([0,1]\) на \(N_e\) элементов с узлами \(0 = x_0 < x_1 < \dots < x_N = 1\). Введём кусочно-линейные базисные функции «крышечки» \(\phi_i(x)\), удовлетворяющие \(\phi_i(x_j) = \delta_{ij}\). Приближённое решение:</p>
+
+<div class="eq">\[
+u_h(x) = \sum_{j=1}^N U_j\,\phi_j(x),\qquad U_j \approx u(x_j).
+\tag{2.17}
+\]</div>
+
+<p>Так как \(u(0)=0\), то \(U_0 = 0\) — эта степень свободы исключается. Подставляя \(v = \phi_i\) для \(i = 1,\dots,N\) (функция \(\phi_0\) не используется как тестовая, ведь \(v(0)=0\)), получаем СЛАУ:</p>
+
+<div class="eq">\[
+\sum_{j=1}^N K_{ij}\,U_j = F_i,\quad i = 1,\dots,N,
+\tag{2.18}
+\]</div>
+
+<p>где элементы матрицы жёсткости и вектора нагрузки:</p>
+
+<div class="eq">\[
+K_{ij} = \int_0^1 \phi'_j(x)\,\phi'_i(x)\,dx,\qquad
+F_i = \underbrace{\int_0^1 f(x)\,\phi_i(x)\,dx}_{F_i^{\text{vol}}} + \underbrace{\alpha\cdot\phi_i(1)}_{F_i^{\text{bound}}}.
+\tag{2.19}
+\]</div>
+
+<p>Поскольку \(\phi_i(1) = 1\) только для \(i = N\) (последний узел) и \(0\) иначе, естественное условие добавляется <strong>только</strong> к последней компоненте: \(F_N \leftarrow F_N + \alpha\).</p>
+
+<div class="exercise">
+<strong>Пример 2.1 (численная иллюстрация).</strong> Пусть \(f(x)=1\), \(\alpha = 0.5\), равномерная сетка с \(N=2\) элементами (\(x_0=0,\ x_1=0.5,\ x_2=1\), шаг \(h=0.5\)).
+<p>1. Матрица жёсткости после исключения \(U_0\) (с точностью до множителя \(1/h\)):
+\[ K = \begin{bmatrix} 4 & -2 \\ -2 & 2 \end{bmatrix}. \]</p>
+<p>2. Вектор нагрузки:
+\[ F^{\text{vol}} = \begin{bmatrix} \int_0^1 1\cdot\phi_1\,dx \\ \int_0^1 1\cdot\phi_2\,dx \end{bmatrix} \approx \begin{bmatrix} 0.5 \\ 0.25 \end{bmatrix},\qquad
+F^{\text{bound}} = \begin{bmatrix} 0 \\ \alpha \end{bmatrix} = \begin{bmatrix} 0 \\ 0.5 \end{bmatrix}, \]
+итого \(F = [0.5,\ 0.75]^\top\).</p>
+<p>3. Решение \(KU = F\) даёт \(U_1 \approx 0.625\), \(U_2 \approx 0.875\).</p>
+</div>
+
+<div class="remark">
+<strong>Вывод.</strong> Главные условия определяют пространство поиска решения (реализуются через ограничение базиса), а естественные определяют правую часть системы (учитываются в нагрузке). В одномерном случае механика наглядна: интегрирование по частям «выносит» производные на границу, где они либо заменяются известными значениями (естественные ГУ), либо исчезают благодаря выбору тестовых функций (главные ГУ).
+</div>
+
+<h2 id="interactive">Интерактив: лемма Сеа и сходимость Галёркина</h2>
+
+<p>Решаем модельную задачу \(-u'' = f\), \(u(0)=u(1)=0\) методом Галёркина в синусном базисе \(\phi_k(x) = \sin(k\pi x)\), \(k = 1,\dots,N\). В этом базисе форма \(a(u,v)=\int u'v'\) диагональна, поэтому галёркинское приближение совпадает с <em>наилучшим</em> приближением в \(V_h\) (усечённый ряд Фурье) — наглядная иллюстрация квазиоптимальности. Меняйте число базисных функций \(N\): энергетическая ошибка \(\|u-u_h\|\) монотонно падает.</p>
+
+<div id="ceaDemo" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Правая часть f(x)</label>
+    <select id="ceaFn" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <option value="one">f = 1 (полка)</option>
+      <option value="x">f = x</option>
+      <option value="bump">f = всплеск</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">N базисных функций: <span id="ceaNv">3</span></label>
+    <input type="range" id="ceaN" min="1" max="40" value="3" style="width:180px">
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">u(x) точное и uₕ(x)</div><canvas id="cea_u" width="440" height="280" style="width:100%;height:auto"></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Энергетическая ошибка ‖u−uₕ‖ от N</div><canvas id="cea_e" width="440" height="280" style="width:100%;height:auto"></canvas></div>
+</div>
+<div id="ceaStatus" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.4rem"></div>
+</div>
+
+<script>
+(function(){
+  var NQ = 600;                 // точек квадратуры/отрисовки
+  var xs = new Float64Array(NQ+1);
+  for (var i=0;i<=NQ;i++) xs[i] = i/NQ;
+
+  function fval(name, x){
+    if (name==='one') return 1.0;
+    if (name==='x')   return x;
+    // bump: гладкий локализованный всплеск возле x=0.35
+    return Math.exp(-120*(x-0.35)*(x-0.35));
+  }
+  // Коэффициенты Фурье правой части: f(x) = Σ b_k sin(kπx), b_k = 2∫_0^1 f sin(kπx) dx
+  function bcoef(name, k){
+    var s=0, kp=k*Math.PI;
+    for (var i=0;i<NQ;i++){
+      var x=(i+0.5)/NQ;
+      s += fval(name,x)*Math.sin(kp*x);
+    }
+    return 2*s/NQ;
+  }
+  // Точное решение -u''=f, u(0)=u(1)=0:  u = Σ (b_k/(kπ)^2) sin(kπx)
+  // Галёркин в базисе sin(kπx): a(φm,φk)=∫ φm'φk' = (kπ)^2/2 δ, f(φk)=b_k/2
+  //  => U_k = b_k/(kπ)^2  — совпадает с усечённым рядом => наилучшее приближение.
+  // Энергетическая норма ошибки^2 = Σ_{k>N} a-вклад = Σ_{k>N} (kπ)^2 U_k^2 = Σ_{k>N} b_k^2/(kπ)^2
+
+  function curveExact(name){
+    var KMAX=200, U=new Float64Array(KMAX+1);
+    for (var k=1;k<=KMAX;k++){ var bk=bcoef(name,k); U[k]=bk/((k*Math.PI)*(k*Math.PI)); }
+    var y=new Float64Array(NQ+1);
+    for (var i=0;i<=NQ;i++){ var v=0,x=xs[i]; for(var k=1;k<=KMAX;k++) v+=U[k]*Math.sin(k*Math.PI*x); y[i]=v; }
+    return y;
+  }
+  function curveApprox(name,N){
+    var y=new Float64Array(NQ+1);
+    for (var i=0;i<=NQ;i++){ var v=0,x=xs[i];
+      for(var k=1;k<=N;k++){ var bk=bcoef(name,k); v+=(bk/((k*Math.PI)*(k*Math.PI)))*Math.sin(k*Math.PI*x); }
+      y[i]=v; }
+    return y;
+  }
+  function energyErr(name,N){
+    var s=0; for(var k=N+1;k<=200;k++){ var bk=bcoef(name,k); s+=bk*bk/((k*Math.PI)*(k*Math.PI)); }
+    return Math.sqrt(s);
+  }
+
+  function plotU(name,N){
+    var c=document.getElementById('cea_u'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:40,r:12,t:12,b:26},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var ye=curveExact(name), ya=curveApprox(name,N);
+    var mn=1e9,mx=-1e9; for(var i=0;i<=NQ;i++){ var a=ye[i],b=ya[i]; if(a<mn)mn=a;if(a>mx)mx=a;if(b<mn)mn=b;if(b>mx)mx=b; }
+    var pad=(mx-mn)*0.12||0.1; mn-=pad;mx+=pad;
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var g=0;g<=4;g++){var gy=P.t+ph*g/4;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    function xp(x){return P.l+pw*x;} function yp(v){return P.t+ph*(1-(v-mn)/(mx-mn));}
+    // exact
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.beginPath();
+    for(var i=0;i<=NQ;i++){i===0?ctx.moveTo(xp(xs[i]),yp(ye[i])):ctx.lineTo(xp(xs[i]),yp(ye[i]));}ctx.stroke();ctx.setLineDash([]);
+    // approx
+    ctx.strokeStyle='#b44a2d';ctx.lineWidth=2.2;ctx.beginPath();
+    for(var i=0;i<=NQ;i++){i===0?ctx.moveTo(xp(xs[i]),yp(ya[i])):ctx.lineTo(xp(xs[i]),yp(ya[i]));}ctx.stroke();
+    // axes
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('0',P.l,P.t+ph+14);ctx.fillText('0.5',P.l+pw/2,P.t+ph+14);ctx.fillText('1',P.l+pw,P.t+ph+14);
+    ctx.textAlign='left';ctx.font='9px JetBrains Mono';
+    ctx.fillStyle='#6b5d4f';ctx.fillText('- - u точное',P.l+6,P.t+11);
+    ctx.fillStyle='#b44a2d';ctx.fillText('— uₕ (N='+N+')',P.l+6,P.t+23);
+  }
+
+  function plotE(name,N){
+    var c=document.getElementById('cea_e'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:48,r:12,t:12,b:26},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var Nmax=40, errs=new Float64Array(Nmax+1), mx=0;
+    for(var n=1;n<=Nmax;n++){ errs[n]=energyErr(name,n); if(errs[n]>mx)mx=errs[n]; }
+    mx*=1.08; if(mx<=0)mx=1;
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var g=0;g<=4;g++){var gy=P.t+ph*g/4;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    function xp(n){return P.l+pw*(n-1)/(Nmax-1);} function yp(v){return P.t+ph*(1-v/mx);}
+    ctx.strokeStyle='#1a6b5a';ctx.lineWidth=2;ctx.beginPath();
+    for(var n=1;n<=Nmax;n++){n===1?ctx.moveTo(xp(n),yp(errs[n])):ctx.lineTo(xp(n),yp(errs[n]));}ctx.stroke();
+    // current N marker
+    ctx.fillStyle='#b44a2d';ctx.beginPath();ctx.arc(xp(N),yp(errs[N]),4,0,Math.PI*2);ctx.fill();
+    // axes
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('1',P.l,P.t+ph+14);ctx.fillText('20',P.l+pw/2,P.t+ph+14);ctx.fillText('40',P.l+pw,P.t+ph+14);
+    ctx.fillText('N',P.l+pw/2,P.t+ph+24);
+    ctx.textAlign='right';
+    for(var g=0;g<=4;g++) ctx.fillText((mx*(1-g/4)).toFixed(3),P.l-4,P.t+ph*g/4+3);
+  }
+
+  function run(){
+    var name=document.getElementById('ceaFn').value;
+    var N=+document.getElementById('ceaN').value;
+    document.getElementById('ceaNv').textContent=N;
+    plotU(name,N); plotE(name,N);
+    var e=energyErr(name,N);
+    document.getElementById('ceaStatus').innerHTML='N='+N+' базисных функций · энергетическая ошибка ‖u−uₕ‖ = '+e.toExponential(3)+' · uₕ — наилучшее приближение в Vₕ (квазиоптимальность Сеа)';
+  }
+  document.getElementById('ceaFn').addEventListener('change',run);
+  document.getElementById('ceaN').addEventListener('input',run);
+  window.addEventListener('load',function(){ setTimeout(run,200); });
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> При росте \(N\) приближение \(u_h\) (терракота) всё точнее ложится на точное решение \(u\) (пунктир), а энергетическая ошибка монотонно убывает к нулю — это и есть сходимость Галёркина. Для гладкой полки \(f=1\) ошибка падает быстро; для локализованного всплеска требуется больше базисных функций, чтобы разрешить узкую особенность — наглядная связь гладкости решения и скорости сходимости из леммы Сеа.
+</div>
+
+<div class="lecture-nav">
+<a href="lec1.html" class="nav-prev">← Лекция 1</a>
+<a href="lec3.html" class="nav-next">Лекция 3 →</a>
+</div>
+</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>МКЭ-Лекция 3. Матричная техника</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>МКЭ · Лекция 3</h2>
+  <div class="g">Содержание</div>
+  <a href="#problem">Краевая задача и функционал</a>
+  <a href="#rod">Пример: стержень на подвесе</a>
+  <a href="#mesh">Сетка и функции формы</a>
+  <a href="#local">Локальная матрица жёсткости</a>
+  <a href="#assembly">Ансамблирование</a>
+  <a href="#assembly-cheap">Дешёвая сборка</a>
+  <a href="#bc">Граничные условия и решение</a>
+  <a href="#truss">Расчёт фермы</a>
+  <a href="#truss-example">Численный пример фермы</a>
+  <a href="#interactive">Интерактив</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="lec2.html">← Лекция 2</a>
+  <a href="index.html">Обзор курса</a>
+  <a href="lec4.html">→ Лекция 4</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-fem">МКЭ</span>
+<div class="lecture-num">Лекция 3 · Метод конечных элементов</div>
+<h1>Матричная техника МКЭ и примеры прикладных расчётов</h1>
+
+<p>Для практических приложений метод конечных элементов реализуется в виде <strong>вычислительной технологии</strong> — последовательности типовых этапов: разбиение области на элементы, построение локальных матриц, их ансамблирование в глобальную систему, учёт граничных условий и решение СЛАУ. Эту технологию мы разберём сначала на одномерной краевой задаче, а затем перенесём на типичный инженерный пример — расчёт плоской фермы. Везде используется матричная форма записи: она не только упрощает выкладки, но и служит основой для разработки численных кодов МКЭ.</p>
+
+<h2 id="problem">Краевая задача и связанный с ней функционал</h2>
+
+<p>Рассмотрим на отрезке \([0,1]\) краевую задачу для линейного дифференциального оператора второго порядка</p>
+
+<div class="eq">\[
+L(y) \equiv -\frac{d}{dx}\!\left(p(x)\,\frac{dy}{dx}\right) + q(x)\,y(x) = f(x), \qquad 0 < x < 1,
+\tag{1}
+\]</div>
+
+<div class="eq">\[
+p(x) \ge p_0 > 0, \qquad q(x) \ge 0, \qquad y(0) = y(1) = 0.
+\tag{2}
+\]</div>
+
+<p>Эта краевая задача служит математической моделью многих физических процессов: она описывает, например, температурное состояние стержня с переменными теплоёмкостью и тепловыми источниками или распределение концентрации вещества в результате конвекции и диффузии.</p>
+
+<div class="definition">
+<strong>Определение (пространство \(L_2\) и скалярное произведение).</strong> Функция \(f\) принадлежит пространству \(L_2\), если конечна её норма
+\[ \|f\|_0 = \left(\int_0^1 f^2\,dx\right)^{1/2} < +\infty. \]
+Скалярным произведением функций \(f, g \in L_2\) называют число
+\[ (f,g) = \int_0^1 f\,g\,dx, \qquad (f,f) = \|f\|_0^2. \]
+Пространству \(L_2\) принадлежат, например, кусочно-непрерывные ограниченные функции.
+</div>
+
+<p>Если \(p(x)\) имеет ограниченную производную, а \(q(x)\) ограничена, то задача (1)–(2) имеет единственное решение, принадлежащее пространству \(W_{2,0}^2\) функций с ограниченной второй производной, удовлетворяющих краевым условиям (2):</p>
+
+<div class="eq">\[
+\|y\|_2 = \left(\int_0^1\!\left[\left(\frac{d^2 y}{dx^2}\right)^2 + \left(\frac{dy}{dx}\right)^2 + y^2\right]dx\right)^{1/2}.
+\]</div>
+
+<p>С задачей (1)–(2) тесно связана <strong>вариационная задача о минимуме функционала</strong>. Среди функций пространства \(W_{2,0}^1\) требуется найти ту, что сообщает наименьшее значение квадратичному функционалу</p>
+
+<div class="eq">\[
+J(v) = \int_0^1\!\left[p(x)\left(\frac{dv}{dx}\right)^2 + q(x)\,v^2(x)\right]dx - 2\int_0^1 f(x)\,v(x)\,dx.
+\tag{3}
+\]</div>
+
+<div class="theorem">
+<strong>Теорема (эквивалентность задач).</strong> Решение \(y(x)\) краевой задачи (1)–(2) доставляет минимум функционалу (3); обратно, функция \(v(x) \in W_{2,0}^2\), сообщающая (3) наименьшее значение, является решением задачи (1)–(2).
+</div>
+
+<p><em>Доказательство.</em> Заменим \(v\) на \(y + (v-y)\) и перепишем функционал:
+\[
+J(v) = J(y) + \int_0^1\!\left[p\left(\frac{d(v-y)}{dx}\right)^2 + q\,(v-y)^2\right]dx
++ 2\int_0^1\!\left[p\,\frac{dy}{dx}\,\frac{d(v-y)}{dx} + q\,y\,(v-y) - f\,(v-y)\right]dx.
+\]
+Последний интеграл равен нулю: интегрируя его по частям и учитывая, что \(y\) — решение (1)–(2) и \((v-y)\) обращается в ноль на концах, получаем подынтегральное выражение \([L(y)-f]\,(v-y)=0\). Средний интеграл неотрицателен в силу \(p \ge p_0 > 0\), \(q \ge 0\). Следовательно \(J(v) \ge J(y)\) для всех \(v \in W_{2,0}^1\), то есть \(y\) минимизирует \(J\). Обратное утверждение проверяется подстановкой \(v + \alpha\varphi\) и условием \(\tfrac{d}{d\alpha}J(v+\alpha\varphi)\big|_{\alpha=0}=0\). \(\square\)</p>
+
+<h2 id="rod">Прикладной пример: стержень на подвесе</h2>
+
+<p>Применим теорию к расчёту напряжённо-деформированного состояния (НДС) тонкого стержня, закреплённого на подвесе и растягивающегося под действием собственного веса. Примем модель тонкого стержня: поперечный размер много меньше длины, напряжение в сечении однородно, растяжение одноосное (вдоль вертикали), деформация упругая. Обозначим \(E\) — модуль Юнга, \(G\) — объёмную силу тяжести. В приближении малых деформаций напряжение подчиняется закону Гука:</p>
+
+<div class="eq">\[
+\sigma(x) = E\,\frac{du}{dx}, \qquad \varepsilon = \frac{du}{dx},
+\]</div>
+
+<p>где \(\varepsilon\) — относительная деформация, \(u(x)\) — перемещения сечений, имевших в недеформированном состоянии координату \(x\).</p>
+
+<div class="figure">
+<svg viewBox="0 0 360 280" xmlns="http://www.w3.org/2000/svg" style="max-width:300px">
+  <!-- top fixation -->
+  <line x1="80" y1="40" x2="280" y2="40" stroke="#2c2419" stroke-width="2"/>
+  <g stroke="#6b5d4f" stroke-width="1">
+    <line x1="90" y1="40" x2="80" y2="30"/><line x1="110" y1="40" x2="100" y2="30"/>
+    <line x1="130" y1="40" x2="120" y2="30"/><line x1="150" y1="40" x2="140" y2="30"/>
+    <line x1="170" y1="40" x2="160" y2="30"/><line x1="190" y1="40" x2="180" y2="30"/>
+    <line x1="210" y1="40" x2="200" y2="30"/><line x1="230" y1="40" x2="220" y2="30"/>
+    <line x1="250" y1="40" x2="240" y2="30"/><line x1="270" y1="40" x2="260" y2="30"/>
+  </g>
+  <!-- rod -->
+  <rect x="155" y="40" width="50" height="180" fill="#b44a2d" fill-opacity="0.10" stroke="#b44a2d" stroke-width="2"/>
+  <!-- bottom fixation -->
+  <line x1="80" y1="220" x2="280" y2="220" stroke="#2c2419" stroke-width="2"/>
+  <g stroke="#6b5d4f" stroke-width="1">
+    <line x1="90" y1="230" x2="80" y2="220"/><line x1="110" y1="230" x2="100" y2="220"/>
+    <line x1="130" y1="230" x2="120" y2="220"/><line x1="150" y1="230" x2="140" y2="220"/>
+    <line x1="170" y1="230" x2="160" y2="220"/><line x1="190" y1="230" x2="180" y2="220"/>
+    <line x1="210" y1="230" x2="200" y2="220"/><line x1="230" y1="230" x2="220" y2="220"/>
+    <line x1="250" y1="230" x2="240" y2="220"/><line x1="270" y1="230" x2="260" y2="220"/>
+  </g>
+  <!-- gravity arrow -->
+  <line x1="300" y1="60" x2="300" y2="200" stroke="#1a6b5a" stroke-width="1.5" marker-end="url(#arrRod)"/>
+  <defs><marker id="arrRod" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#1a6b5a"/></marker></defs>
+  <text x="312" y="135" font-family="JetBrains Mono,monospace" font-size="12" fill="#1a6b5a">G</text>
+  <text x="180" y="135" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle" font-weight="600">u(x)</text>
+  <line x1="135" y1="40" x2="135" y2="220" stroke="#3a5ba0" stroke-width="0.8" marker-end="url(#arrX)"/>
+  <defs><marker id="arrX" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#3a5ba0"/></marker></defs>
+  <text x="124" y="135" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0">x</text>
+  <text x="206" y="36" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f">x=0</text>
+  <text x="206" y="234" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f">x=H</text>
+</svg>
+<div class="caption">Тонкий стержень, закреплённый на подвесе, растягивается под действием собственного веса \(G\). Ось \(x\) направлена вертикально вниз; \(u(x)\) — перемещение сечения, в недеформированном состоянии имевшего координату \(x\).</div>
+</div>
+
+<p>Поскольку стержень рассматривается в равновесии, расчёт НДС удобно провести по <strong>принципу минимума потенциальной энергии</strong>. Направив ось \(X\) по вертикали вниз, запишем уравнение равновесия под действием сил упругости и тяжести:</p>
+
+<div class="eq">\[
+-\frac{d}{dx}\!\left(E\,\frac{du}{dx}\right) = G.
+\]</div>
+
+<p>Потенциальная энергия деформированного стержня</p>
+
+<div class="eq">\[
+\Pi(u) = \frac{1}{2}\int_0^1 \sigma(x)\,\varepsilon(x)\,dx - \int_0^1 G(x)\,u(x)\,dx
+= \frac{1}{2}\int_0^1 E\left(\frac{du}{dx}\right)^2 dx - \int_0^1 G(x)\,u(x)\,dx.
+\tag{4}
+\]</div>
+
+<div class="remark">
+<strong>Связь с функционалом (3).</strong> Сравнивая (4) и (3), видим, что энергия растянутого стержня с точностью до множителя \(2\) совпадает с функционалом \(J\), если положить \(p(x) = E\), \(q(x) = 0\), \(f(x) = G\). Поэтому решение находится методом Ритца, а итоговую систему уравнений МКЭ получим матричными вычислениями. Ниже мы строим минимум \(J(u) = 2\Pi(u)\).
+</div>
+
+<h2 id="mesh">Сетка, конечные элементы и функции формы</h2>
+
+<p>Разобьём стержень на \(N\) конечных элементов равной длины, введя сетку с узлами</p>
+
+<div class="eq">\[
+x_i = i h, \quad i = 0, 1, \ldots, N, \qquad x_0 = 0, \quad x_N = H, \quad h = \frac{H}{N}.
+\]</div>
+
+<p>Конечный элемент \(e^{(i)} = [x_{i-1}, x_i]\) считаем достаточно малым, чтобы приближённое решение на нём аппроксимировать <strong>линейной функцией</strong>. Тогда для определения решения на элементе достаточно его значений в двух узлах — концах \(x_{i-1}\) и \(x_i\). Обозначив значения в узлах через \(u_i\), на элементе \(e^{(i)}\) имеем</p>
+
+<div class="eq">\[
+u(x) = u_{i-1}\,\Phi_{i-1}^{(i)}(x) + u_i\,\Phi_i^{(i)}(x), \qquad x \in e^{(i)},
+\tag{5}
+\]</div>
+
+<p>где так называемые <strong>функции формы</strong> конечного элемента есть</p>
+
+<div class="eq">\[
+\Phi_{i-1}^{(i)}(x) = \frac{x_i - x}{h}, \qquad \Phi_i^{(i)}(x) = \frac{x - x_{i-1}}{h}.
+\tag{6}
+\]</div>
+
+<p>Это две линейные «полушапочки» на элементе: каждая равна \(1\) в своём узле и \(0\) в соседнем. Склеенные по всем элементам, они образуют глобальные кусочно-линейные функции формы — характерные «шапочки» с носителем на двух соседних элементах.</p>
+
+<div class="figure">
+<svg viewBox="0 0 600 230" xmlns="http://www.w3.org/2000/svg" style="max-width:560px">
+  <defs><marker id="arrMesh" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2c2419"/></marker></defs>
+  <!-- hat functions -->
+  <polyline points="60,150 150,60 240,150" fill="none" stroke="#9a8d7e" stroke-width="1.6"/>
+  <polyline points="150,150 240,60 330,150" fill="none" stroke="#b44a2d" stroke-width="2.4"/>
+  <polyline points="240,150 330,60 420,150" fill="none" stroke="#9a8d7e" stroke-width="1.6"/>
+  <polyline points="330,150 420,60 510,150" fill="none" stroke="#9a8d7e" stroke-width="1.6"/>
+  <!-- axis -->
+  <line x1="40" y1="150" x2="560" y2="150" stroke="#2c2419" stroke-width="1" marker-end="url(#arrMesh)"/>
+  <text x="565" y="155" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419">x</text>
+  <!-- nodes -->
+  <g fill="#3a5ba0">
+    <circle cx="60" cy="150" r="4"/><circle cx="150" cy="150" r="4"/>
+    <circle cx="240" cy="150" r="4"/><circle cx="330" cy="150" r="4"/>
+    <circle cx="420" cy="150" r="4"/><circle cx="510" cy="150" r="4"/>
+  </g>
+  <!-- node ticks -->
+  <g font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">
+    <text x="60" y="170">x₀</text><text x="150" y="170">x₁</text>
+    <text x="240" y="170">x₂</text><text x="330" y="170">x₃</text>
+    <text x="420" y="170">x₄</text><text x="510" y="170">x₅</text>
+  </g>
+  <!-- element labels -->
+  <g font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">
+    <text x="105" y="200">e⁽¹⁾</text><text x="195" y="200">e⁽²⁾</text>
+    <text x="285" y="200">e⁽³⁾</text><text x="375" y="200">e⁽⁴⁾</text><text x="465" y="200">e⁽⁵⁾</text>
+  </g>
+  <!-- element separators -->
+  <g stroke="#d9cfc0" stroke-width="0.7" stroke-dasharray="3,3">
+    <line x1="60" y1="150" x2="60" y2="190"/><line x1="150" y1="150" x2="150" y2="190"/>
+    <line x1="240" y1="150" x2="240" y2="190"/><line x1="330" y1="150" x2="330" y2="190"/>
+    <line x1="420" y1="150" x2="420" y2="190"/><line x1="510" y1="150" x2="510" y2="190"/>
+  </g>
+  <!-- value 1 marker -->
+  <line x1="40" y1="60" x2="45" y2="60" stroke="#6b5d4f" stroke-width="1"/>
+  <text x="35" y="64" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="end">1</text>
+  <text x="240" y="50" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d" text-anchor="middle" font-weight="600">Φ₂ (узел 2)</text>
+</svg>
+<div class="caption">Глобальные кусочно-линейные функции формы («шапочки»). Каждая равна \(1\) в своём узле и линейно спадает до нуля в соседних; терракотовая — \(\Phi_2\) с носителем \([x_1, x_3]\). Локально на элементе \(e^{(i)}\) это две полушапочки \(\Phi_{i-1}^{(i)}, \Phi_i^{(i)}\) из (6).</div>
+</div>
+
+<p>Введём вектор узловых значений и строку функций формы элемента:</p>
+
+<div class="eq">\[
+\mathbf v^{(i)} = \begin{pmatrix} u_{i-1} \\ u_i \end{pmatrix}, \qquad
+\boldsymbol\Phi^{(i)} = \begin{pmatrix} \Phi_{i-1}^{(i)} & \Phi_i^{(i)} \end{pmatrix}.
+\]</div>
+
+<p>Тогда (5) записывается компактно как произведение матриц:</p>
+
+<div class="eq">\[
+u(x) = \boldsymbol\Phi^{(i)}\,\mathbf v^{(i)}, \qquad x \in e^{(i)}.
+\tag{7}
+\]</div>
+
+<h2 id="local">Локальная матрица жёсткости и вектор нагрузки</h2>
+
+<p>Подставим приближённое решение в удвоенную потенциальную энергию \(J(u)\), представив её сначала суммой функционалов по элементам:</p>
+
+<div class="eq">\[
+J(u) = \sum_{i=1}^N J^{(i)}(u), \qquad
+J^{(i)}(u) = \int_{e^{(i)}} E\left(\frac{du}{dx}\right)^2 dx - 2\int_{e^{(i)}} G\,u\,dx.
+\tag{8}
+\]</div>
+
+<p>Продольная деформация постоянна на линейном элементе:</p>
+
+<div class="eq">\[
+\varepsilon^{(i)}(x) = \frac{du}{dx} = \mathbf B^{(i)}\,\mathbf v^{(i)}, \qquad
+\mathbf B^{(i)} = \frac{d}{dx}\boldsymbol\Phi^{(i)} = \frac{1}{h}\begin{pmatrix} -1 & 1 \end{pmatrix},
+\]</div>
+
+<p>а нормальное напряжение \(\sigma^{(i)} = E\,\varepsilon^{(i)} = E\,\mathbf B^{(i)}\mathbf v^{(i)}\). Упругая часть функционала элемента есть квадратичная форма узловых значений:</p>
+
+<div class="eq">\[
+J_E^{(i)}(u) = \int_{e^{(i)}} \sigma^{(i)}\varepsilon^{(i)}\,dx = (\mathbf v^{(i)})^\top \mathbf K^{(i)} \mathbf v^{(i)},
+\]</div>
+
+<p>где <strong>локальная (элементная) матрица жёсткости</strong></p>
+
+<div class="eq">\[
+\mathbf K^{(i)} = \int_{e^{(i)}} (\mathbf B^{(i)})^\top E\,\mathbf B^{(i)}\,dx
+= \frac{E}{h^2}\int_{e^{(i)}}\begin{pmatrix} -1 \\ 1 \end{pmatrix}\begin{pmatrix} -1 & 1 \end{pmatrix}dx
+= \frac{E}{h}\begin{pmatrix} 1 & -1 \\ -1 & 1 \end{pmatrix}.
+\tag{9}
+\]</div>
+
+<p>Множитель \(h\) в знаменателе появился после интегрирования постоянного подынтегрального выражения по элементу длины \(h\). Силовая часть даёт <strong>локальный вектор нагрузки</strong>:</p>
+
+<div class="eq">\[
+J_G^{(i)}(u) = 2\int_{e^{(i)}} G\,u\,dx = 2\,(\mathbf v^{(i)})^\top \mathbf F^{(i)}, \qquad
+\mathbf F^{(i)} = \int_{e^{(i)}} G\,(\boldsymbol\Phi^{(i)})^\top dx
+= \frac{G h}{2}\begin{pmatrix} 1 \\ 1 \end{pmatrix}.
+\tag{10}
+\]</div>
+
+<p>Вес элемента \(G h\) поровну распределён между его двумя узлами. Итак, удвоенная потенциальная энергия элемента есть квадратичная форма</p>
+
+<div class="eq">\[
+J^{(i)}(u) = (\mathbf v^{(i)})^\top \mathbf K^{(i)} \mathbf v^{(i)} - 2\,(\mathbf v^{(i)})^\top \mathbf F^{(i)}.
+\tag{11}
+\]</div>
+
+<h2 id="assembly">Ансамблирование: сборка глобальной системы</h2>
+
+<p>Чтобы подставить (11) в сумму (8), установим связь между полным вектором неизвестных \(\mathbf U = (u_0\;u_1\;\ldots\;u_N)^\top\) и локальным вектором:</p>
+
+<div class="eq">\[
+\mathbf v^{(i)} = \mathbf S^{(i)}\,\mathbf U,
+\tag{12}
+\]</div>
+
+<p>где \(\mathbf S^{(i)}\) — прямоугольная \(2 \times (N+1)\) <strong>матрица кинематических связей</strong>, выбирающая из \(\mathbf U\) две компоненты, относящиеся к узлам элемента \(i\):</p>
+
+<div class="eq">\[
+\mathbf S^{(i)} = \begin{pmatrix}
+0\;\cdots\;0 & 1 & 0 & 0\;\cdots\;0 \\
+0\;\cdots\;0 & 0 & 1 & 0\;\cdots\;0
+\end{pmatrix},
+\]</div>
+
+<p>с единицами в столбцах \(i-1\) и \(i\). Подставляя (12) в (11) и суммируя, получаем</p>
+
+<div class="eq">\[
+J(u) = \mathbf U^\top \mathbf K\,\mathbf U - 2\,\mathbf U^\top \mathbf F,
+\tag{13}
+\]</div>
+
+<p>где глобальная матрица жёсткости и глобальный вектор нагрузки собираются как</p>
+
+<div class="eq">\[
+\mathbf K = \sum_{i=1}^N (\mathbf S^{(i)})^\top \mathbf K^{(i)}\,\mathbf S^{(i)}, \qquad
+\mathbf F = \sum_{i=1}^N (\mathbf S^{(i)})^\top \mathbf F^{(i)}.
+\tag{14}
+\]</div>
+
+<p>Значение \(J\) есть функция \((N+1)\) переменной \(u_0, \ldots, u_N\); условие минимума — обращение в ноль первых производных. Дифференцируя (13) с учётом симметрии \(\mathbf K\) и сокращая на \(2\), получаем линейную систему</p>
+
+<div class="eq">\[
+\boxed{\;\mathbf K\,\mathbf U = \mathbf F.\;}
+\tag{15}
+\]</div>
+
+<div class="figure">
+<svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" style="max-width:560px">
+  <!-- local matrices stack -->
+  <g font-family="JetBrains Mono,monospace">
+    <!-- K1 -->
+    <rect x="40" y="40" width="70" height="70" fill="#b44a2d" fill-opacity="0.18" stroke="#b44a2d" stroke-width="1.4"/>
+    <text x="75" y="30" font-size="11" fill="#b44a2d" text-anchor="middle" font-weight="600">K⁽¹⁾</text>
+    <text x="75" y="80" font-size="9" fill="#b44a2d" text-anchor="middle">узлы 0,1</text>
+    <!-- K2 -->
+    <rect x="40" y="135" width="70" height="70" fill="#1a6b5a" fill-opacity="0.18" stroke="#1a6b5a" stroke-width="1.4"/>
+    <text x="75" y="125" font-size="11" fill="#1a6b5a" text-anchor="middle" font-weight="600">K⁽²⁾</text>
+    <text x="75" y="175" font-size="9" fill="#1a6b5a" text-anchor="middle">узлы 1,2</text>
+  </g>
+  <!-- arrow -->
+  <line x1="135" y1="125" x2="220" y2="125" stroke="#2c2419" stroke-width="1.2" marker-end="url(#arrAsm)"/>
+  <defs><marker id="arrAsm" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7" fill="#2c2419"/></marker></defs>
+  <text x="177" y="115" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">сборка</text>
+  <!-- global banded matrix -->
+  <g transform="translate(260,30)">
+    <!-- grid 4x4 (N=3 -> 4 nodes) -->
+    <g stroke="#d9cfc0" stroke-width="0.8" fill="none">
+      <rect x="0" y="0" width="200" height="200"/>
+      <line x1="50" y1="0" x2="50" y2="200"/><line x1="100" y1="0" x2="100" y2="200"/><line x1="150" y1="0" x2="150" y2="200"/>
+      <line x1="0" y1="50" x2="200" y2="50"/><line x1="0" y1="100" x2="200" y2="100"/><line x1="0" y1="150" x2="200" y2="150"/>
+    </g>
+    <!-- element 1 contribution (rows/cols 0,1) -->
+    <rect x="0" y="0" width="100" height="100" fill="#b44a2d" fill-opacity="0.12"/>
+    <!-- element 2 contribution (rows/cols 1,2) -->
+    <rect x="50" y="50" width="100" height="100" fill="#1a6b5a" fill-opacity="0.12"/>
+    <!-- element 3 contribution (rows/cols 2,3) -->
+    <rect x="100" y="100" width="100" height="100" fill="#3a5ba0" fill-opacity="0.12"/>
+    <!-- overlap cell at (1,1) and (2,2) -->
+    <rect x="50" y="50" width="50" height="50" fill="#b44a2d" fill-opacity="0.30"/>
+    <rect x="100" y="100" width="50" height="50" fill="#1a6b5a" fill-opacity="0.30"/>
+    <!-- nonzero dots on tridiagonal -->
+    <g fill="#2c2419">
+      <circle cx="25" cy="25" r="3"/><circle cx="75" cy="25" r="3"/>
+      <circle cx="25" cy="75" r="3"/><circle cx="75" cy="75" r="3"/><circle cx="125" cy="75" r="3"/>
+      <circle cx="75" cy="125" r="3"/><circle cx="125" cy="125" r="3"/><circle cx="175" cy="125" r="3"/>
+      <circle cx="125" cy="175" r="3"/><circle cx="175" cy="175" r="3"/>
+    </g>
+    <text x="100" y="-12" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle" font-weight="600">глобальная K (трёхдиаг.)</text>
+  </g>
+  <text x="360" y="245" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">тёмные клетки — перекрытие вкладов соседних элементов в общий узел</text>
+</svg>
+<div class="caption">Ансамблирование: локальные матрицы \(2\times 2\) «окаймляются» нулями (через \(\mathbf S^{(i)}\)) и складываются. Вклады соседних элементов перекрываются на диагонали в общем узле, что и даёт трёхдиагональную (ленточную) структуру глобальной матрицы.</div>
+</div>
+
+<h2 id="assembly-cheap">Дешёвая сборка и иллюстрация для \(N = 2\)</h2>
+
+<p>При реальных вычислениях \(\mathbf K\) и \(\mathbf F\) не нужно явно перемножать матрицы по формулам (14): структура \(\mathbf S^{(i)}\) тривиальна. Покажем это для \(N = 2\). Локальные матрицы:</p>
+
+<div class="eq">\[
+\mathbf K^{(1)} = \mathbf K^{(2)} = \frac{E}{h}\begin{pmatrix} 1 & -1 \\ -1 & 1 \end{pmatrix},
+\qquad
+\mathbf S^{(1)} = \begin{pmatrix} 1 & 0 & 0 \\ 0 & 1 & 0 \end{pmatrix},
+\quad
+\mathbf S^{(2)} = \begin{pmatrix} 0 & 1 & 0 \\ 0 & 0 & 1 \end{pmatrix}.
+\]</div>
+
+<p>Окаймление нулями даёт расширенные \(3\times 3\) вклады, сумма которых — глобальная матрица:</p>
+
+<div class="eq">\[
+\sum_{i=1}^2 (\mathbf S^{(i)})^\top \mathbf K^{(i)}\mathbf S^{(i)}
+= \frac{E}{h}\begin{pmatrix}
+1 & -1 & 0 \\
+-1 & 1{+}1 & -1 \\
+0 & -1 & 1
+\end{pmatrix}
+= \frac{E}{h}\begin{pmatrix}
+1 & -1 & 0 \\
+-1 & 2 & -1 \\
+0 & -1 & 1
+\end{pmatrix}.
+\]</div>
+
+<p>Центральный диагональный элемент \(2 = 1 + 1\) — это и есть <strong>перекрытие</strong>: внутренний узел \(1\) принадлежит обоим элементам, поэтому в него складываются вклады \(\mathbf K^{(1)}\) и \(\mathbf K^{(2)}\). Аналогично для вектора нагрузки:</p>
+
+<div class="eq">\[
+\mathbf F = (\mathbf S^{(1)})^\top\mathbf F^{(1)} + (\mathbf S^{(2)})^\top\mathbf F^{(2)}
+= G h\begin{pmatrix} 1/2 \\ 1/2 \\ 0 \end{pmatrix} + G h\begin{pmatrix} 0 \\ 1/2 \\ 1/2 \end{pmatrix}
+= G h\begin{pmatrix} 1/2 \\ 1/2 + 1/2 \\ 1/2 \end{pmatrix} = G h\begin{pmatrix} 1/2 \\ 1 \\ 1/2 \end{pmatrix}.
+\]</div>
+
+<div class="algo">
+<strong>Алгоритм ансамблирования (поэлементная сборка).</strong>
+<ol>
+<li>Обнулить глобальные \(\mathbf K\) размера \((N{+}1)\times(N{+}1)\) и \(\mathbf F\) длины \(N{+}1\).</li>
+<li>Для каждого элемента \(i = 1, \ldots, N\):
+  <ul>
+  <li>определить глобальные номера узлов: \(a = i-1\), \(b = i\);</li>
+  <li>вычислить \(\mathbf K^{(i)} = \dfrac{E}{h}\begin{pmatrix}1 & -1 \\ -1 & 1\end{pmatrix}\) и \(\mathbf F^{(i)} = \dfrac{Gh}{2}\begin{pmatrix}1\\1\end{pmatrix}\);</li>
+  <li>прибавить вклады в глобальные структуры:
+    \(K_{aa}{+}{=}K^{(i)}_{11}\), \(K_{ab}{+}{=}K^{(i)}_{12}\), \(K_{ba}{+}{=}K^{(i)}_{21}\), \(K_{bb}{+}{=}K^{(i)}_{22}\),
+    \(F_{a}{+}{=}F^{(i)}_1\), \(F_{b}{+}{=}F^{(i)}_2\).</li>
+  </ul>
+</li>
+</ol>
+Умножение на \(\mathbf S^{(i)}\) реализуется просто как индексная адресация по двум глобальным номерам узлов — без явного построения \(\mathbf S^{(i)}\). Это и есть способ, используемый в реальных кодах на ЭВМ.
+</div>
+
+<h2 id="bc">Учёт граничных условий и решение СЛАУ</h2>
+
+<p>Чтобы завершить построение системы, надо учесть закрепление концов стержня. Граничные условия Дирихле дают \(u_0 = u_N = 0\). Соответствующие уравнения заменяют первое и последнее уравнения системы (15). После этого неизвестные \(u_0, u_N\) можно вообще исключить — получается <strong>редуцированная</strong> система порядка \((N-1)\), снова с симметричной матрицей. Этот приём называют редукцией системы по числу неизвестных.</p>
+
+<div class="remark">
+<strong>Дирихле и Нейман.</strong> Условие Дирихле \(u = u_*\) на узле учитывается заменой строки (или вычёркиванием неизвестной с переносом вклада в правую часть). Условие Неймана \(p\,u' = g\) (заданный поток на конце) входит в слабую форму естественно — через граничный член \([p\,u'\,\delta u]\), который добавляет известное слагаемое в соответствующую компоненту \(\mathbf F\) и не требует модификации матрицы. Поэтому условия Неймана называют <em>естественными</em>, а Дирихле — <em>главными</em>.
+</div>
+
+<p>Для нашего одномерного оператора матрица \(\mathbf K\) трёхдиагональна, поэтому редуцированная система решается <strong>прогонкой</strong> (методом Томаса) за \(O(N)\) операций. Это решение реализовано в интерактиве ниже.</p>
+
+<h2 id="truss">МКЭ в инженерной практике: расчёт фермы</h2>
+
+<p>Метод конечных элементов давно служит основным вычислительным методом структурной механики. Рассмотрим типичный инженерный пример — определение НДС плоской <strong>фермы</strong> в равновесии. В упрощённой модели ферма — плоская конструкция из стержней, соединённых шарнирами без трения. Шарниры передают силы, но не моменты: стержни могут растягиваться или сжиматься, но не изгибаются. Деформации упруги (закон Гука), стержни тонкие (одноосное растяжение/сжатие), начальные напряжения отсутствуют, нагрузки приложены в шарнирах. Каждый отдельный стержень рассматривается как <strong>один конечный элемент</strong>.</p>
+
+<div class="figure">
+<svg viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg" style="max-width:560px">
+  <!-- wall left -->
+  <line x1="40" y1="30" x2="40" y2="250" stroke="#2c2419" stroke-width="2"/>
+  <g stroke="#6b5d4f" stroke-width="1">
+    <line x1="40" y1="45" x2="28" y2="55"/><line x1="40" y1="75" x2="28" y2="85"/>
+    <line x1="40" y1="105" x2="28" y2="115"/><line x1="40" y1="135" x2="28" y2="145"/>
+    <line x1="40" y1="165" x2="28" y2="175"/><line x1="40" y1="195" x2="28" y2="205"/>
+    <line x1="40" y1="225" x2="28" y2="235"/>
+  </g>
+  <!-- nodes coords -->
+  <!-- 6 top-left wall, 5 bottom-left wall, 1 right wall, 4 mid-low, 2 center, 3 top-right -->
+  <!-- members -->
+  <g stroke="#b44a2d" stroke-width="2.4">
+    <line x1="40" y1="55" x2="240" y2="120"/>   <!-- e1: 6-2 -->
+    <line x1="40" y1="55" x2="130" y2="180"/>   <!-- e2: 6-4 -->
+    <line x1="130" y1="180" x2="40" y2="235"/>  <!-- e3: 4-5 -->
+    <line x1="240" y1="120" x2="130" y2="180"/> <!-- e4: 2-4 -->
+    <line x1="240" y1="120" x2="430" y2="190"/> <!-- e5: 2-1 -->
+    <line x1="240" y1="120" x2="380" y2="50"/>  <!-- e6: 2-3 (highlight) -->
+    <line x1="380" y1="50" x2="430" y2="190"/>  <!-- e7: 3-1 -->
+  </g>
+  <!-- highlight e6 -->
+  <line x1="240" y1="120" x2="380" y2="50" stroke="#1a6b5a" stroke-width="3.2"/>
+  <!-- wall right -->
+  <line x1="455" y1="150" x2="455" y2="230" stroke="#2c2419" stroke-width="2"/>
+  <g stroke="#6b5d4f" stroke-width="1">
+    <line x1="455" y1="160" x2="467" y2="170"/><line x1="455" y1="185" x2="467" y2="195"/>
+    <line x1="455" y1="210" x2="467" y2="220"/>
+  </g>
+  <!-- element labels -->
+  <g font-family="JetBrains Mono,monospace" font-size="10" fill="#9a8d7e" font-style="italic">
+    <text x="135" y="80">e₁</text><text x="75" y="125">e₂</text>
+    <text x="78" y="215">e₃</text><text x="180" y="160">e₄</text>
+    <text x="345" y="165">e₅</text><text x="320" y="78" fill="#1a6b5a" font-weight="600">e₆</text>
+    <text x="415" y="115">e₇</text>
+  </g>
+  <!-- joint nodes -->
+  <g fill="#3a5ba0">
+    <circle cx="40" cy="55" r="6"/><circle cx="40" cy="235" r="6"/>
+    <circle cx="430" cy="190" r="6"/><circle cx="130" cy="180" r="6"/>
+    <circle cx="240" cy="120" r="6"/><circle cx="380" cy="50" r="6"/>
+  </g>
+  <g font-family="JetBrains Mono,monospace" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">
+    <text x="40" y="59">6</text><text x="40" y="239">5</text>
+    <text x="430" y="194">1</text><text x="130" y="184">4</text>
+    <text x="240" y="124">2</text><text x="380" y="54">3</text>
+  </g>
+  <!-- external loads -->
+  <line x1="380" y1="50" x2="395" y2="20" stroke="#3a5ba0" stroke-width="1.5" marker-end="url(#arrTr)"/>
+  <line x1="430" y1="190" x2="470" y2="190" stroke="#3a5ba0" stroke-width="1.5" marker-end="url(#arrTr)"/>
+  <line x1="40" y1="235" x2="10" y2="245" stroke="#3a5ba0" stroke-width="1.5" marker-end="url(#arrTr)"/>
+  <defs><marker id="arrTr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#3a5ba0"/></marker></defs>
+  <g font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">
+    <text x="398" y="18">R₃</text><text x="473" y="193">R₁</text><text x="2" y="258">R₅</text>
+  </g>
+</svg>
+<div class="caption">Плоская ферма из семи стержневых элементов \(e_1,\ldots,e_7\), соединённых шарнирами в узлах \(1,\ldots,6\). Стержень \(e_6\) (узлы \(2\)–\(3\)) выделен зелёным. Узлы \(5, 6\) закреплены к левой стене, узел \(1\) — к правой; внешние силы \(R_1, R_3, R_5\) приложены в шарнирах.</div>
+</div>
+
+<p>Смещения узлов от ненапряжённого состояния обозначим \(\boldsymbol\delta = (\delta_x, \delta_y)\) с индексом узла. Для элемента \(e_6\) (узлы \(2\) и \(3\)) силы и смещения:</p>
+
+<div class="eq">\[
+\mathbf F^{e_6} = \begin{pmatrix} F_{x2} \\ F_{y2} \\ F_{x3} \\ F_{y3} \end{pmatrix}, \qquad
+\boldsymbol\delta^{e_6} = \begin{pmatrix} \delta_{x2} \\ \delta_{y2} \\ \delta_{x3} \\ \delta_{y3} \end{pmatrix}.
+\tag{1'}
+\]</div>
+
+<p>Пусть все стержни имеют длину \(L\), а стержень составляет угол \(\theta\) с осью \(X\). Приращение длины — проекция разности смещений узлов на направление стержня:</p>
+
+<div class="eq">\[
+D^{e_6} = (\delta_{x3} - \delta_{x2})\cos\theta + (\delta_{y3} - \delta_{y2})\sin\theta.
+\tag{2'}
+\]</div>
+
+<p>Продольная сила по закону Гука (\(S\) — площадь сечения, \(E\) — модуль Юнга; положительна при растяжении):</p>
+
+<div class="eq">\[
+F = \frac{ES}{L}\big[(\delta_{x3} - \delta_{x2})\cos\theta + (\delta_{y3} - \delta_{y2})\sin\theta\big].
+\tag{3'}
+\]</div>
+
+<p>Проектируя силу на оси в обоих узлах, получаем для всех четырёх компонент матричное уравнение элемента:</p>
+
+<div class="eq">\[
+\mathbf F^{e_6} =
+\frac{ES}{L}\begin{pmatrix}
+\cos^2\theta & \sin\theta\cos\theta & -\cos^2\theta & -\sin\theta\cos\theta \\
+\sin\theta\cos\theta & \sin^2\theta & -\sin\theta\cos\theta & -\sin^2\theta \\
+-\cos^2\theta & -\sin\theta\cos\theta & \cos^2\theta & \sin\theta\cos\theta \\
+-\sin\theta\cos\theta & -\sin^2\theta & \sin\theta\cos\theta & \sin^2\theta
+\end{pmatrix}
+\begin{pmatrix} \delta_{x2} \\ \delta_{y2} \\ \delta_{x3} \\ \delta_{y3} \end{pmatrix}.
+\tag{6'}
+\]</div>
+
+<p>Квадратная матрица — это <strong>матрица жёсткости стержневого элемента</strong> \(\mathbf K_6\). Разбивая её на подматрицы \(2\times 2\) по узлам, имеем блочную запись</p>
+
+<div class="eq">\[
+\mathbf F^{e_6} =
+\begin{pmatrix}
+\mathbf k_{22}^{e_6} & \mathbf k_{23}^{e_6} \\
+\mathbf k_{32}^{e_6} & \mathbf k_{33}^{e_6}
+\end{pmatrix}
+\begin{pmatrix} \boldsymbol\delta_2 \\ \boldsymbol\delta_3 \end{pmatrix}.
+\tag{8'}
+\]</div>
+
+<p>Уравнение (8') расширяется до размерности всей системы окаймлением нулями, и вклад элемента \(e_6\) в полную матрицу \(\mathbf K\) занимает блоки в строках/столбцах узлов \(2\) и \(3\):</p>
+
+<div class="eq">\[
+\mathbf F^{e_6} = \mathbf k^{e_6}\,\boldsymbol\delta,
+\tag{10'}
+\]</div>
+
+<p>где \(\mathbf k^{e_6}\) — расширенная матрица жёсткости, \(\boldsymbol\delta\) — вектор узловых смещений всей системы.</p>
+
+<div class="algo">
+<strong>Алгоритм поэлементного объединения (фермa).</strong>
+<ol>
+<li>Для каждого стержня \(e\) определить узлы-концы, длину \(L\), угол \(\theta\), параметры \(E, S\).</li>
+<li>Построить локальную \(4\times 4\) матрицу жёсткости по (6').</li>
+<li>Разбить её на блоки \(2\times 2\) по двум узлам и прибавить каждый блок в соответствующие узловые позиции глобальной матрицы:
+\[ \mathbf K_{\alpha\beta} = \sum_{e} \mathbf k_{\alpha\beta}^{e}, \qquad \mathbf k_{\alpha\beta}^{e} = 0,\ \text{если узел } \alpha \text{ или } \beta \notin e. \]</li>
+<li>Условие равновесия в узле \(\alpha\): внешняя сила равна сумме сил со стороны примыкающих элементов,
+\[ \mathbf R_\alpha = \sum_{e} \mathbf F_\alpha^{e}, \quad\Rightarrow\quad \mathbf K\,\boldsymbol\delta = \mathbf R. \]</li>
+<li>Закрепить опорные узлы (\(\boldsymbol\delta = 0\)) — редуцировать систему — и решить СЛАУ относительно свободных смещений; затем найти реакции опор.</li>
+</ol>
+</div>
+
+<p>Результирующая система равновесия \(\mathbf K\,\boldsymbol\delta = \mathbf R\) называется матричным уравнением системы, а \(\mathbf K = \sum_e \mathbf k^e\) — матрицей жёсткости системы. Описанный подход — <strong>метод перемещений</strong>; он обобщается на начальные/тепловые деформации \(\mathbf F_0\), массовые силы \(\mathbf F_b\) и распределённые нагрузки \(\mathbf F_d\):</p>
+
+<div class="eq">\[
+\mathbf K\,\boldsymbol\delta + \mathbf F_0 + \mathbf F_b + \mathbf F_d = \mathbf R.
+\tag{20'}
+\]</div>
+
+<h2 id="truss-example">Численный пример расчёта фермы</h2>
+
+<p>Рассмотрим шарнирно-соединённую ферму из двух стержней (элементы \(1\) и \(2\)), сходящихся в узле \(2\). Длина каждого стержня \(L = 10\) см, площадь сечения \(S = 1\) см\(^2\), модуль Юнга \(E = 2\cdot 10^5\) кГ/см\(^2\). Стержень \(1\) составляет угол \(135^\circ\), стержень \(2\) — угол \(45^\circ\) с осью \(X\). Вычислим смещение узла \(2\).</p>
+
+<div class="exercise">
+<strong>Дано.</strong> \(E = 2\cdot 10^5\), \(S = 1\), \(L = 10\); внешняя нагрузка в узле \(2\):
+\[ R_{x2} = 1000\cos 60^\circ = 500, \qquad R_{y2} = -1000\sin 60^\circ = -866. \]
+Опорные узлы закреплены: \(\delta_{x1} = \delta_{y1} = \delta_{x3} = \delta_{y3} = 0\). Найти \(\delta_{x2}, \delta_{y2}\) и реакции опор.
+</div>
+
+<p>Собирая вклады обоих стержней (с \(ES/L = 2\cdot10^4 = 10^5\cdot 0{,}2\)), глобальное уравнение принимает вид (множитель \(10^5\) вынесен):</p>
+
+<div class="eq">\[
+10^5\begin{pmatrix}
+1 & -1 & -1 & 1 & 0 & 0 \\
+-1 & 1 & 1 & -1 & 0 & 0 \\
+-1 & 1 & 2 & 0 & -1 & -1 \\
+1 & -1 & 0 & 2 & -1 & -1 \\
+0 & 0 & -1 & -1 & 1 & 1 \\
+0 & 0 & -1 & -1 & 1 & 1
+\end{pmatrix}
+\begin{pmatrix} \delta_{x1} \\ \delta_{y1} \\ \delta_{x2} \\ \delta_{y2} \\ \delta_{x3} \\ \delta_{y3} \end{pmatrix}
+= \begin{pmatrix} F_{x1} \\ F_{y1} \\ F_{x2} \\ F_{y2} \\ F_{x3} \\ F_{y3} \end{pmatrix}.
+\tag{25}
+\]</div>
+
+<p>В узле \(2\) диагональные блоки \(2\) — результат перекрытия вкладов обоих стержней (сумма \(1+1\)), как и при сборке одномерной задачи. Подставляя нулевые опорные смещения, выделяем редуцированную систему для узла \(2\):</p>
+
+<div class="eq">\[
+10^5\begin{pmatrix} 2 & 0 \\ 0 & 2 \end{pmatrix}
+\begin{pmatrix} \delta_{x2} \\ \delta_{y2} \end{pmatrix}
+= \begin{pmatrix} 500 \\ -866 \end{pmatrix}.
+\]</div>
+
+<p>Откуда смещения узла \(2\):</p>
+
+<div class="eq">\[
+\delta_{x2} = \frac{500}{2\cdot 10^5} = 2{,}5\cdot 10^{-3}\ \text{см}, \qquad
+\delta_{y2} = \frac{-866}{2\cdot 10^5} = -4{,}33\cdot 10^{-3}\ \text{см}.
+\tag{28,29}
+\]</div>
+
+<p>Подстановка смещений в полную систему (25) даёт реакции опор:</p>
+
+<div class="eq">\[
+R_{x1} = -683\ \text{кГ}, \quad R_{y1} = 683\ \text{кГ}, \quad
+R_{x3} = 183\ \text{кГ}, \quad R_{y3} = 183\ \text{кГ}.
+\tag{31}
+\]</div>
+
+<p>Проверка по условиям равновесия всей фермы подтверждает результат:</p>
+
+<div class="eq">\[
+\sum_{i=1}^3 R_{xi} = -683 + 500 + 183 = 0, \qquad
+\sum_{i=1}^3 R_{yi} = 683 - 866 + 183 = 0.
+\tag{32}
+\]</div>
+
+<div class="remark">
+<strong>О выборе разбиения.</strong> Приближённое представление объекта набором конечных элементов — важнейший этап МКЭ. Здесь измельчение стержней на более мелкие элементы не оправдано: в рамках принятой механической модели (одноосные стержни, упругость) рост числа элементов не повышает точность. Для более точного результата нужна более полная модель — учёт конечного сечения, пластичности, температурных эффектов, реальных свойств шарниров.
+</div>
+
+<h2 id="interactive">Интерактив: МКЭ для 1D краевой задачи</h2>
+
+<p>Ниже — реализация всей технологии для задачи \(-(p\,u')' + q\,u = f\) на \([0,1]\) с \(u(0)=u(1)=0\), линейными элементами. Демонстрация собирает трёхдиагональную СЛАУ \(\mathbf K\mathbf U = \mathbf F\), решает её прогонкой и сравнивает КЭ-решение с точным. Меняйте число элементов \(N\) и параметры \(p, q\); демо выводит максимальную узловую ошибку и структуру ненулей глобальной матрицы.</p>
+
+<div id="femBVP" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Точное решение u(x)</label>
+    <select id="femSol" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <option value="sin">sin(πx)</option>
+      <option value="poly">x(1−x)</option>
+      <option value="bump">sin(3πx)</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">N элементов: <span id="femNv">10</span></label>
+    <input type="range" id="femN" min="2" max="80" value="10" style="width:150px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">p = <span id="femPv">1.0</span></label>
+    <input type="range" id="femP" min="5" max="40" value="10" style="width:120px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">q = <span id="femQv">1.0</span></label>
+    <input type="range" id="femQ" min="0" max="50" value="10" style="width:120px">
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">КЭ-решение vs точное</div><canvas id="fem_u" width="440" height="280" style="width:100%;height:auto"></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Структура K (ненули)</div><canvas id="fem_sp" width="220" height="220" style="width:100%;height:auto"></canvas></div>
+</div>
+<div id="femStatus" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.4rem"></div>
+</div>
+
+<script>
+(function(){
+  // Manufactured solution: choose exact u(x) with u(0)=u(1)=0, then f = -(p u')' + q u = -p u'' + q u (p,q const)
+  function uexact(x, name){
+    if (name==='sin') return Math.sin(Math.PI*x);
+    if (name==='poly') return x*(1-x);
+    return Math.sin(3*Math.PI*x);
+  }
+  function uxx(x, name){
+    if (name==='sin') return -Math.PI*Math.PI*Math.sin(Math.PI*x);
+    if (name==='poly') return -2.0;
+    return -9*Math.PI*Math.PI*Math.sin(3*Math.PI*x);
+  }
+  function rhs(x, name, p, q){ return -p*uxx(x,name) + q*uexact(x,name); }
+
+  // Thomas algorithm for tridiagonal system a[i]x[i-1]+b[i]x[i]+c[i]x[i+1]=d[i]
+  function thomas(a,b,c,d){
+    var n=d.length, cp=new Float64Array(n), dp=new Float64Array(n), x=new Float64Array(n);
+    cp[0]=c[0]/b[0]; dp[0]=d[0]/b[0];
+    for (var i=1;i<n;i++){ var m=b[i]-a[i]*cp[i-1]; cp[i]=c[i]/m; dp[i]=(d[i]-a[i]*dp[i-1])/m; }
+    x[n-1]=dp[n-1];
+    for (var i=n-2;i>=0;i--) x[i]=dp[i]-cp[i]*x[i+1];
+    return x;
+  }
+
+  function solveFEM(N, p, q, name){
+    var h=1.0/N, nNodes=N+1;
+    // Global tridiagonal: diag D, off E (symmetric). Assemble element by element.
+    var D=new Float64Array(nNodes), Off=new Float64Array(nNodes), F=new Float64Array(nNodes);
+    // Element stiffness: (p/h)*[[1,-1],[-1,1]] + (q*h/6)*[[2,1],[1,2]] (mass matrix from linear shape fns)
+    var ke_d = p/h + q*h*2/6;   // diagonal contribution per node from one element
+    var ke_o = -p/h + q*h*1/6;  // off-diagonal contribution
+    for (var e=0;e<N;e++){
+      var a=e, b=e+1;
+      D[a]+=ke_d; D[b]+=ke_d; Off[b]+=ke_o; // Off[b] stores coupling between b-1 and b
+      // load: integrate f*Phi over element; use 2-pt nodal lumping with linear shape (trapezoid-ish midpoint)
+      var xa=a*h, xb=b*h, xm=(xa+xb)/2;
+      var fm=rhs(xm,name,p,q);
+      F[a]+=fm*h/2; F[b]+=fm*h/2;
+    }
+    // Apply Dirichlet u0=uN=0 -> reduce to interior nodes 1..N-1
+    var m=N-1;
+    if (m<=0) return {x:[0,1],u:[0,0],ue:[0,0],err:0,N:N,nNodes:nNodes,nnz:0};
+    var a=new Float64Array(m), bb=new Float64Array(m), c=new Float64Array(m), d=new Float64Array(m);
+    for (var i=0;i<m;i++){
+      var node=i+1;
+      bb[i]=D[node];
+      a[i]=(i>0)?Off[node]:0;
+      c[i]=(i<m-1)?Off[node+1]:0;
+      d[i]=F[node];
+    }
+    var sol=thomas(a,bb,c,d);
+    var xs=new Float64Array(nNodes), uh=new Float64Array(nNodes), ue=new Float64Array(nNodes);
+    for (var i=0;i<nNodes;i++){ xs[i]=i*h; ue[i]=uexact(xs[i],name); }
+    uh[0]=0; uh[nNodes-1]=0;
+    for (var i=0;i<m;i++) uh[i+1]=sol[i];
+    var err=0;
+    for (var i=0;i<nNodes;i++){ var e2=Math.abs(uh[i]-ue[i]); if (e2>err) err=e2; }
+    var nnz = nNodes + 2*(nNodes-1); // tridiagonal nonzeros (full, before BC)
+    return {x:xs,u:uh,ue:ue,err:err,N:N,nNodes:nNodes,nnz:nnz};
+  }
+
+  function plotSol(r){
+    var c=document.getElementById('fem_u'), ctx=c.getContext('2d'), W=c.width, H=c.height;
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+    var P={l:42,r:15,t:15,b:30}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+    var mn=1e9,mx=-1e9;
+    for (var i=0;i<r.u.length;i++){ mn=Math.min(mn,r.u[i],r.ue[i]); mx=Math.max(mx,r.u[i],r.ue[i]); }
+    var pad=(mx-mn)*0.12||0.2; mn-=pad; mx+=pad;
+    ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+    for (var g=0;g<=5;g++){ var gy=P.t+ph*g/5; ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke(); }
+    function xp(x){ return P.l+pw*x; }
+    function yp(v){ return P.t+ph*(1-(v-mn)/(mx-mn)); }
+    // exact (dashed, fine sampling)
+    ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=2; ctx.setLineDash([6,4]); ctx.beginPath();
+    var name=document.getElementById('femSol').value;
+    for (var k=0;k<=200;k++){ var x=k/200, v=uexact(x,name); k===0?ctx.moveTo(xp(x),yp(v)):ctx.lineTo(xp(x),yp(v)); }
+    ctx.stroke(); ctx.setLineDash([]);
+    // FEM (piecewise linear through nodes)
+    ctx.strokeStyle='#b44a2d'; ctx.lineWidth=2; ctx.beginPath();
+    for (var i=0;i<r.x.length;i++){ i===0?ctx.moveTo(xp(r.x[i]),yp(r.u[i])):ctx.lineTo(xp(r.x[i]),yp(r.u[i])); }
+    ctx.stroke();
+    ctx.fillStyle='#b44a2d';
+    for (var i=0;i<r.x.length;i++){ ctx.beginPath(); ctx.arc(xp(r.x[i]),yp(r.u[i]),2.2,0,Math.PI*2); ctx.fill(); }
+    // axes
+    ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1; ctx.beginPath();
+    ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+    ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+    ctx.fillText('0',P.l,P.t+ph+14); ctx.fillText('0.5',P.l+pw/2,P.t+ph+14); ctx.fillText('1',P.l+pw,P.t+ph+14);
+    ctx.textAlign='right';
+    for (var g=0;g<=5;g++) ctx.fillText((mx-(mx-mn)*g/5).toFixed(2),P.l-3,P.t+ph*g/5+3);
+    ctx.textAlign='left'; ctx.font='9px JetBrains Mono'; ctx.fillStyle='#6b5d4f';
+    ctx.fillText('- - точное',P.l+5,P.t+10); ctx.fillStyle='#b44a2d'; ctx.fillText('— МКЭ',P.l+5,P.t+22);
+  }
+
+  function plotSparsity(r){
+    var c=document.getElementById('fem_sp'), ctx=c.getContext('2d'), W=c.width, H=c.height;
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+    var n=Math.min(r.nNodes,40); // cap display
+    var P=14, sz=(W-2*P)/n;
+    ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.4;
+    for (var k=0;k<=n;k++){ ctx.beginPath(); ctx.moveTo(P+k*sz,P); ctx.lineTo(P+k*sz,P+n*sz); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(P,P+k*sz); ctx.lineTo(P+n*sz,P+k*sz); ctx.stroke(); }
+    for (var i=0;i<n;i++){ for (var j=0;j<n;j++){
+      if (Math.abs(i-j)<=1){
+        ctx.fillStyle = (i===j)?'#b44a2d':'#1a6b5a';
+        ctx.beginPath(); ctx.arc(P+(j+0.5)*sz,P+(i+0.5)*sz,Math.max(1.4,sz*0.28),0,Math.PI*2); ctx.fill();
+      }
+    }}
+  }
+
+  function run(){
+    var name=document.getElementById('femSol').value;
+    var N=+document.getElementById('femN').value;
+    var p=+document.getElementById('femP').value/10;
+    var q=+document.getElementById('femQ').value/10;
+    document.getElementById('femNv').textContent=N;
+    document.getElementById('femPv').textContent=p.toFixed(1);
+    document.getElementById('femQv').textContent=q.toFixed(1);
+    var r=solveFEM(N,p,q,name);
+    plotSol(r); plotSparsity(r);
+    document.getElementById('femStatus').innerHTML='N='+N+' элементов, '+r.nNodes+' узлов · p='+p.toFixed(1)+', q='+q.toFixed(1)+' · ненулей в K: '+r.nnz+' (трёхдиаг.) · макс. узловая ошибка: '+r.err.toExponential(2);
+  }
+  document.getElementById('femSol').addEventListener('change',run);
+  document.getElementById('femN').addEventListener('input',run);
+  document.getElementById('femP').addEventListener('input',run);
+  document.getElementById('femQ').addEventListener('input',run);
+  window.addEventListener('load',function(){ setTimeout(run,200); });
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> С ростом \(N\) кусочно-линейное КЭ-решение приближается к точному, а максимальная узловая ошибка убывает как \(O(h^2)\) (для линейных элементов узловые значения сходятся со вторым порядком — эффект суперсходимости в узлах). Матрица \(\mathbf K\) остаётся строго трёхдиагональной: каждый внутренний узел связан лишь с двумя соседями, поэтому прогонка решает систему за \(O(N)\). Увеличение \(q\) усиливает «массовый» (диагональный) вклад, увеличение \(p\) — «жёсткостный»; обе части собираются поэлементно по одному и тому же алгоритму ансамблирования.
+</div>
+
+<div class="lecture-nav">
+<a href="lec2.html" class="nav-prev">← Лекция 2</a>
+<a href="lec4.html" class="nav-next">Лекция 4 →</a>
+</div>
+</div>
+</div>
+
+</body>
+</html>

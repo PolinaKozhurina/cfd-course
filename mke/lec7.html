@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>МКЭ-Лекция 7. Изопараметрический элемент</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>МКЭ · Лекция 7</h2>
+  <div class="g">Содержание</div>
+  <a href="#intro">Введение: зачем изопараметрия</a>
+  <a href="#bary">Барицентрические координаты</a>
+  <a href="#iso">Идея изопараметрического элемента</a>
+  <a href="#general">Общая формулировка</a>
+  <a href="#quad">Квадратичные элементы</a>
+  <a href="#mapping">Отображение и якобиан</a>
+  <a href="#gauss">Численное интегрирование</a>
+  <a href="#interactive">Интерактив</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="lec6.html">← Лекция 6</a>
+  <a href="index.html">Обзор курса</a>
+  <a href="lec8.html">→ Лекция 8</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-fem">МКЭ</span>
+<div class="lecture-num">Лекция 7 · Метод конечных элементов</div>
+<h1>Изопараметрический конечный элемент: концепция</h1>
+
+<h2 id="intro">Введение: зачем нужна изопараметрия</h2>
+
+<p>Техника построения линейного треугольного конечного элемента, изложенная в предыдущих лекциях, формально может быть распространена на треугольные и четырёхугольные элементы высокого порядка. Однако на этом пути возникают две принципиальные трудности.</p>
+
+<ul>
+<li><strong>Построение функций форм.</strong> Для элементов с <em>криволинейными границами</em> сложно построить функции форм (интерполирующие функции), удовлетворяющие всем необходимым условиям — непрерывности на границах смежных элементов, полноте полиномиального базиса, свойству разбиения единицы.</li>
+<li><strong>Невычислимость интегралов.</strong> Интегралы, возникающие в выражении элементных матриц жёсткости и узловых векторов для криволинейных элементов, уже <em>не могут быть вычислены</em> в виде каких-либо замкнутых функций (алгебраических, трансцендентных и т.&nbsp;п.).</li>
+</ul>
+
+<p>Имеющиеся трудности оказываются преодолимыми, если исходить из идеи использования <strong>изопараметрического элемента</strong> совместно с <strong>квадратурами численного интегрирования</strong>. Разработки численных методик на основе этой идеи, начавшиеся примерно в 1960-х годах, существенно расширили области применения МКЭ.</p>
+
+<div class="remark">
+<strong>Суть подхода в двух словах.</strong> Все вычисления — интегрирование, дифференцирование, задание узлов — выполняются на простом <em>каноническом (опорном)</em> элементе фиксированной формы (квадрат \([-1,1]^2\) или единичный треугольник). Реальный криволинейный элемент получается из него гладким <em>отображением</em>, заданным теми же функциями форм. Интеграл по криволинейной области сводится к интегралу по опорному квадрату с множителем — детерминантом якобиана отображения, который и берётся численно квадратурой Гаусса.
+</div>
+
+<h2 id="bary">Исходные понятия: барицентрические координаты</h2>
+
+<p>По существу знакомство с изопараметрическими элементами мы начали на предыдущей лекции на примере линейного треугольного конечного элемента. Основные соотношения в теории такого рода элементов получены на основе <strong>барицентрических координат</strong> \(\xi_k(x,y)\), \(k=1,2,3\), введённых в треугольнике. Пусть \(A\) — площадь треугольника, а \((x_k,y_k)\) — координаты его вершин. Тогда барицентрические координаты выражаются матричным соотношением</p>
+
+<div class="eq">\[
+2A\begin{pmatrix} \xi_1 \\ \xi_2 \\ \xi_3 \end{pmatrix}
+=
+\begin{pmatrix}
+x_2 y_3 - x_3 y_2 & y_2 - y_3 & x_3 - x_2 \\
+x_3 y_1 - x_1 y_3 & y_3 - y_1 & x_1 - x_3 \\
+x_1 y_2 - x_2 y_1 & y_1 - y_2 & x_2 - x_1
+\end{pmatrix}
+\begin{pmatrix} 1 \\ x \\ y \end{pmatrix},
+\tag{1а}
+\]</div>
+
+<p>а обратное преобразование (от барицентрических координат к декартовым) имеет особенно простой вид:</p>
+
+<div class="eq">\[
+\begin{pmatrix} 1 \\ x \\ y \end{pmatrix}
+=
+\begin{pmatrix}
+1 & 1 & 1 \\
+x_1 & x_2 & x_3 \\
+y_1 & y_2 & y_3
+\end{pmatrix}
+\begin{pmatrix} \xi_1 \\ \xi_2 \\ \xi_3 \end{pmatrix}.
+\tag{1а'}
+\]</div>
+
+<p>Первая строка соотношения (1а′) — это <em>условие разбиения единицы</em> \(\xi_1+\xi_2+\xi_3=1\); две оставшиеся задают саму геометрию треугольника.</p>
+
+<p>Барицентрические координаты используются также и для аппроксимации искомого решения. Запишем его для двухкомпонентного векторного поля \(\mathbf u(x,y)\), принадлежащего некоторой плоскости \(\Pi\) (в терминах теории упругости так представляются узловые смещения). В треугольном элементе векторы смещений аппроксимируются посредством тех же барицентрических координат:</p>
+
+<div class="eq">\[
+u_x = u_{x1}\,\xi_1 + u_{x2}\,\xi_2 + u_{x3}\,\xi_3,\qquad
+u_y = u_{y1}\,\xi_1 + u_{y2}\,\xi_2 + u_{y3}\,\xi_3,
+\tag{1б}
+\]</div>
+
+<p>или, вводя функции форм элемента \(N_i^{(e)}\),</p>
+
+<div class="eq">\[
+\mathbf u = \sum_{i=1}^{3} \mathbf u_i\, N_i^{(e)},\qquad
+N_i^{(e)} = \xi_i,\quad i=1,2,3.
+\tag{1в}
+\]</div>
+
+<p>Аппроксимация (1в) очевидным образом применима к различным вектор-функциям на плоскости — скорости, тепловому потоку и т.&nbsp;п.</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+  <!-- triangle -->
+  <polygon points="80,250 460,250 250,50" fill="#1a6b5a" fill-opacity="0.06" stroke="#1a6b5a" stroke-width="1.6"/>
+  <!-- internal point P -->
+  <circle cx="270" cy="180" r="4.5" fill="#b44a2d"/>
+  <text x="282" y="184" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d">P(x,y)</text>
+  <!-- sub-triangle dividers -->
+  <line x1="270" y1="180" x2="80" y2="250" stroke="#9a8d7e" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <line x1="270" y1="180" x2="460" y2="250" stroke="#9a8d7e" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <line x1="270" y1="180" x2="250" y2="50" stroke="#9a8d7e" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <!-- area labels (opposite each vertex) -->
+  <text x="365" y="200" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0">A₁</text>
+  <text x="160" y="200" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0">A₂</text>
+  <text x="262" y="120" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0">A₃</text>
+  <!-- vertices -->
+  <circle cx="80" cy="250" r="6" fill="#1a6b5a"/>
+  <circle cx="460" cy="250" r="6" fill="#1a6b5a"/>
+  <circle cx="250" cy="50" r="6" fill="#1a6b5a"/>
+  <text x="64" y="266" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419">1 (ξ₁=1)</text>
+  <text x="430" y="266" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419">2 (ξ₂=1)</text>
+  <text x="220" y="42" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419">3 (ξ₃=1)</text>
+  <text x="80" y="292" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">ξ_k = A_k / A,&#160;&#160;A = A₁ + A₂ + A₃</text>
+</svg>
+<div class="caption">Геометрический смысл барицентрических координат. Внутренняя точка \(P\) делит треугольник на три подтреугольника площадей \(A_1, A_2, A_3\); координата \(\xi_k\) равна отношению \(A_k/A\) (площадь, противолежащая вершине \(k\)). В вершине \(k\) выполняется \(\xi_k=1\), на противоположной стороне \(\xi_k=0\).</div>
+</div>
+
+<h2 id="iso">Идея изопараметрического элемента</h2>
+
+<p>Идея изопараметрического представления конечного элемента состоит в том, что барицентрические (треугольные) координаты определяют <em>геометрию</em> с помощью соотношения (1а′) и, в то же время, <em>поле перемещений</em> аппроксимируется согласно (1б) с помощью тех же функций форм \(N_i^{(e)}\). В случае линейного треугольного элемента функции форм совпадают с барицентрическими координатами. Таким образом, и геометрия элемента (глобальные координаты), и основные переменные (перемещения) определяются с помощью <strong>одинаковых</strong> интерполирующих соотношений. Такие элементы носят название <strong>изопараметрических</strong>.</p>
+
+<div class="definition">
+<strong>Определение (изо-, супер-, субпараметрические элементы).</strong> Пусть геометрия задаётся полиномом степени \(p_g\), а поле — полиномом степени \(p_u\) от естественных координат.
+<ul>
+<li>\(p_u = p_g\) — <strong>изопараметрический</strong> элемент (геометрия и поле одного порядка);</li>
+<li>\(p_u > p_g\) — <strong>суперпараметрический</strong> (поле богаче геометрии: прямые стороны, квадратичное поле);</li>
+<li>\(p_u < p_g\) — <strong>субпараметрический</strong> (криволинейная геометрия, линейное поле).</li>
+</ul>
+В некоторых случаях применение неизопараметрических элементов оказывается оправданным.
+</div>
+
+<p>Перепишем соотношения (1а)–(1в) в универсальном виде, чтобы подчеркнуть их внутреннее единство:</p>
+
+<div class="eq">\[
+\begin{pmatrix} 1 \\ x \\ y \\ u_x \\ u_y \end{pmatrix}
+=
+\begin{pmatrix}
+1 & 1 & 1 \\
+x_1 & x_2 & x_3 \\
+y_1 & y_2 & y_3 \\
+u_{x1} & u_{x2} & u_{x3} \\
+u_{y1} & u_{y2} & u_{y3}
+\end{pmatrix}
+\begin{pmatrix} \xi_1 \\ \xi_2 \\ \xi_3 \end{pmatrix}
+=
+\begin{pmatrix}
+1 & 1 & 1 \\
+x_1 & x_2 & x_3 \\
+y_1 & y_2 & y_3 \\
+u_{x1} & u_{x2} & u_{x3} \\
+u_{y1} & u_{y2} & u_{y3}
+\end{pmatrix}
+\begin{pmatrix} N_1^{(e)} \\ N_2^{(e)} \\ N_3^{(e)} \end{pmatrix}.
+\tag{2}
+\]</div>
+
+<p>Формула (2) подчёркивает тот факт, что геометрия и перемещения заданы одним и тем же параметрическим представлением с помощью функций форм \(N_i^{(e)}\). В этом и состоит ключевая идея изопараметрического подхода в методе конечных элементов, схематически показанная на рис.&nbsp;ниже.</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 220" xmlns="http://www.w3.org/2000/svg" style="max-width:540px">
+  <defs>
+    <marker id="arrIso" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 z" fill="#1a6b5a"/></marker>
+  </defs>
+  <!-- left box -->
+  <rect x="20" y="80" width="130" height="60" rx="6" fill="#3a5ba0" fill-opacity="0.08" stroke="#3a5ba0" stroke-width="1.3"/>
+  <text x="85" y="105" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">Естественные</text>
+  <text x="85" y="122" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">координаты ξ_k</text>
+  <!-- middle box -->
+  <rect x="215" y="80" width="130" height="60" rx="6" fill="#b44a2d" fill-opacity="0.08" stroke="#b44a2d" stroke-width="1.3"/>
+  <text x="280" y="105" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">Функции форм</text>
+  <text x="280" y="123" font-family="JetBrains Mono,monospace" font-size="12" fill="#b44a2d" text-anchor="middle">N_i^(e)</text>
+  <!-- right boxes -->
+  <rect x="420" y="30" width="125" height="55" rx="6" fill="#1a6b5a" fill-opacity="0.08" stroke="#1a6b5a" stroke-width="1.3"/>
+  <text x="482" y="52" font-family="JetBrains Mono,monospace" font-size="10.5" fill="#2c2419" text-anchor="middle">Геометрия</text>
+  <text x="482" y="69" font-family="JetBrains Mono,monospace" font-size="11" fill="#1a6b5a" text-anchor="middle">1, x, y</text>
+  <rect x="420" y="135" width="125" height="55" rx="6" fill="#1a6b5a" fill-opacity="0.08" stroke="#1a6b5a" stroke-width="1.3"/>
+  <text x="482" y="157" font-family="JetBrains Mono,monospace" font-size="10.5" fill="#2c2419" text-anchor="middle">Перемещения</text>
+  <text x="482" y="174" font-family="JetBrains Mono,monospace" font-size="11" fill="#1a6b5a" text-anchor="middle">u_x, u_y</text>
+  <!-- arrows -->
+  <line x1="152" y1="110" x2="211" y2="110" stroke="#1a6b5a" stroke-width="1.6" marker-end="url(#arrIso)"/>
+  <line x1="347" y1="100" x2="416" y2="62" stroke="#1a6b5a" stroke-width="1.6" marker-end="url(#arrIso)"/>
+  <line x1="347" y1="120" x2="416" y2="158" stroke="#1a6b5a" stroke-width="1.6" marker-end="url(#arrIso)"/>
+</svg>
+<div class="caption">Рис.&nbsp;1. Изопараметрический подход в МКЭ. Одни и те же функции форм \(N_i^{(e)}\), построенные на естественных координатах, порождают и геометрию элемента \((x,y)\), и поле перемещений \((u_x,u_y)\).</div>
+</div>
+
+<h2 id="general">Общая изопараметрическая формулировка двумерного элемента</h2>
+
+<p>Рассмотрим общую изопараметрическую формулировку упругого двумерного элемента, содержащего \(n\) узлов. Для описания элемента требуются два типа интерполирующих соотношений: одно для задания геометрии, другое — для аппроксимации вектора перемещений. Оба строятся с помощью одинаковых функций форм и соответствующих узловых значений.</p>
+
+<p><strong>Геометрические соотношения</strong> (интерполяция координат):</p>
+
+<div class="eq">\[
+1 = \sum_{i=1}^{n} N_i^{(e)},\qquad
+x = \sum_{i=1}^{n} x_i\, N_i^{(e)},\qquad
+y = \sum_{i=1}^{n} y_i\, N_i^{(e)}.
+\tag{3}
+\]</div>
+
+<p><strong>Функциональные соотношения</strong> (интерполяция перемещений):</p>
+
+<div class="eq">\[
+u_x = \sum_{i=1}^{n} u_{xi}\, N_i^{(e)},\qquad
+u_y = \sum_{i=1}^{n} u_{yi}\, N_i^{(e)}.
+\tag{4}
+\]</div>
+
+<p>Уравнения (3) и (4) объединяются в единую матричную формулу:</p>
+
+<div class="eq">\[
+\begin{pmatrix} 1 \\ x \\ y \\ u_x \\ u_y \end{pmatrix}
+=
+\begin{pmatrix}
+1 & 1 & \cdots & 1 \\
+x_1 & x_2 & \cdots & x_n \\
+y_1 & y_2 & \cdots & y_n \\
+u_{x1} & u_{x2} & \cdots & u_{xn} \\
+u_{y1} & u_{y2} & \cdots & u_{yn}
+\end{pmatrix}
+\begin{pmatrix} N_1^{(e)} \\ N_2^{(e)} \\ \vdots \\ N_n^{(e)} \end{pmatrix}.
+\tag{5}
+\]</div>
+
+<p>Первые три строки в (5) определяют геометрию элемента, последние две задают аппроксимацию перемещений. Для линейного треугольного элемента функции форм совпадают с барицентрическими координатами:</p>
+
+<div class="eq">\[
+N_1^{(e)} = \xi_1,\qquad N_2^{(e)} = \xi_2,\qquad N_3^{(e)} = \xi_3.
+\tag{6}
+\]</div>
+
+<div class="remark">
+<strong>Универсальность.</strong> Метод изопараметрического отображения позволяет добавлять в систему (5) любые другие функции, заданные на тех же узлах через те же функции форм. Например, при переменной толщине пластины \(h\) и переменном температурном поле \(T\) (термоупругая задача) базовое уравнение расширяется:
+\[
+\begin{pmatrix} 1 \\ x \\ y \\ u_x \\ u_y \\ h \\ T \end{pmatrix}
+=
+\begin{pmatrix}
+1 & \cdots & 1 \\
+x_1 & \cdots & x_n \\
+y_1 & \cdots & y_n \\
+u_{x1} & \cdots & u_{xn} \\
+u_{y1} & \cdots & u_{yn} \\
+h_1 & \cdots & h_n \\
+T_1 & \cdots & T_n
+\end{pmatrix}
+\begin{pmatrix} N_1^{(e)} \\ \vdots \\ N_n^{(e)} \end{pmatrix}.
+\tag{7}
+\]
+Столбец функций форм при этом <em>не меняется</em> — в этом одно из главных достоинств изопараметрического подхода.
+</div>
+
+<h2 id="quad">Квадратичные изопараметрические элементы</h2>
+
+<p>В приложениях МКЭ широко применяются элементы с квадратичной аппроксимацией искомых решений, а также коэффициентов и других величин (тепловые источники, силы и т.&nbsp;п.), входящих в постановку задачи.</p>
+
+<h3 id="quad-1d">Одномерный квадратичный элемент</h3>
+
+<p>Рассмотрим трёхузловой стержневой элемент. Введём естественную локальную координату \(\xi\). Два концевых узла и один средний пронумеруем в локальной системе как 1, 2, 3, причём естественные координаты узлов равны соответственно</p>
+
+<div class="eq">\[
+\xi_1 = -1,\qquad \xi_2 = +1,\qquad \xi_3 = 0.
+\tag{8}
+\]</div>
+
+<p>Потребуем, чтобы функции форм обладали <em>интерполяционным свойством Кронекера</em> — равнялись единице в «своём» узле и нулю во всех остальных:</p>
+
+<div class="eq">\[
+N_i^{(e)}(\xi_k) = \delta_{ik} =
+\begin{cases} 1, & i = k, \\ 0, & i \neq k, \end{cases}
+\tag{9}
+\]</div>
+
+<p>где \(\delta_{ik}\) — символ Кронекера. Тогда функции форм представляются финитными параболическими функциями:</p>
+
+<div class="eq">\[
+N_1^{(e)}(\xi) = \tfrac12\,\xi(\xi-1),\qquad
+N_2^{(e)}(\xi) = \tfrac12\,\xi(\xi+1),\qquad
+N_3^{(e)}(\xi) = 1 - \xi^2.
+\tag{10}
+\]</div>
+
+<div class="figure">
+<svg viewBox="0 0 560 230" xmlns="http://www.w3.org/2000/svg" style="max-width:540px">
+  <defs>
+    <marker id="arrQ" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2c2419"/></marker>
+  </defs>
+  <!-- baseline -->
+  <line x1="40" y1="150" x2="520" y2="150" stroke="#2c2419" stroke-width="1" marker-end="url(#arrQ)"/>
+  <text x="527" y="154" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419">ξ</text>
+  <!-- node ticks at xi=-1(60), 0(280), +1(500) -->
+  <line x1="60" y1="146" x2="60" y2="154" stroke="#2c2419" stroke-width="1"/>
+  <line x1="280" y1="146" x2="280" y2="154" stroke="#2c2419" stroke-width="1"/>
+  <line x1="500" y1="146" x2="500" y2="154" stroke="#2c2419" stroke-width="1"/>
+  <text x="60" y="170" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">ξ=−1 (1)</text>
+  <text x="280" y="170" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">ξ=0 (3)</text>
+  <text x="500" y="170" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">ξ=+1 (2)</text>
+  <!-- baseline value 1 reference -->
+  <line x1="40" y1="55" x2="520" y2="55" stroke="#d9cfc0" stroke-width="0.7" stroke-dasharray="3,3"/>
+  <text x="35" y="59" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="end">1</text>
+  <!-- N1 = xi(xi-1)/2 : at -1 ->1 (y55), 0->0(y150), +1->0 -->
+  <path d="M 60 55 Q 170 150 280 150 Q 390 150 500 150" fill="none" stroke="#b44a2d" stroke-width="2.2"/>
+  <text x="95" y="48" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">N₁</text>
+  <!-- N2 = xi(xi+1)/2 : at +1->1, 0->0, -1->0 -->
+  <path d="M 60 150 Q 170 150 280 150 Q 390 150 500 55" fill="none" stroke="#1a6b5a" stroke-width="2.2"/>
+  <text x="465" y="48" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a">N₂</text>
+  <!-- N3 = 1 - xi^2 : at 0->1(y55), ±1->0 -->
+  <path d="M 60 150 Q 280 -40 500 150" fill="none" stroke="#3a5ba0" stroke-width="2.2"/>
+  <text x="290" y="48" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">N₃</text>
+  <!-- nodes -->
+  <circle cx="60" cy="150" r="4" fill="#fff" stroke="#2c2419" stroke-width="1.3"/>
+  <circle cx="280" cy="150" r="4" fill="#fff" stroke="#2c2419" stroke-width="1.3"/>
+  <circle cx="500" cy="150" r="4" fill="#fff" stroke="#2c2419" stroke-width="1.3"/>
+  <text x="40" y="210" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">N_i(ξ_k)=δ_ik:&#160;каждая форма = 1 в своём узле, 0 в остальных</text>
+</svg>
+<div class="caption">Рис.&nbsp;3. Функции форм стержневого квадратичного изопараметрического элемента (10): концевые \(N_1,N_2\) и центральная \(N_3\). Средний узел выбран посередине; в общем случае он может быть сдвинут.</div>
+</div>
+
+<p>Интерполяционное соотношение для стержневого квадратичного элемента:</p>
+
+<div class="eq">\[
+\begin{pmatrix} 1 \\ x \\ u \end{pmatrix}
+=
+\begin{pmatrix}
+1 & 1 & 1 \\
+x_1 & x_2 & x_3 \\
+u_1 & u_2 & u_3
+\end{pmatrix}
+\begin{pmatrix} N_1^{(e)} \\ N_2^{(e)} \\ N_3^{(e)} \end{pmatrix},
+\tag{11}
+\]</div>
+
+<p>где \(x\) — глобальная координата точки стержня, а \(u = \sum_{i=1}^{3} u_i N_i^{(e)}\) — её перемещение.</p>
+
+<h3 id="quad-tri">Шестиузловой треугольный элемент</h3>
+
+<p>Часто используемый представитель семейства — <strong>шестиузловой треугольный элемент</strong> (квадратичный, или параболический). Он имеет по одному дополнительному узлу на каждой стороне, что даёт возможность более точно описывать криволинейную границу тела и повышает степень аппроксимации перемещений. Матричное уравнение элемента:</p>
+
+<div class="eq">\[
+\begin{pmatrix} 1 \\ x \\ y \\ u_x \\ u_y \end{pmatrix}
+=
+\begin{pmatrix}
+1 & 1 & 1 & 1 & 1 & 1 \\
+x_1 & x_2 & x_3 & x_4 & x_5 & x_6 \\
+y_1 & y_2 & y_3 & y_4 & y_5 & y_6 \\
+u_{x1} & u_{x2} & u_{x3} & u_{x4} & u_{x5} & u_{x6} \\
+u_{y1} & u_{y2} & u_{y3} & u_{y4} & u_{y5} & u_{y6}
+\end{pmatrix}
+\begin{pmatrix} N_1^{(e)} \\ N_2^{(e)} \\ N_3^{(e)} \\ N_4^{(e)} \\ N_5^{(e)} \\ N_6^{(e)} \end{pmatrix}.
+\tag{12}
+\]</div>
+
+<p>Функции форм — полиномы второго порядка от барицентрических координат:</p>
+
+<div class="eq">\[
+\begin{aligned}
+N_1^{(e)} &= \xi_1(2\xi_1 - 1), & N_2^{(e)} &= \xi_2(2\xi_2 - 1), & N_3^{(e)} &= \xi_3(2\xi_3 - 1), \\
+N_4^{(e)} &= 4\xi_1\xi_2, & N_5^{(e)} &= 4\xi_2\xi_3, & N_6^{(e)} &= 4\xi_3\xi_1.
+\end{aligned}
+\tag{13}
+\]</div>
+
+<div class="figure">
+<svg viewBox="0 0 560 280" xmlns="http://www.w3.org/2000/svg" style="max-width:540px">
+  <!-- (a) straight-sided superparametric -->
+  <text x="40" y="30" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419">(а) прямые стороны — суперпараметрический</text>
+  <polygon points="60,230 230,230 145,70" fill="#b44a2d" fill-opacity="0.06" stroke="#b44a2d" stroke-width="1.6"/>
+  <!-- corner nodes -->
+  <circle cx="60" cy="230" r="5" fill="#fff" stroke="#2c2419" stroke-width="1.3"/>
+  <circle cx="230" cy="230" r="5" fill="#fff" stroke="#2c2419" stroke-width="1.3"/>
+  <circle cx="145" cy="70" r="5" fill="#fff" stroke="#2c2419" stroke-width="1.3"/>
+  <!-- mid nodes (midpoints) -->
+  <circle cx="145" cy="230" r="4.5" fill="#1a6b5a"/>
+  <circle cx="187.5" cy="150" r="4.5" fill="#1a6b5a"/>
+  <circle cx="102.5" cy="150" r="4.5" fill="#1a6b5a"/>
+  <text x="48" y="248" font-family="JetBrains Mono,monospace" font-size="10" fill="#2c2419">1</text>
+  <text x="232" y="248" font-family="JetBrains Mono,monospace" font-size="10" fill="#2c2419">2</text>
+  <text x="148" y="64" font-family="JetBrains Mono,monospace" font-size="10" fill="#2c2419">3</text>
+  <text x="138" y="248" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a">4</text>
+  <text x="195" y="148" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a">5</text>
+  <text x="82" y="148" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a">6</text>
+  <!-- (b) curved isoparametric -->
+  <text x="320" y="30" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419">(б) криволинейные — изопараметрический</text>
+  <path d="M 330 230 Q 415 245 500 232 Q 470 150 440 78 Q 380 130 330 230 Z"
+        fill="#3a5ba0" fill-opacity="0.06" stroke="#3a5ba0" stroke-width="1.6"/>
+  <circle cx="330" cy="230" r="5" fill="#fff" stroke="#2c2419" stroke-width="1.3"/>
+  <circle cx="500" cy="232" r="5" fill="#fff" stroke="#2c2419" stroke-width="1.3"/>
+  <circle cx="440" cy="78" r="5" fill="#fff" stroke="#2c2419" stroke-width="1.3"/>
+  <!-- mid nodes shifted off the midpoints onto curve -->
+  <circle cx="415" cy="245" r="4.5" fill="#1a6b5a"/>
+  <circle cx="470" cy="150" r="4.5" fill="#1a6b5a"/>
+  <circle cx="380" cy="130" r="4.5" fill="#1a6b5a"/>
+  <text x="316" y="248" font-family="JetBrains Mono,monospace" font-size="10" fill="#2c2419">1</text>
+  <text x="503" y="248" font-family="JetBrains Mono,monospace" font-size="10" fill="#2c2419">2</text>
+  <text x="443" y="72" font-family="JetBrains Mono,monospace" font-size="10" fill="#2c2419">3</text>
+  <text x="408" y="262" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a">4</text>
+  <text x="478" y="148" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a">5</text>
+  <text x="356" y="126" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a">6</text>
+</svg>
+<div class="caption">Рис.&nbsp;4. Шестиузловой треугольный элемент. (а) Суперпараметрический вариант: прямые стороны, средние узлы 4, 5, 6 — точно посередине сторон. (б) Изопараметрический вариант: средние узлы смещены, стороны становятся криволинейными — и геометрия, и поле заданы полиномами 2-го порядка.</div>
+</div>
+
+<p>Базовые определяющие уравнения элемента построены. Рассмотренная методика легко распространяется на трёхмерные элементы сложной геометрии (тетраэдр, пентаэдр, гексаэдр); при этом термин «треугольные барицентрические координаты» заменяется на более общее понятие <em>естественных локальных координат</em>, также представимых посредством изопараметрических отображений.</p>
+
+<h2 id="mapping">Изопараметрическое отображение и якобиан</h2>
+
+<p>Изопараметрические формулы (3)–(5) — это, по сути, гладкое <strong>отображение</strong> опорного (канонического) элемента на физический. Для четырёхугольного билинейного элемента опорной областью служит квадрат \(\boldsymbol\xi=(\xi,\eta)\in[-1,1]^2\) с четырьмя узлами и функциями форм</p>
+
+<div class="eq">\[
+N_i(\xi,\eta) = \tfrac14(1+\xi_i\,\xi)(1+\eta_i\,\eta),\qquad i = 1,\dots,4,
+\tag{14}
+\]</div>
+
+<p>где \((\xi_i,\eta_i)\in\{\pm1\}^2\) — координаты узлов на опорном квадрате. Отображение задаётся теми же функциями форм:</p>
+
+<div class="eq">\[
+x(\xi,\eta) = \sum_{i} N_i(\xi,\eta)\,x_i,\qquad
+y(\xi,\eta) = \sum_{i} N_i(\xi,\eta)\,y_i.
+\tag{15}
+\]</div>
+
+<div class="figure">
+<svg viewBox="0 0 580 280" xmlns="http://www.w3.org/2000/svg" style="max-width:560px">
+  <defs>
+    <marker id="arrMap" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#b44a2d"/></marker>
+  </defs>
+  <!-- reference square (left) -->
+  <text x="120" y="30" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">опорный элемент (ξ,η)∈[−1,1]²</text>
+  <rect x="55" y="60" width="130" height="130" fill="#3a5ba0" fill-opacity="0.06" stroke="#3a5ba0" stroke-width="1.6"/>
+  <!-- iso lines -->
+  <g stroke="#9a8d7e" stroke-width="0.6" stroke-dasharray="3,3">
+    <line x1="98.3" y1="60" x2="98.3" y2="190"/><line x1="141.6" y1="60" x2="141.6" y2="190"/>
+    <line x1="55" y1="103.3" x2="185" y2="103.3"/><line x1="55" y1="146.6" x2="185" y2="146.6"/>
+  </g>
+  <!-- nodes -->
+  <circle cx="55" cy="190" r="4.5" fill="#3a5ba0"/><circle cx="185" cy="190" r="4.5" fill="#3a5ba0"/>
+  <circle cx="185" cy="60" r="4.5" fill="#3a5ba0"/><circle cx="55" cy="60" r="4.5" fill="#3a5ba0"/>
+  <text x="42" y="205" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419">(−1,−1)</text>
+  <text x="160" y="205" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419">(1,−1)</text>
+  <text x="172" y="54" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419">(1,1)</text>
+  <text x="40" y="54" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419">(−1,1)</text>
+  <!-- axes glyph -->
+  <text x="120" y="225" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">ξ →,&#160;&#160;η ↑</text>
+  <!-- arrow -->
+  <line x1="210" y1="125" x2="320" y2="125" stroke="#b44a2d" stroke-width="2" marker-end="url(#arrMap)"/>
+  <text x="265" y="116" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle">x=ΣN_i x_i</text>
+  <text x="265" y="142" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle">y=ΣN_i y_i</text>
+  <!-- physical curved quad (right) -->
+  <text x="450" y="30" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">физический элемент (x,y)</text>
+  <path d="M 360 195 Q 420 215 490 200 Q 510 140 500 70 Q 430 55 365 80 Q 350 140 360 195 Z"
+        fill="#1a6b5a" fill-opacity="0.06" stroke="#1a6b5a" stroke-width="1.6"/>
+  <!-- mapped iso lines (approx) -->
+  <g stroke="#9a8d7e" stroke-width="0.6" stroke-dasharray="3,3">
+    <path d="M 385 188 Q 392 135 387 82" fill="none"/>
+    <path d="M 430 200 Q 437 140 432 70" fill="none"/>
+    <path d="M 357 152 Q 425 170 503 158" fill="none"/>
+    <path d="M 360 115 Q 428 128 502 118" fill="none"/>
+  </g>
+  <circle cx="360" cy="195" r="4.5" fill="#1a6b5a"/><circle cx="490" cy="200" r="4.5" fill="#1a6b5a"/>
+  <circle cx="500" cy="70" r="4.5" fill="#1a6b5a"/><circle cx="365" cy="80" r="4.5" fill="#1a6b5a"/>
+  <text x="345" y="210" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419">(x₁,y₁)</text>
+  <text x="468" y="216" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419">(x₂,y₂)</text>
+</svg>
+<div class="caption">Отображение канонического элемента на физический. Линии \(\xi=\text{const}\), \(\eta=\text{const}\) опорного квадрата переходят в криволинейные линии физического элемента. Все интегралы вычисляются на опорном квадрате — простой области с фиксированными пределами \([-1,1]\).</div>
+</div>
+
+<p>Чтобы вычислять производные функций форм по физическим координатам \((x,y)\) и преобразовывать интегралы, нужна матрица производных отображения — <strong>якобиан</strong>:</p>
+
+<div class="eq">\[
+\mathbf J =
+\begin{pmatrix}
+\dfrac{\partial x}{\partial \xi} & \dfrac{\partial y}{\partial \xi} \\[8pt]
+\dfrac{\partial x}{\partial \eta} & \dfrac{\partial y}{\partial \eta}
+\end{pmatrix}
+=
+\begin{pmatrix}
+\displaystyle\sum_i \dfrac{\partial N_i}{\partial \xi}\,x_i & \displaystyle\sum_i \dfrac{\partial N_i}{\partial \xi}\,y_i \\[10pt]
+\displaystyle\sum_i \dfrac{\partial N_i}{\partial \eta}\,x_i & \displaystyle\sum_i \dfrac{\partial N_i}{\partial \eta}\,y_i
+\end{pmatrix}.
+\tag{16}
+\]</div>
+
+<p>Производные функций форм по физическим координатам получаются обращением якобиана:</p>
+
+<div class="eq">\[
+\begin{pmatrix} \partial N_i/\partial x \\[4pt] \partial N_i/\partial y \end{pmatrix}
+= \mathbf J^{-1}
+\begin{pmatrix} \partial N_i/\partial \xi \\[4pt] \partial N_i/\partial \eta \end{pmatrix}.
+\tag{17}
+\]</div>
+
+<div class="theorem">
+<strong>Теорема (замена переменных в интеграле).</strong> Если отображение (15) невырождено, то есть \(\det \mathbf J(\xi,\eta) > 0\) во всех точках опорной области \(\hat\Omega = [-1,1]^2\), то для любой интегрируемой функции \(g\)
+\[
+\iint_{\Omega} g(x,y)\,dx\,dy
+= \iint_{\hat\Omega} g\big(x(\xi,\eta), y(\xi,\eta)\big)\,\det\mathbf J(\xi,\eta)\,d\xi\,d\eta,
+\qquad dx\,dy = \det\mathbf J\,d\xi\,d\eta.
+\]
+</div>
+
+<p><em>Доказательство.</em> Элемент площади физической области есть площадь параллелограмма, натянутого на векторы \(\partial_\xi\mathbf r\,d\xi\) и \(\partial_\eta\mathbf r\,d\eta\), где \(\mathbf r=(x,y)\). Эта площадь равна модулю векторного произведения:
+\[
+dA = \left|\frac{\partial\mathbf r}{\partial\xi}\times\frac{\partial\mathbf r}{\partial\eta}\right|d\xi\,d\eta
+= \left|\frac{\partial x}{\partial\xi}\frac{\partial y}{\partial\eta} - \frac{\partial y}{\partial\xi}\frac{\partial x}{\partial\eta}\right|d\xi\,d\eta = |\det\mathbf J|\,d\xi\,d\eta.
+\]
+При сохранении ориентации \(\det\mathbf J>0\), и модуль снимается. \(\square\)</p>
+
+<div class="remark">
+<strong>Роль знака якобиана.</strong> Величина \(\det\mathbf J\) — локальный коэффициент растяжения площади при отображении. Если элемент сильно искажён (узел «заехал» за противоположную сторону, или образуется невыпуклый четырёхугольник), \(\det\mathbf J\) может обратиться в ноль или сменить знак — отображение становится <em>вырожденным</em> (необратимым), и формула замены переменных теряет смысл. На практике следят, чтобы \(\det\mathbf J>0\) во всех точках Гаусса. Это интерактивно показано ниже.
+</div>
+
+<div class="figure">
+<svg viewBox="0 0 580 240" xmlns="http://www.w3.org/2000/svg" style="max-width:560px">
+  <!-- good element -->
+  <text x="100" y="28" font-family="JetBrains Mono,monospace" font-size="11" fill="#1a6b5a" text-anchor="middle">det J &gt; 0 (корректный)</text>
+  <polygon points="40,200 175,210 185,70 50,80" fill="#1a6b5a" fill-opacity="0.07" stroke="#1a6b5a" stroke-width="1.6"/>
+  <circle cx="40" cy="200" r="4" fill="#1a6b5a"/><circle cx="175" cy="210" r="4" fill="#1a6b5a"/>
+  <circle cx="185" cy="70" r="4" fill="#1a6b5a"/><circle cx="50" cy="80" r="4" fill="#1a6b5a"/>
+  <text x="100" y="232" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">выпуклый — площадь &gt; 0 всюду</text>
+  <!-- mild distortion -->
+  <text x="290" y="28" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle">искажение → det J мал</text>
+  <polygon points="245,200 380,205 320,110 255,85" fill="#b44a2d" fill-opacity="0.07" stroke="#b44a2d" stroke-width="1.6"/>
+  <circle cx="245" cy="200" r="4" fill="#b44a2d"/><circle cx="380" cy="205" r="4" fill="#b44a2d"/>
+  <circle cx="320" cy="110" r="4" fill="#b44a2d"/><circle cx="255" cy="85" r="4" fill="#b44a2d"/>
+  <text x="312" y="232" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">острые углы — точность падает</text>
+  <!-- degenerate -->
+  <text x="490" y="28" font-family="JetBrains Mono,monospace" font-size="11" fill="#9a8d7e" text-anchor="middle">det J меняет знак</text>
+  <polygon points="430,200 565,205 460,120 505,150" fill="#9a8d7e" fill-opacity="0.10" stroke="#9a8d7e" stroke-width="1.6"/>
+  <circle cx="430" cy="200" r="4" fill="#9a8d7e"/><circle cx="565" cy="205" r="4" fill="#9a8d7e"/>
+  <circle cx="460" cy="120" r="4" fill="#9a8d7e"/><circle cx="505" cy="150" r="4" fill="#9a8d7e"/>
+  <text x="497" y="232" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">самопересечение — вырождение</text>
+</svg>
+<div class="caption">Влияние искажения элемента на якобиан. Слева — выпуклый элемент с \(\det\mathbf J>0\). В центре — сильное искажение: \(\det\mathbf J\) мал, обусловленность ухудшается. Справа — невыпуклый (самопересекающийся) элемент: \(\det\mathbf J\) меняет знак, отображение вырождается.</div>
+</div>
+
+<h2 id="gauss">Численное интегрирование квадратурами Гаусса</h2>
+
+<p>После замены переменных подынтегральное выражение (например, для матрицы жёсткости \(\mathbf K^{(e)}=\int \mathbf B^\top \mathbf D\,\mathbf B\,\det\mathbf J\,d\xi\,d\eta\)) — рациональная функция от \(\xi,\eta\), которая в общем случае <em>не интегрируется аналитически</em>. Её берут численно квадратурой Гаусса–Лежандра. Одномерная квадратура с \(n\) точками:</p>
+
+<div class="eq">\[
+\int_{-1}^{1} f(\xi)\,d\xi \approx \sum_{g=1}^{n} w_g\, f(\xi_g),
+\tag{18}
+\]</div>
+
+<p>точно интегрирует полиномы степени \(\le 2n-1\). Двумерная квадратура по квадрату — тензорное произведение одномерных:</p>
+
+<div class="eq">\[
+\iint_{[-1,1]^2} F(\xi,\eta)\,d\xi\,d\eta \approx \sum_{g=1}^{n}\sum_{h=1}^{n} w_g\,w_h\, F(\xi_g,\eta_h).
+\tag{19}
+\]</div>
+
+<p>Узлы и веса для нескольких порядков (на отрезке \([-1,1]\)):</p>
+
+<div class="eq">\[
+\begin{array}{c|c|c}
+n & \xi_g & w_g \\\hline
+1 & 0 & 2 \\
+2 & \pm\tfrac{1}{\sqrt3} & 1,\ 1 \\
+3 & 0,\ \pm\sqrt{3/5} & \tfrac{8}{9},\ \tfrac{5}{9},\ \tfrac{5}{9}
+\end{array}
+\tag{20}
+\]</div>
+
+<div class="figure">
+<svg viewBox="0 0 560 200" xmlns="http://www.w3.org/2000/svg" style="max-width:540px">
+  <!-- 1x1 -->
+  <text x="90" y="28" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">1×1 точка</text>
+  <rect x="40" y="45" width="100" height="100" fill="#3a5ba0" fill-opacity="0.05" stroke="#3a5ba0" stroke-width="1.3"/>
+  <circle cx="90" cy="95" r="5" fill="#b44a2d"/>
+  <!-- 2x2 -->
+  <text x="280" y="28" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">2×2 точки</text>
+  <rect x="230" y="45" width="100" height="100" fill="#3a5ba0" fill-opacity="0.05" stroke="#3a5ba0" stroke-width="1.3"/>
+  <!-- xi = +-1/sqrt3 -> at +-0.577*50 = +-28.9 px from center (280,95) -->
+  <circle cx="251.1" cy="74" r="5" fill="#b44a2d"/><circle cx="308.9" cy="74" r="5" fill="#b44a2d"/>
+  <circle cx="251.1" cy="116" r="5" fill="#b44a2d"/><circle cx="308.9" cy="116" r="5" fill="#b44a2d"/>
+  <!-- 3x3 -->
+  <text x="470" y="28" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">3×3 точки</text>
+  <rect x="420" y="45" width="100" height="100" fill="#3a5ba0" fill-opacity="0.05" stroke="#3a5ba0" stroke-width="1.3"/>
+  <!-- sqrt(3/5)=0.7746 -> 38.7px ; center (470,95) -->
+  <g fill="#b44a2d">
+    <circle cx="431.3" cy="56.3" r="4.5"/><circle cx="470" cy="56.3" r="4.5"/><circle cx="508.7" cy="56.3" r="4.5"/>
+    <circle cx="431.3" cy="95" r="4.5"/><circle cx="470" cy="95" r="4.5"/><circle cx="508.7" cy="95" r="4.5"/>
+    <circle cx="431.3" cy="133.7" r="4.5"/><circle cx="470" cy="133.7" r="4.5"/><circle cx="508.7" cy="133.7" r="4.5"/>
+  </g>
+  <text x="280" y="178" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">точки Гаусса лежат внутри опорного квадрата [−1,1]², не на границе</text>
+</svg>
+<div class="caption">Точки квадратуры Гаусса на опорном квадрате для тензорных правил \(1\times1\), \(2\times2\), \(3\times3\). Правило \(n\times n\) точно интегрирует полиномы степени до \(2n-1\) по каждой переменной.</div>
+</div>
+
+<div class="algo">
+<strong>Алгоритм. Сборка элементной матрицы жёсткости численным интегрированием.</strong>
+<ol>
+<li>Выбрать порядок квадратуры \(n\) (для билинейного четырёхугольника обычно \(2\times2\)); задать узлы \(\{\xi_g\}\) и веса \(\{w_g\}\) из (20).</li>
+<li>Инициализировать \(\mathbf K^{(e)} \leftarrow \mathbf 0\).</li>
+<li><strong>Цикл по точкам Гаусса</strong> \((\xi_g,\eta_h)\), \(g,h=1,\dots,n\):
+  <ul>
+  <li>вычислить функции форм \(N_i\) и их производные \(\partial N_i/\partial\xi,\ \partial N_i/\partial\eta\) в точке;</li>
+  <li>собрать якобиан \(\mathbf J\) по (16) и его детерминант \(\det\mathbf J\);</li>
+  <li><em>проверка вырождения:</em> если \(\det\mathbf J \le 0\) — прервать (элемент вырожден);</li>
+  <li>вычислить \(\mathbf J^{-1}\) и физические производные \(\partial N_i/\partial x,\ \partial N_i/\partial y\) по (17);</li>
+  <li>сформировать матрицу деформаций \(\mathbf B\) и накопить вклад
+  \(\;\mathbf K^{(e)} \mathrel{+}= w_g\,w_h\,\mathbf B^\top \mathbf D\,\mathbf B\,\det\mathbf J\).</li>
+  </ul>
+</li>
+<li>Вернуть \(\mathbf K^{(e)}\).</li>
+</ol>
+</div>
+
+<h2 id="interactive">Интерактив: изопараметрическое отображение и якобиан</h2>
+
+<p>Слева — опорный квадрат \([-1,1]^2\), справа — физический четырёхугольник. Перетаскивайте узлы физического элемента мышью. Программа реализует билинейное отображение (14)–(15), рисует отображённые линии \(\xi=\text{const}\), \(\eta=\text{const}\) и вычисляет знак детерминанта якобиана. Если \(\det\mathbf J\) где-то меняет знак, элемент вырождается — выводится предупреждение.</p>
+
+<div id="isoDemo" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">опорный (ξ,η)∈[−1,1]²</div><canvas id="isoRef" width="320" height="320" style="width:100%;height:auto"></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">физический (x,y) — тяните узлы</div><canvas id="isoPhys" width="320" height="320" style="width:100%;height:auto;cursor:grab"></canvas></div>
+</div>
+<div id="isoStatus" style="font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--text2);margin-top:.5rem"></div>
+</div>
+
+<script>
+(function(){
+  var ref = document.getElementById('isoRef');
+  var phys = document.getElementById('isoPhys');
+  var rctx = ref.getContext('2d'), pctx = phys.getContext('2d');
+  var status = document.getElementById('isoStatus');
+  // node order: (-1,-1),(1,-1),(1,1),(-1,1) ; xi,eta
+  var XI  = [-1, 1, 1, -1];
+  var ETA = [-1, -1, 1, 1];
+  // physical node coords in canvas px
+  var nodes = [{x:60,y:260},{x:260,y:250},{x:250,y:60},{x:70,y:70}];
+  var drag = -1;
+
+  function N(i, xi, eta){ return 0.25*(1+XI[i]*xi)*(1+ETA[i]*eta); }
+  function dNdxi(i, xi, eta){ return 0.25*XI[i]*(1+ETA[i]*eta); }
+  function dNdeta(i, xi, eta){ return 0.25*ETA[i]*(1+XI[i]*xi); }
+
+  function mapXY(xi, eta){
+    var x=0,y=0;
+    for (var i=0;i<4;i++){ var n=N(i,xi,eta); x+=n*nodes[i].x; y+=n*nodes[i].y; }
+    return {x:x,y:y};
+  }
+  function detJ(xi, eta){
+    var dxdxi=0,dydxi=0,dxdeta=0,dydeta=0;
+    for (var i=0;i<4;i++){
+      var a=dNdxi(i,xi,eta), b=dNdeta(i,xi,eta);
+      dxdxi+=a*nodes[i].x; dydxi+=a*nodes[i].y;
+      dxdeta+=b*nodes[i].x; dydeta+=b*nodes[i].y;
+    }
+    return dxdxi*dydeta - dydxi*dxdeta;
+  }
+
+  // reference canvas: xi,eta in [-1,1] -> px
+  function rX(xi){ return 30 + (xi+1)/2*260; }
+  function rY(eta){ return 290 - (eta+1)/2*260; }
+
+  function drawRef(){
+    rctx.fillStyle='#fdf9f3'; rctx.fillRect(0,0,320,320);
+    rctx.strokeStyle='#d9cfc0'; rctx.lineWidth=0.7;
+    for (var k=-1;k<=1;k+=0.5){
+      rctx.beginPath(); rctx.moveTo(rX(k),rY(-1)); rctx.lineTo(rX(k),rY(1)); rctx.stroke();
+      rctx.beginPath(); rctx.moveTo(rX(-1),rY(k)); rctx.lineTo(rX(1),rY(k)); rctx.stroke();
+    }
+    rctx.strokeStyle='#3a5ba0'; rctx.lineWidth=1.8;
+    rctx.strokeRect(rX(-1),rY(1),260,260);
+    // gauss points 2x2
+    var g=1/Math.sqrt(3);
+    rctx.fillStyle='#b44a2d';
+    [[-g,-g],[g,-g],[g,g],[-g,g]].forEach(function(p){
+      rctx.beginPath(); rctx.arc(rX(p[0]),rY(p[1]),4,0,7); rctx.fill();
+    });
+    rctx.fillStyle='#3a5ba0';
+    for (var i=0;i<4;i++){ rctx.beginPath(); rctx.arc(rX(XI[i]),rY(ETA[i]),5,0,7); rctx.fill(); }
+    rctx.fillStyle='#6b5d4f'; rctx.font='10px JetBrains Mono'; rctx.textAlign='center';
+    rctx.fillText('ξ', rX(1)+12, rY(0)+4); rctx.fillText('η', rX(0), rY(1)-10);
+  }
+
+  function drawPhys(){
+    pctx.fillStyle='#fdf9f3'; pctx.fillRect(0,0,320,320);
+    // iso-lines xi=const, eta=const
+    pctx.strokeStyle='#c9bba6'; pctx.lineWidth=0.8;
+    var steps=20;
+    for (var ci=-1;ci<=1.001;ci+=0.5){ // eta=const
+      pctx.beginPath();
+      for (var s=0;s<=steps;s++){ var xi=-1+2*s/steps; var p=mapXY(xi,ci); s===0?pctx.moveTo(p.x,p.y):pctx.lineTo(p.x,p.y); }
+      pctx.stroke();
+    }
+    for (var cj=-1;cj<=1.001;cj+=0.5){ // xi=const
+      pctx.beginPath();
+      for (var s=0;s<=steps;s++){ var eta=-1+2*s/steps; var p=mapXY(cj,eta); s===0?pctx.moveTo(p.x,p.y):pctx.lineTo(p.x,p.y); }
+      pctx.stroke();
+    }
+    // outline
+    pctx.strokeStyle='#1a6b5a'; pctx.lineWidth=1.8;
+    pctx.beginPath();
+    for (var s=0;s<=steps;s++){ var xi=-1+2*s/steps; var p=mapXY(xi,-1); s===0?pctx.moveTo(p.x,p.y):pctx.lineTo(p.x,p.y); }
+    for (var s=0;s<=steps;s++){ var eta=-1+2*s/steps; var p=mapXY(1,eta); pctx.lineTo(p.x,p.y); }
+    for (var s=0;s<=steps;s++){ var xi=1-2*s/steps; var p=mapXY(xi,1); pctx.lineTo(p.x,p.y); }
+    for (var s=0;s<=steps;s++){ var eta=1-2*s/steps; var p=mapXY(-1,eta); pctx.lineTo(p.x,p.y); }
+    pctx.closePath(); pctx.stroke();
+    // gauss points + their detJ
+    var g=1/Math.sqrt(3);
+    [[-g,-g],[g,-g],[g,g],[-g,g]].forEach(function(pt){
+      var p=mapXY(pt[0],pt[1]); var d=detJ(pt[0],pt[1]);
+      pctx.fillStyle = d>0 ? '#b44a2d' : '#9a8d7e';
+      pctx.beginPath(); pctx.arc(p.x,p.y,4,0,7); pctx.fill();
+    });
+    // nodes
+    pctx.fillStyle='#1a6b5a';
+    for (var i=0;i<4;i++){ pctx.beginPath(); pctx.arc(nodes[i].x,nodes[i].y,7,0,7); pctx.fill(); }
+    pctx.fillStyle='#fff'; pctx.font='10px JetBrains Mono'; pctx.textAlign='center';
+    for (var i=0;i<4;i++){ pctx.fillText(''+(i+1), nodes[i].x, nodes[i].y+3.5); }
+  }
+
+  function update(){
+    drawRef(); drawPhys();
+    // sample detJ on a grid to detect sign change
+    var minD=1e30, maxD=-1e30;
+    for (var a=-1;a<=1.001;a+=0.25) for (var b=-1;b<=1.001;b+=0.25){
+      var d=detJ(a,b); if (d<minD) minD=d; if (d>maxD) maxD=d;
+    }
+    var dc = detJ(0,0);
+    if (minD<=0 && maxD>0){
+      status.innerHTML = '<span style="color:#b44a2d;font-weight:600">⚠ ВЫРОЖДЕНИЕ:</span> det J меняет знак (min='+minD.toFixed(0)+', max='+maxD.toFixed(0)+'). Отображение необратимо — узел заехал за противоположную сторону.';
+    } else if (maxD<=0){
+      status.innerHTML = '<span style="color:#b44a2d;font-weight:600">⚠ det J &lt; 0 всюду:</span> обратите порядок обхода узлов.';
+    } else {
+      status.innerHTML = 'det J(0,0) = '+dc.toFixed(0)+' &gt; 0 · диапазон по элементу ['+minD.toFixed(0)+', '+maxD.toFixed(0)+'] · отображение корректно (взаимно-однозначно).';
+    }
+  }
+
+  function pos(e){
+    var r=phys.getBoundingClientRect();
+    return {x:(e.clientX-r.left)*phys.width/r.width, y:(e.clientY-r.top)*phys.height/r.height};
+  }
+  phys.addEventListener('mousedown', function(e){
+    var m=pos(e);
+    for (var i=0;i<4;i++){ var dx=m.x-nodes[i].x, dy=m.y-nodes[i].y; if (dx*dx+dy*dy<200){ drag=i; phys.style.cursor='grabbing'; break; } }
+  });
+  window.addEventListener('mousemove', function(e){
+    if (drag<0) return;
+    var m=pos(e);
+    nodes[drag].x=Math.max(8,Math.min(312,m.x));
+    nodes[drag].y=Math.max(8,Math.min(312,m.y));
+    update();
+  });
+  window.addEventListener('mouseup', function(){ drag=-1; phys.style.cursor='grab'; });
+
+  update();
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> Пока физический четырёхугольник остаётся выпуклым, отображённые линии \(\xi,\eta\) образуют регулярную криволинейную сетку, а \(\det\mathbf J>0\) во всех точках Гаусса. Стоит «вывернуть» один узел за противоположную сторону — сетка самопересекается, \(\det\mathbf J\) меняет знак, и появляется предупреждение о вырождении. Именно поэтому при генерации сетки контролируют выпуклость и отношение сторон элементов.
+</div>
+
+<div class="lecture-nav">
+<a href="lec6.html" class="nav-prev">← Лекция 6</a>
+<a href="lec8.html" class="nav-next">Лекция 8 →</a>
+</div>
+</div>
+</div>
+
+</body>
+</html>

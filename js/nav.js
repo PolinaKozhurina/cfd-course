@@ -107,6 +107,30 @@
           { href: "sph/index.html", label: "Обзор курса" },
           { href: "sph/maple-reference.html", label: "📘 Памятка Maple" }
         ]
+      },
+      {
+        id: "mke",
+        label: "Метод конечных элементов",
+        semester: "Курс · МКЭ",
+        sections: [
+          { title: "Основы метода", items: [
+              { href: "mke/lec1.html", label: "Лек. 1 Введение" },
+              { href: "mke/lec2.html", label: "Лек. 2 Теор. основы" },
+              { href: "mke/lec3.html", label: "Лек. 3 Матричная техника" }
+          ]},
+          { title: "Сетки и приложения", items: [
+              { href: "mke/lec4.html", label: "Лек. 4 Расчётные сетки" },
+              { href: "mke/lec5.html", label: "Лек. 5 Лаплас и Пуассон" }
+          ]},
+          { title: "Высокий порядок и теория", items: [
+              { href: "mke/lec6.html", label: "Лек. 6 Симплексы" },
+              { href: "mke/lec7.html", label: "Лек. 7 Изопараметрия" },
+              { href: "mke/lec8.html", label: "Лек. 8 Свойства КЭ" }
+          ]}
+        ],
+        extras: [
+          { href: "mke/index.html", label: "Обзор курса" }
+        ]
       }
     ],
     utils: [
@@ -117,11 +141,11 @@
   // Auto-detect subfolder
   var loc = location.pathname;
   var prefix = '';
-  if (loc.indexOf('/sem1/') >= 0 || loc.indexOf('/sem2/') >= 0 || loc.indexOf('/sph/') >= 0) prefix = '../';
+  if (loc.indexOf('/sem1/') >= 0 || loc.indexOf('/sem2/') >= 0 || loc.indexOf('/sph/') >= 0 || loc.indexOf('/mke/') >= 0) prefix = '../';
   var parts = loc.split('/');
   var fileName = parts.pop() || 'index.html';
   var folder = parts.pop() || '';
-  var currentPageFull = (folder === 'sem1' || folder === 'sem2' || folder === 'sph') ? folder + '/' + fileName : fileName;
+  var currentPageFull = (folder === 'sem1' || folder === 'sem2' || folder === 'sph' || folder === 'mke') ? folder + '/' + fileName : fileName;
 
   function p(href) { return prefix + href; }
 

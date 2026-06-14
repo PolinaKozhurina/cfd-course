@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>МКЭ-Лекция 1. Введение</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>МКЭ · Лекция 1</h2>
+  <div class="g">Содержание</div>
+  <a href="#intro">Что такое МКЭ</a>
+  <a href="#methods-class">Место среди сеточных методов</a>
+  <a href="#collocation">Пример: метод коллокаций</a>
+  <a href="#weighted">Метод взвешенных невязок</a>
+  <a href="#least-squares">Метод наименьших квадратов</a>
+  <a href="#projection">Проекционные методы</a>
+  <a href="#galerkin">Метод Галёркина</a>
+  <a href="#ritz">Вариационный метод Ритца</a>
+  <a href="#to-fem">Переход к конечным элементам</a>
+  <a href="#shape">Функции формы</a>
+  <a href="#interactive">Интерактив</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+  <a href="lec2.html">→ Лекция 2</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-fem">МКЭ</span>
+<div class="lecture-num">Лекция 1 · Метод конечных элементов</div>
+<h1>Введение. Общее представление о методе конечных элементов</h1>
+
+<h2 id="intro">Что такое метод конечных элементов</h2>
+
+<p>Метод конечных элементов (МКЭ) относится к классу <strong>сеточных методов</strong>, поскольку он основан на дискретизации области решения — её разбиении на сетку из элементов. Вычислительные модели на основе метода сеток позволяют найти приближённое решение начально-краевой задачи, заменив исходные дифференциальные уравнения аппроксимирующей системой алгебраических уравнений.</p>
+
+<p>МКЭ часто выделяют в отдельную группу наряду с методом конечных разностей (МКР) и методом конечных объёмов (МКО). Причина — в <em>проекционной или вариационной природе</em> различных вариантов метода и в способе аппроксимации функций внутри элементов. В настоящее время МКЭ широко применяется для решения начально-краевых задач, особенно в механике, физике и инженерии.</p>
+
+<div class="definition">
+<strong>Определение.</strong> <em>Конечный элемент</em> — это подобласть (отрезок, треугольник, тетраэдр и т.п.), на которую разбивается расчётная область, и на которой искомое решение представляется простой функцией (как правило, полиномом невысокой степени). Совокупность таких элементов с согласованными на границах функциями даёт <strong>кусочно-полиномиальную аппроксимацию</strong> решения по всей области.</p></div>
+
+<p>Знакомство с методом мы начнём с примеров построения приближённых решений краевых задач с помощью полиномов: сначала рассмотрим метод коллокаций, затем обобщим его до метода взвешенных невязок и проекционных методов, и лишь после этого придём к идее конечного элемента.</p>
+
+<h2 id="methods-class">Место МКЭ среди сеточных методов</h2>
+
+<p>Метод сеток — наиболее распространённый способ решения начально-краевых задач. Сеточные алгоритмы сводят нахождение приближённого решения к решению системы алгебраических уравнений, аппроксимирующих исходное дифференциальное уравнение. Принципиальное различие конечно-разностных (КР) и конечно-элементных (КЭ) подходов состоит в следующем:</p>
+
+<ul>
+<li><strong>В МКР</strong> аппроксимируются сами <em>уравнения</em> и граничные условия (производные заменяются разностными отношениями). Результат — конечномерный вектор значений решения в узлах сетки.</li>
+<li><strong>В МКЭ</strong> аппроксимируется искомое <em>решение</em>. Результат — приближённая, но <em>аналитическая по всей области</em> функция, заданная кусочно на элементах.</li>
+</ul>
+
+<p>МКЭ можно рассматривать как разновидность метода взвешенных невязок, в котором весовые функции имеют носители, ограниченные малыми интервалами расчётной области, а решение аппроксимируется полиномами невысокой степени (например, кусочно-линейными). Эта связь и будет лейтмотивом лекции.</p>
+
+<div class="figure">
+<svg viewBox="0 0 580 230" xmlns="http://www.w3.org/2000/svg" style="max-width:560px">
+  <rect x="20" y="18" width="540" height="150" fill="none" stroke="#d9cfc0" stroke-width="0.8" rx="6"/>
+  <text x="290" y="40" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419" text-anchor="middle" font-weight="600">Сеточные методы решения краевых задач</text>
+  <!-- three branches -->
+  <g font-family="JetBrains Mono,monospace" font-size="10.5" text-anchor="middle">
+    <rect x="55" y="70" width="130" height="74" rx="5" fill="#b44a2d" fill-opacity="0.08" stroke="#b44a2d" stroke-width="1.2"/>
+    <text x="120" y="90" fill="#b44a2d" font-weight="600">МКР</text>
+    <text x="120" y="108" fill="#6b5d4f" font-size="9">аппроксимируют</text>
+    <text x="120" y="121" fill="#6b5d4f" font-size="9">уравнения</text>
+    <text x="120" y="137" fill="#6b5d4f" font-size="9">(разностные схемы)</text>
+
+    <rect x="225" y="70" width="130" height="74" rx="5" fill="#1a6b5a" fill-opacity="0.08" stroke="#1a6b5a" stroke-width="1.2"/>
+    <text x="290" y="90" fill="#1a6b5a" font-weight="600">МКО</text>
+    <text x="290" y="108" fill="#6b5d4f" font-size="9">балансы потоков</text>
+    <text x="290" y="121" fill="#6b5d4f" font-size="9">по объёмам</text>
+    <text x="290" y="137" fill="#6b5d4f" font-size="9">(интегр. форма)</text>
+
+    <rect x="395" y="70" width="130" height="74" rx="5" fill="#3a5ba0" fill-opacity="0.08" stroke="#3a5ba0" stroke-width="1.6"/>
+    <text x="460" y="90" fill="#3a5ba0" font-weight="700">МКЭ</text>
+    <text x="460" y="108" fill="#6b5d4f" font-size="9">аппроксимируют</text>
+    <text x="460" y="121" fill="#6b5d4f" font-size="9">решение</text>
+    <text x="460" y="137" fill="#6b5d4f" font-size="9">(проекц./вариац.)</text>
+  </g>
+  <text x="290" y="200" font-family="Source Serif 4,serif" font-size="11" fill="#6b5d4f" text-anchor="middle" font-style="italic">МКЭ ≡ взвешенные невязки с финитными весовыми функциями + кусочно-полиномиальное решение</text>
+</svg>
+<div class="caption">Три основных сеточных подхода. МКР дискретизирует уравнения, МКО — интегральные балансы, МКЭ аппроксимирует само решение проекционными и вариационными средствами.</div>
+</div>
+
+<h2 id="collocation">Пример: построение решения методом коллокаций</h2>
+
+<p>Рассмотрим краевую задачу для линейного ОДУ 2-го порядка (А. Ф. Филиппов, «Сборник задач по дифференциальным уравнениям»):</p>
+
+<div class="eq">\[
+\hat L(y) \equiv y'' + y' - 2y = 0,\qquad 0 \le x \le 4,\qquad y(0) = 0,\quad y(4) = 1.
+\tag{1.1}
+\]</div>
+
+<p>Это краевая задача для модельного стационарного уравнения (теплопроводности, конвекции-диффузии и т.п.); \(\hat L\) — линейный дифференциальный оператор. Характеристическое уравнение \(\lambda^2 + \lambda - 2 = 0\) даёт корни \(\lambda_1 = 1\), \(\lambda_2 = -2\), поэтому общее решение</p>
+
+<div class="eq">\[
+y(x) = c_1 e^{x} + c_2 e^{-2x},\qquad c_1, c_2 = \mathrm{const}.
+\]</div>
+
+<p>Удовлетворяя граничным условиям, получаем точное решение</p>
+
+<div class="eq">\[
+y(x) = \frac{e^{x} - e^{-2x}}{e^{4} - e^{-8}}.
+\tag{1.2}
+\]</div>
+
+<p>Это дважды непрерывно дифференцируемая функция; её значения в отдельных точках:
+\(\;y(1) = 0{,}0473,\quad y(2) = 0{,}1350,\quad y(3) = 0{,}3679.\)</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 280" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+  <defs>
+    <marker id="arrF1" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2c2419"/></marker>
+  </defs>
+  <line x1="55" y1="235" x2="525" y2="235" stroke="#2c2419" stroke-width="1" marker-end="url(#arrF1)"/>
+  <line x1="55" y1="235" x2="55" y2="25" stroke="#2c2419" stroke-width="1" marker-end="url(#arrF1)"/>
+  <text x="532" y="240" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419">x</text>
+  <text x="50" y="22" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="end">y(x)</text>
+  <!-- y=1 level -->
+  <line x1="55" y1="45" x2="475" y2="45" stroke="#d9cfc0" stroke-width="0.7" stroke-dasharray="3,3"/>
+  <text x="50" y="49" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="end">1</text>
+  <!-- x ticks 1..4 -->
+  <g font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">
+    <text x="55"  y="252">0</text>
+    <text x="160" y="252">1</text>
+    <text x="265" y="252">2</text>
+    <text x="370" y="252">3</text>
+    <text x="475" y="252">4</text>
+  </g>
+  <g stroke="#d9cfc0" stroke-width="0.6">
+    <line x1="160" y1="235" x2="160" y2="230"/><line x1="265" y1="235" x2="265" y2="230"/>
+    <line x1="370" y1="235" x2="370" y2="230"/><line x1="475" y1="235" x2="475" y2="230"/>
+  </g>
+  <!-- exact solution curve: y maps 0->235, 1->45 (190 px). x maps 0->55, 4->475 (105 px/unit) -->
+  <!-- y(0)=0(235) y(1)=0.0473(226) y(2)=0.135(209.4) y(3)=0.3679(165.1) y(4)=1(45) -->
+  <path d="M 55 235 Q 130 233, 160 226 Q 220 218, 265 209.4 Q 330 195, 370 165.1 Q 430 110, 475 45"
+        fill="none" stroke="#b44a2d" stroke-width="2.5"/>
+  <!-- marked points -->
+  <g fill="#3a5ba0">
+    <circle cx="160" cy="226" r="3.5"/><circle cx="265" cy="209.4" r="3.5"/><circle cx="370" cy="165.1" r="3.5"/><circle cx="475" cy="45" r="3.5"/>
+  </g>
+  <g font-family="JetBrains Mono,monospace" font-size="9" fill="#3a5ba0">
+    <text x="150" y="221" text-anchor="end">0.047</text>
+    <text x="255" y="205" text-anchor="end">0.135</text>
+    <text x="360" y="161" text-anchor="end">0.368</text>
+    <text x="468" y="41" text-anchor="end">1</text>
+  </g>
+  <text x="120" y="180" font-family="Source Serif 4,serif" font-size="12" fill="#b44a2d" font-weight="600">y = (eˣ − e⁻²ˣ)/(e⁴ − e⁻⁸)</text>
+</svg>
+<div class="caption">Рис. 1. Точное решение краевой задачи (1.1)–(1.2). Решение круто нарастает у правого конца отрезка; синими точками отмечены значения \(y(1), y(2), y(3), y(4)\).</div>
+</div>
+
+<h3 id="poly-ansatz">Полиномиальный анзац</h3>
+
+<p>Построим приближённое решение в аналитическом виде — в виде полинома 3-й степени:</p>
+
+<div class="eq">\[
+\tilde y(x) = a_0 + a_1 x + a_2 x^2 + a_3 x^3 \approx y(x).
+\tag{1.3}
+\]</div>
+
+<p>Коэффициенты \(a_0,\dots,a_3\) — неизвестные, которые надо определить из четырёх условий. Два условия задаёт сама краевая задача:</p>
+
+<div class="eq">\[
+\tilde y(0) = 0 \;\Rightarrow\; a_0 = 0,\qquad
+\tilde y(4) = 1 \;\Rightarrow\; a_0 + 4a_1 + 16a_2 + 64a_3 = 1.
+\]</div>
+
+<p>Ещё два уравнения получим методом коллокаций. Подставим (1.3) в оператор \(\hat L\). Приводя подобные члены, получим выражение для <strong>невязки</strong>:</p>
+
+<div class="eq">\[
+\hat L(\tilde y) = (-2a_0 + a_1 + 2a_2) + 2(-a_1 + a_2 + 3a_3)\,x + (-2a_2 + 3a_3)\,x^2 - 2a_3\,x^3.
+\tag{1.4}
+\]</div>
+
+<p>Условие \(\hat L(\tilde y) = 0\), вообще говоря, не может выполняться при всех \(x \in (0,4)\) — иначе полином совпадал бы с точным решением, что невозможно (точное решение содержит экспоненты). Поэтому потребуем обращения невязки в ноль лишь в нескольких <em>избранных точках</em> — <strong>узлах коллокации</strong>. Возьмём для удобства вычислений точки \(x = 0\) и \(x = 1\):</p>
+
+<div class="eq">\[
+\hat L\bigl(\tilde y(0)\bigr) = 0,\qquad \hat L\bigl(\tilde y(1)\bigr) = 0.
+\]</div>
+
+<p>Вместе с граничными условиями это даёт систему линейных уравнений:</p>
+
+<div class="eq">\[
+\begin{cases}
+a_0 = 0, \\
+a_1 + 2a_2 = 0, \\
+-a_1 + 2a_2 + 7a_3 = 0, \\
+4a_1 + 16a_2 + 64a_3 = 1.
+\end{cases}
+\tag{1.5}
+\]</div>
+
+<div class="proof">
+Из второго уравнения \(a_1 = -2a_2\). Подставив в третье: \(2a_2 + 2a_2 + 7a_3 = 0\), откуда \(a_2 = -\tfrac{7}{4}a_3\) и \(a_1 = \tfrac{7}{2}a_3\). Четвёртое уравнение даёт \(4\cdot\tfrac{7}{2}a_3 + 16\cdot(-\tfrac{7}{4}a_3) + 64a_3 = 14a_3 - 28a_3 + 64a_3 = 50a_3 = 1\). Следовательно \(a_3 = \tfrac{1}{50}\), \(a_2 = -\tfrac{7}{200}\), \(a_1 = \tfrac{7}{100}\).
+</div>
+
+<p>Итоговое приближённое решение:</p>
+
+<div class="eq">\[
+\boxed{\;\tilde y(x) = \frac{7}{100}\,x - \frac{7}{200}\,x^2 + \frac{1}{50}\,x^3.\;}
+\tag{1.6}
+\]</div>
+
+<p>Сравним \(\tilde y\) с точным \(y\) в контрольных точках:</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 175" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+  <g font-family="JetBrains Mono,monospace" font-size="11">
+    <line x1="20" y1="35" x2="540" y2="35" stroke="#d9cfc0" stroke-width="0.8"/>
+    <line x1="20" y1="75" x2="540" y2="75" stroke="#d9cfc0" stroke-width="0.8"/>
+    <line x1="20" y1="115" x2="540" y2="115" stroke="#d9cfc0" stroke-width="0.8"/>
+    <line x1="20" y1="12" x2="540" y2="12" stroke="#d9cfc0" stroke-width="0.8"/>
+    <line x1="20" y1="155" x2="540" y2="155" stroke="#d9cfc0" stroke-width="0.8"/>
+    <line x1="150" y1="12" x2="150" y2="155" stroke="#d9cfc0" stroke-width="0.8"/>
+    <line x1="280" y1="12" x2="280" y2="155" stroke="#d9cfc0" stroke-width="0.8"/>
+    <line x1="410" y1="12" x2="410" y2="155" stroke="#d9cfc0" stroke-width="0.8"/>
+
+    <text x="30" y="29" fill="#2c2419" font-weight="600">x</text>
+    <text x="200" y="29" fill="#2c2419" text-anchor="middle" font-weight="600">1</text>
+    <text x="330" y="29" fill="#2c2419" text-anchor="middle" font-weight="600">2</text>
+    <text x="470" y="29" fill="#2c2419" text-anchor="middle" font-weight="600">3</text>
+
+    <text x="30" y="69" fill="#b44a2d">y(x)</text>
+    <text x="200" y="69" fill="#b44a2d" text-anchor="middle">0,0473</text>
+    <text x="330" y="69" fill="#b44a2d" text-anchor="middle">0,1350</text>
+    <text x="470" y="69" fill="#b44a2d" text-anchor="middle">0,3679</text>
+
+    <text x="30" y="109" fill="#3a5ba0">ỹ(x)</text>
+    <text x="200" y="109" fill="#3a5ba0" text-anchor="middle">0,055</text>
+    <text x="330" y="109" fill="#3a5ba0" text-anchor="middle">0,16</text>
+    <text x="470" y="109" fill="#3a5ba0" text-anchor="middle">0,435</text>
+
+    <text x="30" y="149" fill="#6b5d4f">|ỹ−y|</text>
+    <text x="200" y="149" fill="#6b5d4f" text-anchor="middle">0,0077</text>
+    <text x="330" y="149" fill="#6b5d4f" text-anchor="middle">0,025</text>
+    <text x="470" y="149" fill="#6b5d4f" text-anchor="middle">0,0671</text>
+  </g>
+</svg>
+<div class="caption">Сравнение точного решения и кубического приближения по методу коллокаций. Ошибка нарастает к правому концу отрезка, где решение меняется быстрее всего.</div>
+</div>
+
+<div class="remark">
+<strong>Обсуждение.</strong>
+<ol>
+<li>Простые «оценочные» решения полезны при отладке программ, но требуют аккуратности. В нашем случае узлы коллокации (\(x=0,1\)) выбраны далеко не лучшим образом — они смещены влево, тогда как решение быстрее всего меняется справа, отсюда и рост погрешности.</li>
+<li>Можно взять полином более высокой степени, но тогда система растёт, а её матрица становится <em>плотно заполненной</em>. Стоимость метода Гаусса \(\sim O(n^3)\). Кроме того, при больших \(n\) на отрезке длиной \(>1\) приходится возводить в высокие степени как малые (\(\sim 1/n\)), так и большие числа: в матрице появляются одновременно очень малые и очень большие элементы, что резко ухудшает обусловленность.</li>
+</ol>
+</div>
+
+<h2 id="weighted">Метод взвешенных невязок</h2>
+
+<p>Метод коллокаций — частный случай общего <strong>метода взвешенных невязок</strong>. Исходная посылка: искомую функцию можно представить функциональным рядом. Для ОДУ приближённое решение записывают в виде</p>
+
+<div class="eq">\[
+\tilde y(x) = f_0(x) + \sum_{j=1}^{n} a_j\, f_j(x).
+\tag{1.7}
+\]</div>
+
+<p>Функцию \(f_0\) выбирают так, чтобы она по возможности удовлетворяла граничным (начальным) условиям; функции \(f_j\) — <em>пробные</em> (аппроксимирующие), известные и, как правило, гладкие (полиномы, тригонометрические функции). Приведём уравнение к виду \(F(y) = 0\). Подстановка приближения \(\tilde y\) не обращает его в тождество:</p>
+
+<div class="eq">\[
+F(\tilde y) = R(x),
+\]</div>
+
+<p>где \(R(x)\) — невязка. Ключевая идея: подобрать коэффициенты \(a_j\) так, чтобы невязка была мала во всей области в интегральном смысле — чтобы интегралы от невязки, умноженной на <strong>весовые функции</strong> \(W_m\), обращались в ноль:</p>
+
+<div class="eq">\[
+\int_\Omega W_m(x)\,R(x)\,dx = 0,\qquad m = 1,2,\dots,n.
+\tag{1.8}
+\]</div>
+
+<p>Конечное число весовых функций даёт систему уравнений для \(a_j\). Различный выбор пробных и весовых функций порождает целый класс методов.</p>
+
+<h3 id="subdomain">Метод подобластей</h3>
+<p>Область делится на подобласти \(D_m\) (возможно перекрывающиеся). Весовая функция — индикатор подобласти:</p>
+<div class="eq">\[
+W_m(x) = \begin{cases} 1, & x \in D_m,\\ 0, & x \notin D_m.\end{cases}
+\]</div>
+<p>Так обеспечивается выполнение уравнения «в среднем» по каждой подобласти.</p>
+
+<h3 id="colloc-as-wr">Метод коллокаций как взвешенная невязка</h3>
+<p>В методе коллокаций весовыми функциями служат дельта-функции Дирака:</p>
+<div class="eq">\[
+W_m(x) = \delta(x - x_m).
+\]</div>
+<p>Дельта-функцию можно понимать как предел последовательности гладких функций с сужающимися носителями и единичным интегралом. Интегрирование невязки с весом \(\delta(x - x_m)\) в силу фильтрующего свойства даёт</p>
+<div class="eq">\[
+\int_\Omega \delta(x - x_m)\,R(x)\,dx = R(x_m) = 0,
+\]</div>
+<p>то есть требование обращения невязки в ноль в выбранных узлах \(x_m\) — ровно то, что мы делали в первом примере.</p>
+
+<h2 id="least-squares">Метод наименьших квадратов</h2>
+
+<p>В основе — минимизация интеграла от квадрата невязки:</p>
+
+<div class="eq">\[
+\Phi(a_1,\dots,a_n) = \int_\Omega R^2(x)\,dx \;\to\; \min.
+\tag{1.9}
+\]</div>
+
+<p>Это тоже метод взвешенных невязок: весовой функцией является сама невязка \(R(x)\). Интеграл (1.9) — неотрицательная квадратичная форма от коэффициентов \(a_j\). Условие минимума</p>
+
+<div class="eq">\[
+\frac{\partial \Phi}{\partial a_m} = 2\int_\Omega R(x)\,\frac{\partial R}{\partial a_m}\,dx = 0,\qquad m = 1,\dots,n,
+\tag{1.10}
+\]</div>
+
+<p>даёт систему линейных уравнений относительно \(a_j\). Поскольку \(\Phi\) — неотрицательная квадратичная форма, её стационарная точка является минимумом.</p>
+
+<h2 id="projection">Проекционные методы: геометрическая идея</h2>
+
+<p>В вычислительной практике гораздо употребительнее методов коллокаций, подобластей и наименьших квадратов оказались <strong>проекционные методы</strong>. Их суть проще всего понять на задаче наилучшего приближения вектора.</p>
+
+<p>Пусть \(\mathbf a\) — вектор в евклидовом пространстве \(\mathbb R^N\), а \(\mathbb R^M\) (\(M < N\)) — его подпространство, которому \(\mathbf a\) не принадлежит. Найдём наилучшее приближение \(\mathbf b \in \mathbb R^M\), минимизирующее расстояние:</p>
+
+<div class="eq">\[
+\|\mathbf a - \mathbf b\| = \min_{\mathbf c \in \mathbb R^M} \|\mathbf a - \mathbf c\|.
+\]</div>
+
+<p>Геометрически решение очевидно: \(\mathbf b\) есть <em>ортогональная проекция</em> \(\mathbf a\) на \(\mathbb R^M\), а разность \(\mathbf a - \mathbf b\) ортогональна всему подпространству:</p>
+
+<div class="eq">\[
+(\mathbf a - \mathbf b,\, \mathbf c) = 0\qquad \forall\, \mathbf c \in \mathbb R^M.
+\tag{1.11}
+\]</div>
+
+<div class="figure">
+<svg viewBox="0 0 520 260" xmlns="http://www.w3.org/2000/svg" style="max-width:470px">
+  <defs>
+    <marker id="arrP" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#b44a2d"/></marker>
+    <marker id="arrPb" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a6b5a"/></marker>
+    <marker id="arrPe" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#9a8d7e"/></marker>
+  </defs>
+  <!-- plane (parallelogram) -->
+  <polygon points="60,200 360,200 460,140 160,140" fill="#3a5ba0" fill-opacity="0.07" stroke="#3a5ba0" stroke-width="1"/>
+  <text x="430" y="160" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0">ℝᴹ</text>
+  <!-- origin -->
+  <circle cx="160" cy="180" r="3" fill="#2c2419"/>
+  <text x="148" y="195" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">O</text>
+  <!-- vector a (up out of plane) -->
+  <line x1="160" y1="180" x2="300" y2="55" stroke="#b44a2d" stroke-width="2.2" marker-end="url(#arrP)"/>
+  <text x="305" y="52" font-family="JetBrains Mono,monospace" font-size="12" fill="#b44a2d" font-weight="600">a</text>
+  <!-- projection b in plane -->
+  <line x1="160" y1="180" x2="300" y2="168" stroke="#1a6b5a" stroke-width="2.2" marker-end="url(#arrPb)"/>
+  <text x="305" y="180" font-family="JetBrains Mono,monospace" font-size="12" fill="#1a6b5a" font-weight="600">b</text>
+  <!-- residual a-b -->
+  <line x1="300" y1="168" x2="300" y2="55" stroke="#9a8d7e" stroke-width="1.8" stroke-dasharray="5,3" marker-end="url(#arrPe)"/>
+  <text x="306" y="115" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" font-style="italic">a − b ⊥ ℝᴹ</text>
+  <!-- right angle mark -->
+  <path d="M 300 168 L 290 168 L 290 158" fill="none" stroke="#6b5d4f" stroke-width="1"/>
+  <!-- basis vectors -->
+  <line x1="160" y1="180" x2="240" y2="178" stroke="#3a5ba0" stroke-width="1.4" marker-end="url(#arrPb)" opacity="0.6"/>
+  <text x="210" y="172" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a5ba0">e₁</text>
+  <line x1="160" y1="180" x2="215" y2="155" stroke="#3a5ba0" stroke-width="1.4" marker-end="url(#arrPb)" opacity="0.6"/>
+  <text x="220" y="150" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a5ba0">e₂</text>
+</svg>
+<div class="caption">Наилучшее приближение вектора \(\mathbf a\) элементом подпространства \(\mathbb R^M\) — это его ортогональная проекция \(\mathbf b\). Невязка \(\mathbf a - \mathbf b\) ортогональна всем базисным векторам \(\mathbf e_i\). Этот принцип ортогональности невязки лежит в основе метода Галёркина.</div>
+</div>
+
+<p>Раскладывая \(\mathbf b = \sum_{i=1}^{M} b_i \mathbf e_i\) по базису \(\{\mathbf e_i\}\) и подставляя в (1.11), приходим к системе линейных уравнений</p>
+
+<div class="eq">\[
+\sum_{k=1}^{M} (\mathbf e_k, \mathbf e_i)\,b_k = (\mathbf a, \mathbf e_i),\qquad i = 1,\dots,M,
+\tag{1.12}
+\]</div>
+
+<p>матрица которой — <em>матрица Грама</em> системы линейно независимых векторов: она симметрична и невырожденна. Если базис ортогонален, \((\mathbf e_i, \mathbf e_k) = 0\) при \(i \neq k\), матрица диагональна и система решается тривиально.</p>
+
+<h2 id="galerkin">Метод Галёркина</h2>
+
+<p>Перенесём принцип ортогональности невязки на операторное уравнение. В гильбертовом пространстве \(H\) над \(\mathbb R\) со скалярным произведением \((x,y)\) задано</p>
+
+<div class="eq">\[
+A x = f,
+\tag{1.13}
+\]</div>
+
+<p>где \(A\) — линейный оператор, \(f \in H\). Пусть \(H_N \subset D_A\) — конечномерное подпространство. <strong>Приближённым решением по Галёркину</strong> называют такой \(x_N \in H_N\), для которого невязка \(A x_N - f\) ортогональна всему \(H_N\):</p>
+
+<div class="eq">\[
+(A x_N - f,\, \psi) = 0\qquad \forall\, \psi \in H_N.
+\tag{1.14}
+\]</div>
+
+<p>Пусть \(\psi_1,\dots,\psi_N\) — базис в \(H_N\). Ищем решение в виде \(x_N = \sum_{k=1}^{N} c_k \psi_k\). Подставляя в (1.14) и полагая \(\psi\) последовательно равным \(\psi_1,\dots,\psi_N\), получаем систему для \(c_k\):</p>
+
+<div class="eq">\[
+\sum_{k=1}^{N} (A\psi_k,\, \psi_i)\,c_k = (f,\, \psi_i),\qquad i = 1,\dots,N.
+\tag{1.15}
+\]</div>
+
+<p>Функции \(\psi_i\) называются <strong>координатными</strong> (или весовыми) функциями проекционного метода. Их ценность в том, что они позволяют сохранить в приближённой задаче важные свойства исходной — симметрию и знакоопределённость оператора.</p>
+
+<div class="remark">
+<strong>Из истории.</strong> Борис Григорьевич Галёркин (1871–1945) — русский и советский механик и математик, академик. Его проекционный метод получил широкую известность после работ около 1915 года. Аналогичный приём применял корабельный инженер Иван Бубнов (1913), поэтому метод нередко называют методом Бубнова — Галёркина. Впоследствии он был распространён на задачи теплообмена, электрофизики, гидродинамики.
+</div>
+
+<h2 id="ritz">Вариационный метод Ритца</h2>
+
+<p>Метод Ритца, как и метод Галёркина, строит решение в виде линейной комбинации известных функций, но опирается на <em>вариационный принцип</em>. Он применим, когда оператор самосопряжён и положительно определён.</p>
+
+<div class="theorem">
+<strong>Теорема (вариационный принцип).</strong> Пусть в гильбертовом пространстве \(H\) задано уравнение \(A u = f\), причём оператор \(A\) самосопряжён и положительно определён:
+\[ (Av, w) = (v, Aw)\ \ \forall v,w;\qquad (Av,v) \ge \gamma\,\|v\|^2 > 0\ \ \forall v \neq 0. \]
+Тогда решение \(u\) уравнения \(Au = f\) доставляет минимум функционалу энергии
+\[ \Phi(v) = (Av, v) - 2(f, v),\qquad u = \arg\min_{v \in H} \Phi(v). \]
+</div>
+
+<div class="proof">
+Положим \(v = u + \eta\), где \(\eta\) — произвольное отклонение от решения, и используем \(Au - f = 0\):
+\[
+\Phi(v) = (A(u+\eta), u+\eta) - 2(f, u+\eta).
+\]
+Раскрывая и группируя с учётом самосопряжённости \((A\eta, u) = (\eta, Au) = (Au, \eta)\):
+\[
+\Phi(v) = \underbrace{(Au,u) - 2(f,u)}_{\Phi(u)} + 2\,(Au - f,\, \eta) + (A\eta, \eta).
+\]
+Средний член равен нулю, а \((A\eta, \eta) \ge 0\) в силу положительной определённости. Поэтому \(\Phi(v) \ge \Phi(u)\), причём равенство только при \(\eta = 0\). Минимум достигается на решении и единствен.
+</div>
+
+<p>Приближённо ищем минимум на подпространстве \(H_N\): \(x_N = \sum_{k=1}^{N} c_k \psi_k\). Подстановка в \(\Phi\) превращает его в квадратичную форму от \(c_k\):</p>
+
+<div class="eq">\[
+\Phi(x_N) = \sum_{k=1}^{N}\sum_{m=1}^{N} c_k c_m\,(A\psi_k, \psi_m) - 2\sum_{k=1}^{N} c_k\,(f, \psi_k).
+\]</div>
+
+<p>Условие минимума \(\partial \Phi/\partial c_i = 0\) с учётом самосопряжённости приводит ровно к той же системе, что и у Галёркина:</p>
+
+<div class="eq">\[
+\sum_{k=1}^{N} (A\psi_k, \psi_i)\,c_k = (f, \psi_i),\qquad i = 1,\dots,N.
+\tag{1.16}
+\]</div>
+
+<div class="remark">
+<strong>Из истории.</strong> Вальтер Ритц (1878–1909) — швейцарский физик-теоретик и математик. В 1909 году он предложил метод, широко применяемый к вариационным задачам. Совпадение систем (1.15) и (1.16) для самосопряжённого оператора объясняет, почему МКЭ часто называют методом Рэлея — Ритца: минимизация энергии и проекция невязки в этом случае эквивалентны.
+</div>
+
+<h2 id="to-fem">Переход к конечным элементам</h2>
+
+<p>У классических проекционных методов есть серьёзный практический изъян. Когда в качестве координатных функций берут «глобальные» полиномы или тригонометрические функции высокого порядка, возникающие системы линейных уравнений становятся <em>плохо обусловленными</em>: ошибки округления неприемлемо искажают решение. Это долго затрудняло применение проекционных методов на ЭВМ.</p>
+
+<p>Выход подсказывают сами рассмотренные примеры: вместо полиномов высокой степени использовать <strong>полиномы невысокой степени, заданные кусочно</strong> — например, кусочно-линейные функции, линейные на каждом интервале разбиения</p>
+
+<div class="eq">\[
+x_0 < x_1 < x_2 < \dots < x_n.
+\]</div>
+
+<p>От этого отправного пункта мы и подходим к методу конечных элементов.</p>
+
+<div class="remark">
+<strong>Из истории МКЭ.</strong> Метод возник при поиске новых путей решения задач строительной механики и теории упругости в 1930-х годах. У истоков идей — Александр Хренников и Рихард Курант (работы 1940-х). Эффективность метода на ЭВМ впервые продемонстрировал Иоаннис Аргирис (1944). В Китае Фэн Кан в 1950-х независимо предложил «метод конечных разностей на основе вариационного принципа». Важнейший толчок дал 1963 год, когда МКЭ был осознан как вариант метода Рэлея — Ритца, сводящего задачу к минимизации потенциальной энергии; после этого метод стал применяться к уравнениям Лапласа и Пуассона. В СССР практическая реализация МКЭ в 1960-х связана с именем Леонарда Оганесяна.
+</div>
+
+<p>Поясним сеточный вариант метода Галёркина, который одновременно служит примером конечно-элементного подхода. От классического Галёркина его отличают <strong>непрерывные финитные пробные функции</strong> — равные нулю всюду, кроме малой подобласти, причём каждая равна единице в «своём» узле и нулю во всех остальных узлах. Тогда коэффициенты разложения приобретают прямой физический смысл — это значения искомой функции в узлах:</p>
+
+<div class="eq">\[
+\tilde u(x) \approx \sum_{j=1}^{N} f_j\,\varphi_j(x),
+\tag{1.17}
+\]</div>
+
+<p>где \(f_j\) — приближённые узловые значения, а \(\varphi_j(x)\) — пробные функции, называемые также <strong>интерполяционными функциями</strong> или <strong>функциями формы</strong>.</p>
+
+<h2 id="shape">Функции формы: кусочно-линейные и кусочно-квадратичные</h2>
+
+<p>В одномерном случае кусочно-линейная пробная функция узла \(j\) имеет вид «шапочки» (hat-функции):</p>
+
+<div class="eq">\[
+\varphi_j(x) = \begin{cases}
+0, & x \le x_{j-1}, \\[4pt]
+\dfrac{x - x_{j-1}}{x_j - x_{j-1}}, & x_{j-1} \le x \le x_j, \\[8pt]
+\dfrac{x_{j+1} - x}{x_{j+1} - x_j}, & x_j \le x \le x_{j+1}, \\[8pt]
+0, & x \ge x_{j+1}.
+\end{cases}
+\tag{1.18}
+\]</div>
+
+<p>Каждая такая функция равна 1 в узле \(x_j\), линейно спадает до 0 в соседних узлах \(x_{j-1}, x_{j+1}\) и равна нулю вне отрезка \([x_{j-1}, x_{j+1}]\). Между узлами решение (1.17) при этом интерполируется линейно.</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 230" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+  <defs>
+    <marker id="arrSh" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2c2419"/></marker>
+  </defs>
+  <!-- axis -->
+  <line x1="40" y1="180" x2="540" y2="180" stroke="#2c2419" stroke-width="1" marker-end="url(#arrSh)"/>
+  <line x1="40" y1="180" x2="40" y2="35" stroke="#2c2419" stroke-width="1" marker-end="url(#arrSh)"/>
+  <text x="545" y="184" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419">x</text>
+  <text x="34" y="48" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="end">1</text>
+  <line x1="36" y1="55" x2="44" y2="55" stroke="#6b5d4f" stroke-width="1"/>
+  <!-- nodes at x = 80,180,280,380,480 -->
+  <g stroke="#6b5d4f" stroke-width="0.8">
+    <line x1="80" y1="180" x2="80" y2="184"/><line x1="180" y1="180" x2="180" y2="184"/>
+    <line x1="280" y1="180" x2="280" y2="184"/><line x1="380" y1="180" x2="380" y2="184"/>
+    <line x1="480" y1="180" x2="480" y2="184"/>
+  </g>
+  <g font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">
+    <text x="80" y="198">x_{j-2}</text><text x="180" y="198">x_{j-1}</text>
+    <text x="280" y="198">x_j</text><text x="380" y="198">x_{j+1}</text><text x="480" y="198">x_{j+2}</text>
+  </g>
+  <!-- vertical guide for peak -->
+  <line x1="280" y1="180" x2="280" y2="55" stroke="#d9cfc0" stroke-width="0.7" stroke-dasharray="3,3"/>
+  <!-- neighbour hats (faded) -->
+  <polyline points="80,180 180,55 280,180" fill="none" stroke="#9a8d7e" stroke-width="1.6" opacity="0.7"/>
+  <polyline points="280,180 380,55 480,180" fill="none" stroke="#9a8d7e" stroke-width="1.6" opacity="0.7"/>
+  <!-- central hat phi_j -->
+  <polyline points="180,180 280,55 380,180" fill="none" stroke="#b44a2d" stroke-width="2.6"/>
+  <circle cx="280" cy="55" r="3.5" fill="#b44a2d"/>
+  <text x="295" y="58" font-family="JetBrains Mono,monospace" font-size="12" fill="#b44a2d" font-weight="600">φ_j(x)</text>
+  <text x="150" y="80" font-family="JetBrains Mono,monospace" font-size="10" fill="#9a8d7e">φ_{j-1}</text>
+  <text x="400" y="80" font-family="JetBrains Mono,monospace" font-size="10" fill="#9a8d7e">φ_{j+1}</text>
+</svg>
+<div class="caption">Рис. 2. Кусочно-линейные пробные функции («шапочки»). Функция \(\varphi_j\) равна 1 в узле \(x_j\), линейно спадает до 0 в соседних узлах и финитна. Соседние функции перекрываются только на смежных элементах — поэтому матрица системы будет ленточной (разреженной).</div>
+</div>
+
+<p>Применяют и интерполяцию более высокого порядка. Для <strong>кусочно-квадратичной</strong> на отрезке \([a,b]\) вводят равномерную сетку с шагом \(h\) и различают чётные и нечётные узлы. В чётном узле \(x_{2i}\) (общем для двух соседних элементов) функция формы записывается через произведение линейных множителей:</p>
+
+<div class="eq">\[
+\varphi_{2i}(x) = \Bigl(1 + \tfrac{3}{2}\tfrac{x - x_{2i}}{h}\Bigr)\Bigl(1 - \tfrac{3}{2}\tfrac{x - x_{2i}}{h}\Bigr)
+\quad\text{на } |x - x_{2i}| \le 2h,
+\]</div>
+
+<p>а в нечётном (внутреннем) узле \(x_{2i+1}\) — «горб», обращающийся в ноль в концах своего элемента:</p>
+
+<div class="eq">\[
+\varphi_{2i+1}(x) = 1 - \Bigl(\frac{x - x_{2i+1}}{h}\Bigr)^2,\qquad |x - x_{2i+1}| \le h,
+\]</div>
+
+<p>и нулю вне указанных интервалов.</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 230" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+  <defs>
+    <marker id="arrShQ" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2c2419"/></marker>
+  </defs>
+  <line x1="40" y1="180" x2="540" y2="180" stroke="#2c2419" stroke-width="1" marker-end="url(#arrShQ)"/>
+  <line x1="40" y1="180" x2="40" y2="35" stroke="#2c2419" stroke-width="1" marker-end="url(#arrShQ)"/>
+  <text x="545" y="184" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419">x</text>
+  <text x="34" y="48" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="end">1</text>
+  <line x1="36" y1="55" x2="44" y2="55" stroke="#6b5d4f" stroke-width="1"/>
+  <!-- nodes 80,180,280,380,480 ; even: 80,280,480 ; odd: 180,380 -->
+  <g stroke="#6b5d4f" stroke-width="0.8">
+    <line x1="80" y1="180" x2="80" y2="184"/><line x1="180" y1="180" x2="180" y2="184"/>
+    <line x1="280" y1="180" x2="280" y2="184"/><line x1="380" y1="180" x2="380" y2="184"/>
+    <line x1="480" y1="180" x2="480" y2="184"/>
+  </g>
+  <g font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">
+    <text x="80" y="198">x_{2i}</text><text x="180" y="198">x_{2i+1}</text>
+    <text x="280" y="198">x_{2i+2}</text><text x="380" y="198">x_{2i+3}</text><text x="480" y="198">x_{2i+4}</text>
+  </g>
+  <!-- quadratic bump at odd node 180 over [80,280] : 1-((x-180)/100)^2 -->
+  <path d="M 80 180 Q 130 55, 180 55 Q 230 55, 280 180" fill="none" stroke="#1a6b5a" stroke-width="2.6"/>
+  <circle cx="180" cy="55" r="3.5" fill="#1a6b5a"/>
+  <text x="150" y="78" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a">φ_{2i+1}</text>
+  <!-- quadratic bump at odd node 380 over [280,480] -->
+  <path d="M 280 180 Q 330 55, 380 55 Q 430 55, 480 180" fill="none" stroke="#1a6b5a" stroke-width="2.6" opacity="0.55"/>
+  <circle cx="380" cy="55" r="3.5" fill="#1a6b5a" opacity="0.55"/>
+  <!-- even-node shape at 280, peak 1 at 280, zero at 80 and 480, dips below near edges -->
+  <path d="M 80 180 Q 180 245, 280 55 Q 380 245, 480 180" fill="none" stroke="#b44a2d" stroke-width="2.6"/>
+  <circle cx="280" cy="55" r="3.5" fill="#b44a2d"/>
+  <text x="295" y="58" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" font-weight="600">φ_{2i+2}</text>
+  <text x="225" y="215" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">узел чётный (стык 2 элементов)</text>
+</svg>
+<div class="caption">Рис. 3. Кусочно-квадратичные пробные функции. В нечётных (внутренних) узлах — «горб», обнуляющийся на концах элемента (зелёный); в чётных (стыковых) узлах — функция, охватывающая два соседних элемента (терракота). Квадратичная интерполяция повышает порядок аппроксимации, но заметно усложняет вычисления, особенно в 2D и 3D.</div>
+</div>
+
+<div class="remark">
+<strong>Главная мысль.</strong> Переход от глобальных полиномов к финитным функциям формы превращает плотную плохо обусловленную систему в <em>разреженную и хорошо обусловленную</em>: каждая функция \(\varphi_j\) перекрывается лишь с несколькими соседями, поэтому в строке матрицы Галёркина-Ритца почти все элементы нулевые. Именно это сделало МКЭ практичным методом — и это связующее звено между проекционно-вариационной теорией и реальными расчётами.
+</div>
+
+<h2 id="interactive">Интерактив: метод коллокаций для краевой задачи</h2>
+
+<p>Ниже — реализация метода коллокаций для задачи (1.1) на JavaScript. Ползунок задаёт степень аппроксимирующего полинома \(n\) (он же определяет число внутренних точек коллокации). Две степени свободы всегда уходят на граничные условия \(y(0)=0,\ y(4)=1\); остальные \(n-2\) уравнения — это требования \(\hat L(\tilde y)=0\) в равномерно расставленных внутренних узлах. Демонстрация строит полином, накладывает его на точное решение и показывает невязку.</p>
+
+<div id="mkeC" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Степень полинома n = <span id="mkeCnv">3</span></label>
+    <input type="range" id="mkeCn" min="3" max="12" value="3" style="width:200px">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">точек коллокации (внутр.): <span id="mkeCpv">2</span></label>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text3)">+ 2 граничных условия</div>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">решение: точное и коллокация</div><canvas id="mkeC_y" width="440" height="290" style="width:100%;height:auto"></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">невязка L(ỹ)(x)</div><canvas id="mkeC_r" width="440" height="290" style="width:100%;height:auto"></canvas></div>
+</div>
+<div id="mkeCstatus" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.4rem"></div>
+</div>
+
+<script>
+(function(){
+  var L0 = 0, L1 = 4;
+  // exact solution y = (e^x - e^{-2x})/(e^4 - e^{-8})
+  var denom = Math.exp(4) - Math.exp(-8);
+  function yExact(x){ return (Math.exp(x) - Math.exp(-2*x))/denom; }
+
+  // Solve linear system A c = b (Gaussian elimination with partial pivoting)
+  function solve(A, b){
+    var n = b.length, i, j, k;
+    for (i=0;i<n;i++){ A[i] = A[i].slice(); }
+    b = b.slice();
+    for (k=0;k<n;k++){
+      var p = k, max = Math.abs(A[k][k]);
+      for (i=k+1;i<n;i++){ if (Math.abs(A[i][k])>max){ max=Math.abs(A[i][k]); p=i; } }
+      var t=A[k]; A[k]=A[p]; A[p]=t; var tb=b[k]; b[k]=b[p]; b[p]=tb;
+      for (i=k+1;i<n;i++){
+        var f = A[i][k]/A[k][k];
+        for (j=k;j<n;j++) A[i][j]-=f*A[k][j];
+        b[i]-=f*b[k];
+      }
+    }
+    var c = new Array(n);
+    for (i=n-1;i>=0;i--){
+      var s=b[i];
+      for (j=i+1;j<n;j++) s-=A[i][j]*c[j];
+      c[i]=s/A[i][i];
+    }
+    return c;
+  }
+
+  // Build polynomial of degree n: y = sum_{p=0..n} a_p x^p  (n+1 unknowns)
+  // Conditions: y(0)=0 ; y(4)=1 ; L(y)=0 at (n-1) interior collocation points
+  // L(y) = y'' + y' - 2y
+  function collocate(n){
+    var m = n+1; // unknowns a_0..a_n
+    var A = [], b = [];
+    var r;
+    // row: y(0)=0  -> a_0 = 0
+    var row = new Array(m).fill(0); row[0]=1; A.push(row); b.push(0);
+    // row: y(4)=1
+    row = new Array(m).fill(0);
+    for (var p=0;p<=n;p++) row[p]=Math.pow(L1,p);
+    A.push(row); b.push(1);
+    // interior collocation points: (m-2) of them, evenly spaced in (0,4)
+    var ncol = m-2;
+    for (var c=0;c<ncol;c++){
+      var x = L0 + (L1-L0)*(c+1)/(ncol+1);
+      row = new Array(m).fill(0);
+      for (var p=0;p<=n;p++){
+        // x^p contributes: y''=p(p-1)x^{p-2}, y'=p x^{p-1}, -2 x^p
+        var ypp = (p>=2)? p*(p-1)*Math.pow(x,p-2) : 0;
+        var yp  = (p>=1)? p*Math.pow(x,p-1) : 0;
+        row[p] = ypp + yp - 2*Math.pow(x,p);
+      }
+      A.push(row); b.push(0);
+    }
+    var a = solve(A,b);
+    return {a:a, ncol:ncol};
+  }
+
+  function polyVal(a,x){ var s=0; for (var p=a.length-1;p>=0;p--) s=s*x+a[p]; return s; }
+  function residual(a,x){
+    var n=a.length-1, ypp=0,yp=0,yy=0;
+    for (var p=0;p<=n;p++){
+      ypp += (p>=2)? a[p]*p*(p-1)*Math.pow(x,p-2):0;
+      yp  += (p>=1)? a[p]*p*Math.pow(x,p-1):0;
+      yy  += a[p]*Math.pow(x,p);
+    }
+    return ypp + yp - 2*yy;
+  }
+
+  function plotSolution(cid, a){
+    var c=document.getElementById(cid), ctx=c.getContext('2d'), W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+    var P={l:46,r:14,t:14,b:28}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+    var ymin=-0.1, ymax=1.15;
+    function xp(x){ return P.l + pw*(x-L0)/(L1-L0); }
+    function yp(v){ return P.t + ph*(1-(v-ymin)/(ymax-ymin)); }
+    ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+    for (var g=0;g<=5;g++){ var gy=P.t+ph*g/5; ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke(); }
+    // exact
+    ctx.strokeStyle='#b44a2d'; ctx.lineWidth=2.4; ctx.beginPath();
+    for (var i=0;i<=200;i++){ var x=L0+(L1-L0)*i/200; i===0?ctx.moveTo(xp(x),yp(yExact(x))):ctx.lineTo(xp(x),yp(yExact(x))); }
+    ctx.stroke();
+    // collocation poly
+    ctx.strokeStyle='#3a5ba0'; ctx.lineWidth=2; ctx.setLineDash([6,4]); ctx.beginPath();
+    for (var i=0;i<=200;i++){ var x=L0+(L1-L0)*i/200; var v=polyVal(a,x); v=Math.max(ymin,Math.min(ymax,v)); i===0?ctx.moveTo(xp(x),yp(v)):ctx.lineTo(xp(x),yp(v)); }
+    ctx.stroke(); ctx.setLineDash([]);
+    // collocation nodes
+    var ncol=a.length-2;
+    ctx.fillStyle='#1a6b5a';
+    for (var k=0;k<ncol;k++){ var x=L0+(L1-L0)*(k+1)/(ncol+1); ctx.beginPath(); ctx.arc(xp(x),yp(polyVal(a,x)),3,0,7); ctx.fill(); }
+    // axes
+    ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1; ctx.beginPath();
+    ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+    ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+    for (var t=0;t<=4;t++) ctx.fillText(t, xp(t), P.t+ph+14);
+    ctx.fillText('x', P.l+pw+4, P.t+ph+14);
+    ctx.textAlign='right';
+    for (var g=0;g<=5;g++) ctx.fillText((ymax-(ymax-ymin)*g/5).toFixed(1), P.l-4, P.t+ph*g/5+3);
+    // legend
+    ctx.textAlign='left'; ctx.font='9px JetBrains Mono';
+    ctx.fillStyle='#b44a2d'; ctx.fillText('— точное y(x)', P.l+6, P.t+12);
+    ctx.fillStyle='#3a5ba0'; ctx.fillText('- - коллокация ỹ(x)', P.l+6, P.t+24);
+    ctx.fillStyle='#1a6b5a'; ctx.fillText('• узлы коллокации', P.l+6, P.t+36);
+  }
+
+  function plotResidual(cid, a){
+    var c=document.getElementById(cid), ctx=c.getContext('2d'), W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+    var P={l:50,r:14,t:14,b:28}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+    // residual range
+    var rmax=1e-9;
+    for (var i=0;i<=200;i++){ var x=L0+(L1-L0)*i/200; var r=Math.abs(residual(a,x)); if (r>rmax) rmax=r; }
+    rmax*=1.15;
+    function xp(x){ return P.l + pw*(x-L0)/(L1-L0); }
+    function yp(v){ return P.t + ph*(1-(v+rmax)/(2*rmax)); }
+    ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+    for (var g=0;g<=4;g++){ var gy=P.t+ph*g/4; ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+pw,gy); ctx.stroke(); }
+    // zero line
+    ctx.strokeStyle='#9a8d7e'; ctx.lineWidth=1; ctx.setLineDash([4,3]); ctx.beginPath(); ctx.moveTo(P.l,yp(0)); ctx.lineTo(P.l+pw,yp(0)); ctx.stroke(); ctx.setLineDash([]);
+    // residual curve
+    ctx.strokeStyle='#1a6b5a'; ctx.lineWidth=2; ctx.beginPath();
+    for (var i=0;i<=200;i++){ var x=L0+(L1-L0)*i/200; var r=residual(a,x); i===0?ctx.moveTo(xp(x),yp(r)):ctx.lineTo(xp(x),yp(r)); }
+    ctx.stroke();
+    // collocation zeros
+    var ncol=a.length-2;
+    ctx.fillStyle='#b44a2d';
+    for (var k=0;k<ncol;k++){ var x=L0+(L1-L0)*(k+1)/(ncol+1); ctx.beginPath(); ctx.arc(xp(x),yp(0),3,0,7); ctx.fill(); }
+    // axes
+    ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1; ctx.beginPath();
+    ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+    ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+    for (var t=0;t<=4;t++) ctx.fillText(t, xp(t), P.t+ph+14);
+    ctx.fillText('x', P.l+pw+4, P.t+ph+14);
+    ctx.textAlign='right';
+    ctx.fillText('+'+rmax.toExponential(0), P.l-4, P.t+9);
+    ctx.fillText('0', P.l-4, yp(0)+3);
+    ctx.fillText('-'+rmax.toExponential(0), P.l-4, P.t+ph);
+    ctx.textAlign='left'; ctx.font='9px JetBrains Mono'; ctx.fillStyle='#b44a2d';
+    ctx.fillText('• невязка = 0 в узлах', P.l+6, P.t+12);
+  }
+
+  function run(){
+    var n = +document.getElementById('mkeCn').value;
+    document.getElementById('mkeCnv').textContent = n;
+    var res = collocate(n);
+    document.getElementById('mkeCpv').textContent = res.ncol;
+    plotSolution('mkeC_y', res.a);
+    plotResidual('mkeC_r', res.a);
+    // L2 error vs exact + checkpoint values
+    var e2=0, N=400;
+    for (var i=0;i<=N;i++){ var x=L0+(L1-L0)*i/N; var d=polyVal(res.a,x)-yExact(x); e2+=d*d; }
+    e2=Math.sqrt(e2/(N+1));
+    var y1=polyVal(res.a,1).toFixed(4), y2=polyVal(res.a,2).toFixed(4), y3=polyVal(res.a,3).toFixed(4);
+    document.getElementById('mkeCstatus').innerHTML =
+      'n='+n+' · ỹ(1)='+y1+' (точн. 0.0473), ỹ(2)='+y2+' (0.1350), ỹ(3)='+y3+' (0.3679) · L₂-ошибка = '+e2.toExponential(2);
+  }
+  document.getElementById('mkeCn').addEventListener('input', run);
+  window.addEventListener('load', function(){ setTimeout(run, 200); });
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> При \(n=3\) воспроизводится разобранный в лекции случай: \(\tilde y(1)\approx0{,}055\), невязка — кубический полином, обнуляющийся в выбранных узлах, но заметно отличный от нуля между ними (особенно справа). С ростом степени \(n\) и числа точек коллокации полином всё точнее ложится на точное решение, а невязка прижимается к нулю по всему отрезку — иллюстрация того, как увеличение базиса повышает точность. Одновременно проявляется проблема из «Обсуждения»: при больших \(n\) матрица плотная, в ней соседствуют очень малые и очень большие числа, и обусловленность ухудшается. Это и есть мотив перехода к финитным функциям формы и методу конечных элементов.
+</div>
+
+<div class="exercise">
+<strong>Упражнение.</strong> Выведите систему (1.5), подставив кубический полином (1.3) в невязку (1.4) и потребовав \(\hat L(\tilde y)=0\) в точках \(x=0\) и \(x=1\). Затем повторите расчёт, выбрав узлы коллокации \(x=2\) и \(x=3\) (ближе к области быстрого роста решения), и сравните погрешности в точках \(x=1,2,3\) с приведёнными в таблице. Какой выбор узлов точнее и почему?
+</div>
+
+<div class="lecture-nav">
+<a href="index.html" class="nav-prev">← Обзор курса</a>
+<a href="lec2.html" class="nav-next">Лекция 2 →</a>
+</div>
+</div>
+</div>
+
+</body>
+</html>

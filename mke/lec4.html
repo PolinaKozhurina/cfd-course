@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>МКЭ-Лекция 4. Расчётные сетки</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>МКЭ · Лекция 4</h2>
+  <div class="g">Содержание</div>
+  <a href="#stages">Этапы численного решения</a>
+  <a href="#definition">Определение сетки</a>
+  <a href="#structured">Структурированные сетки</a>
+  <a href="#block">Блочно-структурированные</a>
+  <a href="#datastruct">Структуры данных регулярной сетки</a>
+  <a href="#unstructured">Неструктурированные сетки</a>
+  <a href="#memory">Сравнение по памяти</a>
+  <a href="#adjacency">Смежность и инцидентность</a>
+  <a href="#proper">Правильное примыкание</a>
+  <a href="#nodecell">Отношение узел–ячейка</a>
+  <a href="#interactive">Интерактив</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="lec3.html">← Лекция 3</a>
+  <a href="index.html">Обзор курса</a>
+  <a href="lec5.html">→ Лекция 5</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-fem">МКЭ</span>
+<div class="lecture-num">Лекция 4 · Метод конечных элементов</div>
+<h1>Расчётные сетки регулярной и нерегулярной структуры</h1>
+
+<h2 id="stages">Этапы численного решения краевой задачи</h2>
+
+<p>Численное решение начально-краевой задачи математической физики обычно разделяется на несколько последовательных этапов. Каждый из них отвечает за определённую часть работы — от формулировки модели до представления полученных результатов:</p>
+
+<ol>
+<li><strong>Математическая постановка задачи</strong> — описание системы уравнений модели, входных данных решения (свойств среды, граничных и начальных условий).</li>
+<li><strong>Выбор и обоснование методики расчёта</strong> — какой численный метод применяется, на какой сетке, с каким порядком аппроксимации.</li>
+<li><strong>Препроцессинг</strong> (подготовка исходных данных) — <em>построение сетки</em> и дискретизация уравнений исходной модели, определение параметров расчёта и параметров управления расчётом.</li>
+<li><strong>Процессинг</strong> — собственно выполнение расчёта.</li>
+<li><strong>Постпроцессинг</strong> — обработка результатов: вычисление дополнительных параметров, характеризующих результаты, и <em>визуализация</em> — представление расчётных данных в графическом виде, анимация и т.п.</li>
+</ol>
+
+<p>Настоящая лекция посвящена ключевому элементу препроцессинга — <strong>расчётной сетке</strong>. Именно сетка определяет, как непрерывная область превращается в конечный набор дискретных объектов, на которых строится дискретный аналог исходных уравнений.</p>
+
+<div class="figure">
+<svg viewBox="0 0 760 110" xmlns="http://www.w3.org/2000/svg" style="max-width:720px">
+  <defs>
+    <marker id="arrStage" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#6b5d4f"/></marker>
+  </defs>
+  <g font-family="JetBrains Mono,monospace" font-size="10" text-anchor="middle">
+    <rect x="10"  y="35" width="120" height="44" rx="5" fill="#e9ebf7" stroke="#3a4a8a" stroke-width="1"/>
+    <text x="70"  y="53" fill="#3a4a8a" font-weight="600">постановка</text>
+    <text x="70"  y="68" fill="#6b5d4f" font-size="8">уравнения, БУ, НУ</text>
+
+    <rect x="160" y="20" width="150" height="74" rx="5" fill="#fde8e8" stroke="#b44a2d" stroke-width="1.4"/>
+    <text x="235" y="40" fill="#b44a2d" font-weight="700">препроцессинг</text>
+    <text x="235" y="56" fill="#6b5d4f" font-size="8">построение СЕТКИ</text>
+    <text x="235" y="69" fill="#6b5d4f" font-size="8">дискретизация</text>
+    <text x="235" y="82" fill="#6b5d4f" font-size="8">параметры расчёта</text>
+
+    <rect x="340" y="35" width="120" height="44" rx="5" fill="#e8f4f0" stroke="#1a6b5a" stroke-width="1"/>
+    <text x="400" y="53" fill="#1a6b5a" font-weight="600">процессинг</text>
+    <text x="400" y="68" fill="#6b5d4f" font-size="8">выполнение расчёта</text>
+
+    <rect x="490" y="35" width="150" height="44" rx="5" fill="#faeeda" stroke="#854f0b" stroke-width="1"/>
+    <text x="565" y="53" fill="#854f0b" font-weight="600">постпроцессинг</text>
+    <text x="565" y="68" fill="#6b5d4f" font-size="8">визуализация, анимация</text>
+  </g>
+  <g stroke="#6b5d4f" stroke-width="1.2" marker-end="url(#arrStage)">
+    <line x1="132" y1="57" x2="156" y2="57"/>
+    <line x1="312" y1="57" x2="336" y2="57"/>
+    <line x1="462" y1="57" x2="486" y2="57"/>
+  </g>
+</svg>
+<div class="caption">Конвейер численного решения краевой задачи. Построение расчётной сетки — центральная часть препроцессинга и предмет данной лекции.</div>
+</div>
+
+<h2 id="definition">Определение сетки</h2>
+
+<div class="definition">
+<strong>Определение (расчётная сетка).</strong> Под <em>сеткой</em> мы будем понимать покрытие расчётной области множеством <strong>ячеек</strong>, образованных вершинами, или <strong>узлами</strong> сетки. Этого нестрогого определения для наших целей достаточно.
+</div>
+
+<p>Ячейки могут иметь различную форму: <strong>прямоугольники, треугольники</strong> в двумерном случае, <strong>кубы, тетраэдры, призмы</strong> в трёхмерном случае и т.п. От выбора формы ячеек и способа их взаимного расположения зависят как геометрическая гибкость сетки (способность повторять сложную границу области), так и эффективность хранения и обработки данных. По этому признаку сетки делят на два больших класса — <em>структурированные</em> и <em>неструктурированные</em>.</p>
+
+<h2 id="structured">Структурированные (регулярные) расчётные сетки</h2>
+
+<p>Структурированные сетки широко применяются для расчётов в областях несложной геометрической формы (прямоугольники, параллелепипеды, ступенчатые области и т.п.). Существует несколько эквивалентных определений сеток такого типа:</p>
+
+<div class="definition">
+<strong>Определение (структурированная сетка).</strong> Структурированной (регулярной) называют сетку, удовлетворяющую любому из равносильных условий:
+<ul>
+<li>все внутренние узлы <strong>топологически эквивалентны</strong> — у каждого внутреннего узла одинаковое окружение соседей;</li>
+<li>множество сеточных узлов <strong>упорядочено</strong> — каждый узел адресуется набором целочисленных индексов \((i,j)\) в 2D или \((i,j,k)\) в 3D.</li>
+</ul>
+</div>
+
+<p>На сетках такого типа <strong>шаблон разностной аппроксимации не зависит от номера узла</strong> (или ячейки), относительно которого выполнена аппроксимация решаемого уравнения. Это ключевое свойство: один и тот же набор формул применяется к каждому внутреннему узлу, что радикально упрощает программирование и ускоряет расчёт.</p>
+
+<p>С помощью различного рода преобразований координатных систем структурированные сетки могут использоваться для расчётов на неплоских поверхностях, в областях с криволинейными границами и т.п. (см. ниже технику отображений).</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 220" xmlns="http://www.w3.org/2000/svg" style="max-width:540px">
+  <!-- left: regular cartesian grid -->
+  <g stroke="#3a5ba0" stroke-width="1" fill="none">
+    <!-- vertical -->
+    <line x1="30" y1="30" x2="30" y2="190"/><line x1="60" y1="30" x2="60" y2="190"/>
+    <line x1="90" y1="30" x2="90" y2="190"/><line x1="120" y1="30" x2="120" y2="190"/>
+    <line x1="150" y1="30" x2="150" y2="190"/><line x1="180" y1="30" x2="180" y2="190"/>
+    <line x1="210" y1="30" x2="210" y2="190"/><line x1="240" y1="30" x2="240" y2="190"/>
+    <!-- horizontal -->
+    <line x1="30" y1="30" x2="240" y2="30"/><line x1="30" y1="62" x2="240" y2="62"/>
+    <line x1="30" y1="94" x2="240" y2="94"/><line x1="30" y1="126" x2="240" y2="126"/>
+    <line x1="30" y1="158" x2="240" y2="158"/><line x1="30" y1="190" x2="240" y2="190"/>
+  </g>
+  <!-- index annotations -->
+  <text x="135" y="22" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">i →</text>
+  <text x="18" y="113" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle" transform="rotate(-90 18 113)">j →</text>
+  <circle cx="120" cy="94" r="3.5" fill="#b44a2d"/>
+  <text x="126" y="90" font-family="JetBrains Mono,monospace" font-size="8" fill="#b44a2d">(i,j)</text>
+  <text x="135" y="210" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">регулярная декартова</text>
+
+  <!-- right: curvilinear (mapped) grid - half annulus -->
+  <g stroke="#1a6b5a" stroke-width="1" fill="none">
+    <!-- arcs (constant radius) -->
+    <path d="M 320 190 A 90 90 0 0 1 500 190"/>
+    <path d="M 338 190 A 72 72 0 0 1 482 190"/>
+    <path d="M 356 190 A 54 54 0 0 1 464 190"/>
+    <path d="M 374 190 A 36 36 0 0 1 446 190"/>
+    <path d="M 392 190 A 18 18 0 0 1 428 190"/>
+    <!-- radial spokes -->
+    <line x1="410" y1="190" x2="410" y2="100"/>
+    <line x1="410" y1="190" x2="346.4" y2="126.4"/>
+    <line x1="410" y1="190" x2="473.6" y2="126.4"/>
+    <line x1="410" y1="190" x2="320" y2="190"/>
+    <line x1="410" y1="190" x2="500" y2="190"/>
+    <line x1="410" y1="190" x2="375.6" y2="106.7"/>
+    <line x1="410" y1="190" x2="444.4" y2="106.7"/>
+  </g>
+  <text x="410" y="210" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">криволинейная (отображение)</text>
+</svg>
+<div class="caption">Примеры структурированных сеток на плоскости. Слева — регулярная декартова сетка: каждый узел адресуется парой индексов \((i,j)\). Справа — та же топологически прямоугольная сетка, отображённая на криволинейную область (полукольцо): индексная упорядоченность сохраняется, хотя ячейки геометрически искажены.</div>
+</div>
+
+<div class="remark">
+<strong>Почему «топологическая эквивалентность» важна.</strong> Так как окружение каждого внутреннего узла одинаково, для перехода к соседу достаточно изменить индекс: сосед справа — это \((i{+}1,j)\), сверху — \((i,j{+}1)\). Никакие списки соседей хранить не нужно — связи вычисляются арифметически. Это и есть источник экономии памяти и скорости регулярных сеток.
+</div>
+
+<h2 id="block">Блочно-структурированные сетки</h2>
+
+<p>Комбинации нумераций «координатных» сеток применяют при компоновке <strong>блочно-структурированных</strong> сеток. Само название говорит о том, что сетки такого типа построены путём соединения некоторого набора <strong>блоков</strong>, каждый из которых представляет собой сетку регулярной структуры. Внутри блока действует обычная индексная адресация \((i,j,k)\); на стыках блоков задаётся правило соответствия граничных узлов соседних блоков.</p>
+
+<p>Такой подход совмещает достоинства регулярных сеток (быстрый доступ, простой шаблон) с геометрической гибкостью: разбивая сложную область на несколько простых блоков, можно покрыть её структурированной сеткой целиком. Так строят, например, трёхмерные блочные сетки объединением структурированных гексаэдральных блоков, а также сетки, составленные из призматических и гексаэдральных элементов.</p>
+
+<div class="figure">
+<svg viewBox="0 0 540 230" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+  <!-- Three coloured blocks forming an L / stepped domain, each internally regular -->
+  <!-- Block A (left, blue) -->
+  <g stroke="#3a5ba0" stroke-width="0.9" fill="#3a5ba0" fill-opacity="0.05">
+    <rect x="40" y="40" width="120" height="120"/>
+    <line x1="70" y1="40" x2="70" y2="160"/><line x1="100" y1="40" x2="100" y2="160"/><line x1="130" y1="40" x2="130" y2="160"/>
+    <line x1="40" y1="70" x2="160" y2="70"/><line x1="40" y1="100" x2="160" y2="100"/><line x1="40" y1="130" x2="160" y2="130"/>
+  </g>
+  <text x="100" y="178" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a5ba0" text-anchor="middle">блок 1</text>
+  <!-- Block B (right top, green) -->
+  <g stroke="#1a6b5a" stroke-width="0.9" fill="#1a6b5a" fill-opacity="0.05">
+    <rect x="160" y="40" width="150" height="60"/>
+    <line x1="190" y1="40" x2="190" y2="100"/><line x1="220" y1="40" x2="220" y2="100"/><line x1="250" y1="40" x2="250" y2="100"/><line x1="280" y1="40" x2="280" y2="100"/>
+    <line x1="160" y1="70" x2="310" y2="70"/>
+  </g>
+  <text x="235" y="58" font-family="JetBrains Mono,monospace" font-size="9" fill="#1a6b5a" text-anchor="middle">блок 2</text>
+  <!-- Block C (right bottom, terracotta) -->
+  <g stroke="#b44a2d" stroke-width="0.9" fill="#b44a2d" fill-opacity="0.05">
+    <rect x="160" y="100" width="90" height="90"/>
+    <line x1="190" y1="100" x2="190" y2="190"/><line x1="220" y1="100" x2="220" y2="190"/>
+    <line x1="160" y1="130" x2="250" y2="130"/><line x1="160" y1="160" x2="250" y2="160"/>
+  </g>
+  <text x="205" y="180" font-family="JetBrains Mono,monospace" font-size="9" fill="#b44a2d" text-anchor="middle">блок 3</text>
+  <!-- highlight shared interfaces -->
+  <line x1="160" y1="40" x2="160" y2="160" stroke="#2c2419" stroke-width="2"/>
+  <line x1="160" y1="100" x2="250" y2="100" stroke="#2c2419" stroke-width="2"/>
+  <text x="360" y="95" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419">— стыки блоков</text>
+  <text x="360" y="115" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b5d4f">(согласование узлов)</text>
+</svg>
+<div class="caption">Блочно-структурированная сетка: сложная (здесь ступенчатая) область разбита на несколько блоков, внутри каждого построена регулярная сетка со своей индексацией \((i,j)\). Жирными линиями показаны межблочные стыки, на которых задаётся соответствие граничных узлов.</div>
+</div>
+
+<h2 id="datastruct">Структуры данных регулярной сетки</h2>
+
+<p>Для расчётов на сетках регулярной структуры применяется, как правило, <strong>прямое обращение к данным</strong> на разностном шаблоне аппроксимации, что существенно сокращает время расчёта. Структура данных регулярной сетки подразумевает хранение следующих элементов.</p>
+
+<ul>
+<li><strong>Количество ячеек по координатным направлениям \(I, J, K\).</strong> Для расчётов используются как декартова, так и криволинейные координатные системы — цилиндрическая, сферическая и т.д.</li>
+<li><strong>Глобальная нумерация узлов и ячеек.</strong> Её можно определить, последовательно пронумеровав ячейки сначала по направлению \(I\), затем по \(J\) и далее по \(K\).</li>
+<li><strong>Ячеечный массив</strong> — значение физической величины в центре ячейки — представляет собой линейный массив размерности
+<div class="eq">\[ N = I\cdot J\cdot K. \]</div></li>
+<li><strong>Глобальный номер грани.</strong> Нумерация граней вводится так же, как нумерация ячеек: сначала нумеруются грани по первому координатному направлению, затем по второму и далее по третьему.</li>
+<li><strong>Массив номеров граней</strong> (значение величины в центре грани) — линейный массив размерности
+<div class="eq">\[ M = (I+1)\times(J+1)\times(K+1). \]</div></li>
+</ul>
+
+<p>Поскольку связь между индексами \((i,j,k)\) и линейным глобальным номером задаётся явной формулой, переход «узел \(\to\) сосед» и «ячейка \(\to\) грань» выполняется арифметически, без обращения к таблицам смежности.</p>
+
+<div class="figure">
+<svg viewBox="0 0 540 260" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+  <!-- 4x3 grid of cells with global numbering by I then J -->
+  <g stroke="#d9cfc0" stroke-width="1" fill="none">
+    <rect x="60" y="40" width="360" height="180"/>
+    <line x1="150" y1="40" x2="150" y2="220"/><line x1="240" y1="40" x2="240" y2="220"/><line x1="330" y1="40" x2="330" y2="220"/>
+    <line x1="60" y1="100" x2="420" y2="100"/><line x1="60" y1="160" x2="420" y2="160"/>
+  </g>
+  <!-- cell global indices -->
+  <g font-family="JetBrains Mono,monospace" font-size="11" fill="#9a8d7e" text-anchor="middle">
+    <text x="105" y="195">1</text><text x="195" y="195">2</text><text x="285" y="195">3</text><text x="375" y="195">4</text>
+    <text x="105" y="135">5</text><text x="195" y="135">6</text><text x="285" y="135">7</text><text x="375" y="135">8</text>
+    <text x="105" y="75">9</text><text x="195" y="75">10</text><text x="285" y="75">11</text><text x="375" y="75">12</text>
+  </g>
+  <!-- highlight one cell and its stencil neighbours -->
+  <rect x="150" y="100" width="90" height="60" fill="#b44a2d" fill-opacity="0.16" stroke="#b44a2d" stroke-width="1.6"/>
+  <rect x="60"  y="100" width="90" height="60" fill="#3a5ba0" fill-opacity="0.10"/>
+  <rect x="240" y="100" width="90" height="60" fill="#3a5ba0" fill-opacity="0.10"/>
+  <rect x="150" y="40"  width="90" height="60" fill="#3a5ba0" fill-opacity="0.10"/>
+  <rect x="150" y="160" width="90" height="60" fill="#3a5ba0" fill-opacity="0.10"/>
+  <!-- stencil annotation -->
+  <text x="195" y="128" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d" text-anchor="middle" font-weight="700">L=6</text>
+  <text x="195" y="142" font-family="JetBrains Mono,monospace" font-size="8"  fill="#6b5d4f" text-anchor="middle">(i,j)</text>
+  <!-- axes -->
+  <text x="240" y="248" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">I → (нумерация: сначала по I, затем по J)</text>
+  <text x="42" y="130" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle" transform="rotate(-90 42 130)">J →</text>
+</svg>
+<div class="caption">Глобальная нумерация ячеек регулярной сетки \(4\times3\): ячейки пронумерованы сначала по направлению \(I\), затем по \(J\). Для ячейки \(L=6\) (терракота) пятиточечный шаблон образуют соседи \(L\pm1\) и \(L\pm I\) (синие), вычисляемые арифметически из глобального номера.</div>
+</div>
+
+<h2 id="unstructured">Неструктурированные (структурно-нерегулярные) сетки</h2>
+
+<div class="definition">
+<strong>Определение (неструктурированная сетка).</strong> Структурно-нерегулярная сетка — это сетка с нерегулярным расположением узлов, такая, что узлы могут иметь <strong>произвольное координационное число</strong> — количество ближайших узлов, с которыми у данного узла имеется общее ребро сетки.
+</div>
+
+<p>Состоят такие сетки из ячеек различной формы. Преимущественно расчёты выполняются на сетках, состоящих из ячеек-<strong>шестигранников (гексаэдров)</strong>, <strong>тетраэдров</strong>, <strong>призм с треугольным основанием</strong>; реже используются пирамидальные ячейки. В англоязычной литературе для сеток нерегулярной структуры преимущественно используется термин <em>«unstructured meshes»</em> — неструктурированные сетки.</p>
+
+<p>Неструктурированные сетки широко используются для решения задач, рассматриваемых в областях <strong>сложной геометрической формы</strong>. Генерация таких сеток, согласованных с границей расчётной области нетривиальной формы, выполняется посредством кодов, реализующих методы вычислительной геометрии для построения дискретных (сеточных) аналогов моделируемых объектов. Зачастую генераторы сеток имеют интерфейсы, поддерживающие <strong>импорт геометрических объектов из CAD-систем</strong>.</p>
+
+<div class="figure">
+<svg viewBox="0 0 540 250" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+  <!-- Unstructured triangular mesh on an L-shaped domain -->
+  <g stroke="#1a6b5a" stroke-width="0.9" fill="#1a6b5a" fill-opacity="0.04">
+    <!-- A hand-built irregular triangulation of an L-shape -->
+    <polygon points="40,40 95,55 70,100"/>
+    <polygon points="95,55 130,40 120,95"/>
+    <polygon points="40,40 70,100 40,130"/>
+    <polygon points="70,100 120,95 95,140"/>
+    <polygon points="40,130 70,100 95,140"/>
+    <polygon points="40,130 95,140 60,180"/>
+    <polygon points="95,140 120,95 160,130"/>
+    <polygon points="95,140 160,130 140,180"/>
+    <polygon points="60,180 95,140 140,180"/>
+    <polygon points="40,130 60,180 40,210"/>
+    <polygon points="40,210 60,180 100,210"/>
+    <polygon points="60,180 140,180 110,210"/>
+    <polygon points="60,180 110,210 100,210"/>
+    <polygon points="120,95 130,40 175,70"/>
+    <polygon points="120,95 175,70 160,130"/>
+    <polygon points="160,130 175,70 215,110"/>
+    <polygon points="160,130 215,110 140,180"/>
+    <polygon points="140,180 215,110 200,175"/>
+    <polygon points="140,180 200,175 110,210"/>
+    <polygon points="110,210 200,175 190,210"/>
+  </g>
+  <text x="130" y="235" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">треугольная сетка (L-область)</text>
+
+  <!-- Unstructured triangulation of an ellipse -->
+  <g stroke="#1a6b5a" stroke-width="0.9" fill="#1a6b5a" fill-opacity="0.04" transform="translate(290,10)">
+    <polygon points="20,90 60,55 95,70"/>
+    <polygon points="20,90 95,70 80,110"/>
+    <polygon points="20,90 80,110 50,135"/>
+    <polygon points="60,55 110,50 95,70"/>
+    <polygon points="95,70 110,50 150,75"/>
+    <polygon points="95,70 150,75 130,110"/>
+    <polygon points="95,70 130,110 80,110"/>
+    <polygon points="80,110 130,110 105,140"/>
+    <polygon points="50,135 80,110 105,140"/>
+    <polygon points="110,50 160,70 150,75"/>
+    <polygon points="150,75 160,70 200,95"/>
+    <polygon points="150,75 200,95 175,115"/>
+    <polygon points="130,110 150,75 175,115"/>
+    <polygon points="130,110 175,115 150,140"/>
+    <polygon points="105,140 130,110 150,140"/>
+    <polygon points="175,115 200,95 180,140"/>
+    <polygon points="150,140 175,115 180,140"/>
+  </g>
+  <text x="395" y="170" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">триангуляция эллипса</text>
+</svg>
+<div class="caption">Примеры неструктурированных сеток на плоскости. Узлы имеют различное координационное число, ячейки (треугольники) разного размера и ориентации; сетка повторяет границу области сложной формы. Аналогично в 3D области заполняются тетраэдрами.</div>
+</div>
+
+<div class="remark">
+<strong>Отображения для регулярных сеток.</strong> Сетки регулярной структуры во многих случаях применяют и к расчётам в геометрически сложных областях. Для этого используется <em>техника отображений</em>: исходная регулярная сетка (например, декартова прямоугольная) подстраивается к границе области (см. рисунок полукольца выше). Применяются также методики на основе простых «координатных» сеток, реализующие учёт граничных условий специальной аппроксимацией, отличающейся от аппроксимации уравнений внутри области.
+</div>
+
+<h2 id="memory">Сравнение по объёму памяти</h2>
+
+<p>Регулярные сетки имеют то достоинство, что для хранения информации о самой сетке и сеточных функциях требуются массивы данных, занимающие существенно меньшие объёмы памяти ЭВМ по сравнению с неструктурированными сетками при <em>одинаковом количестве узловых точек</em>. Причина — отсутствие необходимости явно хранить связи между элементами.</p>
+
+<p>Сопоставим количества узлов и ячеек:</p>
+
+<ul>
+<li>В структурированных сетках количества узлов и ячеек примерно одинаковы.</li>
+<li>В неструктурированных <strong>треугольных</strong> сетках количество ячеек оказывается больше количества узлов <strong>примерно в два раза</strong> (по оценкам типичных ситуаций).</li>
+<li>Широко используемые для трёхмерных расчётов сетки из ячеек-<strong>тетраэдров</strong> содержат (также оценочно) количество ячеек <strong>в три раза</strong> превосходящее число узлов.</li>
+</ul>
+
+<p>Кроме того, неструктурированные сетки требуют довольно много машинной памяти для хранения массивов с информацией об их структуре — таблиц смежности и инцидентности, которые в регулярном случае вообще не нужны.</p>
+
+<div class="figure">
+<svg viewBox="0 0 540 200" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+  <!-- bar chart: cells per node ratio -->
+  <line x1="60" y1="160" x2="500" y2="160" stroke="#2c2419" stroke-width="1"/>
+  <line x1="60" y1="160" x2="60" y2="30" stroke="#2c2419" stroke-width="1"/>
+  <!-- gridlines -->
+  <g stroke="#e8e0d4" stroke-width="0.6">
+    <line x1="60" y1="120" x2="500" y2="120"/><line x1="60" y1="80" x2="500" y2="80"/><line x1="60" y1="40" x2="500" y2="40"/>
+  </g>
+  <g font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="end">
+    <text x="55" y="163">0</text><text x="55" y="123">1</text><text x="55" y="83">2</text><text x="55" y="43">3</text>
+  </g>
+  <text x="30" y="100" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle" transform="rotate(-90 30 100)">ячеек / узлов</text>
+  <!-- bars -->
+  <rect x="110" y="120" width="70" height="40" fill="#3a5ba0" fill-opacity="0.8"/>
+  <text x="145" y="113" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0" text-anchor="middle">~1</text>
+  <text x="145" y="178" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419" text-anchor="middle">структур.</text>
+
+  <rect x="240" y="80" width="70" height="80" fill="#1a6b5a" fill-opacity="0.8"/>
+  <text x="275" y="73" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a" text-anchor="middle">~2</text>
+  <text x="275" y="178" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419" text-anchor="middle">треуг. 2D</text>
+
+  <rect x="370" y="40" width="70" height="120" fill="#b44a2d" fill-opacity="0.8"/>
+  <text x="405" y="33" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d" text-anchor="middle">~3</text>
+  <text x="405" y="178" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419" text-anchor="middle">тетраэдр. 3D</text>
+</svg>
+<div class="caption">Оценочное отношение числа ячеек к числу узлов. В регулярных сетках оно близко к единице, в плоских треугольных — около двух, в трёхмерных тетраэдральных — около трёх. Чем выше отношение и нерегулярность, тем больше памяти на хранение структуры сетки.</div>
+</div>
+
+<h2 id="adjacency">Смежность и инцидентность</h2>
+
+<p>Далее на примере двумерной треугольной сетки рассмотрим проблемы формирования структур данных, необходимых для работы с неструктурированными сетками. Вначале отметим, что в классификации сеток используются два важных понятия.</p>
+
+<div class="definition">
+<strong>Определение (смежность и инцидентность).</strong>
+<ul>
+<li><strong>Смежность</strong> — отношение между элементами сетки <em>одинаковой</em> размерности (например, две ячейки смежны, если имеют общее ребро; два узла смежны, если соединены ребром).</li>
+<li><strong>Инцидентность</strong> — отношение между элементами <em>разной</em> размерности (например, узел инцидентен ячейке, если является её вершиной; ребро инцидентно ячейке, если является её стороной).</li>
+</ul>
+</div>
+
+<div class="figure">
+<svg viewBox="0 0 540 200" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+  <!-- Left: two triangles adjacent by an edge -->
+  <g>
+    <polygon points="40,160 60,40 180,60" fill="#1a6b5a" fill-opacity="0.07" stroke="#2c2419" stroke-width="1.2"/>
+    <polygon points="40,160 180,60 200,170" fill="#3a5ba0" fill-opacity="0.07" stroke="#2c2419" stroke-width="1.2"/>
+    <!-- shared edge highlighted -->
+    <line x1="40" y1="160" x2="180" y2="60" stroke="#b44a2d" stroke-width="2.6"/>
+    <!-- nodes -->
+    <g fill="#2c2419"><circle cx="40" cy="160" r="3.5"/><circle cx="60" cy="40" r="3.5"/><circle cx="180" cy="60" r="3.5"/><circle cx="200" cy="170" r="3.5"/></g>
+    <text x="110" y="100" font-family="JetBrains Mono,monospace" font-size="9" fill="#b44a2d" font-weight="600" transform="rotate(-35 110 100)">общее ребро</text>
+    <text x="120" y="190" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">смежные по ребру</text>
+  </g>
+  <!-- Right: node incident to cell -->
+  <g transform="translate(300,0)">
+    <polygon points="40,170 200,170 120,40" fill="#1a6b5a" fill-opacity="0.07" stroke="#2c2419" stroke-width="1.2"/>
+    <g fill="#b44a2d"><circle cx="40" cy="170" r="4.5"/><circle cx="200" cy="170" r="4.5"/><circle cx="120" cy="40" r="4.5"/></g>
+    <text x="120" y="120" font-family="JetBrains Mono,monospace" font-size="9" fill="#1a6b5a" text-anchor="middle">ячейка</text>
+    <text x="120" y="190" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">узлы инцидентны ячейке</text>
+  </g>
+</svg>
+<div class="caption">Слева: две ячейки <em>смежны по ребру</em> — у них общий элемент той же размерности (ребро, выделено терракотой). Справа: каждая вершина (узел) <em>инцидентна</em> ячейке — отношение между элементами разной размерности (узел ↔ ячейка).</div>
+</div>
+
+<h2 id="proper">Правильное примыкание ячеек</h2>
+
+<p>Приводимые далее примеры вычислительной работы относятся к «двумерным» сеткам, составленным из треугольных ячеек. Это делается лишь для определённости — методы обработки данных пригодны для сеток из различных многоугольников. Рассматриваемые сетки составлены из <strong>правильно примыкающих</strong> ячеек.</p>
+
+<div class="definition">
+<strong>Определение (правильное примыкание).</strong> Термин «правильное примыкание» относится к однотипным элементам. Правильное примыкание означает, что смежными элементами, из которых составлены ячейки (в 2-мерном случае — узлы и рёбра, в 3-мерном добавляются грани), являются элементы <strong>одинаковой размерности</strong>.
+</div>
+
+<p>На рисунке ниже показаны два корректных случая (общий узел и общее ребро) и пример некорректного примыкания.</p>
+
+<div class="figure">
+<svg viewBox="0 0 540 230" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+  <!-- Case 1: common node -->
+  <g transform="translate(0,10)">
+    <polygon points="30,110 120,40 120,110" fill="#1a6b5a" fill-opacity="0.06" stroke="#2c2419" stroke-width="1.2"/>
+    <polygon points="120,110 120,180 210,110" fill="#3a5ba0" fill-opacity="0.06" stroke="#2c2419" stroke-width="1.2"/>
+    <circle cx="120" cy="110" r="5" fill="#b44a2d"/>
+    <text x="120" y="100" font-family="JetBrains Mono,monospace" font-size="9" fill="#b44a2d" text-anchor="middle">общий узел</text>
+    <text x="120" y="210" font-family="JetBrains Mono,monospace" font-size="9" fill="#1a6b5a" text-anchor="middle">правильно ✓</text>
+  </g>
+  <!-- Case 2: common edge -->
+  <g transform="translate(290,10)">
+    <polygon points="30,110 110,30 190,110" fill="#1a6b5a" fill-opacity="0.06" stroke="#2c2419" stroke-width="1.2"/>
+    <polygon points="30,110 190,110 110,190" fill="#3a5ba0" fill-opacity="0.06" stroke="#2c2419" stroke-width="1.2"/>
+    <line x1="30" y1="110" x2="190" y2="110" stroke="#b44a2d" stroke-width="2.6"/>
+    <text x="110" y="103" font-family="JetBrains Mono,monospace" font-size="9" fill="#b44a2d" text-anchor="middle">общее ребро</text>
+    <text x="110" y="210" font-family="JetBrains Mono,monospace" font-size="9" fill="#1a6b5a" text-anchor="middle">правильно ✓</text>
+  </g>
+</svg>
+<div class="caption">Топологически правильное примыкание ячеек: два треугольника либо имеют один общий узел, либо одно общее ребро. В обоих случаях общий элемент — однотипный (узел↔узел, ребро↔ребро).</div>
+</div>
+
+<div class="figure">
+<svg viewBox="0 0 540 200" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+  <!-- improper: a vertex of one triangle lies in the middle of another's edge (hanging node) -->
+  <polygon points="60,170 150,40 300,140" fill="#1a6b5a" fill-opacity="0.06" stroke="#2c2419" stroke-width="1.2"/>
+  <polygon points="300,140 430,110 320,170" fill="#3a5ba0" fill-opacity="0.06" stroke="#2c2419" stroke-width="1.2"/>
+  <!-- hanging node sits on edge of big triangle -->
+  <polygon points="225,90 300,140 320,170" fill="none" stroke="#b44a2d" stroke-width="1" stroke-dasharray="4,3"/>
+  <circle cx="300" cy="140" r="5" fill="#b44a2d"/>
+  <text x="300" y="132" font-family="JetBrains Mono,monospace" font-size="9" fill="#b44a2d" text-anchor="middle">висячий узел</text>
+  <!-- annotate -->
+  <line x1="225" y1="90" x2="320" y2="170" stroke="#9a8d7e" stroke-width="0.8" stroke-dasharray="3,3"/>
+  <text x="270" y="190" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e" text-anchor="middle">узел лежит на ребре соседа</text>
+  <text x="120" y="190" font-family="JetBrains Mono,monospace" font-size="9" fill="#b44a2d" text-anchor="middle">неправильно ✗</text>
+</svg>
+<div class="caption">Пример неправильного примыкания: вершина одной ячейки попадает на середину ребра соседней («висячий узел»). Такую пару можно рассматривать и как треугольник с четырёхугольником, и как два неправильно примыкающих треугольника — элементы оказываются разной размерности на стыке.</div>
+</div>
+
+<h2 id="nodecell">Отношение узел–ячейка: массивы бинарных отношений</h2>
+
+<p>Рассмотрим использование <strong>массивов бинарных отношений</strong> для хранения и обработки геометрических и других данных неструктурированной сетки. Будем использовать глобальную нумерацию сеточных элементов и нумеровать узлы индексом «\(K\)», ячейки — индексом «\(L\)».</p>
+
+<p>Введём массив указателей <code>NE_P</code> (Node–Element Pointer), с помощью которого по текущему номеру узла \(K\) можно найти группу номеров ячеек \(L_K(i)\), включающих данный узел как инцидентный им. Для определённости рассмотрим фрагмент треугольной сетки, в котором ячейки \(L_K(1),\dots,L_K(6)\) составляют шаблон аппроксимации около узла \(K\).</p>
+
+<div class="figure">
+<svg viewBox="0 0 420 360" xmlns="http://www.w3.org/2000/svg" style="max-width:400px">
+  <!-- central node K with 6 triangles forming a hexagon fan -->
+  <!-- hexagon vertices around centre (210,180), R=120 -->
+  <!-- angles: 90,150,210,270,330,30 deg -->
+  <!-- v0 top (210,60) v1 (210-104,120)=(106,120) v2 (106,240) v3 (210,300) v4 (314,240) v5 (314,120) -->
+  <g stroke="#2c2419" stroke-width="1.1" fill="#1a6b5a" fill-opacity="0.05">
+    <polygon points="210,180 210,60 314,120"/>
+    <polygon points="210,180 314,120 314,240"/>
+    <polygon points="210,180 314,240 210,300"/>
+    <polygon points="210,180 210,300 106,240"/>
+    <polygon points="210,180 106,240 106,120"/>
+    <polygon points="210,180 106,120 210,60"/>
+  </g>
+  <!-- cell labels -->
+  <g font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0" text-anchor="middle">
+    <text x="255" y="115">L&#8345;(6)</text>
+    <text x="278" y="185">L&#8345;(5)</text>
+    <text x="245" y="255">L&#8345;(4)</text>
+    <text x="175" y="255">L&#8345;(3)</text>
+    <text x="142" y="185">L&#8345;(2)</text>
+    <text x="165" y="115">L&#8345;(1)</text>
+  </g>
+  <!-- central node -->
+  <circle cx="210" cy="180" r="5.5" fill="#b44a2d"/>
+  <line x1="210" y1="180" x2="350" y2="150" stroke="#6b5d4f" stroke-width="0.7"/>
+  <text x="355" y="153" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d">узел K</text>
+  <!-- vertex dots -->
+  <g fill="#2c2419"><circle cx="210" cy="60" r="3"/><circle cx="314" cy="120" r="3"/><circle cx="314" cy="240" r="3"/><circle cx="210" cy="300" r="3"/><circle cx="106" cy="240" r="3"/><circle cx="106" cy="120" r="3"/></g>
+  <text x="210" y="345" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">шаблон узла K</text>
+</svg>
+<div class="caption">Шаблон узла \(K\): ячейки \(L_K(1),\dots,L_K(6)\), которым данный узел инцидентен. Число таких ячеек переменно (координационное число узла), что и отличает неструктурированную сетку от регулярной.</div>
+</div>
+
+<p>Для хранения этого отношения используют пару массивов: <code>NE_P</code> (указатели) и <code>NE</code> (Node–Element, собственно номера ячеек). Работа организована так. Элемент <code>NE_P(K)</code> содержит указатель \(P_K\) на ту позицию массива <code>NE</code>, в которую помещён номер \(L_1\) первой ячейки, инцидентной узлу \(K\); далее идут \(L_2\), и т.д. до последней ячейки группы. Тогда число ячеек, инцидентных узлу \(K\), вычисляется как разность соседних указателей:</p>
+
+<div class="eq">\[ N_K = \mathtt{NE\_P}(K+1) - \mathtt{NE\_P}(K). \]</div>
+
+<p>Числа \(N_K\) могут понадобиться, если в расчётном алгоритме есть циклы по ячейкам, окружающим \(K\)-й узел.</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 200" xmlns="http://www.w3.org/2000/svg" style="max-width:540px">
+  <!-- NE_P array -->
+  <text x="20" y="40" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" font-weight="600">NE_P</text>
+  <g font-family="JetBrains Mono,monospace" font-size="10" text-anchor="middle">
+    <rect x="80"  y="25" width="60" height="30" fill="#e9ebf7" stroke="#3a4a8a"/>
+    <rect x="140" y="25" width="60" height="30" fill="#e9ebf7" stroke="#3a4a8a"/>
+    <text x="110" y="45" fill="#3a4a8a">P&#8342;</text>
+    <text x="170" y="45" fill="#3a4a8a">P&#8342;&#8330;&#8321;</text>
+    <text x="110" y="70" fill="#6b5d4f" font-size="8">NE_P(K)</text>
+    <text x="170" y="70" fill="#6b5d4f" font-size="8">NE_P(K+1)</text>
+  </g>
+  <!-- NE array -->
+  <text x="20" y="135" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" font-weight="600">NE</text>
+  <g font-family="JetBrains Mono,monospace" font-size="10" text-anchor="middle">
+    <rect x="80"  y="120" width="55" height="30" fill="#fde8e8" stroke="#b44a2d"/>
+    <rect x="135" y="120" width="55" height="30" fill="#fde8e8" stroke="#b44a2d"/>
+    <rect x="190" y="120" width="55" height="30" fill="#fde8e8" stroke="#b44a2d"/>
+    <rect x="245" y="120" width="55" height="30" fill="#fff8e8" stroke="#9a8d7e" stroke-dasharray="3,2"/>
+    <rect x="300" y="120" width="55" height="30" fill="#fde8e8" stroke="#b44a2d"/>
+    <text x="107" y="140" fill="#b44a2d">L&#8321;</text>
+    <text x="162" y="140" fill="#b44a2d">L&#8322;</text>
+    <text x="217" y="140" fill="#b44a2d">…</text>
+    <text x="272" y="140" fill="#6b5d4f">L&#7472;&#7506;&#7504;</text>
+    <text x="327" y="140" fill="#b44a2d">M&#8321;</text>
+  </g>
+  <!-- pointers -->
+  <defs><marker id="arrNE" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#3a4a8a"/></marker></defs>
+  <line x1="110" y1="56" x2="107" y2="118" stroke="#3a4a8a" stroke-width="1" marker-end="url(#arrNE)"/>
+  <line x1="170" y1="56" x2="327" y2="118" stroke="#3a4a8a" stroke-width="1" marker-end="url(#arrNE)"/>
+  <text x="430" y="40" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f">NE_P(K) → начало группы</text>
+  <text x="430" y="135" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f">группа ячеек узла K:</text>
+  <text x="430" y="150" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f">NE(P&#8342;)…NE(P&#8342;&#8330;&#8321;−1)</text>
+</svg>
+<div class="caption">Пара массивов <code>NE_P</code> и <code>NE</code> для отношения узел→ячейки. Указатель <code>NE_P(K)</code> задаёт начало группы ячеек узла \(K\) в массиве <code>NE</code>; группа продолжается до позиции <code>NE_P(K+1)−1</code>. Это компактный способ хранения списков переменной длины.</div>
+</div>
+
+<div class="algo">
+<strong>Алгоритм. Обход всех ячеек, инцидентных узлу \(K\).</strong>
+<ol>
+<li>Вычислить границы группы: <code>p_begin = NE_P(K)</code>, <code>p_end = NE_P(K+1) - 1</code>.</li>
+<li>Число инцидентных ячеек: \(N_K = \) <code>p_end - p_begin + 1</code>.</li>
+<li>Для <code>p = p_begin … p_end</code>: взять номер ячейки <code>L = NE(p)</code> и обработать ячейку \(L\) (считать координаты узлов, площадь, вклад в матрицу жёсткости и т.д.).</li>
+</ol>
+</div>
+
+<p>Совершенно аналогично устроена обратная пара массивов <code>EN_P</code> (Element–Node Pointer) и <code>EN</code> (Element–Node) — она позволяет по заданному номеру ячейки \(L\) найти все инцидентные ей узлы \(K_L(i)\). Эта пара применяется для организации циклов, например, при вычислении коэффициентов, из которых формируется матрица жёсткости в конечно-элементной модели.</p>
+
+<div class="remark">
+<strong>Связь с разреженными матрицами.</strong> Аппроксимации на сетке линейных операторов приводят к СЛАУ с <em>разреженными</em> матрицами (заполненность ненулевыми элементами — проценты и меньше). Структура такой матрицы повторяет структуру шаблонов сетки, поэтому те же идеи указателей и списков переменной длины лежат в основе разреженного строчного формата (<code>iaja</code>: массивы <code>IA</code>, <code>JA</code>, <code>A</code>), где <code>IA</code> играет роль, аналогичную <code>NE_P</code> / <code>EN_P</code>.
+</div>
+
+<h2 id="interactive">Интерактив: структура и смежность ячеек</h2>
+
+<p>Демонстрация ниже сравнивает две сетки на одном квадрате. Переключатель выбирает тип сетки: <strong>структурированную</strong> (регулярная решётка, разбитая на треугольники по фиксированному правилу) или <strong>неструктурированную</strong> (триангуляция возмущённых узлов). Ползунок управляет <em>плотностью</em>. Наведите курсор на любую ячейку — она подсветится, а её <strong>соседи по ребру</strong> выделятся другим цветом. Это иллюстрирует, что в регулярном случае соседи вычисляются арифметически, а в нерегулярном их приходится хранить в таблице смежности.</p>
+
+<div id="meshDemo" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Тип сетки</label>
+    <div style="display:flex;gap:.4rem">
+      <button id="mdStruct" style="background:var(--accent);color:#fff;border:none;border-radius:4px;padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:.78rem;cursor:pointer">структурированная</button>
+      <button id="mdUnstruct" style="background:#fff;color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:.78rem;cursor:pointer">неструктурированная</button>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Плотность: <span id="mdNv">6</span>×<span id="mdNv2">6</span></label>
+    <input type="range" id="mdN" min="3" max="12" value="6" style="width:160px">
+  </div>
+</div>
+<div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+  <canvas id="mdCanvas" width="560" height="420" style="width:100%;height:auto;cursor:crosshair"></canvas>
+</div>
+<div id="mdStatus" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.4rem">Наведите курсор на ячейку…</div>
+</div>
+
+<script>
+(function(){
+  var canvas = document.getElementById('mdCanvas');
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  var mode = 'struct';
+  var N = 6;
+  var verts = [];   // {x,y}
+  var tris = [];    // [a,b,c] vertex indices
+  var triCentroid = []; // {x,y}
+  var adj = [];     // adj[t] = array of neighbour triangle indices (share an edge)
+  var hover = -1;
+
+  function rng(seed){ // deterministic pseudo-random
+    var s = seed;
+    return function(){ s = (s*1103515245 + 12345) & 0x7fffffff; return s/0x7fffffff; };
+  }
+
+  function buildStructured(n){
+    verts = []; tris = [];
+    var pad = 30;
+    var w = W - 2*pad, h = H - 2*pad;
+    var idx = function(i,j){ return j*(n+1)+i; };
+    for (var j=0;j<=n;j++) for (var i=0;i<=n;i++){
+      verts.push({x: pad + w*i/n, y: pad + h*j/n});
+    }
+    for (var j=0;j<n;j++) for (var i=0;i<n;i++){
+      // split each square into two triangles
+      tris.push([idx(i,j), idx(i+1,j), idx(i+1,j+1)]);
+      tris.push([idx(i,j), idx(i+1,j+1), idx(i,j+1)]);
+    }
+  }
+
+  function buildUnstructured(n){
+    // perturbed grid of points -> triangulate by same square-split but jitter interior nodes
+    verts = []; tris = [];
+    var pad = 30;
+    var w = W - 2*pad, h = H - 2*pad;
+    var rand = rng(12345 + n*97);
+    var idx = function(i,j){ return j*(n+1)+i; };
+    for (var j=0;j<=n;j++) for (var i=0;i<=n;i++){
+      var jitter = (i>0 && i<n && j>0 && j<n) ? 0.42 : 0;
+      var dx = (rand()-0.5)*2 * jitter * (w/n);
+      var dy = (rand()-0.5)*2 * jitter * (h/n);
+      verts.push({x: pad + w*i/n + dx, y: pad + h*j/n + dy});
+    }
+    for (var j=0;j<n;j++) for (var i=0;i<n;i++){
+      // alternate diagonal direction pseudo-randomly for an irregular look
+      if (rand() < 0.5){
+        tris.push([idx(i,j), idx(i+1,j), idx(i+1,j+1)]);
+        tris.push([idx(i,j), idx(i+1,j+1), idx(i,j+1)]);
+      } else {
+        tris.push([idx(i,j), idx(i+1,j), idx(i,j+1)]);
+        tris.push([idx(i+1,j), idx(i+1,j+1), idx(i,j+1)]);
+      }
+    }
+  }
+
+  function computeAdjacency(){
+    triCentroid = []; adj = [];
+    for (var t=0;t<tris.length;t++){
+      var a=verts[tris[t][0]], b=verts[tris[t][1]], c=verts[tris[t][2]];
+      triCentroid.push({x:(a.x+b.x+c.x)/3, y:(a.y+b.y+c.y)/3});
+      adj.push([]);
+    }
+    // edge map: key "min-max" -> list of triangles
+    var edgeMap = {};
+    function ekey(p,q){ return Math.min(p,q)+'-'+Math.max(p,q); }
+    for (var t=0;t<tris.length;t++){
+      var v = tris[t];
+      var edges = [[v[0],v[1]],[v[1],v[2]],[v[2],v[0]]];
+      for (var e=0;e<3;e++){
+        var k = ekey(edges[e][0], edges[e][1]);
+        if (!edgeMap[k]) edgeMap[k] = [];
+        edgeMap[k].push(t);
+      }
+    }
+    for (var k in edgeMap){
+      var lst = edgeMap[k];
+      if (lst.length === 2){
+        adj[lst[0]].push(lst[1]);
+        adj[lst[1]].push(lst[0]);
+      }
+    }
+  }
+
+  function rebuild(){
+    if (mode === 'struct') buildStructured(N); else buildUnstructured(N);
+    computeAdjacency();
+    hover = -1;
+    draw();
+  }
+
+  function pointInTri(px,py,t){
+    var a=verts[tris[t][0]], b=verts[tris[t][1]], c=verts[tris[t][2]];
+    var d1=(px-b.x)*(a.y-b.y)-(a.x-b.x)*(py-b.y);
+    var d2=(px-c.x)*(b.y-c.y)-(b.x-c.x)*(py-c.y);
+    var d3=(px-a.x)*(c.y-a.y)-(c.x-a.x)*(py-a.y);
+    var neg=(d1<0)||(d2<0)||(d3<0), pos=(d1>0)||(d2>0)||(d3>0);
+    return !(neg&&pos);
+  }
+
+  function fillTri(t, color){
+    var a=verts[tris[t][0]], b=verts[tris[t][1]], c=verts[tris[t][2]];
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(c.x,c.y); ctx.closePath();
+    ctx.fillStyle = color; ctx.fill();
+  }
+
+  function draw(){
+    ctx.fillStyle = '#fdf9f3'; ctx.fillRect(0,0,W,H);
+    // fill highlights first
+    if (hover >= 0){
+      var nb = adj[hover];
+      for (var i=0;i<nb.length;i++) fillTri(nb[i], 'rgba(58,91,160,0.30)'); // neighbours blue
+      fillTri(hover, 'rgba(180,74,45,0.40)'); // hovered terracotta
+    }
+    // edges
+    ctx.strokeStyle = '#1a6b5a'; ctx.lineWidth = 0.9;
+    for (var t=0;t<tris.length;t++){
+      var a=verts[tris[t][0]], b=verts[tris[t][1]], c=verts[tris[t][2]];
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(c.x,c.y); ctx.closePath();
+      ctx.stroke();
+    }
+    // nodes
+    ctx.fillStyle = '#2c2419';
+    for (var v=0; v<verts.length; v++){
+      ctx.beginPath(); ctx.arc(verts[v].x, verts[v].y, 2, 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  canvas.addEventListener('mousemove', function(ev){
+    var r = canvas.getBoundingClientRect();
+    var px = (ev.clientX - r.left) * (W / r.width);
+    var py = (ev.clientY - r.top) * (H / r.height);
+    var found = -1;
+    for (var t=0;t<tris.length;t++){ if (pointInTri(px,py,t)){ found = t; break; } }
+    if (found !== hover){
+      hover = found;
+      draw();
+      var st = document.getElementById('mdStatus');
+      if (hover >= 0){
+        st.innerHTML = 'Ячейка L=' + hover + ' · координационное число (соседей по ребру): <b>' + adj[hover].length + '</b>' +
+          ' · всего ячеек: ' + tris.length + ', узлов: ' + verts.length;
+      } else {
+        st.textContent = 'Наведите курсор на ячейку…';
+      }
+    }
+  });
+  canvas.addEventListener('mouseleave', function(){ hover = -1; draw(); document.getElementById('mdStatus').textContent='Наведите курсор на ячейку…'; });
+
+  function setMode(m){
+    mode = m;
+    var bs = document.getElementById('mdStruct'), bu = document.getElementById('mdUnstruct');
+    if (m==='struct'){ bs.style.background='var(--accent)'; bs.style.color='#fff'; bs.style.border='none';
+      bu.style.background='#fff'; bu.style.color='var(--text)'; bu.style.border='1px solid var(--border)'; }
+    else { bu.style.background='var(--accent)'; bu.style.color='#fff'; bu.style.border='none';
+      bs.style.background='#fff'; bs.style.color='var(--text)'; bs.style.border='1px solid var(--border)'; }
+    rebuild();
+  }
+  document.getElementById('mdStruct').addEventListener('click', function(){ setMode('struct'); });
+  document.getElementById('mdUnstruct').addEventListener('click', function(){ setMode('unstruct'); });
+  document.getElementById('mdN').addEventListener('input', function(){
+    N = +this.value;
+    document.getElementById('mdNv').textContent = N;
+    document.getElementById('mdNv2').textContent = N;
+    rebuild();
+  });
+
+  window.addEventListener('load', function(){ setTimeout(rebuild, 150); });
+  rebuild();
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> В структурированной сетке каждая внутренняя ячейка имеет ровно трёх соседей по ребру, а её соседей легко найти по индексам — таблица смежности не нужна. В неструктурированной сетке координационное число узлов и число соседей ячеек меняется от элемента к элементу, и именно поэтому приходится явно строить и хранить массивы бинарных отношений (<code>NE_P/NE</code>, <code>EN_P/EN</code>), рассмотренные выше.
+</div>
+
+<div class="lecture-nav">
+<a href="lec3.html" class="nav-prev">← Лекция 3</a>
+<a href="lec5.html" class="nav-next">Лекция 5 →</a>
+</div>
+</div>
+</div>
+
+</body>
+</html>

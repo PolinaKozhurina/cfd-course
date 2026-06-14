@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>МКЭ-Лекция 6. Интерполяция на симплексах</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>МКЭ · Лекция 6</h2>
+  <div class="g">Содержание</div>
+  <a href="#intro">Введение: уравнение Гельмгольца</a>
+  <a href="#maxwell">Уравнения Максвелла</a>
+  <a href="#helmholtz">Неоднородное уравнение Гельмгольца</a>
+  <a href="#hp">h- и p-сходимость</a>
+  <a href="#simplex">Симплексные (барицентрические) координаты</a>
+  <a href="#transform">Переход к декартовым координатам</a>
+  <a href="#interp">Интерполяция на симплексах</a>
+  <a href="#shape">Функции форм P1, P2, P3</a>
+  <a href="#accuracy">Точность интерполяции</a>
+  <a href="#interactive">Интерактив</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="lec5.html">← Лекция 5</a>
+  <a href="index.html">Обзор курса</a>
+  <a href="lec7.html">→ Лекция 7</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-fem">МКЭ</span>
+<div class="lecture-num">Лекция 6 · Метод конечных элементов</div>
+<h1>Интерполяция высокого порядка на треугольных симплексах</h1>
+
+<h2 id="intro">Введение: интерполяции высокого порядка на примере уравнения Гельмгольца</h2>
+
+<p>В этой лекции мы рассмотрим конечно-элементные аппроксимации <em>высокого порядка</em> на примере краевой задачи для <strong>уравнения Гельмгольца</strong>. Такой выбор объясняется тем, что уравнение Гельмгольца применяется в самых разных областях физики и техники для анализа волновых процессов:</p>
+
+<ul>
+<li><strong>Электродинамика.</strong> Расчёт дифракции и распространения волн.</li>
+<li><strong>Оптика.</strong> Расчёт аберраций линз.</li>
+<li><strong>Акустика.</strong> Моделирование звукового поля.</li>
+<li><strong>Рассеяние волн.</strong> Расчёт рассеяния света или звука на препятствиях.</li>
+<li><strong>Волноводные структуры.</strong> Оптимизация формы волноводов для фокусировки и коллимации волн.</li>
+<li><strong>Метаматериалы.</strong> Моделирование волновых эффектов на масштабе, меньшем длины волны.</li>
+</ul>
+
+<p>Аппроксимации мы строим на <strong>треугольных конечных элементах</strong>. Сетку из треугольников можно сгенерировать в любом, сколь угодно сложном многоугольнике, поэтому такие аппроксимации чрезвычайно широко употребительны для практических задач.</p>
+
+<h2 id="maxwell">Уравнения Максвелла как источник задачи</h2>
+
+<p>Процессы в электромагнитном поле подчиняются законам, выражаемым в общей форме системой <strong>уравнений Максвелла</strong>. Для однородной изотропной среды (при пренебрежимо малой пространственной и временной дисперсии) уравнения в дифференциальной форме имеют вид</p>
+
+<div class="eq">\[
+\operatorname{rot}\mathbf E = -\frac{\partial \mathbf B}{\partial t}\quad(\text{закон Фарадея}),
+\tag{1.1}
+\]</div>
+
+<div class="eq">\[
+\operatorname{rot}\mathbf H = \mathbf J + \frac{\partial \mathbf D}{\partial t}\quad(\text{закон Ампера}),
+\tag{1.2}
+\]</div>
+
+<div class="eq">\[
+\operatorname{div}\mathbf D = \rho,\qquad \operatorname{div}\mathbf B = 0.
+\tag{1.3, 1.4}
+\]</div>
+
+<p>К ним добавляются материальные уравнения, связывающие индукции с напряжённостями полей:</p>
+
+<div class="eq">\[
+\mathbf D = \varepsilon\,\mathbf E,\qquad
+\mathbf B = \mu\,\mathbf H,\qquad
+\mathbf J = \sigma\,\mathbf E.
+\tag{1.5–1.7}
+\]</div>
+
+<p>Величины диэлектрической проницаемости \(\varepsilon\), магнитной проницаемости \(\mu\) и удельной проводимости \(\sigma\) не обязательно постоянны: в ферромагнетиках зависимость \(\mathbf B(\mathbf H)\) может быть нелинейной, а в анизотропных средах \(\varepsilon,\mu,\sigma\) становятся тензорами 2-го ранга. Для вакуума \(\varepsilon_0\approx 8{,}854\cdot10^{-12}\) Ф/м и \(\mu_0 = 4\pi\cdot10^{-7}\) Гн/м, причём \(c = (\varepsilon_0\mu_0)^{-1/2}\approx 2{,}998\cdot10^{8}\) м/с.</p>
+
+<p>К уравнениям (1.1)–(1.4) добавляется <strong>закон сохранения заряда</strong> (уравнение непрерывности):</p>
+
+<div class="eq">\[
+\operatorname{div}\mathbf J + \frac{\partial\rho}{\partial t} = 0.
+\tag{1.8}
+\]</div>
+
+<div class="remark">
+<strong>Комплексная форма.</strong> Во многих задачах изучаются установившиеся колебания. Тогда переменные удобно записывать в комплексной форме \(\mathbf E_p = \mathbf E_r + i\mathbf E_i\), а физическое поле принимать равным вещественной части \(\mathbf E_p\,e^{+i\omega t}\). При этом оператор \(\partial/\partial t\) заменяется умножением на \(i\omega\), и уравнение (1.1) переходит в \(\operatorname{rot}\mathbf E = -i\omega\mathbf B\).
+</div>
+
+<h3 id="potentials">Уравнения для потенциалов</h3>
+
+<p>Существенные упрощения дают потенциалы. Поскольку \(\operatorname{rot}\operatorname{grad}\equiv 0\) и \(\operatorname{div}\operatorname{rot}\equiv 0\), представления</p>
+
+<div class="eq">\[
+\mathbf E = -\nabla u - \frac{\partial \mathbf A}{\partial t},
+\qquad
+\mathbf B = \operatorname{rot}\mathbf A
+\tag{1.17, 1.18}
+\]</div>
+
+<p>через скалярный потенциал \(u\) и векторный потенциал \(\mathbf A\) <em>автоматически</em> удовлетворяют уравнениям (1.1) и (1.4). В представлении есть произвол; при калибровке Лоренца \(\operatorname{div}\mathbf A = -\varepsilon\mu\,\partial u/\partial t\) оставшиеся два уравнения Максвелла для линейной однородной среды симметризуются:</p>
+
+<div class="eq">\[
+\Delta u - \varepsilon\mu\,\frac{\partial^2 u}{\partial t^2} = -\frac{\rho}{\varepsilon},
+\qquad
+\Delta \mathbf A - \varepsilon\mu\,\frac{\partial^2 \mathbf A}{\partial t^2} = -\mu\,\mathbf J.
+\tag{1.20, 1.21}
+\]</div>
+
+<h2 id="helmholtz">Неоднородное уравнение Гельмгольца</h2>
+
+<p>Уравнение Гельмгольца описывает установившиеся состояния при периодическом воздействии. Полагая в (1.20) зависимость \(u,\rho\sim e^{+i\omega t}\) и дифференцируя по времени, приходим к частному случаю общего <strong>неоднородного уравнения Гельмгольца</strong>:</p>
+
+<div class="eq">\[
+\boxed{\;\operatorname{div}(p\,\nabla u) + k^2 u = g.\;}
+\tag{1.22}
+\]</div>
+
+<p>Здесь неизвестная \(u(x,y,z)\) — скалярный потенциал, \(p(x,y,z)\) описывает материальные свойства среды, \(k^2\) не зависит от координат (известно или определяется условиями задачи), а \(g(x,y,z)\) — заданная функция источника. На замкнутой поверхности \(S\) задаются граничные условия: <strong>условие Дирихле</strong> \(u = \bar u\) на части \(S_1\) и <strong>однородное условие Неймана</strong> \(\partial u/\partial n = 0\) на части \(S_2\).</p>
+
+<p>Частными случаями (1.22) являются:</p>
+
+<ul>
+<li><strong>Уравнение Лапласа</strong> \(\operatorname{div}(\varepsilon\nabla u)=0\) — электростатика без зарядов (1.23);</li>
+<li><strong>Уравнение Пуассона</strong> \(\operatorname{div}(\varepsilon\nabla u)=-\rho\) при переменной \(\varepsilon\) (1.24);</li>
+<li><strong>Двумерное уравнение Гельмгольца</strong> \(\nabla_\perp^2 H_z + k_c^2 H_z = 0\), описывающее поперечно-электрические (ТЕ) волны в волноводах, где \(\nabla_\perp^2 = \partial_{xx}+\partial_{yy}\), а \(k_c\) — критическое волновое число (1.25).</li>
+</ul>
+
+<div class="remark">
+<strong>Вариационная формулировка.</strong> Решения уравнения (2.12) \((\Delta+k^2)u = g\) соответствуют стационарным точкам функционала
+\[
+F(U) = \tfrac12\int_\Omega (\nabla U)^2\,d\Omega - \tfrac12 k^2\!\int_\Omega U^2\,d\Omega + \int_\Omega U g\,d\Omega,
+\tag{2.13}
+\]
+при условии, что пробные функции \(U\) непрерывны и удовлетворяют условию Дирихле. Условие Дирихле является <em>главным</em> (накладывается на пробные функции), а однородное условие Неймана — <em>естественным</em> (выполняется автоматически в точке экстремума). Доказательство строится подстановкой \(U=u+\eta h\) и обращением в нуль первой вариации \(\delta F\) с помощью формулы Грина.
+</div>
+
+<h2 id="hp">Сходимость h-типа и p-типа</h2>
+
+<p>Ранее мы строили аппроксимации на кусочно-линейных пробных функциях (треугольные симплекс-элементы первого порядка). Точность численного решения можно повышать двумя путями:</p>
+
+<div class="definition">
+<strong>Два пути повышения точности.</strong>
+<ul>
+<li><strong>h-сходимость</strong> — измельчение сетки: уменьшение характерного размера треугольника \(h\) при фиксированной степени полинома \(p\).</li>
+<li><strong>p-сходимость</strong> — повышение степени полинома \(p\) на каждом элементе при фиксированной (крупной) сетке.</li>
+</ul>
+</div>
+
+<p>Теория и практика подтверждают: для многих двумерных задач оптимальным (по соотношению точность / вычислительные затраты) является деление области на <em>минимально возможное число крупных треугольников</em> с достижением требуемой точности за счёт полиномиальных аппроксимаций высоких порядков. Иначе говоря — выбирать треугольники крупнее, чем при элементах первого порядка, но повышать порядок аппроксимации на них.</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 320" xmlns="http://www.w3.org/2000/svg" style="max-width:540px">
+  <defs>
+    <marker id="arrHP" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2c2419"/></marker>
+  </defs>
+  <!-- Axes -->
+  <line x1="60" y1="270" x2="530" y2="270" stroke="#2c2419" stroke-width="1" marker-end="url(#arrHP)"/>
+  <line x1="60" y1="270" x2="60" y2="25" stroke="#2c2419" stroke-width="1" marker-end="url(#arrHP)"/>
+  <text x="535" y="288" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="end">log N (число степеней свободы)</text>
+  <text x="55" y="20" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="end">log ‖ошибка‖</text>
+  <!-- grid -->
+  <g stroke="#e8e0d4" stroke-width="0.5">
+    <line x1="60" y1="90" x2="530" y2="90"/>
+    <line x1="60" y1="150" x2="530" y2="150"/>
+    <line x1="60" y1="210" x2="530" y2="210"/>
+  </g>
+  <!-- h-convergence: straight, algebraic (slope -p) -->
+  <path d="M 100 70 L 480 230" fill="none" stroke="#3a5ba0" stroke-width="2.6"/>
+  <!-- markers on h-line -->
+  <g fill="#3a5ba0"><circle cx="100" cy="70" r="3.5"/><circle cx="195" cy="110" r="3.5"/><circle cx="290" cy="150" r="3.5"/><circle cx="385" cy="190" r="3.5"/><circle cx="480" cy="230" r="3.5"/></g>
+  <!-- p-convergence: curved, exponential -->
+  <path d="M 100 70 C 160 130, 200 215, 300 250 C 360 268, 420 273, 480 274" fill="none" stroke="#b44a2d" stroke-width="2.6"/>
+  <g fill="#b44a2d"><circle cx="100" cy="70" r="3.5"/><circle cx="160" cy="135" r="3.5"/><circle cx="230" cy="225" r="3.5"/><circle cx="320" cy="256" r="3.5"/><circle cx="430" cy="273" r="3.5"/></g>
+  <!-- slope triangle for h -->
+  <line x1="290" y1="150" x2="385" y2="150" stroke="#9a8d7e" stroke-width="0.8" stroke-dasharray="3,2"/>
+  <line x1="385" y1="150" x2="385" y2="190" stroke="#9a8d7e" stroke-width="0.8" stroke-dasharray="3,2"/>
+  <text x="392" y="174" font-family="JetBrains Mono,monospace" font-size="9" fill="#9a8d7e">~p</text>
+  <!-- labels -->
+  <text x="300" y="60" font-family="Source Serif 4,serif" font-size="12" fill="#3a5ba0" font-weight="600">h-сходимость</text>
+  <text x="300" y="76" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f">e ~ h^p  (алгебраическая)</text>
+  <text x="360" y="240" font-family="Source Serif 4,serif" font-size="12" fill="#b44a2d" font-weight="600">p-сходимость</text>
+  <text x="360" y="256" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f">e ~ e^(−c·p) (экспонент.)</text>
+</svg>
+<div class="caption">Схематическое сравнение h- и p-сходимости в логарифмических координатах. При измельчении сетки (h) ошибка убывает алгебраически \(\sim h^p\) — прямая с наклоном \(p\). При повышении порядка (p) на гладком решении ошибка убывает <em>экспоненциально</em> — кривая опускается круче. Поэтому крупные элементы высокого порядка часто оптимальны.</div>
+</div>
+
+<h2 id="simplex">Симплексные (барицентрические) координаты</h2>
+
+<p>Аппроксимирующие функции на треугольных элементах обладают двумя ценными свойствами: непрерывность на границах обеспечивается равенством значений в совпадающих вершинах, а сами аппроксимации <em>инвариантны</em> относительно глобальной системы координат \((x,y)\). Эти свойства сохраняются и для высоких порядков при правильном определении локальных базисных функций. Наиболее просто теория излагается на языке <strong>симплексных координат</strong>.</p>
+
+<div class="definition">
+<strong>Определение (симплекс).</strong> Симплекс \(S\) в \(N\)-мерном пространстве — это простейшая нетривиальная геометрическая фигура с \(N+1\) вершиной. Так, 1-мерный симплекс — отрезок, 2-мерный — треугольник, 3-мерный — тетраэдр. Размер симплекса определяется детерминантом
+\[
+\tau(S) = \frac{1}{N!}\begin{vmatrix}
+1 & x_1^{(1)} & x_1^{(2)} & \cdots & x_1^{(N)}\\
+1 & x_2^{(1)} & x_2^{(2)} & \cdots & x_2^{(N)}\\
+\vdots & & & & \vdots\\
+1 & x_{N+1}^{(1)} & x_{N+1}^{(2)} & \cdots & x_{N+1}^{(N)}
+\end{vmatrix},
+\tag{2.1}
+\]
+где нижние индексы — номера вершин, верхние — номера координатных осей. Для отрезка \(\tau\) — длина, для треугольника — площадь, для тетраэдра — объём.
+</div>
+
+<p>Пусть точка \(P\) лежит внутри симплекса \(S\). Она однозначно разбивает \(S\) на \(N+1\) подсимплекс \(S_k\), каждый из которых имеет \(P\) одной из вершин (рис. ниже). Размеры подсимплексов в сумме дают размер \(S\):</p>
+
+<div class="eq">\[
+\tau(S) = \sum_{k=1}^{N+1}\tau(S_k).
+\tag{2.2}
+\]</div>
+
+<div class="definition">
+<strong>Симплексные координаты.</strong> Числа
+\[
+\xi_m = \frac{\tau(S_m)}{\tau(S)},\qquad m = 1,\ldots,N+1,
+\tag{2.3}
+\]
+называются <strong>симплексными</strong> (или однородными, барицентрическими) координатами точки \(P\). Их совокупность однозначно определяет положение \(P\) внутри \(S\).
+</div>
+
+<p>Геометрический смысл \(\xi_m\) — отношение длины перпендикуляра, опущенного из \(P\) на грань (сторону), к длине перпендикуляра из противоположной этой грани вершины. Для треугольника это видно из отношения площадей треугольников \((1,2,3)\) и \((P,2,3)\) с общим основанием \((2,3)\). Из (2.2) и (2.3) немедленно следует фундаментальное свойство <strong>замыкания</strong>:</p>
+
+<div class="eq">\[
+\sum_{k=1}^{N+1}\xi_k = 1.
+\tag{2.4}
+\]</div>
+
+<p>Эта линейная зависимость естественна: координат \(N+1\), а для задания точки в \(N\)-мерном пространстве достаточно \(N\) чисел. В случае треугольника пишут \(L_1, L_2, L_3\) (или \(\xi_1,\xi_2,\xi_3\)), и \(L_1 + L_2 + L_3 = 1\).</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 320" xmlns="http://www.w3.org/2000/svg" style="max-width:540px">
+  <!-- Triangle vertices -->
+  <!-- v1 left-bottom (40,270), v2 right-bottom (300,290), v3 top (220,40) -->
+  <polygon points="40,270 300,290 220,40" fill="#1a6b5a" fill-opacity="0.05" stroke="#2c2419" stroke-width="1.6"/>
+  <!-- internal point P -->
+  <!-- choose P -->
+  <g>
+    <!-- sub-triangle edges from P to vertices -->
+    <line x1="185" y1="190" x2="40" y2="270" stroke="#9a8d7e" stroke-width="1" stroke-dasharray="4,3"/>
+    <line x1="185" y1="190" x2="300" y2="290" stroke="#9a8d7e" stroke-width="1" stroke-dasharray="4,3"/>
+    <line x1="185" y1="190" x2="220" y2="40" stroke="#9a8d7e" stroke-width="1" stroke-dasharray="4,3"/>
+  </g>
+  <!-- sub-area labels -->
+  <text x="120" y="240" font-family="JetBrains Mono,monospace" font-size="13" fill="#b44a2d" font-weight="600">S₃</text>
+  <text x="245" y="225" font-family="JetBrains Mono,monospace" font-size="13" fill="#3a5ba0" font-weight="600">S₁</text>
+  <text x="135" y="150" font-family="JetBrains Mono,monospace" font-size="13" fill="#1a6b5a" font-weight="600">S₂</text>
+  <!-- P point -->
+  <circle cx="185" cy="190" r="4.5" fill="#2c2419"/>
+  <text x="172" y="186" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419" font-weight="700">P</text>
+  <!-- vertices -->
+  <circle cx="40" cy="270" r="5" fill="#2c2419"/><text x="26" y="282" font-family="JetBrains Mono,monospace" font-size="13" fill="#2c2419" font-weight="700">1</text>
+  <circle cx="300" cy="290" r="5" fill="#2c2419"/><text x="308" y="296" font-family="JetBrains Mono,monospace" font-size="13" fill="#2c2419" font-weight="700">2</text>
+  <circle cx="220" cy="40" r="5" fill="#2c2419"/><text x="226" y="34" font-family="JetBrains Mono,monospace" font-size="13" fill="#2c2419" font-weight="700">3</text>
+  <!-- L labels near vertices -->
+  <text x="55" y="258" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0">L₁ = S₁/S</text>
+  <text x="305" y="270" font-family="JetBrains Mono,monospace" font-size="11" fill="#1a6b5a">L₂ = S₂/S</text>
+  <text x="235" y="60" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d">L₃ = S₃/S</text>
+  <!-- relation -->
+  <text x="380" y="160" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419">L₁ + L₂ + L₃ = 1</text>
+  <text x="380" y="182" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f">в вершине k: L_k = 1,</text>
+  <text x="380" y="198" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f">остальные = 0</text>
+</svg>
+<div class="caption">Симплексные (барицентрические) координаты на треугольнике. Внутренняя точка \(P\) делит треугольник на три подтреугольника площадей \(S_1, S_2, S_3\); координата \(L_k\) (\(=\xi_k\)) равна отношению площади подтреугольника, противолежащего вершине \(k\) через \(P\), к полной площади \(S\). Подтреугольник \(S_k\) здесь — тот, чьё основание есть сторона, противоположная вершине \(k\). Сумма координат равна единице.</div>
+</div>
+
+<h2 id="transform">Переход от декартовых координат к симплексным</h2>
+
+<p>Пусть треугольник лежит в плоскости \((x,y)\) с вершинами \((x_i,y_i)\). По определению (2.3) первая симплексная координата точки \((x,y)\) равна отношению площадей, записываемому через детерминанты:</p>
+
+<div class="eq">\[
+\xi_1 = \begin{vmatrix}1 & x & y\\ 1 & x_2 & y_2\\ 1 & x_3 & y_3\end{vmatrix}
+\Big/
+\begin{vmatrix}1 & x_1 & y_1\\ 1 & x_2 & y_2\\ 1 & x_3 & y_3\end{vmatrix}.
+\tag{2.5}
+\]</div>
+
+<p>Разлагая числитель по первому столбцу (знаменатель равен \(2A\), где \(A\) — площадь треугольника):</p>
+
+<div class="eq">\[
+\xi_1 = \frac{1}{2A}\left\{\begin{vmatrix}x_2 & y_2\\ x_3 & y_3\end{vmatrix}
+- \begin{vmatrix}x & y\\ x_3 & y_3\end{vmatrix}
++ \begin{vmatrix}x & y\\ x_2 & y_2\end{vmatrix}\right\}.
+\tag{2.6}
+\]</div>
+
+<p>Вычисляя миноры, получаем явно линейную по \(x,y\) функцию:</p>
+
+<div class="eq">\[
+\xi_1 = \frac{x_2 y_3 - y_2 x_3}{2A} + \frac{y_2 - y_3}{2A}\,x + \frac{x_3 - x_2}{2A}\,y.
+\tag{2.7}
+\]</div>
+
+<p>Аналогичные вычисления для \(\xi_2,\xi_3\) дают единое <strong>матричное уравнение преобразования</strong>:</p>
+
+<div class="eq">\[
+2A\begin{pmatrix}\xi_1\\ \xi_2\\ \xi_3\end{pmatrix}
+=
+\begin{pmatrix}
+x_2 y_3 - x_3 y_2 & y_2 - y_3 & x_3 - x_2\\
+x_3 y_1 - x_1 y_3 & y_3 - y_1 & x_1 - x_3\\
+x_1 y_2 - x_2 y_1 & y_1 - y_2 & x_2 - x_1
+\end{pmatrix}
+\begin{pmatrix}1\\ x\\ y\end{pmatrix}.
+\tag{2.8}
+\]</div>
+
+<div class="remark">
+<strong>Локальность.</strong> Симплексные координаты <em>чисто локальны</em>: значения (2.3) инвариантны относительно трансляции или поворота глобальной системы. Это позволяет выполнить большую часть формулировки уравнений конечных элементов <em>один раз</em> в симплексных координатах, а затем переносить результаты на все треугольники простыми правилами преобразования.
+</div>
+
+<h2 id="interp">Интерполяция на симплексах</h2>
+
+<p>Для построения интерполяционных функций удобно ввести семейство вспомогательных полиномов \(R_m(n,\xi)\). Член семейства с номером \(m\) определяется как</p>
+
+<div class="eq">\[
+R_m(n,\xi) = \prod_{k=0}^{m-1}\frac{\xi - (k/n)}{(m/n) - (k/n)} = \frac{1}{m!}\prod_{k=0}^{m-1}(n\xi - k),\qquad m > 0,
+\tag{2.9}
+\]</div>
+
+<p>при \(R_0(n,\xi)\equiv 1\). Полином \(R_m\) имеет нули в точках \(\xi = 0, 1/n, \ldots, (m-1)/n\) и принимает единичное значение при \(\xi = m/n\): \(m\) эквидистантных нулей слева от \(\xi = m/n\) и ни одного справа.</p>
+
+<p>На <strong>одномерном симплексе</strong> (отрезке) семейство интерполяционных полиномов степени \(n\) строится как</p>
+
+<div class="eq">\[
+\alpha_{ij} = R_i(n,\xi_1)\,R_j(n,\xi_2),\qquad i + j = n.
+\tag{2.10}
+\]</div>
+
+<p>Это не что иное, как полиномы Лагранжа, записанные в необычной форме; двойной индекс \(ij\) указывает положение узла в двух симплексных координатах. Для <strong>треугольника</strong> применяется тот же приём с тремя сомножителями:</p>
+
+<div class="eq">\[
+\boxed{\;\alpha_{ijk} = R_i(n,\xi_1)\,R_j(n,\xi_2)\,R_k(n,\xi_3),\qquad i + j + k = n.\;}
+\tag{2.11}
+\]</div>
+
+<p>Результирующие полиномы интерполяционны на множестве регулярно расположенных точек. Число узлов на треугольнике порядка \(n\) равно</p>
+
+<div class="eq">\[
+N_{\text{узлов}} = \frac{(n+1)(n+2)}{2}.
+\]</div>
+
+<p>Естественная нумерация содержит три индекса \(ijk\), но на практике предпочтительнее одноиндексная схема. На рисунке ниже показано расположение узлов — это «треугольник Паскаля» узлов для \(P1, P2, P3\).</p>
+
+<div class="figure">
+<svg viewBox="0 0 580 250" xmlns="http://www.w3.org/2000/svg" style="max-width:560px">
+  <!-- Three triangles side by side: P1, P2, P3 -->
+  <!-- P1 -->
+  <g transform="translate(20,30)">
+    <polygon points="60,160 0,160 30,40" fill="none" stroke="#2c2419" stroke-width="1.4"/>
+    <circle cx="30" cy="40" r="5" fill="#b44a2d"/>
+    <circle cx="0" cy="160" r="5" fill="#b44a2d"/>
+    <circle cx="60" cy="160" r="5" fill="#b44a2d"/>
+    <text x="30" y="205" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419" text-anchor="middle" font-weight="600">P1 (n=1)</text>
+    <text x="30" y="222" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">3 узла</text>
+  </g>
+  <!-- P2 -->
+  <g transform="translate(210,30)">
+    <polygon points="60,160 0,160 30,40" fill="none" stroke="#2c2419" stroke-width="1.4"/>
+    <!-- vertices -->
+    <circle cx="30" cy="40" r="5" fill="#b44a2d"/>
+    <circle cx="0" cy="160" r="5" fill="#b44a2d"/>
+    <circle cx="60" cy="160" r="5" fill="#b44a2d"/>
+    <!-- edge midpoints -->
+    <circle cx="15" cy="100" r="5" fill="#3a5ba0"/>
+    <circle cx="45" cy="100" r="5" fill="#3a5ba0"/>
+    <circle cx="30" cy="160" r="5" fill="#3a5ba0"/>
+    <text x="30" y="205" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419" text-anchor="middle" font-weight="600">P2 (n=2)</text>
+    <text x="30" y="222" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">6 узлов</text>
+  </g>
+  <!-- P3 -->
+  <g transform="translate(400,30)">
+    <polygon points="60,160 0,160 30,40" fill="none" stroke="#2c2419" stroke-width="1.4"/>
+    <!-- vertices -->
+    <circle cx="30" cy="40" r="5" fill="#b44a2d"/>
+    <circle cx="0" cy="160" r="5" fill="#b44a2d"/>
+    <circle cx="60" cy="160" r="5" fill="#b44a2d"/>
+    <!-- edge thirds (two per edge) -->
+    <circle cx="20" cy="80" r="5" fill="#3a5ba0"/>
+    <circle cx="10" cy="120" r="5" fill="#3a5ba0"/>
+    <circle cx="40" cy="80" r="5" fill="#3a5ba0"/>
+    <circle cx="50" cy="120" r="5" fill="#3a5ba0"/>
+    <circle cx="20" cy="160" r="5" fill="#3a5ba0"/>
+    <circle cx="40" cy="160" r="5" fill="#3a5ba0"/>
+    <!-- interior node -->
+    <circle cx="30" cy="120" r="5" fill="#1a6b5a"/>
+    <text x="30" y="205" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419" text-anchor="middle" font-weight="600">P3 (n=3)</text>
+    <text x="30" y="222" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">10 узлов</text>
+  </g>
+  <!-- legend -->
+  <g transform="translate(20,10)">
+    <circle cx="6" cy="0" r="4.5" fill="#b44a2d"/><text x="14" y="4" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419">вершины</text>
+    <circle cx="120" cy="0" r="4.5" fill="#3a5ba0"/><text x="128" y="4" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419">на сторонах</text>
+    <circle cx="250" cy="0" r="4.5" fill="#1a6b5a"/><text x="258" y="4" font-family="JetBrains Mono,monospace" font-size="9" fill="#2c2419">внутренний</text>
+  </g>
+</svg>
+<div class="caption">Расположение интерполяционных узлов для элементов \(P1\) (линейный, 3 узла), \(P2\) (квадратичный, 6 узлов: вершины + середины сторон) и \(P3\) (кубический, 10 узлов: вершины + по два на каждой стороне + один внутренний). Число узлов \((n+1)(n+2)/2\) — «треугольник Паскаля» узлов. На каждой стороне \(n+1\) узел, что обеспечивает непрерывность поля между смежными элементами.</div>
+</div>
+
+<p>Непрерывность поля между элементами обеспечивается так: если \(U\) есть полином степени \(\le n\) по \(x,y\), то вдоль любой стороны треугольника \(U=U(s)\) — полином степени \(\le n\) по дуговой длине \(s\). Сторона несёт \(n+1\) узел, и эти \(n+1\) значений однозначно фиксируют \(U\) на стороне. Поскольку узлы стороны общие для смежных треугольников, поле \(U\) непрерывно на границах элементов.</p>
+
+<h2 id="shape">Функции форм P1, P2, P3</h2>
+
+<p>Используя \(R_m\) из (2.9) и (2.11), выпишем явные функции форм через симплексные координаты \(L_1=\xi_1,\,L_2=\xi_2,\,L_3=\xi_3\).</p>
+
+<h3 id="p1">Линейный элемент P1 (n = 1)</h3>
+
+<p>При \(n=1\) функции форм совпадают с самими барицентрическими координатами:</p>
+
+<div class="eq">\[
+N_1 = L_1,\qquad N_2 = L_2,\qquad N_3 = L_3.
+\tag{P1}
+\]</div>
+
+<p>Каждая равна единице в «своей» вершине и нулю в двух других, а в сумме \(N_1+N_2+N_3=1\). Это и есть кусочно-линейная аппроксимация: поле над треугольником — наклонная плоскость.</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" style="max-width:540px">
+  <!-- Base triangle (in projection) -->
+  <!-- base vertices: A(120,250) B(400,250) C(300,180) -->
+  <polygon points="120,250 400,250 300,180" fill="#d9cfc0" fill-opacity="0.4" stroke="#9a8d7e" stroke-width="1"/>
+  <!-- The shape function N1 = 1 at vertex A; plane rises over A -->
+  <!-- raised vertices: A_top = above A by full height, B_top=B (zero), C_top=C(zero) -->
+  <!-- A lifted: (120,250) -> (120,80) -->
+  <!-- The inclined plane: vertices A_top(120,80), B(400,250), C(300,180) -->
+  <polygon points="120,80 400,250 300,180" fill="#b44a2d" fill-opacity="0.18" stroke="#b44a2d" stroke-width="1.8"/>
+  <!-- vertical edge from A base to A_top -->
+  <line x1="120" y1="250" x2="120" y2="80" stroke="#b44a2d" stroke-width="1.4" stroke-dasharray="4,3"/>
+  <!-- connect top to base other vertices (already same) -->
+  <line x1="120" y1="80" x2="400" y2="250" stroke="#b44a2d" stroke-width="1.2"/>
+  <line x1="120" y1="80" x2="300" y2="180" stroke="#b44a2d" stroke-width="1.2"/>
+  <!-- value markers -->
+  <circle cx="120" cy="80" r="4" fill="#b44a2d"/><text x="100" y="76" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d">N₁=1</text>
+  <circle cx="400" cy="250" r="4" fill="#3a5ba0"/><text x="408" y="255" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0">N₁=0</text>
+  <circle cx="300" cy="180" r="4" fill="#3a5ba0"/><text x="308" y="176" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0">N₁=0</text>
+  <!-- base vertex labels -->
+  <text x="110" y="268" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" font-weight="700">1</text>
+  <text x="404" y="268" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" font-weight="700">2</text>
+  <text x="306" y="170" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" font-weight="700">3</text>
+  <text x="280" y="40" font-family="Source Serif 4,serif" font-size="13" fill="#2c2419">N₁(L₁,L₂,L₃) = L₁ — линейная функция формы</text>
+</svg>
+<div class="caption">Линейная функция формы \(N_1 = L_1\) изображена как наклонная плоскость над опорным треугольником: значение \(1\) в вершине 1 и \(0\) в вершинах 2 и 3. Любая линейная функция на треугольнике есть линейная комбинация трёх таких плоскостей, \(U = U_1 N_1 + U_2 N_2 + U_3 N_3\).</div>
+</div>
+
+<h3 id="p2">Квадратичный элемент P2 (n = 2)</h3>
+
+<p>При \(n=2\) узлы — три вершины и три середины сторон. Из \(R_2(2,\xi)=\tfrac12(2\xi)(2\xi-1)=\xi(2\xi-1)\) и \(R_1(2,\xi)=2\xi\) получаем шесть базисных функций. Для вершинных узлов (тип \(\alpha_{200}\)):</p>
+
+<div class="eq">\[
+N_i^{\text{верш}} = L_i\,(2L_i - 1),\qquad i = 1,2,3,
+\tag{P2-в}
+\]</div>
+
+<p>а для узлов в серединах сторон (тип \(\alpha_{110}\)):</p>
+
+<div class="eq">\[
+N_{ij}^{\text{сер}} = 4\,L_i\,L_j,\qquad (ij)\in\{12,23,31\}.
+\tag{P2-с}
+\]</div>
+
+<p>Эти шесть функций образуют полный базис квадратичных полиномов \(\{1,x,y,x^2,xy,y^2\}\) на треугольнике; каждая равна \(1\) в своём узле и \(0\) во всех остальных пяти.</p>
+
+<h3 id="p3">Кубический элемент P3 (n = 3)</h3>
+
+<p>При \(n=3\) имеется 10 узлов. Из \(R_3(3,\xi)=\tfrac12 \xi(3\xi-1)(3\xi-2)\), \(R_2(3,\xi)=\tfrac12(3\xi)(3\xi-1)\), \(R_1(3,\xi)=3\xi\) получаем функции форм. Вершинные (тип \(\alpha_{300}\)):</p>
+
+<div class="eq">\[
+N_i^{\text{верш}} = \tfrac12\,L_i\,(3L_i - 1)(3L_i - 2),\qquad i = 1,2,3.
+\tag{P3-в}
+\]</div>
+
+<p>Реберные (по два на каждой стороне, тип \(\alpha_{210}\)):</p>
+
+<div class="eq">\[
+N_{ij}^{\text{реб}} = \tfrac92\,L_i\,L_j\,(3L_i - 1),
+\]</div>
+
+<p>и внутренний узел (тип \(\alpha_{111}\)):</p>
+
+<div class="eq">\[
+N^{\text{внутр}} = 27\,L_1\,L_2\,L_3.
+\tag{P3-внутр}
+\]</div>
+
+<div class="theorem">
+<strong>Свойство интерполяции (свойство дельты Кронекера).</strong> Каждая функция формы \(\alpha_{ijk}\) обращается в нуль во всех узловых точках, кроме связанного с ней узла, где она равна единице:
+\[
+\alpha_a(\text{узел } b) = \delta_{ab}.
+\]
+Поэтому коэффициенты разложения \(U=\sum_a U_a\,\alpha_a\) суть в точности значения потенциала в узлах. Кроме того, для любого порядка \(\sum_a \alpha_a \equiv 1\) (разбиение единицы), что гарантирует точное воспроизведение констант.
+</div>
+
+<p>Подставляя разложение \(U(\xi_1,\xi_2,\xi_3)=\sum_{ijk}U_{ijk}\,\alpha_{ijk}\) в функционал (2.13), получаем для элемента матричную форму</p>
+
+<div class="eq">\[
+F(U) = \tfrac12\,\mathbf U^{\mathsf T}\mathbf S\,\mathbf U - \tfrac{k^2}{2}\,\mathbf U^{\mathsf T}\mathbf T\,\mathbf U + \mathbf U^{\mathsf T}\mathbf T\,\mathbf g,
+\tag{2.17}
+\]</div>
+
+<p>где матрица Дирихле \(\mathbf S\) (аналог матрицы жёсткости) и метрическая матрица \(\mathbf T\) (аналог матрицы масс) задаются интегралами</p>
+
+<div class="eq">\[
+S_{mn} = \int_\Omega \nabla\alpha_m\cdot\nabla\alpha_n\,d\Omega,
+\qquad
+T_{mn} = \int_\Omega \alpha_m\,\alpha_n\,d\Omega.
+\tag{2.18, 2.19}
+\]</div>
+
+<p>Требование стационарности \(\partial F/\partial U_m = 0\) приводит к финальной системе линейных уравнений конечно-элементной задачи Гельмгольца:</p>
+
+<div class="eq">\[
+\boxed{\;\mathbf S\,\mathbf U - k^2\,\mathbf T\,\mathbf U = -\,\mathbf T\,\mathbf g.\;}
+\tag{2.21}
+\]</div>
+
+<div class="remark">
+<strong>Универсальность матриц.</strong> Интегралы мономов по симплексу вычисляются по замечательной формуле (интегрирование в симплексных координатах)
+\[
+\int_\Omega L_1^{i}L_2^{j}L_3^{k}\,\frac{d\Omega}{2A} = \frac{i!\,j!\,k!\,2!}{(i+j+k+2)!}.
+\tag{2.33}
+\]
+Благодаря ей элементы \(\mathbf S\) и \(\mathbf T\) выражаются универсально через котангенсы углов треугольника и площадь \(A\); матрицы протабулированы вплоть до 6-го порядка и не зависят от размеров и положения конкретного элемента.
+</div>
+
+<h2 id="accuracy">Точность интерполяции</h2>
+
+<p>Пусть точное решение \(u\) гладко. Интерполянт \(I_h u = \sum_a u(\text{узел }a)\,\alpha_a\) элемента порядка \(p\) воспроизводит без ошибки все полиномы степени \(\le p\). Из теории аппроксимации для треугольника диаметром \(h\) при достаточной гладкости \(u\) справедлива оценка погрешности в энергетической норме</p>
+
+<div class="eq">\[
+\|u - I_h u\|_{H^1(\Omega)} \le C\,h^{p}\,|u|_{H^{p+1}(\Omega)},
+\]</div>
+
+<p>и в норме \(L^2\) на порядок лучше, \(\|u-I_h u\|_{L^2}\le C\,h^{p+1}\,|u|_{H^{p+1}}\). Это и есть теоретическое обоснование h-сходимости со скоростью \(\sim h^p\) (наклон \(p\) на лог-лог-графике). При фиксированной крупной сетке и росте \(p\) на аналитически гладких решениях сходимость становится экспоненциальной — отсюда выгода p-метода, отмеченная в начале лекции.</p>
+
+<div class="algo">
+<strong>Алгоритм построения элемента порядка \(n\).</strong>
+<ol>
+<li>Разбить область \(\Omega\) на треугольники (крупные при p-методе).</li>
+<li>На каждом треугольнике разместить \((n+1)(n+2)/2\) узлов: \(n+1\) на каждой стороне (включая вершины) + внутренние.</li>
+<li>Вычислить барицентрические координаты узлов и построить функции форм \(\alpha_{ijk}=R_iR_jR_k\) по (2.11).</li>
+<li>Вычислить локальные матрицы \(\mathbf S, \mathbf T\) по (2.18)–(2.19), используя формулу интегрирования (2.33).</li>
+<li>Ансамблировать глобальные матрицы через матрицу связей \(\mathbf C\): \(\mathbf S=\mathbf C^{\mathsf T}\mathbf S_d\mathbf C\), \(\mathbf T=\mathbf C^{\mathsf T}\mathbf T_d\mathbf C\).</li>
+<li>Наложить условия Дирихле и решить систему (2.21).</li>
+</ol>
+</div>
+
+<h2 id="interactive">Интерактив: барицентрические координаты и функции форм</h2>
+
+<p>Двигайте точку \(P\) внутри треугольника мышью. Демонстрация вычисляет барицентрические координаты \(L_1, L_2, L_3\) (они же — функции форм \(P1\): \(N_i = L_i\)) и закрашивает треугольник по их значениям. Переключатель \(P1/P2\) показывает узлы и значения базисных функций соответствующего порядка в текущей точке.</p>
+
+<div id="femSim" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0">
+<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:center">
+  <div style="display:flex;gap:.4rem;align-items:center">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.74rem;color:var(--text2)">Порядок:</label>
+    <button id="femP1" style="background:#b44a2d;color:#fff;border:none;border-radius:4px;padding:5px 12px;font-family:'JetBrains Mono',monospace;font-size:.8rem;cursor:pointer">P1</button>
+    <button id="femP2" style="background:#fff;color:#2c2419;border:1px solid var(--border);border-radius:4px;padding:5px 12px;font-family:'JetBrains Mono',monospace;font-size:.8rem;cursor:pointer">P2</button>
+  </div>
+  <div style="display:flex;gap:.4rem;align-items:center">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.74rem;color:var(--text2)">
+      <input type="checkbox" id="femFill" checked> заливка по L₁,L₂,L₃
+    </label>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Треугольник (тяните точку P)</div>
+    <canvas id="femCanvas" width="440" height="360" style="width:100%;height:auto;cursor:crosshair;touch-action:none"></canvas>
+  </div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <div style="text-align:center;font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:.2rem;font-family:'JetBrains Mono',monospace">Значения функций форм в P</div>
+    <canvas id="femBars" width="440" height="360" style="width:100%;height:auto"></canvas>
+  </div>
+</div>
+<div id="femStatus" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.4rem"></div>
+</div>
+
+<script>
+(function(){
+  var cv = document.getElementById('femCanvas');
+  var bars = document.getElementById('femBars');
+  var status = document.getElementById('femStatus');
+  var ctx = cv.getContext('2d');
+  var bx = bars.getContext('2d');
+  var order = 1;
+  var fill = true;
+  // Triangle vertices (canvas coords)
+  var V = [ {x:80, y:300}, {x:380, y:310}, {x:230, y:50} ];
+  // Point P start (centroid)
+  var P = { x:(V[0].x+V[1].x+V[2].x)/3, y:(V[0].y+V[1].y+V[2].y)/3 };
+  var dragging = false;
+
+  function area2(a,b,c){ return (b.x-a.x)*(c.y-a.y) - (c.x-a.x)*(b.y-a.y); }
+  function bary(p){
+    var d = area2(V[0],V[1],V[2]);
+    var L1 = area2(p, V[1], V[2]) / d;
+    var L2 = area2(V[0], p, V[2]) / d;
+    var L3 = area2(V[0], V[1], p) / d;
+    return [L1, L2, L3];
+  }
+  function clampInside(p){
+    var L = bary(p);
+    // if outside, project toward centroid
+    var c = { x:(V[0].x+V[1].x+V[2].x)/3, y:(V[0].y+V[1].y+V[2].y)/3 };
+    var t = 1;
+    while ((L[0]<0||L[1]<0||L[2]<0) && t>0.001){
+      t *= 0.92;
+      var q = { x: c.x + (p.x-c.x)*t, y: c.y + (p.y-c.y)*t };
+      L = bary(q);
+      if (L[0]>=0&&L[1]>=0&&L[2]>=0){ return q; }
+    }
+    return p;
+  }
+
+  // shape functions
+  function shapesP1(L){ return [ {n:'N₁=L₁', v:L[0]}, {n:'N₂=L₂', v:L[1]}, {n:'N₃=L₃', v:L[2]} ]; }
+  function shapesP2(L){
+    var L1=L[0],L2=L[1],L3=L[2];
+    return [
+      {n:'N₁ (верш)', v:L1*(2*L1-1)},
+      {n:'N₂ (верш)', v:L2*(2*L2-1)},
+      {n:'N₃ (верш)', v:L3*(2*L3-1)},
+      {n:'N₁₂ (сер)', v:4*L1*L2},
+      {n:'N₂₃ (сер)', v:4*L2*L3},
+      {n:'N₃₁ (сер)', v:4*L3*L1}
+    ];
+  }
+
+  function drawTri(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,cv.width,cv.height);
+    var L = bary(P);
+    // fill by barycentric: sample grid of small triangles via simple raster of bounding box
+    if (fill){
+      var minx=Math.min(V[0].x,V[1].x,V[2].x), maxx=Math.max(V[0].x,V[1].x,V[2].x);
+      var miny=Math.min(V[0].y,V[1].y,V[2].y), maxy=Math.max(V[0].y,V[1].y,V[2].y);
+      var step=4;
+      for (var yy=miny; yy<maxy; yy+=step){
+        for (var xx=minx; xx<maxx; xx+=step){
+          var b = bary({x:xx+step/2, y:yy+step/2});
+          if (b[0]<0||b[1]<0||b[2]<0) continue;
+          // color: R from L1, G from L2, B from L3 (mixed with accent palette)
+          var r = Math.round(180*b[0] + 26*b[1] + 58*b[2]);
+          var g = Math.round(74*b[0] + 107*b[1] + 91*b[2]);
+          var bl = Math.round(45*b[0] + 90*b[1] + 160*b[2]);
+          ctx.fillStyle='rgba('+r+','+g+','+bl+',0.55)';
+          ctx.fillRect(xx,yy,step,step);
+        }
+      }
+    }
+    // triangle outline
+    ctx.beginPath();
+    ctx.moveTo(V[0].x,V[0].y); ctx.lineTo(V[1].x,V[1].y); ctx.lineTo(V[2].x,V[2].y); ctx.closePath();
+    ctx.strokeStyle='#2c2419'; ctx.lineWidth=2; ctx.stroke();
+    // sub-triangle edges from P to vertices
+    ctx.strokeStyle='rgba(108,93,79,0.6)'; ctx.lineWidth=1; ctx.setLineDash([4,3]);
+    for (var i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(P.x,P.y); ctx.lineTo(V[i].x,V[i].y); ctx.stroke(); }
+    ctx.setLineDash([]);
+    // nodes
+    ctx.font='12px JetBrains Mono'; ctx.textAlign='center';
+    var vc=['#b44a2d','#1a6b5a','#3a5ba0'];
+    for (var i=0;i<3;i++){ ctx.fillStyle=vc[i]; ctx.beginPath(); ctx.arc(V[i].x,V[i].y,6,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#2c2419'; ctx.fillText((i+1), V[i].x+(i==2?0:(i==0?-14:14)), V[i].y+(i==2?-12:18)); }
+    if (order===2){
+      // midpoints
+      var mids=[ {x:(V[0].x+V[1].x)/2,y:(V[0].y+V[1].y)/2}, {x:(V[1].x+V[2].x)/2,y:(V[1].y+V[2].y)/2}, {x:(V[2].x+V[0].x)/2,y:(V[2].y+V[0].y)/2} ];
+      ctx.fillStyle='#9a8d7e';
+      for (var i=0;i<3;i++){ ctx.beginPath(); ctx.arc(mids[i].x,mids[i].y,5,0,Math.PI*2); ctx.fill(); }
+    }
+    // point P
+    ctx.fillStyle='#2c2419'; ctx.beginPath(); ctx.arc(P.x,P.y,7,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='10px JetBrains Mono'; ctx.fillText('P',P.x,P.y+3.5);
+  }
+
+  function drawBars(){
+    bx.clearRect(0,0,bars.width,bars.height);
+    bx.fillStyle='#fdf9f3'; bx.fillRect(0,0,bars.width,bars.height);
+    var L = bary(P);
+    var data = order===1 ? shapesP1(L) : shapesP2(L);
+    var W=bars.width, H=bars.height;
+    var P0={l:90,r:20,t:20,b:20};
+    var n=data.length;
+    var rowH=(H-P0.t-P0.b)/n;
+    // zero axis at center of value range [-0.2 .. 1]
+    var vmin=-0.25, vmax=1.0;
+    function xp(v){ return P0.l + (W-P0.l-P0.r)*(v-vmin)/(vmax-vmin); }
+    var x0=xp(0);
+    // zero line
+    bx.strokeStyle='#d9cfc0'; bx.lineWidth=1;
+    bx.beginPath(); bx.moveTo(x0,P0.t-5); bx.lineTo(x0,H-P0.b+5); bx.stroke();
+    bx.fillStyle='#9a8d7e'; bx.font='9px JetBrains Mono'; bx.textAlign='center';
+    bx.fillText('0', x0, P0.t-8);
+    bx.fillText('1', xp(1), P0.t-8);
+    var cols=['#b44a2d','#1a6b5a','#3a5ba0','#c98a3a','#7a9a4a','#8a5aa0'];
+    for (var i=0;i<n;i++){
+      var cy=P0.t+rowH*(i+0.5);
+      var v=data[i].v;
+      bx.fillStyle=cols[i%cols.length];
+      var bw=xp(v)-x0;
+      bx.fillRect(x0, cy-rowH*0.3, bw, rowH*0.6);
+      bx.fillStyle='#2c2419'; bx.font='10px JetBrains Mono'; bx.textAlign='right';
+      bx.fillText(data[i].n, P0.l-6, cy+3);
+      bx.textAlign='left';
+      bx.fillText(v.toFixed(3), xp(v)+(bw>=0?4:-4)+(bw<0?-30:0), cy+3);
+    }
+    // sum check
+    var sum=0; for (var i=0;i<n;i++) sum+=data[i].v;
+    bx.fillStyle='#6b5d4f'; bx.font='10px JetBrains Mono'; bx.textAlign='left';
+    bx.fillText('Σ Nᵢ = '+sum.toFixed(3), P0.l, H-4);
+  }
+
+  function update(){
+    drawTri(); drawBars();
+    var L=bary(P);
+    status.innerHTML = 'P = ('+P.x.toFixed(0)+','+P.y.toFixed(0)+') · L₁='+L[0].toFixed(3)+', L₂='+L[1].toFixed(3)+', L₃='+L[2].toFixed(3)+' · порядок '+(order===1?'P1':'P2');
+  }
+
+  function getPos(e){
+    var r=cv.getBoundingClientRect();
+    var sx=cv.width/r.width, sy=cv.height/r.height;
+    var cx = (e.touches?e.touches[0].clientX:e.clientX);
+    var cy = (e.touches?e.touches[0].clientY:e.clientY);
+    return { x:(cx-r.left)*sx, y:(cy-r.top)*sy };
+  }
+  function onDown(e){ dragging=true; P=clampInside(getPos(e)); update(); e.preventDefault(); }
+  function onMove(e){ if(!dragging) return; P=clampInside(getPos(e)); update(); e.preventDefault(); }
+  function onUp(){ dragging=false; }
+  cv.addEventListener('mousedown',onDown); window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onUp);
+  cv.addEventListener('touchstart',onDown); cv.addEventListener('touchmove',onMove); window.addEventListener('touchend',onUp);
+
+  document.getElementById('femP1').addEventListener('click',function(){
+    order=1; this.style.background='#b44a2d'; this.style.color='#fff';
+    var o=document.getElementById('femP2'); o.style.background='#fff'; o.style.color='#2c2419'; o.style.border='1px solid #d9cfc0';
+    this.style.border='none'; update();
+  });
+  document.getElementById('femP2').addEventListener('click',function(){
+    order=2; this.style.background='#b44a2d'; this.style.color='#fff';
+    var o=document.getElementById('femP1'); o.style.background='#fff'; o.style.color='#2c2419'; o.style.border='1px solid #d9cfc0';
+    this.style.border='none'; update();
+  });
+  document.getElementById('femFill').addEventListener('change',function(){ fill=this.checked; update(); });
+
+  window.addEventListener('load', function(){ setTimeout(update, 150); });
+  update();
+})();
+</script>
+
+<div class="remark">
+<strong>Что видно в интерактиве.</strong> Координаты \(L_1,L_2,L_3\) всегда положительны внутри треугольника и в сумме дают \(1\) (разбиение единицы) — это видно по строке \(\Sigma N_i\). В режиме \(P1\) функции форм совпадают с \(L_i\) и линейны. В режиме \(P2\) вершинные функции \(L_i(2L_i-1)\) могут принимать <em>отрицательные</em> значения внутри элемента (немонотонность квадратичного базиса), тогда как «рёберные» \(4L_iL_j\) неотрицательны и достигают максимума \(1\) в середине стороны. При этом сумма всех функций форм по-прежнему равна единице при любом положении \(P\).
+</div>
+
+<div class="lecture-nav">
+<a href="lec5.html" class="nav-prev">← Лекция 5</a>
+<a href="lec7.html" class="nav-next">Лекция 7 →</a>
+</div>
+</div>
+</div>
+
+</body>
+</html>

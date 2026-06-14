@@ -330,4 +330,35 @@
       openDD = null;
     }
   });
+
+  // --- Floating mobile controls: in-page TOC toggle (lecture pages) + back-to-top ---
+  // nav.js runs before the page's <nav class="sidebar"> is parsed, so defer until DOM is ready.
+  function setupFab() {
+    var lecSidebar = document.querySelector(".sidebar");
+    var fab = document.createElement("div");
+    fab.id = "cfd-fab";
+    var fabHtml = "";
+    if (lecSidebar) fabHtml += '<button class="fab-toc" onclick="window._navTOC()" aria-label="Разделы лекции" title="Разделы">☰</button>';
+    fabHtml += '<button class="fab-top" onclick="window.scrollTo({top:0,behavior:\'smooth\'})" aria-label="Наверх" title="Наверх">↑</button>';
+    fab.innerHTML = fabHtml;
+    document.body.appendChild(fab);
+
+    window._navTOC = function() {
+      if (lecSidebar) lecSidebar.classList.toggle("mob-show");
+    };
+    if (lecSidebar) {
+      // close the TOC overlay after picking a section, or when tapping outside it
+      lecSidebar.addEventListener("click", function(e) {
+        if (e.target.tagName === "A") lecSidebar.classList.remove("mob-show");
+      });
+      document.addEventListener("click", function(e) {
+        if (lecSidebar.classList.contains("mob-show") &&
+            !e.target.closest(".sidebar") && !e.target.closest(".fab-toc")) {
+          lecSidebar.classList.remove("mob-show");
+        }
+      });
+    }
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", setupFab);
+  else setupFab();
 })();

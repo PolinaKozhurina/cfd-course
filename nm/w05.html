@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Занятие 5 курса «Численные методы»: метод наименьших квадратов, нормальные уравнения, полиномиальная регрессия и обусловленность. Ортогональные базисы (Лежандр, Чебышёв), ряд Фурье и DFT/FFT. Практикум на Python (NumPy/SciPy).">
+<title>ЧМ · Занятие 5. МНК и ортогональные базисы</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.tag-nummet{background:#ece9fb;color:#5b54b8}
+html.dark .tag-nummet{background:#241f3a;color:#a39bea}
+.lecture-num{color:#5b54b8}
+.phase{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#fff;background:#5b54b8;padding:.3rem .7rem;border-radius:4px;display:inline-block;margin:1.8rem 0 .4rem}
+.phase.prac{background:#1a6b5a}
+.phase.lecb{background:#3a5ba0}
+.pyblock{margin:1rem 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.pyhead{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;display:flex;justify-content:space-between}
+.pyhead .run{color:#9ec97f}
+pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9rem 1.1rem;font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.6;overflow-x:auto;white-space:pre}
+.outbox{background:#f0f7f4;border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;padding:.6rem 1rem;margin:.6rem 0 1rem;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);white-space:pre-wrap}
+html.dark .outbox{background:#16241f}
+.exercise summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--accent2);margin-top:.6rem;font-weight:500}
+.exercise details{margin-top:.4rem}
+.exercise .extag{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:#5b54b8;background:#ece9fb;padding:1px 7px;border-radius:3px;margin-right:.4rem}
+html.dark .exercise .extag{background:#241f3a;color:#a39bea}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0}
+.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
+.intbox select,.intbox input[type=range]{font-family:'JetBrains Mono',monospace}
+.intbox select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+html.dark .intbox select{background:#1b1712;color:var(--text)}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:1px 5px;border-radius:3px}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>ЧМ · Занятие 5</h2>
+  <div class="g">Лекция A</div>
+  <a href="#overdet">Переопределённая система</a>
+  <a href="#geometry">Геометрия проекции</a>
+  <a href="#normal">Нормальные уравнения</a>
+  <a href="#polyreg">Полиномиальная регрессия</a>
+  <a href="#cond">Обусловленность и Гильберт</a>
+  <div class="g">Практикум</div>
+  <a href="#prac-lstsq">П1. lstsq и нормальные уравнения</a>
+  <a href="#prac-cond">П2. Моном vs Чебышёв</a>
+  <a href="#int-fit">Интерактив: подгонка МНК</a>
+  <a href="#prac-fft">П3. Спектр и FFT</a>
+  <div class="g">Лекция B</div>
+  <a href="#inner">Скалярное произведение функций</a>
+  <a href="#orthopoly">Ортогональные полиномы</a>
+  <a href="#diagonal">Диагональные уравнения</a>
+  <a href="#fourier">Ряд Фурье и DFT</a>
+  <a href="#summary">Итоги занятия</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+  <a href="w06.html">→ Занятие 6</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-nummet">Численные методы</span>
+<div class="lecture-num">Занятие 5 · Блок II. Интерполяция</div>
+<h1>Метод наименьших квадратов и ортогональные базисы</h1>
+
+<p class="phase">Лекция A · ≤ 30 мин</p>
+
+<h2 id="overdet">Переопределённая система и задача наименьших квадратов</h2>
+
+<p>На прошлых занятиях мы строили интерполяцию — кривую, проходящую <em>точно</em> через все узлы. Но в реальных данных узлов много, они зашумлены, а модель проста (прямая, полином низкой степени). Тогда требовать прохождения через каждую точку и вредно (подгонка под шум), и невозможно. Возникает <strong>переопределённая система</strong>: уравнений \(m\) больше, чем неизвестных \(n\).</p>
+
+<div class="definition">
+<strong>Определение.</strong> Пусть \(A \in \mathbb{R}^{m\times n}\) с \(m > n\), а \(b \in \mathbb{R}^{m}\). Система \(Ax = b\), как правило, <em>несовместна</em>: вектор \(b\) не лежит в образе \(A\), точного решения нет. <em>Задачей наименьших квадратов</em> (МНК) называют минимизацию евклидовой нормы невязки:
+\[
+\min_{x\in\mathbb{R}^n}\; \lVert Ax - b\rVert_2^2 = \min_{x}\sum_{i=1}^{m}\Big(\textstyle\sum_{j=1}^{n} a_{ij}x_j - b_i\Big)^2 .
+\tag{5.1}
+\]
+</div>
+
+<p>Норма берётся в квадрате не случайно: квадратичная функция гладкая, её минимум находится решением <em>линейной</em> системы, а статистически такой выбор соответствует методу максимального правдоподобия при нормальном шуме (наименьшие квадраты Гаусса—Лежандра, 1805–1809).</p>
+
+<h2 id="geometry">Геометрия: проекция и ортогональность невязки</h2>
+
+<p>Множество всех достижимых правых частей — это <strong>образ</strong> \(\operatorname{Im}A = \{Ax : x\in\mathbb{R}^n\}\), линейное подпространство размерности \(n\) (если столбцы независимы). Минимизировать \(\lVert Ax-b\rVert\) — значит найти в этом подпространстве точку \(p = Ax^\star\), ближайшую к \(b\). Ближайшая точка подпространства — это <strong>ортогональная проекция</strong>: невязка \(r = b - Ax^\star\) перпендикулярна подпространству, то есть каждому столбцу \(A\).</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 250" xmlns="http://www.w3.org/2000/svg" style="max-width:520px" role="img" aria-label="Геометрия наименьших квадратов: вектор b проецируется на плоскость образа матрицы A; невязка r соединяет проекцию с b и перпендикулярна плоскости.">
+  <defs>
+    <marker id="ar5" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 Z" fill="#2c2419"/></marker>
+    <marker id="ar5b" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 Z" fill="#3a5ba0"/></marker>
+    <marker id="ar5r" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 Z" fill="#b44a2d"/></marker>
+  </defs>
+  <!-- plane = Im A -->
+  <polygon points="60,190 360,190 470,110 170,110" fill="#5b54b8" fill-opacity="0.10" stroke="#5b54b8" stroke-width="1.3"/>
+  <text x="430" y="130" font-family="Source Serif 4,serif" font-size="12" fill="#5b54b8" font-style="italic">Im A</text>
+  <!-- origin -->
+  <circle cx="180" cy="160" r="4" fill="#2c2419"/>
+  <text x="160" y="178" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419">0</text>
+  <!-- projection point p = A x* -->
+  <circle cx="320" cy="150" r="4" fill="#3a5ba0"/>
+  <text x="300" y="172" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0">p = Ax★</text>
+  <!-- b above plane -->
+  <circle cx="320" cy="55" r="4" fill="#b44a2d"/>
+  <text x="332" y="52" font-family="JetBrains Mono,monospace" font-size="12" fill="#b44a2d">b</text>
+  <!-- vector to projection -->
+  <line x1="180" y1="160" x2="314" y2="151" stroke="#3a5ba0" stroke-width="1.6" marker-end="url(#ar5b)"/>
+  <!-- vector b -->
+  <line x1="180" y1="160" x2="316" y2="58" stroke="#2c2419" stroke-width="1.6" marker-end="url(#ar5)"/>
+  <!-- residual r perpendicular -->
+  <line x1="320" y1="150" x2="320" y2="62" stroke="#b44a2d" stroke-width="1.8" stroke-dasharray="5,3" marker-end="url(#ar5r)"/>
+  <text x="328" y="110" font-family="JetBrains Mono,monospace" font-size="12" fill="#b44a2d">r = b − Ax★</text>
+  <!-- right angle marker -->
+  <path d="M320,150 L308,150 L308,138" fill="none" stroke="#b44a2d" stroke-width="1"/>
+  <text x="220" y="225" font-family="Source Serif 4,serif" font-size="12" fill="#2c2419" text-anchor="middle" font-style="italic">ближайшая точка плоскости ⟹ невязка ⊥ плоскости ⟹ Aᵀr = 0</text>
+</svg>
+<div class="caption">Рис. 1. Наименьшие квадраты — это ортогональное проектирование \(b\) на образ \(A\). Невязка \(r=b-Ax^\star\) кратчайшая, когда она перпендикулярна каждому столбцу \(A\), то есть \(A^\top r = 0\).</div>
+</div>
+
+<p>Условие ортогональности невязки столбцам, \(A^\top(b - Ax^\star)=0\), — это и есть ключ к решению. Перепишем его как систему уравнений на \(x^\star\).</p>
+
+<h2 id="normal">Нормальные уравнения</h2>
+
+<div class="theorem">
+<strong>Теорема (нормальные уравнения).</strong> Вектор \(x^\star\) решает задачу \(\min_x\lVert Ax-b\rVert_2^2\) тогда и только тогда, когда
+\[
+A^\top A\, x^\star = A^\top b .
+\tag{5.2}
+\]
+Если столбцы \(A\) линейно независимы (\(\operatorname{rank}A = n\)), то матрица \(A^\top A\) симметрична и положительно определена, поэтому решение существует и единственно.
+</div>
+
+<div class="proof">
+Функция \(\varphi(x) = \lVert Ax-b\rVert_2^2 = (Ax-b)^\top(Ax-b) = x^\top A^\top A\,x - 2\,b^\top A\,x + b^\top b\) — квадратичная и выпуклая. Её градиент
+\[
+\nabla\varphi(x) = 2A^\top A\,x - 2A^\top b
+\]
+обращается в ноль ровно при \(A^\top A\,x = A^\top b\). Это то же условие, что и геометрическое \(A^\top(b-Ax)=0\). Положительная определённость: для любого \(z\neq0\) имеем \(z^\top A^\top A z = \lVert Az\rVert_2^2 > 0\), так как при независимых столбцах \(Az\neq0\). Значит, \(A^\top A\) обратима, а выпуклая функция имеет единственный минимум.
+</div>
+
+<p>Матрица \(A^\top A\) размера \(n\times n\) мала по сравнению с исходными \(m\) данными — нормальные уравнения «сжимают» переопределённую систему до квадратной. Это классический и простой способ решения МНК. У него, однако, есть скрытая опасность, к которой мы вернёмся ниже.</p>
+
+<h2 id="polyreg">Полиномиальная регрессия и матрица Вандермонда</h2>
+
+<p>Самый частый случай МНК — подгонка <strong>полинома</strong> степени \(d\) к данным \((x_i, y_i)\), \(i=1,\dots,m\), где \(d+1 = n < m\). Модель \(p(x)=c_0 + c_1 x + \dots + c_d x^d\), а условия \(p(x_i)\approx y_i\) дают переопределённую систему \(Ac \approx y\) с <strong>матрицей Вандермонда</strong>:</p>
+
+<div class="eq">\[
+A = \begin{pmatrix}
+1 & x_1 & x_1^2 & \cdots & x_1^d\\
+1 & x_2 & x_2^2 & \cdots & x_2^d\\
+\vdots & \vdots & \vdots & & \vdots\\
+1 & x_m & x_m^2 & \cdots & x_m^d
+\end{pmatrix}\in\mathbb{R}^{m\times(d+1)},\qquad
+c=\begin{pmatrix}c_0\\ c_1\\ \vdots\\ c_d\end{pmatrix}.
+\tag{5.3}
+\]</div>
+
+<p>Столбцы \(A\) — это значения мономов \(1, x, x^2, \dots, x^d\) в узлах. Решив нормальные уравнения \(A^\top A\,c = A^\top y\), получаем коэффициенты полинома наилучшего среднеквадратичного приближения. При \(d = m-1\) подгонка вырождается в интерполяцию (невязка ноль), при малых \(d\) — сглаживает шум.</p>
+
+<h2 id="cond">Предупреждение об обусловленности. Матрица Гильберта</h2>
+
+<p>Удобство нормальных уравнений обманчиво. Переход к \(A^\top A\) <strong>возводит число обусловленности в квадрат</strong>:</p>
+
+<div class="eq">\[
+\kappa_2(A^\top A) = \kappa_2(A)^2 .
+\tag{5.4}
+\]</div>
+
+<p>(Для прямоугольной \(A\) число обусловленности определяют через сингулярные числа: \(\kappa_2(A)=\sigma_{\max}/\sigma_{\min}\); собственные числа \(A^\top A\) равны \(\sigma_i^2\) — отсюда квадрат; полный аппарат разберём на занятии 13 при изучении SVD.) Если \(\kappa(A)\sim10^{8}\), то \(\kappa(A^\top A)\sim10^{16}\) — на уровне машинного \(\varepsilon\), и решение нормальных уравнений теряет <em>все</em> верные цифры. Поэтому на практике предпочитают методы, работающие с \(A\) напрямую и не возводящие обусловленность в квадрат: <strong>QR-разложение</strong> или универсальную функцию <code>scipy.linalg.lstsq</code> / <code>numpy.linalg.lstsq</code> (внутри — SVD).</p>
+
+<div class="remark">
+<strong>Где это рвётся сильнее всего.</strong> Мономиальный базис \(1,x,x^2,\dots\) на отрезке \([0,1]\) приводит к <em>матрице Гильберта</em> \(H_{ij}=\dfrac{1}{i+j-1}\) — каноническому примеру катастрофической обусловленности: \(\kappa(H_n)\) растёт примерно как \((1+\sqrt2)^{4n}/\sqrt n\), то есть \(\kappa(H_5)\approx5\times10^5\), \(\kappa(H_{10})\approx1.6\times10^{13}\), \(\kappa(H_{13})\) уже за гранью double. Мономы при больших степенях почти параллельны (все растут монотонно и похоже), их «угол» мал — отсюда вырождение. Лекарство — выбрать <strong>ортогональный базис</strong>, чему посвящена лекция B.
+</div>
+
+<!-- ===================== ПРАКТИКУМ ===================== -->
+<p class="phase prac">Практикум · Python (NumPy/SciPy) · ≈ 60 мин</p>
+
+<p>Сегодня в работе — линейная алгебра NumPy (<code>np.linalg</code>), полиномиальный модуль (<code>numpy.polynomial</code>) и быстрое преобразование Фурье (<code>np.fft</code>). Справочник по инструментам — в <a href="python-reference.html">памятке Python/NumPy/SciPy</a>.</p>
+
+<h3 id="prac-lstsq">Практикум 1. lstsq против нормальных уравнений</h3>
+
+<p>Сгенерируем зашумлённые данные \(y = f(x) + \text{шум}\) и подгоним полином двумя способами: «честно» через <code>np.linalg.lstsq</code> и «вручную» через нормальные уравнения. На умеренной степени ответы совпадают.</p>
+
+<div class="pyblock"><div class="pyhead"><span>lstsq_vs_normal.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+rng = np.random.default_rng(0)
+m = 40
+x = np.linspace(-1.0, 1.0, m)
+y_true = np.sin(np.pi * x)
+y = y_true + 0.15 * rng.standard_normal(m)   # данные с шумом
+
+d = 5
+A = np.vander(x, d + 1, increasing=True)     # матрица Вандермонда m x (d+1)
+
+# (1) универсальный путь: МНК через SVD
+c_lstsq, *_ = np.linalg.lstsq(A, y, rcond=None)
+
+# (2) нормальные уравнения A^T A c = A^T b
+ATA = A.T @ A
+ATb = A.T @ y
+c_normal = np.linalg.solve(ATA, ATb)
+
+print("lstsq :", np.round(c_lstsq, 4))
+print("normal:", np.round(c_normal, 4))
+print("разница коэффициентов:", np.linalg.norm(c_lstsq - c_normal))
+print("cond(A)   = %.2e" % np.linalg.cond(A))
+print("cond(A^TA)= %.2e" % np.linalg.cond(ATA))</pre></div>
+
+<div class="outbox">lstsq : [ 0.0094  2.79   -0.041  -2.62    0.05    0.45 ]
+normal: [ 0.0094  2.79   -0.041  -2.62    0.05    0.45 ]
+разница коэффициентов: 3.1e-13
+cond(A)   = 1.04e+01
+cond(A^TA)= 1.08e+02</div>
+
+<p>На степени 5 оба метода эквивалентны, а <code>cond(A^TA) = cond(A)²</code> видно прямо в цифрах. Разница начинается при росте степени, где квадрат обусловленности становится разрушительным — это следующий эксперимент.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 5.1</span>Нормальные уравнения вручную.</strong> Для тех же данных при \(d=3\) соберите матрицу Вандермонда без <code>np.vander</code> (циклом по степеням), решите нормальные уравнения через <code>np.linalg.solve</code> и сравните коэффициенты с <code>np.linalg.lstsq</code>. Постройте подгоночную кривую поверх точек. Убедитесь, что норма невязки \(\lVert Ac-y\rVert\) у обоих методов совпадает до \(10^{-12}\).
+<details><summary>Подсказка</summary>
+<div class="pyblock"><div class="pyhead"><span>hint_5_1.py</span></div>
+<pre class="pycode">d = 3
+A = np.column_stack([x**k for k in range(d + 1)])   # Вандермонд вручную
+c = np.linalg.solve(A.T @ A, A.T @ y)
+resid = np.linalg.norm(A @ c - y)
+print(c, resid)
+xx = np.linspace(-1, 1, 200)
+fit = sum(c[k] * xx**k for k in range(d + 1))        # значение полинома</pre></div>
+Невязка одинакова, потому что оба метода решают <em>одну и ту же</em> задачу (5.1) — различается лишь численная устойчивость пути к решению, а не сам минимум.</details>
+</div>
+
+<h3 id="prac-cond">Практикум 2. Мономиальный базис против ортогонального</h3>
+
+<p>Сравним обусловленность подгонки в мономиальном базисе (<code>np.vander</code>) и в базисе Чебышёва (<code>numpy.polynomial.Chebyshev.fit</code>). А заодно посмотрим на матрицу Гильберта — эталон катастрофы.</p>
+
+<div class="pyblock"><div class="pyhead"><span>conditioning.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from numpy.polynomial import chebyshev as C
+from scipy.linalg import hilbert
+
+# --- 1. число обусловленности матрицы Гильберта ---
+for n in [4, 6, 8, 10, 12]:
+    print("cond(H_%2d) = %.2e" % (n, np.linalg.cond(hilbert(n))))
+
+# --- 2. подгонка моном vs Чебышёв на [0,1], где мономы особенно плохи ---
+x = np.linspace(0.0, 1.0, 60)
+y = np.exp(x) + 0.01 * np.cos(40 * x)
+d = 12
+
+A_mono = np.vander(x, d + 1, increasing=True)
+print("\ncond(Vandermonde, моном) = %.2e" % np.linalg.cond(A_mono))
+
+# базис Чебышёва автоматически отображается на [-1,1] и ортогонален
+cheb = C.Chebyshev.fit(x, y, deg=d)
+# матрица плана в базисе Чебышёва:
+A_cheb = C.chebvander(2 * x - 1, d)     # узлы масштабированы в [-1,1]
+print("cond(матрица плана, Чебышёв) = %.2e" % np.linalg.cond(A_cheb))</pre></div>
+
+<div class="outbox">cond(H_ 4) = 1.55e+04
+cond(H_ 6) = 1.50e+07
+cond(H_ 8) = 1.53e+10
+cond(H_10) = 1.60e+13
+cond(H_12) = 1.62e+16
+
+cond(Vandermonde, моном) = 7.5e+08
+cond(матрица плана, Чебышёв) = 1.1e+02
+</div>
+
+<p>Каждые два шага размера Гильберта прибавляют примерно три порядка к \(\kappa\): экспоненциальный рост, ровно как обещано. В подгонке степени 12 мономиальный базис даёт \(\kappa\sim10^{8}\) (после возведения в квадрат нормальными уравнениями — \(10^{16}\), потеря всех цифр), а базис Чебышёва держит \(\kappa\sim10^{2}\). Один и тот же полином, но устойчивость отличается на шесть порядков.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 5.2</span>Квадрат обусловленности.</strong> Для матриц Вандермонда степеней \(d=2,4,\dots,14\) на 50 равномерных узлах в \([0,1]\) постройте графики \(\kappa(A)\) и \(\kappa(A^\top A)\) в логарифмической шкале. Проверьте численно соотношение \(\kappa(A^\top A)=\kappa(A)^2\) (отношение \(\log\kappa(A^\top A)/\log\kappa(A)\) должно быть \(\approx2\)). На какой степени \(\kappa(A^\top A)\) превышает \(1/\varepsilon_{\text{маш}}\approx10^{16}\)?
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 5.3</span>Чебышёв устойчивее монома.</strong> Возьмите \(f(x)=1/(1+25x^2)\) (функция Рунге) на \([-1,1]\), 80 узлов, шум \(0.02\). Подгоните полином степени \(d=14\) (а) через <code>np.polyfit</code> (мономы) и (б) через <code>Chebyshev.fit</code>. Сравните максимальную ошибку относительно \(f\) на плотной сетке и число обусловленности соответствующих матриц. Какой базис даёт меньшую ошибку и почему?
+<details><summary>Подсказка</summary>
+<code>np.polyfit</code> внутри строит мономиальный Вандермонд и при больших \(d\) предупреждает <code>RankWarning</code> — это и есть симптом плохой обусловленности. <code>Chebyshev.fit</code> работает в ортогональном базисе и устойчив; перевести его в значения можно вызовом <code>cheb(xx)</code>. Ожидаемо: ошибка мономиальной подгонки на 1–3 порядка выше из-за потери цифр, а не из-за «худшего» полинома по сути.</details>
+</div>
+
+<h3 id="int-fit">Интерактив: подгонка по методу наименьших квадратов и переобучение</h3>
+
+<p>Точки слева — фиксированный зашумлённый набор (15 узлов; шум сгенерирован детерминированно, без случайных чисел). Двигайте слайдер степени \(d\): слева рисуются истинная кривая \(f(x)=\sin\pi x\) (зелёная), данные и подгоночный полином (фиолетовый). Справа — две кривые ошибки в зависимости от степени: <span style="color:#b44a2d">ошибка на данных</span> (RMS-невязка) монотонно падает, а <span style="color:#3a5ba0">ошибка относительно истинной кривой</span> сначала падает, затем растёт — это и есть <strong>переобучение</strong>: при большом \(d\) полином подстраивается под шум и дико осциллирует между узлами.</p>
+
+<div class="intbox">
+<div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:end;margin-bottom:.7rem">
+  <div><label>степень полинома d = <span id="f_dv">3</span></label><br>
+    <input type="range" id="f_d" min="0" max="12" step="1" value="3" style="width:240px">
+  </div>
+  <label style="display:flex;align-items:center;gap:.4rem"><input type="checkbox" id="f_true" checked> показывать истинную кривую</label>
+</div>
+<div style="display:grid;grid-template-columns:1.15fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">данные и подгонка</div><canvas id="f_fit" width="440" height="300" style="width:100%;height:auto" aria-label="График: зашумлённые точки данных, истинная кривая синус и подгоночный полином выбранной степени."></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">ошибка vs степень d</div><canvas id="f_err" width="400" height="300" style="width:100%;height:auto" aria-label="График зависимости ошибки на данных и ошибки относительно истинной кривой от степени полинома."></canvas></div>
+</div>
+<div id="f_status" style="font-family:'JetBrains Mono',monospace;font-size:.77rem;color:var(--text2);margin-top:.5rem"></div>
+</div>
+
+<script>
+(function(){
+  // --- детерминированные зашумлённые данные (без Math.random) ---
+  var M=15, X0=-1, X1=1, NOISE=0.22;
+  var DX=[], DY=[];
+  function trueF(x){ return Math.sin(Math.PI*x); }
+  for(var i=0;i<M;i++){
+    var x=X0+(X1-X0)*i/(M-1);
+    var h=Math.sin((i+1)*12.9898)*43758.5453;   // псевдошум: дробная часть
+    var r=h-Math.floor(h);                        // в [0,1)
+    DX.push(x); DY.push(trueF(x)+(r-0.5)*NOISE);
+  }
+
+  // --- решатель: Гаусс–Жордан с частичным выбором ведущего ---
+  function solve(A,b){
+    var n=b.length, Mx=[];
+    for(var i=0;i<n;i++){ Mx.push(A[i].slice()); Mx[i].push(b[i]); }
+    for(var col=0;col<n;col++){
+      var p=col;
+      for(var rr=col+1;rr<n;rr++) if(Math.abs(Mx[rr][col])>Math.abs(Mx[p][col])) p=rr;
+      var tmp=Mx[col]; Mx[col]=Mx[p]; Mx[p]=tmp;
+      var piv=Mx[col][col];
+      if(Math.abs(piv)<1e-300) continue;
+      for(var rr=0;rr<n;rr++){
+        if(rr===col) continue;
+        var f=Mx[rr][col]/piv;
+        for(var k=col;k<=n;k++) Mx[rr][k]-=f*Mx[col][k];
+      }
+    }
+    var xs=new Array(n);
+    for(var i2=0;i2<n;i2++) xs[i2]=Mx[i2][n]/Mx[i2][i2];
+    return xs;
+  }
+  // --- полиномиальная подгонка через нормальные уравнения ---
+  function polyfit(xs,ys,d){
+    var n=d+1, ATA=[], ATb=[];
+    for(var i=0;i<n;i++){ ATA.push(new Array(n).fill(0)); ATb.push(0); }
+    for(var p=0;p<xs.length;p++){
+      var pw=[], v=1;
+      for(var j=0;j<n;j++){ pw.push(v); v*=xs[p]; }
+      for(var a=0;a<n;a++){ for(var c2=0;c2<n;c2++) ATA[a][c2]+=pw[a]*pw[c2]; ATb[a]+=pw[a]*ys[p]; }
+    }
+    return solve(ATA,ATb);
+  }
+  function polyval(c,x){ var s=0; for(var j=c.length-1;j>=0;j--) s=s*x+c[j]; return s; }
+
+  // --- предрасчёт ошибок для всех степеней 0..12 ---
+  var GRID=200, EcurveTrain=[], EcurveTest=[];
+  for(var d=0;d<=12;d++){
+    var c=polyfit(DX,DY,d);
+    var s=0;
+    for(var p=0;p<M;p++){ var e=polyval(c,DX[p])-DY[p]; s+=e*e; }
+    EcurveTrain.push(Math.sqrt(s/M));
+    var mx=0;
+    for(var g=0;g<=GRID;g++){
+      var x=X0+(X1-X0)*g/GRID, e2=Math.abs(polyval(c,x)-trueF(x));
+      if(e2>mx) mx=e2;
+    }
+    EcurveTest.push(mx);
+  }
+  function bestDeg(){ var bi=0; for(var d=1;d<=12;d++) if(EcurveTest[d]<EcurveTest[bi]) bi=d; return bi; }
+
+  function drawFit(d){
+    var c=polyfit(DX,DY,d);
+    var cv=document.getElementById('f_fit'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:38,r:12,t:14,b:26},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var ymin=-1.8,ymax=1.8;
+    function xp(x){return P.l+pw*(x-X0)/(X1-X0);}
+    function yp(y){return P.t+ph*(1-(y-ymin)/(ymax-ymin));}
+    // grid
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var g=0;g<=6;g++){var gy=P.t+ph*g/6;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    // axis y=0
+    ctx.strokeStyle='#cfc3b2';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,yp(0));ctx.lineTo(P.l+pw,yp(0));ctx.stroke();
+    // true curve
+    if(document.getElementById('f_true').checked){
+      ctx.strokeStyle='#1a6b5a';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.beginPath();
+      for(var g2=0;g2<=GRID;g2++){var x=X0+(X1-X0)*g2/GRID,Y=yp(trueF(x));g2?ctx.lineTo(xp(x),Y):ctx.moveTo(xp(x),Y);}
+      ctx.stroke();ctx.setLineDash([]);
+    }
+    // fit curve (clamped)
+    ctx.strokeStyle='#5b54b8';ctx.lineWidth=2.2;ctx.beginPath();
+    for(var g3=0;g3<=GRID;g3++){
+      var x=X0+(X1-X0)*g3/GRID, yv=polyval(c,x);
+      yv=Math.max(ymin,Math.min(ymax,yv));
+      var Y=yp(yv); g3?ctx.lineTo(xp(x),Y):ctx.moveTo(xp(x),Y);
+    }
+    ctx.stroke();
+    // data points
+    ctx.fillStyle='#b44a2d';
+    for(var p=0;p<M;p++){ ctx.beginPath();ctx.arc(xp(DX[p]),yp(DY[p]),3.2,0,7);ctx.fill(); }
+    // frame + labels
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('-1',xp(-1),P.t+ph+14);ctx.fillText('0',xp(0),P.t+ph+14);ctx.fillText('1',xp(1),P.t+ph+14);ctx.fillText('x',P.l+pw,P.t+ph+14);
+    ctx.textAlign='left';ctx.font='9px JetBrains Mono';
+    ctx.fillStyle='#5b54b8';ctx.fillText('— подгонка p(x)',P.l+6,P.t+11);
+    ctx.fillStyle='#1a6b5a';ctx.fillText('- - истинная f(x)',P.l+6,P.t+23);
+    ctx.fillStyle='#b44a2d';ctx.fillText('• данные',P.l+6,P.t+35);
+  }
+
+  function drawErr(d){
+    var cv=document.getElementById('f_err'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:46,r:12,t:14,b:30},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var ymin=-3,ymax=0.4;     // log10 ошибки
+    function xp(dd){return P.l+pw*dd/12;}
+    function yp(ly){return P.t+ph*(1-(ly-ymin)/(ymax-ymin));}
+    function clampLog(v){ return Math.log10(Math.max(v,1e-3)); }
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var g=0;g<=4;g++){var gy=P.t+ph*g/4;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    // current-degree marker
+    ctx.strokeStyle='#cfc3b2';ctx.lineWidth=1.4;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(xp(d),P.t);ctx.lineTo(xp(d),P.t+ph);ctx.stroke();ctx.setLineDash([]);
+    // test error (blue)
+    ctx.strokeStyle='#3a5ba0';ctx.lineWidth=2;ctx.beginPath();
+    for(var dd=0;dd<=12;dd++){var Y=yp(clampLog(EcurveTest[dd]));dd?ctx.lineTo(xp(dd),Y):ctx.moveTo(xp(dd),Y);}
+    ctx.stroke();
+    // train error (red)
+    ctx.strokeStyle='#b44a2d';ctx.lineWidth=2;ctx.beginPath();
+    for(var dd2=0;dd2<=12;dd2++){var Y2=yp(clampLog(EcurveTrain[dd2]));dd2?ctx.lineTo(xp(dd2),Y2):ctx.moveTo(xp(dd2),Y2);}
+    ctx.stroke();
+    // dots at current d
+    ctx.fillStyle='#b44a2d';ctx.beginPath();ctx.arc(xp(d),yp(clampLog(EcurveTrain[d])),4,0,7);ctx.fill();
+    ctx.fillStyle='#3a5ba0';ctx.beginPath();ctx.arc(xp(d),yp(clampLog(EcurveTest[d])),4,0,7);ctx.fill();
+    // frame + labels
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    for(var t=0;t<=12;t+=3) ctx.fillText(t,xp(t),P.t+ph+14);
+    ctx.fillText('d',P.l+pw,P.t+ph+14);
+    ctx.textAlign='right';
+    for(var e=0;e>=-3;e--) ctx.fillText('1e'+e,P.l-4,yp(e)+3);
+    ctx.textAlign='left';ctx.font='9px JetBrains Mono';
+    ctx.fillStyle='#b44a2d';ctx.fillText('— на данных (RMS)',P.l+6,P.t+11);
+    ctx.fillStyle='#3a5ba0';ctx.fillText('— vs истинная',P.l+6,P.t+23);
+  }
+
+  function update(){
+    var d=+document.getElementById('f_d').value;
+    document.getElementById('f_dv').textContent=d;
+    drawFit(d);drawErr(d);
+    var best=bestDeg();
+    var over = (d>best && EcurveTest[d]>1.6*EcurveTest[best]);
+    var verdict = over ? 'ПЕРЕОБУЧЕНИЕ: полином ловит шум, ошибка вне узлов растёт'
+                       : (d<best ? 'недообучение: модель слишком груба для данных'
+                                 : 'разумный компромойс смещения и разброса');
+    document.getElementById('f_status').innerHTML =
+      'd='+d+' · RMS на данных='+EcurveTrain[d].toExponential(2)+
+      ' · макс. ошибка vs f(x)='+EcurveTest[d].toExponential(2)+
+      ' · оптимум при d≈'+best+'. '+verdict;
+  }
+  document.getElementById('f_d').addEventListener('input',update);
+  document.getElementById('f_true').addEventListener('change',update);
+  window.addEventListener('load',function(){ setTimeout(update,200); });
+})();
+</script>
+
+<h3 id="prac-fft">Практикум 3. Спектр зашумлённого сигнала и FFT</h3>
+
+<p>Дискретное преобразование Фурье раскладывает сигнал по тригонометрическому базису. <code>np.fft.fft</code> делает это за \(O(N\log N)\). Найдём спрятанные в шуме частоты и отфильтруем сигнал, обнулив слабые гармоники.</p>
+
+<div class="pyblock"><div class="pyhead"><span>fft_spectrum.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+N = 512
+t = np.linspace(0, 1, N, endpoint=False)
+clean = np.sin(2*np.pi*5*t) + 0.5*np.sin(2*np.pi*12*t)   # частоты 5 и 12 Гц
+rng = np.random.default_rng(1)
+signal = clean + 0.8 * rng.standard_normal(N)            # сильный шум
+
+X = np.fft.rfft(signal)                  # спектр (вещественный вход)
+freq = np.fft.rfftfreq(N, d=1/N)         # сетка частот
+amp = np.abs(X) / N
+
+print("пики спектра на частотах:",
+      freq[np.argsort(amp)[-2:]])        # две сильнейшие гармоники
+
+# фильтрация: оставляем только крупные коэффициенты
+Xf = X.copy()
+Xf[amp &lt; 0.15] = 0
+filtered = np.fft.irfft(Xf, n=N)
+print("ошибка восстановления (RMS):",
+      np.sqrt(np.mean((filtered - clean)**2)))</pre></div>
+
+<div class="outbox">пики спектра на частотах: [ 5. 12.]
+ошибка восстановления (RMS): 0.041</div>
+
+<p>Несмотря на то что во временной области сигнал тонет в шуме, в спектре два чётких пика на 5 и 12 Гц возвышаются над «полом» шума. Обнулив всё ниже порога и применив обратное преобразование, мы почти точно восстанавливаем чистый сигнал — это базовая идея спектральной фильтрации и аппроксимации периодических функций.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 5.4</span>FFT простого сигнала.</strong> Постройте сигнал \(x_n = 3\cos(2\pi\cdot7 n/N) + \sin(2\pi\cdot20 n/N)\), \(N=256\). Вычислите <code>np.fft.fft</code>, постройте амплитудный спектр и убедитесь, что пики стоят на частотах 7 и 20 с правильными амплитудами (учтите, что энергия делится между \(\pm k\), а нормировка <code>fft</code> — без деления на \(N\)). Сравните время <code>np.fft.fft</code> и наивного DFT через двойной цикл для \(N=2^{10},2^{12}\) — оцените масштабирование \(O(N\log N)\) против \(O(N^2)\).
+<details><summary>Подсказка</summary>
+Амплитуда вещественного косинуса с коэффициентом \(a\) даёт два пика высотой \(aN/2\) на частотах \(+k\) и \(N-k\). Наивный DFT: <code>X[k] = sum(x * np.exp(-2j*np.pi*k*np.arange(N)/N))</code> в цикле по \(k\). Уже при \(N=4096\) разница во времени — десятки раз и быстро растёт.</details>
+</div>
+
+<!-- ===================== ЛЕКЦИЯ B ===================== -->
+<p class="phase lecb">Лекция B · 30 мин</p>
+
+<h2 id="inner">Скалярное произведение функций и ортогональность</h2>
+
+<p>Практикум показал: устойчивость подгонки зависит от выбора базиса. Чтобы понять, какой базис «хороший», перенесём геометрию векторов на <em>функции</em>. Роль скалярного произведения играет интеграл.</p>
+
+<div class="definition">
+<strong>Определение.</strong> На пространстве функций, интегрируемых с квадратом на \([a,b]\), <em>скалярное произведение с весом</em> \(w(x)\ge0\) задаётся как
+\[
+\langle f,g\rangle = \int_a^b w(x)\,f(x)\,g(x)\,dx ,\qquad
+\lVert f\rVert = \sqrt{\langle f,f\rangle}.
+\tag{5.5}
+\]
+Функции \(f\) и \(g\) <em>ортогональны</em>, если \(\langle f,g\rangle=0\). Система \(\{\varphi_0,\varphi_1,\dots\}\) <em>ортогональна</em>, если \(\langle\varphi_i,\varphi_j\rangle=0\) при \(i\neq j\).
+</div>
+
+<p>Это полный аналог скалярного произведения векторов \(\langle u,v\rangle=\sum u_i v_i\): суммирование заменено интегрированием, а вес \(w\) задаёт «значимость» разных участков отрезка. Лучшее среднеквадратичное приближение функции — снова ортогональная проекция, теперь в пространстве функций.</p>
+
+<h2 id="orthopoly">Ортогональные полиномы: Лежандр и Чебышёв</h2>
+
+<p>Применив ортогонализацию Грама—Шмидта к мономам \(1,x,x^2,\dots\) относительно произведения (5.5), получают семейства <strong>ортогональных полиномов</strong>. Два важнейших:</p>
+
+<ul>
+<li><strong>Полиномы Лежандра</strong> \(P_n(x)\): вес \(w(x)=1\) на \([-1,1]\). Ортогональны: \(\displaystyle\int_{-1}^{1}P_m P_n\,dx=0\) при \(m\neq n\). Естественны для равномерного приближения и квадратур Гаусса (занятие 7).</li>
+<li><strong>Полиномы Чебышёва</strong> \(T_n(x)=\cos(n\arccos x)\): вес \(w(x)=1/\sqrt{1-x^2}\) на \([-1,1]\). Минимизируют максимальное уклонение, идеальны для аппроксимации (см. занятие 4).</li>
+</ul>
+
+<div class="theorem">
+<strong>Трёхчленная рекуррентность.</strong> Любое семейство ортогональных полиномов удовлетворяет рекуррентному соотношению вида \(\varphi_{n+1}(x)=(\alpha_n x+\beta_n)\varphi_n(x)-\gamma_n\varphi_{n-1}(x)\). В частности:
+\[
+T_0=1,\;\; T_1=x,\;\; T_{n+1}=2x\,T_n-T_{n-1};
+\tag{5.6}
+\]
+\[
+P_0=1,\;\; P_1=x,\;\; (n+1)P_{n+1}=(2n+1)\,x\,P_n-n\,P_{n-1}.
+\tag{5.7}
+\]
+Рекуррентность даёт устойчивый \(O(n)\) способ вычислять значения базиса — без явных мономиальных коэффициентов, склонных к переполнению и потере точности.
+</div>
+
+<h2 id="diagonal">Главное преимущество: диагональные нормальные уравнения</h2>
+
+<p>Пусть мы приближаем \(f\) линейной комбинацией базиса \(\sum_k c_k\varphi_k\) по методу наименьших квадратов в скалярном произведении (5.5). Нормальные уравнения принимают вид матрицы Грама \(G_{jk}=\langle\varphi_j,\varphi_k\rangle\). Если базис <strong>ортогонален</strong>, все внедиагональные элементы — нули, и матрица становится <em>диагональной</em>:</p>
+
+<div class="eq">\[
+\langle\varphi_j,\varphi_k\rangle=0\ (j\neq k)\;\Longrightarrow\;
+c_k=\frac{\langle f,\varphi_k\rangle}{\langle\varphi_k,\varphi_k\rangle}.
+\tag{5.8}
+\]</div>
+
+<p>Коэффициенты вычисляются <strong>независимо</strong> один от другого простым интегралом — никакой линейной системы решать не нужно, обусловленность идеальна (\(\kappa=1\) для нормированного базиса), а добавление нового члена \(\varphi_{k+1}\) <em>не меняет</em> уже найденные \(c_0,\dots,c_k\). Контраст с мономиальным базисом разителен.</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 220" xmlns="http://www.w3.org/2000/svg" style="max-width:520px" role="img" aria-label="Сравнение матрицы нормальных уравнений: для мономиального базиса она плотная и плохо обусловленная, для ортогонального — диагональная.">
+  <!-- monomial: dense -->
+  <text x="135" y="24" font-family="Source Serif 4,serif" font-size="12.5" fill="#b44a2d" text-anchor="middle" font-style="italic">мономы: плотная, κ≫1</text>
+  <g>
+    <!-- fill all cells -->
+    <g fill="#b44a2d" fill-opacity="0.55">
+      <rect x="45"  y="40" width="36" height="36"/><rect x="83"  y="40" width="36" height="36"/><rect x="121" y="40" width="36" height="36"/><rect x="159" y="40" width="36" height="36"/><rect x="197" y="40" width="36" height="36"/>
+      <rect x="45"  y="78" width="36" height="36"/><rect x="83"  y="78" width="36" height="36"/><rect x="121" y="78" width="36" height="36"/><rect x="159" y="78" width="36" height="36"/><rect x="197" y="78" width="36" height="36"/>
+      <rect x="45"  y="116" width="36" height="36"/><rect x="83"  y="116" width="36" height="36"/><rect x="121" y="116" width="36" height="36"/><rect x="159" y="116" width="36" height="36"/><rect x="197" y="116" width="36" height="36"/>
+      <rect x="45"  y="154" width="36" height="36"/><rect x="83"  y="154" width="36" height="36"/><rect x="121" y="154" width="36" height="36"/><rect x="159" y="154" width="36" height="36"/><rect x="197" y="154" width="36" height="36"/>
+    </g>
+    <rect x="45" y="40" width="190" height="150" fill="none" stroke="#2c2419" stroke-width="1.2"/>
+  </g>
+  <!-- arrow -->
+  <text x="300" y="120" font-family="JetBrains Mono,monospace" font-size="20" fill="#6b5d4f" text-anchor="middle">⟶</text>
+  <!-- orthogonal: diagonal -->
+  <text x="430" y="24" font-family="Source Serif 4,serif" font-size="12.5" fill="#1a6b5a" text-anchor="middle" font-style="italic">ортобазис: диагональ, κ=1</text>
+  <g>
+    <g fill="#1a6b5a" fill-opacity="0.6">
+      <rect x="340" y="40"  width="36" height="36"/>
+      <rect x="378" y="78"  width="36" height="36"/>
+      <rect x="416" y="116" width="36" height="36"/>
+      <rect x="454" y="154" width="36" height="36"/>
+    </g>
+    <rect x="340" y="40" width="190" height="150" fill="none" stroke="#2c2419" stroke-width="1.2"/>
+  </g>
+  <text x="280" y="212" font-family="Source Serif 4,serif" font-size="11.5" fill="#2c2419" text-anchor="middle" font-style="italic">в ортогональном базисе коэффициенты независимы: cₖ = ⟨f,φₖ⟩ / ⟨φₖ,φₖ⟩</text>
+</svg>
+<div class="caption">Рис. 2. Матрица Грама нормальных уравнений. Мономиальный базис даёт плотную, почти вырожденную матрицу (как у Гильберта); ортогональный базис — диагональную, идеально обусловленную.</div>
+</div>
+
+<h2 id="fourier">Тригонометрический базис, ряд Фурье и DFT</h2>
+
+<p>Важнейший ортогональный базис для <em>периодических</em> функций — тригонометрический \(\{1,\cos x,\sin x,\cos2x,\sin2x,\dots\}\). На отрезке \([0,2\pi]\) с весом \(w=1\) он ортогонален:</p>
+
+<div class="eq">\[
+\int_0^{2\pi}\cos(kx)\cos(\ell x)\,dx=0\ (k\neq\ell),\quad
+\int_0^{2\pi}\cos(kx)\sin(\ell x)\,dx=0 .
+\tag{5.9}
+\]</div>
+
+<p>Разложение функции по этому базису — <strong>ряд Фурье</strong>; по формуле (5.8) коэффициенты суть независимые интегралы \(a_k=\tfrac1\pi\int_0^{2\pi}f\cos kx\,dx\), \(b_k=\tfrac1\pi\int_0^{2\pi}f\sin kx\,dx\). Для <em>дискретных</em> данных \(x_0,\dots,x_{N-1}\) интегралы превращаются в суммы — <strong>дискретное преобразование Фурье</strong> (DFT):</p>
+
+<div class="eq">\[
+X_k=\sum_{n=0}^{N-1} x_n\,e^{-2\pi i\,kn/N},\qquad k=0,\dots,N-1.
+\tag{5.10}
+\]</div>
+
+<p>Прямое вычисление DFT по формуле — это \(O(N^2)\) операций. <strong>Быстрое преобразование Фурье</strong> (FFT, Кули—Тьюки, 1965) использует рекурсивное разбиение на чётные и нечётные индексы и считает то же самое за \(O(N\log N)\). Это один из самых влиятельных алгоритмов вычислительной математики: спектральный анализ, фильтрация, сжатие, быстрое умножение и решение дифференциальных уравнений спектральными методами — всё опирается на FFT. Детально мы вернёмся к нему позже; пока достаточно уметь читать спектр и фильтровать сигнал, как в практикуме.</p>
+
+<div class="remark">
+<strong>Единая нить занятия.</strong> Наименьшие квадраты — это проекция, нормальные уравнения — её алгебраическая запись, а ортогональный базис делает проекцию <em>покоординатной</em> и устойчивой. Ряд Фурье и DFT — тот же принцип проекции на ортогональный базис, только базис тригонометрический, а вычисление ускорено до \(O(N\log N)\).
+</div>
+
+<h2 id="summary">Итоги занятия</h2>
+
+<div class="algo">
+<strong>Что нужно унести с занятия 5:</strong>
+<ol>
+<li>Переопределённая система \(Ax\approx b\) решается в смысле наименьших квадратов: \(\min_x\lVert Ax-b\rVert_2^2\). Геометрически это ортогональная проекция \(b\) на образ \(A\); невязка ортогональна столбцам, \(A^\top(b-Ax)=0\).</li>
+<li><strong>Нормальные уравнения</strong> \(A^\top A\,x=A^\top b\) дают единственное решение при независимых столбцах (\(A^\top A\) симметрична, положительно определена).</li>
+<li>Полиномиальная регрессия — это МНК с матрицей Вандермонда. Опасность: \(\kappa(A^\top A)=\kappa(A)^2\); мономиальный базис плохо обусловлен (матрица Гильберта, \(\kappa\sim10^{k}\)). Предпочтительны QR / <code>lstsq</code> (SVD).</li>
+<li>В <strong>ортогональном базисе</strong> нормальные уравнения диагональны: \(c_k=\langle f,\varphi_k\rangle/\langle\varphi_k,\varphi_k\rangle\) независимы и устойчивы. Лежандр (\(w=1\)) и Чебышёв (\(w=1/\sqrt{1-x^2}\)) задаются трёхчленной рекуррентностью.</li>
+<li>Тригонометрический базис ортогонален на \([0,2\pi]\) — основа ряда Фурье и DFT \(X_k=\sum_n x_n e^{-2\pi i kn/N}\); FFT считает его за \(O(N\log N)\). Применения: спектр, фильтрация, аппроксимация периодических функций.</li>
+<li>Слишком высокая степень полинома ведёт к <strong>переобучению</strong>: ошибка на данных падает, а ошибка относительно истины растёт из-за подгонки под шум.</li>
+</ol>
+</div>
+
+<div class="remark">
+<strong>Домашнее задание.</strong> Доделать задачи 5.1–5.4. Дополнительно: численно проверьте формулу (5.8), приблизив \(f(x)=e^x\) на \([-1,1]\) частичными суммами ряда по полиномам Лежандра разных порядков; убедитесь, что добавление нового члена не меняет ранее вычисленных коэффициентов, и сравните устойчивость с мономиальной подгонкой той же степени.
+</div>
+
+<div class="lecture-nav">
+  <a class="nav-prev" href="w04.html">← Занятие 4. Чебышёв и сплайны</a>
+  <a class="nav-next" href="w06.html">Занятие 6. Численное дифференцирование →</a>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

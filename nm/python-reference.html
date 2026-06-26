@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Памятка по Python, NumPy и SciPy для курса «Численные методы»: массивы, линейная алгебра, интерполяция, интегрирование, корни и оптимизация, разреженные матрицы и построение графиков ошибок.">
+<title>ЧМ · Памятка Python / NumPy / SciPy</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.tag-nummet{background:#ece9fb;color:#5b54b8}
+html.dark .tag-nummet{background:#241f3a;color:#a39bea}
+.lecture-num{color:#5b54b8}
+.phase{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#fff;background:#5b54b8;padding:.3rem .7rem;border-radius:4px;display:inline-block;margin:1.8rem 0 .4rem}
+.phase.prac{background:#1a6b5a}
+.phase.lecb{background:#3a5ba0}
+.pyblock{margin:1rem 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.pyhead{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;display:flex;justify-content:space-between}
+.pyhead .run{color:#9ec97f}
+pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9rem 1.1rem;font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.6;overflow-x:auto;white-space:pre}
+.outbox{background:#f0f7f4;border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;padding:.6rem 1rem;margin:.6rem 0 1rem;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);white-space:pre-wrap}
+html.dark .outbox{background:#16241f}
+.exercise summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--accent2);margin-top:.6rem;font-weight:500}
+.exercise details{margin-top:.4rem}
+.exercise .extag{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:#5b54b8;background:#ece9fb;padding:1px 7px;border-radius:3px;margin-right:.4rem}
+html.dark .exercise .extag{background:#241f3a;color:#a39bea}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0}
+.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
+.intbox select,.intbox input[type=range]{font-family:'JetBrains Mono',monospace}
+.intbox select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+html.dark .intbox select{background:#1b1712;color:var(--text)}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:1px 5px;border-radius:3px}
+.reftab{width:100%;border-collapse:collapse;font-size:.86rem;margin:1rem 0}
+.reftab th{text-align:left;padding:5px 9px;border-bottom:2px solid var(--border);color:var(--accent);font-weight:700}
+.reftab td{padding:4px 9px;border-bottom:1px solid var(--border);vertical-align:top}
+.reftab td:first-child{font-family:'JetBrains Mono',monospace;color:#5b54b8;font-weight:500;white-space:nowrap}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>ЧМ · Памятка Python</h2>
+  <div class="g">Инструменты</div>
+  <a href="#env">Окружение и импорты</a>
+  <a href="#arrays">Массивы NumPy</a>
+  <a href="#linalg">Линейная алгебра</a>
+  <a href="#interp">Интерполяция</a>
+  <a href="#integ">Численное интегрирование</a>
+  <a href="#roots">Корни и оптимизация</a>
+  <a href="#sparse">Разреженные матрицы</a>
+  <a href="#plot">Построение графиков</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-nummet">Численные методы</span>
+<div class="lecture-num">Инструменты курса</div>
+<h1>Памятка: Python / NumPy / SciPy</h1>
+
+<p>Эта страница — практический справочник по инструментам, которые понадобятся в практикумах курса. Здесь нет вывода формул: только рабочие рецепты с короткими листингами. Держите её открытой во время работы. Везде предполагаются импорты <code>import numpy as np</code> и <code>import scipy</code>. Версии: NumPy ≥ 1.22, SciPy ≥ 1.10 — все приведённые функции существуют в актуальных релизах.</p>
+
+<h2 id="env">1. Окружение и импорты</h2>
+
+<p>Минимальный набор: <strong>NumPy</strong> для массивов и линейной алгебры, <strong>SciPy</strong> для «тяжёлых» алгоритмов (интегрирование, оптимизация, интерполяция), <strong>Matplotlib</strong> для графиков. Подмодули SciPy импортируются явно — <code>import scipy</code> сам по себе не тянет <code>scipy.linalg</code>.</p>
+
+<div class="pyblock"><div class="pyhead"><span>imports.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+import matplotlib.pyplot as plt
+
+# Подмодули SciPy импортируем по отдельности:
+from scipy import linalg, integrate, interpolate, optimize, sparse
+
+# Точечный импорт конкретных функций — частый стиль:
+from scipy.linalg import lu_factor, lu_solve
+from scipy.integrate import quad
+from scipy.optimize import brentq, minimize
+
+print(np.__version__)        # версия NumPy
+import scipy; print(scipy.__version__)</pre></div>
+
+<div class="remark">
+<strong>Jupyter / IPython.</strong> Запускайте практикумы в <span class="kbd">jupyter lab</span> или <span class="kbd">ipython</span>: интерактивный вывод, графики прямо в ноутбуке. Полезные «магии»: <code>%matplotlib inline</code> (статичные графики), <code>%timeit выражение</code> (замер времени), <code>?np.linalg.solve</code> (быстрая справка), <code>np.linalg.solve??</code> (исходник). В обычном скрипте после построения графиков вызывайте <code>plt.show()</code>.
+</div>
+
+<h2 id="arrays">2. Массивы NumPy</h2>
+
+<p>Массив <code>ndarray</code> — основная структура данных всего научного стека. В отличие от списка Python, он хранит элементы одного типа подряд в памяти, что даёт быстрые <em>векторизованные</em> операции без явных циклов.</p>
+
+<div class="pyblock"><div class="pyhead"><span>arrays_create.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+a = np.array([1.0, 2.0, 3.0])        # из списка
+np.arange(0, 1, 0.25)                # [0, 0.25, 0.5, 0.75] — шаг задан
+np.linspace(0, 1, 5)                 # [0, 0.25, 0.5, 0.75, 1] — 5 точек, концы включены
+np.zeros(4)                          # [0. 0. 0. 0.]
+np.ones((2, 3))                      # матрица 2x3 из единиц
+np.eye(3)                            # единичная матрица 3x3
+np.full(3, 7.0)                      # [7. 7. 7.]
+
+A = np.array([[1.0, 2.0],
+              [3.0, 4.0]])
+A.shape        # (2, 2)  — размеры
+A.ndim         # 2       — число осей
+A.dtype        # float64 — тип элементов</pre></div>
+
+<p>Для построения сеток и табулирования функций <code>linspace</code> удобнее <code>arange</code>: число точек задаётся явно и концы гарантированно попадают в сетку (у <code>arange</code> правый конец не включается и страдает от ошибок округления шага).</p>
+
+<div class="pyblock"><div class="pyhead"><span>arrays_index.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">x = np.linspace(0, 1, 11)            # 11 узлов на [0, 1]
+
+x[0], x[-1]          # первый и последний
+x[2:5]               # срез: элементы 2,3,4
+x[::2]               # каждый второй
+x[x &gt; 0.5]           # булева маска — отбор по условию
+
+A = np.arange(12).reshape(3, 4)      # матрица 3x4
+A[1, 2]              # элемент (строка 1, столбец 2)
+A[:, 0]              # весь нулевой столбец
+A[1, :]              # вся первая строка
+A[-1, -1]            # правый нижний угол</pre></div>
+
+<p><strong>Broadcasting</strong> — автоматическое согласование форм: массивы разной размерности «растягиваются» до общей формы без копирования данных. <strong>Векторизация</strong> — замена циклов поэлементными операциями над целыми массивами; она в десятки раз быстрее и читается ближе к математической записи.</p>
+
+<div class="pyblock"><div class="pyhead"><span>vectorize.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">x = np.linspace(0, 2*np.pi, 1000)
+
+# Векторизация: одна строка вместо цикла
+y = np.sin(x) * np.exp(-x/5)         # поэлементно ко всем 1000 точкам
+
+# Broadcasting: столбец (n,1) + строка (m,) -&gt; матрица (n,m)
+xi = np.linspace(0, 1, 4).reshape(-1, 1)   # (4,1)
+xj = np.linspace(0, 1, 3)                  # (3,)
+D = xi - xj                                # (4,3) — матрица разностей
+
+# Анти-паттерн (медленно): тот же y явным циклом
+y_slow = np.empty_like(x)
+for i in range(x.size):
+    y_slow[i] = np.sin(x[i]) * np.exp(-x[i]/5)</pre></div>
+
+<div class="remark">
+<strong>Машинное эпсилон.</strong> Границу относительной точности арифметики double берут из NumPy, а не «зашивают» числом:
+<div class="pyblock"><div class="pyhead"><span>eps.py</span></div>
+<pre class="pycode">np.finfo(float).eps     # 2.220446049250313e-16  — зазор у единицы
+np.finfo(float).tiny    # наименьшее нормализованное число
+np.finfo(float).max     # наибольшее представимое
+# типичный порог сравнения с поправкой на масштаб:
+np.isclose(a, b, rtol=1e-12, atol=1e-15)</pre></div>
+</div>
+
+<h2 id="linalg">3. Линейная алгебра</h2>
+
+<p>Функции есть в двух модулях: <code>numpy.linalg</code> (базовый набор) и <code>scipy.linalg</code> (шире, включает <code>lu_factor/lu_solve</code>, разложения с дополнительными опциями). Для решения <em>одной</em> системы \(Ax=b\) — <code>np.linalg.solve</code>; <strong>никогда</strong> не считайте <code>inv(A) @ b</code> (медленнее и менее точно).</p>
+
+<div class="pyblock"><div class="pyhead"><span>solve.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+A = np.array([[3.0, 1.0],
+              [1.0, 2.0]])
+b = np.array([9.0, 8.0])
+
+x = np.linalg.solve(A, b)            # решение Ax = b
+print(x)                             # [2. 3.]
+print(np.allclose(A @ x, b))         # True — проверка</pre></div>
+
+<p>Если систему с <em>одной</em> матрицей \(A\) надо решить для <em>многих</em> правых частей, разложите \(A\) один раз LU-факторизацией и переиспользуйте.</p>
+
+<div class="pyblock"><div class="pyhead"><span>lu.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">from scipy.linalg import lu, lu_factor, lu_solve, cholesky
+
+# Явное PA = LU (для изучения метода Гаусса)
+P, L, U = lu(A)                      # A = P @ L @ U
+
+# Практичный путь: факторизовать один раз, решать многократно
+lu_piv = lu_factor(A)               # (LU, pivots)
+x1 = lu_solve(lu_piv, b)
+x2 = lu_solve(lu_piv, np.array([1.0, 0.0]))   # другая правая часть — без повторного разложения
+
+# Симметричная положительно определённая матрица: Холецкий (вдвое дешевле)
+S = np.array([[4.0, 1.0], [1.0, 3.0]])
+Lc = cholesky(S, lower=True)        # S = Lc @ Lc.T</pre></div>
+
+<p><strong>Нормы и обусловленность.</strong> <code>np.linalg.norm</code> по умолчанию даёт евклидову норму вектора (\(\ell_2\)) или фробениусову норму матрицы. Параметр <code>ord</code> выбирает другую норму. <code>np.linalg.cond</code> — число обусловленности матрицы.</p>
+
+<div class="pyblock"><div class="pyhead"><span>norms.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">v = np.array([3.0, -4.0])
+np.linalg.norm(v)             # 5.0      — l2 (по умолчанию)
+np.linalg.norm(v, 1)          # 7.0      — сумма модулей
+np.linalg.norm(v, np.inf)     # 4.0      — максимум модуля
+
+M = np.array([[1.0, 2.0], [0.0, 2.0]])
+np.linalg.norm(M, 2)          # спектральная норма (макс. синг. число)
+np.linalg.norm(M, 1)          # макс. сумма по столбцам
+np.linalg.norm(M, np.inf)     # макс. сумма по строкам
+np.linalg.norm(M, 'fro')      # фробениусова
+
+np.linalg.cond(M)             # число обусловленности (в норме 2)
+np.linalg.cond(M, np.inf)     # в норме inf
+
+# Относительная невязка как проверка качества решения:
+r = np.linalg.norm(A @ x - b) / np.linalg.norm(b)</pre></div>
+
+<p>Собственные значения и разложения для задач устойчивости, МНК и анализа:</p>
+
+<div class="pyblock"><div class="pyhead"><span>decomp.py</span><span class="run">▶ python</span></div>
+<pre class="pycode"># Собственные значения / векторы
+w = np.linalg.eigvals(A)             # только собственные значения
+w, V = np.linalg.eig(A)             # значения w и векторы (столбцы V)
+w = np.linalg.eigvalsh(S)           # для симметричных — быстрее и точнее
+
+# Сингулярное разложение  A = U @ diag(s) @ Vh
+U, s, Vh = np.linalg.svd(A)
+rank = np.sum(s &gt; 1e-12)             # численный ранг
+
+# QR-разложение  A = Q @ R
+Q, R = np.linalg.qr(A)
+
+# Линейный МНК: min ||A x - b|| для прямоугольной A
+coef, residuals, rank, sv = np.linalg.lstsq(A, b, rcond=None)</pre></div>
+
+<div class="remark"><strong>Какую функцию для какой задачи.</strong>
+<table class="reftab">
+<thead><tr><th>Задача</th><th>Функция</th></tr></thead>
+<tbody>
+<tr><td>Решить Ax = b (один раз)</td><td>np.linalg.solve(A, b)</td></tr>
+<tr><td>Много правых частей, одна A</td><td>lu_factor + lu_solve</td></tr>
+<tr><td>Симметричная пол.-опр. A</td><td>scipy.linalg.cholesky</td></tr>
+<tr><td>Переопределённая система (МНК)</td><td>np.linalg.lstsq</td></tr>
+<tr><td>Число обусловленности</td><td>np.linalg.cond</td></tr>
+<tr><td>Длина вектора / норма матрицы</td><td>np.linalg.norm(.., ord=..)</td></tr>
+<tr><td>Собственные значения</td><td>np.linalg.eigvals / eigvalsh</td></tr>
+<tr><td>Ранг, псевдообратная, анализ</td><td>np.linalg.svd</td></tr>
+<tr><td>Ортогонализация</td><td>np.linalg.qr</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="interp">4. Интерполяция</h2>
+
+<p>Модуль <code>scipy.interpolate</code> строит функцию, проходящую через заданные узлы. Для гладких данных предпочтительна <strong>кубическая сплайн-интерполяция</strong>; полином Лагранжа высокой степени страдает от феномена Рунге и численно неустойчив.</p>
+
+<div class="pyblock"><div class="pyhead"><span>interp_scipy.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from scipy.interpolate import (lagrange, BarycentricInterpolator,
+                               CubicSpline, interp1d)
+
+xi = np.linspace(0, 2*np.pi, 7)
+yi = np.sin(xi)
+xx = np.linspace(0, 2*np.pi, 200)
+
+# Полином Лагранжа (только для малого числа узлов!)
+p = lagrange(xi, yi)                 # numpy.poly1d
+yy = p(xx)
+
+# Барицентрическая форма — устойчивее при оценке в точках
+B = BarycentricInterpolator(xi, yi)
+yy = B(xx)
+
+# Кубический сплайн — рабочая лошадка для гладких данных
+cs = CubicSpline(xi, yi, bc_type='natural')
+yy  = cs(xx)
+dyy = cs(xx, 1)                      # производная сплайна
+I   = cs.integrate(0, np.pi)         # интеграл сплайна
+
+# Универсальный интерполятор (линейный / кубический)
+f = interp1d(xi, yi, kind='cubic', fill_value='extrapolate')
+yy = f(xx)</pre></div>
+
+<p>Для приближения многочленами и работы с их корнями/производными удобен пакет <code>numpy.polynomial</code> — современная замена старому <code>np.polyfit/poly1d</code>. Базис Чебышёва численно устойчив на отрезке.</p>
+
+<div class="pyblock"><div class="pyhead"><span>polynomial.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">from numpy.polynomial import Polynomial as P, Chebyshev as C
+
+# Аппроксимация по МНК многочленом степени 5
+xd = np.linspace(-1, 1, 50)
+yd = np.cos(3*xd) + 0.01*np.random.randn(50)
+p = P.fit(xd, yd, deg=5)             # устойчивый МНК-фит
+
+p(0.3)                               # значение в точке
+p.roots()                            # корни многочлена
+p.deriv()                            # производная (новый Polynomial)
+p.integ()                            # первообразная
+
+# Базис Чебышёва — устойчив при высоких степенях
+c = C.fit(xd, yd, deg=12)
+c.roots()</pre></div>
+
+<h2 id="integ">5. Численное интегрирование</h2>
+
+<p>Модуль <code>scipy.integrate</code>. Если есть <em>функция</em> \(f(x)\) — используйте адаптивную квадратуру <code>quad</code> (высокая точность, оценка ошибки). Если есть <em>массив значений</em> на сетке — формулы <code>trapezoid</code> и <code>simpson</code>.</p>
+
+<div class="pyblock"><div class="pyhead"><span>integrate.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from scipy.integrate import quad, dblquad, trapezoid, simpson, fixed_quad
+
+# 1) Функция задана аналитически: адаптивный quad
+val, err = quad(lambda x: np.exp(-x**2), 0, np.inf)
+print(val, err)                      # 0.8862269...  и оценка ошибки
+
+# 2) Двойной интеграл по прямоугольнику
+v2, e2 = dblquad(lambda y, x: x*y, 0, 1, 0, 2)   # внешний x:0..1, внутр. y:0..2
+
+# 3) Данные на сетке (функции в явном виде нет)
+x = np.linspace(0, np.pi, 101)
+y = np.sin(x)
+trapezoid(y, x)                      # метод трапеций       -&gt; ~2.0
+simpson(y, x)                        # метод Симпсона (точнее)
+
+# 4) Квадратура Гаусса фиксированного порядка
+vg, _ = fixed_quad(np.sin, 0, np.pi, n=5)   # 5-точечная Гаусса</pre></div>
+
+<div class="remark">
+<strong>Про <code>romberg</code>.</strong> Старая функция <code>scipy.integrate.romberg</code> объявлена устаревшей и удаляется. Для интегрирования функции используйте <code>quad</code> (адаптивная, с контролем ошибки); для массива на равномерной сетке есть <code>scipy.integrate.romb</code>. В новом коде по умолчанию — <code>quad</code>.
+</div>
+
+<h2 id="roots">6. Корни и оптимизация</h2>
+
+<p>Модуль <code>scipy.optimize</code>. Для скалярного уравнения \(f(x)=0\) на отрезке со сменой знака надёжнее всего <strong>brentq</strong> (гарантированная сходимость + скорость). <code>newton</code> быстрее, но требует хорошего начального приближения и может расходиться.</p>
+
+<div class="pyblock"><div class="pyhead"><span>roots.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from scipy.optimize import brentq, bisect, newton, root_scalar
+
+f = lambda x: x**3 - 2*x - 5
+
+# Скобочные методы: нужен интервал [a,b] с f(a)*f(b) &lt; 0
+brentq(f, 2, 3)                      # 2.0945514...  — рекомендуемый
+bisect(f, 2, 3)                      # бисекция (надёжно, но медленно)
+
+# Метод Ньютона: нужна стартовая точка (и желательно f')
+newton(f, x0=2.0, fprime=lambda x: 3*x**2 - 2)
+
+# Единый интерфейс с выбором метода и диагностикой
+sol = root_scalar(f, bracket=[2, 3], method='brentq')
+print(sol.root, sol.converged, sol.iterations)</pre></div>
+
+<p>Минимизация. Для функции одной переменной — <code>minimize_scalar</code>; для многомерной — <code>minimize</code> (метод <code>BFGS</code> при наличии гладкости, <code>Nelder-Mead</code> без производных). Для задач линейного программирования — <code>linprog</code>.</p>
+
+<div class="pyblock"><div class="pyhead"><span>optimize.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">from scipy.optimize import minimize_scalar, minimize, linprog
+
+# Скаляр: золотое сечение / метод Брента
+r = minimize_scalar(lambda x: (x - 2)**2 + 1, method='brent')
+print(r.x, r.fun)                    # 2.0  1.0
+
+# Многомерная: функция Розенброка
+rosen = lambda v: (1 - v[0])**2 + 100*(v[1] - v[0]**2)**2
+m = minimize(rosen, x0=[0.0, 0.0], method='BFGS')        # градиентный
+m = minimize(rosen, x0=[0.0, 0.0], method='Nelder-Mead') # без производных
+print(m.x, m.fun, m.success)
+
+# Линейное программирование: min c@x при A_ub x &lt;= b_ub
+c   = [-1, -2]                        # максимизируем x+2y -&gt; min -(x+2y)
+Aub = [[1, 1], [1, 0]]
+bub = [4, 2]
+lp = linprog(c, A_ub=Aub, b_ub=bub, bounds=[(0, None), (0, None)])
+print(lp.x, -lp.fun)</pre></div>
+
+<h2 id="sparse">7. Разреженные матрицы</h2>
+
+<p>Когда матрица почти вся из нулей (например, трёхдиагональная из конечных разностей), её хранят в разреженном формате <code>scipy.sparse</code> — экономия памяти и времени на порядки. Собирают матрицу удобно через <code>diags</code>, решают через <code>spsolve</code>.</p>
+
+<div class="pyblock"><div class="pyhead"><span>sparse.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from scipy.sparse import diags, csr_array
+from scipy.sparse.linalg import spsolve, cg
+
+n = 1000
+# Трёхдиагональная матрица: -1 на побочных, 2 на главной диагонали
+main = 2.0*np.ones(n)
+off  = -1.0*np.ones(n - 1)
+A = diags([off, main, off], offsets=[-1, 0, 1], format='csr')
+
+b = np.ones(n)
+x = spsolve(A, b)                    # прямой разреженный решатель
+
+# Итерационный решатель (сопряжённые градиенты) для симм. пол.-опр. A
+x_it, info = cg(A, b, rtol=1e-10)
+print('cg сошёлся' if info == 0 else 'cg не сошёлся')
+
+# Явная сборка в формате CSR из строк/столбцов/значений:
+rows = np.array([0, 1, 2])
+cols = np.array([0, 1, 2])
+vals = np.array([1.0, 2.0, 3.0])
+D = csr_array((vals, (rows, cols)), shape=(3, 3))</pre></div>
+
+<div class="remark"><strong>Форматы.</strong> Для <em>сборки</em> матрицы поэлементно удобны <code>lil</code>/<code>dok</code>; для <em>арифметики и решения</em> — <code>csr</code>/<code>csc</code>. Конвертация: <code>A.tocsr()</code>. <code>diags</code> сразу строит нужный формат через аргумент <code>format='csr'</code>. Это тот самый случай, когда трёхдиагональную систему из метода прогонки решают «по-взрослому» одним вызовом <code>spsolve</code>.</div>
+
+<h2 id="plot">8. Построение графиков</h2>
+
+<p>Matplotlib. Для графиков ошибок и порядков сходимости почти всегда нужны <strong>логарифмические оси</strong>: <code>semilogy</code> (степенное убывание ошибки превращается в прямую при логарифмической оси Y) и <code>loglog</code> (наклон прямой равен порядку метода \(p\)).</p>
+
+<div class="pyblock"><div class="pyhead"><span>plot_basic.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+import matplotlib.pyplot as plt
+
+x = np.linspace(0, 2*np.pi, 200)
+
+fig, ax = plt.subplots(figsize=(6, 4))
+ax.plot(x, np.sin(x), label='sin x')
+ax.plot(x, np.cos(x), '--', label='cos x')
+ax.set_xlabel('x'); ax.set_ylabel('f(x)')
+ax.set_title('Тригонометрические функции')
+ax.legend(); ax.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()                           # в скрипте; в Jupyter не обязательно</pre></div>
+
+<p>Типичная задача курса — показать, как ошибка метода \(E(h)\) убывает при измельчении шага \(h\). На графике <code>loglog</code> зависимость \(E\sim C h^p\) выглядит прямой с наклоном \(p\). Для контроля рисуют референсные наклоны \(h^1, h^2\).</p>
+
+<div class="pyblock"><div class="pyhead"><span>convergence.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+import matplotlib.pyplot as plt
+
+# Пример: ошибка центральной разности для f'(x), f = sin
+hs = np.logspace(-1, -6, 12)         # шаги от 1e-1 до 1e-6
+x0 = 1.0
+err = np.abs((np.sin(x0 + hs) - np.sin(x0 - hs))/(2*hs) - np.cos(x0))
+
+fig, ax = plt.subplots(figsize=(6, 4))
+ax.loglog(hs, err, 'o-', label='ошибка центральной разности')
+ax.loglog(hs, hs**2, '--', label=r'наклон $h^2$ (эталон)')
+ax.set_xlabel('шаг h'); ax.set_ylabel('абсолютная ошибка')
+ax.legend(); ax.grid(True, which='both', alpha=0.3)
+ax.invert_xaxis()                    # часто удобнее: h убывает слева направо
+plt.tight_layout(); plt.show()
+
+# Оценка наблюдаемого порядка по двум точкам:
+p = np.log(err[-2]/err[-1]) / np.log(hs[-2]/hs[-1])
+print(f'наблюдаемый порядок p ≈ {p:.2f}')</pre></div>
+
+<div class="outbox">наблюдаемый порядок p ≈ 2.00</div>
+
+<p>Несколько панелей в одной фигуре делают через <code>subplots(rows, cols)</code>; для убывающей по экспоненте величины (например, невязки итераций) подходит <code>semilogy</code>.</p>
+
+<div class="pyblock"><div class="pyhead"><span>subplots.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+
+# Левая панель: решение
+axes[0].plot(x, np.sin(x))
+axes[0].set_title('решение')
+
+# Правая панель: убывание невязки итерационного метода
+resid = 0.5**np.arange(20)           # модельные невязки
+axes[1].semilogy(resid, 'o-')
+axes[1].set_title('сходимость (semilogy)')
+axes[1].set_xlabel('итерация'); axes[1].set_ylabel('невязка')
+axes[1].grid(True, which='both', alpha=0.3)
+
+plt.tight_layout(); plt.show()</pre></div>
+
+<div class="remark">
+<strong>Памятка по осям ошибок.</strong> Степенная ошибка \(E=Ch^p\) — линия на <code>loglog</code> с наклоном \(p\). Экспоненциальное убывание \(E=Cr^k\) (итерации, спектральные методы) — прямая на <code>semilogy</code>. Если кривая на <code>loglog</code> «утыкается» в горизонтальную полку у \(10^{-16}\) при малых \(h\) — это выход на уровень ошибок округления (см. занятие 1, машинное \(\varepsilon\)), а не дефект метода.
+</div>
+
+<p style="margin-top:1.5rem;color:var(--text2);font-size:.88rem;font-style:italic">Полная документация: <a href="https://numpy.org/doc/stable/" target="_blank" style="color:var(--accent)">NumPy</a>, <a href="https://docs.scipy.org/doc/scipy/" target="_blank" style="color:var(--accent)">SciPy</a>, <a href="https://matplotlib.org/stable/" target="_blank" style="color:var(--accent)">Matplotlib</a>. Быстрая справка прямо в сессии: <code>?имя_функции</code> в IPython/Jupyter.</p>
+
+<div class="lecture-nav">
+  <a class="nav-prev" href="index.html">← Обзор курса</a>
+  <a class="nav-next" href="w01.html">Занятие 1. Машинная арифметика →</a>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

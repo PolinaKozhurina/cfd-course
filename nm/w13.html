@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Занятие 13 курса «Численные методы»: собственные числа и векторы, степенной метод и отношение Рэлея, обратные итерации со сдвигом, обзор QR-алгоритма. Сингулярное разложение SVD, малоранговое приближение и теорема Эккарта–Янга, псевдообратная и МНК. Практикум на Python (NumPy/SciPy).">
+<title>ЧМ · Занятие 13. Собственные числа и сингулярное разложение</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.tag-nummet{background:#ece9fb;color:#5b54b8}
+html.dark .tag-nummet{background:#241f3a;color:#a39bea}
+.lecture-num{color:#5b54b8}
+.phase{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#fff;background:#5b54b8;padding:.3rem .7rem;border-radius:4px;display:inline-block;margin:1.8rem 0 .4rem}
+.phase.prac{background:#1a6b5a}
+.phase.lecb{background:#3a5ba0}
+.pyblock{margin:1rem 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.pyhead{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;display:flex;justify-content:space-between}
+.pyhead .run{color:#9ec97f}
+pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9rem 1.1rem;font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.6;overflow-x:auto;white-space:pre}
+.outbox{background:#f0f7f4;border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;padding:.6rem 1rem;margin:.6rem 0 1rem;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);white-space:pre-wrap}
+html.dark .outbox{background:#16241f}
+.exercise summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--accent2);margin-top:.6rem;font-weight:500}
+.exercise details{margin-top:.4rem}
+.exercise .extag{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:#5b54b8;background:#ece9fb;padding:1px 7px;border-radius:3px;margin-right:.4rem}
+html.dark .exercise .extag{background:#241f3a;color:#a39bea}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0}
+.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
+.intbox select,.intbox input[type=range]{font-family:'JetBrains Mono',monospace}
+.intbox select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+html.dark .intbox select{background:#1b1712;color:var(--text)}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:1px 5px;border-radius:3px}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>ЧМ · Занятие 13</h2>
+  <div class="g">Лекция A</div>
+  <a href="#eig">Задача о собственных значениях</a>
+  <a href="#power">Степенной метод</a>
+  <a href="#inverse">Обратные итерации со сдвигом</a>
+  <a href="#qr">QR-алгоритм (обзор)</a>
+  <div class="g">Практикум</div>
+  <a href="#prac-power">П1. Степенной метод</a>
+  <a href="#int-power">Интерактив: степенной метод</a>
+  <a href="#prac-svd">П2. SVD и сжатие</a>
+  <a href="#prac-lsq">П3. МНК через SVD</a>
+  <div class="g">Лекция B</div>
+  <a href="#svd">Сингулярное разложение</a>
+  <a href="#geom">Геометрия и κ₂(A)</a>
+  <a href="#lowrank">Малоранговое приближение</a>
+  <a href="#pinv">Псевдообратная и МНК</a>
+  <a href="#summary">Итоги занятия</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+  <a href="w14.html">→ Занятие 14</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-nummet">Численные методы</span>
+<div class="lecture-num">Занятие 13 · Блок V. Собственные значения</div>
+<h1>Собственные числа и сингулярное разложение</h1>
+
+<p class="phase">Лекция A · ≤ 30 мин</p>
+
+<h2 id="eig">Задача о собственных значениях</h2>
+
+<p>Многие задачи — устойчивость динамических систем, колебания конструкций, метод главных компонент, ранжирование страниц (PageRank) — сводятся к одному вопросу: для квадратной матрицы \(A\) найти такие числа \(\lambda\) и ненулевые векторы \(v\), что действие матрицы сводится к простому растяжению вдоль \(v\).</p>
+
+<div class="definition">
+<strong>Определение.</strong> Число \(\lambda\) называется <em>собственным значением</em> матрицы \(A\in\mathbb{R}^{n\times n}\), а ненулевой вектор \(v\) — отвечающим ему <em>собственным вектором</em>, если
+\[
+A v = \lambda v,\qquad v \neq 0.
+\]
+Множество всех собственных значений называют <em>спектром</em> матрицы.
+</div>
+
+<p>Соотношение \(Av=\lambda v\) равносильно \((A-\lambda I)v=0\), то есть однородная система имеет ненулевое решение. Это возможно тогда и только тогда, когда матрица \(A-\lambda I\) вырождена:</p>
+
+<div class="eq">\[
+\det(A-\lambda I)=0.
+\tag{13.1}
+\]</div>
+
+<p>Левая часть — многочлен степени \(n\) от \(\lambda\), <strong>характеристический многочлен</strong>. Его корни и есть собственные числа.</p>
+
+<div class="remark">
+<strong>Так делать нельзя.</strong> Хотя формула (13.1) кажется готовым рецептом, <em>численно</em> искать собственные значения через коэффициенты характеристического многочлена категорически не рекомендуется. Переход «матрица → коэффициенты многочлена → корни» катастрофически плохо обусловлен: крошечные возмущения коэффициентов сдвигают корни на порядки (классический пример — многочлен Уилкинсона). На практике работают <em>итерационными</em> методами прямо с матрицей, не вычисляя многочлен.
+</div>
+
+<h2 id="power">Степенной метод</h2>
+
+<p>Простейший итерационный метод опирается на одну идею: если многократно умножать произвольный вектор на \(A\), направление, отвечающее <em>наибольшему по модулю</em> собственному числу, постепенно подавляет все остальные.</p>
+
+<div class="algo">
+<strong>Степенной метод (power iteration).</strong> Выбрать стартовый \(x^{0}\), \(\|x^{0}\|=1\). На каждом шаге
+\[
+y = A x^{k},\qquad x^{k+1}=\frac{y}{\|y\|}.
+\]
+Оценка собственного числа — через <em>отношение Рэлея</em>:
+\[
+\lambda \approx \rho(x^{k})=\frac{(x^{k})^{\mathsf T} A\,x^{k}}{(x^{k})^{\mathsf T} x^{k}}.
+\tag{13.2}
+\]
+</div>
+
+<p>Почему это работает? Пусть \(A\) имеет полный набор собственных векторов \(v_1,\dots,v_n\) с числами \(|\lambda_1|>|\lambda_2|\ge\dots\ge|\lambda_n|\). Разложим старт по базису: \(x^{0}=\sum_i c_i v_i\). Тогда</p>
+
+<div class="eq">\[
+A^{k}x^{0}=\sum_{i=1}^{n} c_i\,\lambda_i^{k} v_i
+=\lambda_1^{k}\Big(c_1 v_1+\sum_{i\ge 2} c_i\big(\tfrac{\lambda_i}{\lambda_1}\big)^{k} v_i\Big).
+\tag{13.3}
+\]</div>
+
+<p>Поскольку \(|\lambda_i/\lambda_1|<1\) при \(i\ge2\), все слагаемые, кроме первого, затухают, и нормированный вектор стремится к направлению \(v_1\) (при условии \(c_1\neq0\)). Скорость линейная:</p>
+
+<div class="theorem">
+<strong>Сходимость.</strong> Если \(|\lambda_1|>|\lambda_2|\), то ошибка направления \(x^{k}\) убывает как
+\[
+\big\|x^{k}-(\pm v_1)\big\| = O\!\left(\left|\frac{\lambda_2}{\lambda_1}\right|^{k}\right).
+\]
+Отношение Рэлея сходится к \(\lambda_1\). Метод тем быстрее, чем сильнее доминирующее число отделено от второго по модулю.
+</div>
+
+<div class="remark">
+<strong>Ограничения.</strong> Степенной метод находит только <em>одно</em> (доминирующее) собственное число и требует \(|\lambda_1|>|\lambda_2|\). Если \(c_1=0\) (старт ортогонален \(v_1\)) или собственные числа равны по модулю (например, комплексно-сопряжённая пара), метод буксует. Зато он почти ничего не стоит: на каждом шаге — одно умножение матрицы на вектор, что незаменимо для огромных разреженных матриц.
+</div>
+
+<h2 id="inverse">Обратные итерации со сдвигом</h2>
+
+<p>Степенной метод даёт лишь самое большое число. Чтобы добраться до <em>конкретного</em> собственного числа, применим простой трюк. Заметим: собственные числа матрицы \((A-\mu I)^{-1}\) равны \(1/(\lambda_i-\mu)\), а собственные векторы те же, что у \(A\). Доминирующим становится то число \(1/(\lambda_i-\mu)\), у которого знаменатель \(\lambda_i-\mu\) минимален по модулю, — то есть \(\lambda_i\), <em>ближайшее к сдвигу</em> \(\mu\).</p>
+
+<div class="algo">
+<strong>Обратные итерации со сдвигом (inverse iteration).</strong> Выбрать сдвиг \(\mu\) (оценку искомого \(\lambda\)) и старт \(x^{0}\). На каждом шаге решить систему и нормировать:
+\[
+(A-\mu I)\,y = x^{k},\qquad x^{k+1}=\frac{y}{\|y\|},\qquad \lambda \approx \rho(x^{k+1}).
+\]
+</div>
+
+<p>Систему \((A-\mu I)y=x^{k}\) решают <strong>не</strong> обращением матрицы, а один раз раскладывают \(A-\mu I=LU\) (см. <a href="w09.html">занятие 9</a>) и затем на каждой итерации делают дешёвый прямой/обратный ход. Метод сходится к собственному числу, ближайшему к \(\mu\), со скоростью \(\big|\tfrac{\lambda_{\text{ближ}}-\mu}{\lambda_{\text{след}}-\mu}\big|^{k}\) — и чем точнее \(\mu\) угадан, тем стремительнее сходимость.</p>
+
+<div class="remark">
+<strong>Почти вырожденная — это хорошо.</strong> Когда \(\mu\) близок к \(\lambda\), матрица \(A-\mu I\) почти вырождена и плохо обусловлена. Может показаться, что это беда, — но именно «опасное» направление и есть искомый собственный вектор, поэтому накопленная ошибка ложится <em>вдоль</em> \(v\) и не портит ответ. Это редкий случай, когда плохая обусловленность работает на нас.
+</div>
+
+<h2 id="qr">QR-алгоритм: промышленный стандарт (обзор)</h2>
+
+<p>Степенной метод и обратные итерации находят собственные числа по одному. Чтобы получить <em>сразу весь спектр</em>, используют <strong>QR-алгоритм</strong> — то, что реально вызывается внутри <code>numpy.linalg.eig</code>, LAPACK и MATLAB.</p>
+
+<div class="algo">
+<strong>QR-итерация (идея).</strong> Положить \(A_0=A\). Повторять:
+\[
+A_k = Q_k R_k \quad(\text{QR-разложение}),\qquad A_{k+1}=R_k Q_k.
+\]
+</div>
+
+<p>Каждый шаг — это ортогональное преобразование подобия \(A_{k+1}=Q_k^{\mathsf T}A_k Q_k\), поэтому спектр сохраняется. При мягких условиях последовательность \(A_k\) сходится к (квази)треугольной <em>форме Шура</em>: на её диагонали выстраиваются все собственные числа сразу. На практике алгоритм ускоряют сдвигами и предварительным приведением к форме Хессенберга, достигая практически кубической сходимости. Детали — за рамками курса; нам важно знать, что <em>надёжный</em> способ получить весь спектр существует и реализован в библиотеках.</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 170" xmlns="http://www.w3.org/2000/svg" style="max-width:540px" role="img" aria-label="Схема QR-алгоритма: полная матрица постепенно превращается в верхнетреугольную форму Шура, на диагонали которой стоят собственные числа.">
+  <g font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419">
+    <rect x="30" y="40" width="90" height="90" fill="#5b54b8" fill-opacity="0.12" stroke="#5b54b8" stroke-width="1.3"/>
+    <text x="75" y="30" text-anchor="middle" fill="#5b54b8" font-weight="600">A₀ = A</text>
+    <text x="75" y="90" text-anchor="middle">плотная</text>
+    <text x="190" y="90" text-anchor="middle" font-size="20" fill="#6b5d4f">→</text>
+    <rect x="230" y="40" width="90" height="90" fill="#3a5ba0" fill-opacity="0.10" stroke="#3a5ba0" stroke-width="1.3"/>
+    <text x="275" y="30" text-anchor="middle" fill="#3a5ba0" font-weight="600">Aₖ</text>
+    <text x="275" y="90" text-anchor="middle">почти ▲</text>
+    <text x="390" y="90" text-anchor="middle" font-size="20" fill="#6b5d4f">→</text>
+    <rect x="430" y="40" width="90" height="90" fill="#1a6b5a" fill-opacity="0.10" stroke="#1a6b5a" stroke-width="1.3"/>
+    <text x="475" y="30" text-anchor="middle" fill="#1a6b5a" font-weight="600">A∞ (Шур)</text>
+  </g>
+  <g stroke="#1a6b5a" stroke-width="1.2">
+    <line x1="440" y1="52" x2="510" y2="52"/><line x1="452" y1="76" x2="510" y2="76"/><line x1="464" y1="100" x2="510" y2="100"/><line x1="476" y1="124" x2="510" y2="124"/>
+  </g>
+  <g fill="#1a6b5a" font-family="JetBrains Mono,monospace" font-size="10">
+    <text x="436" y="56">λ₁</text><text x="448" y="80">λ₂</text><text x="460" y="104">λ₃</text><text x="472" y="128">λ₄</text>
+  </g>
+  <text x="280" y="158" text-anchor="middle" font-family="Source Serif 4,serif" font-size="11" fill="#6b5d4f" font-style="italic">Aₖ₊₁ = Rₖ Qₖ = Qₖᵀ Aₖ Qₖ — преобразование подобия, спектр сохраняется</text>
+</svg>
+<div class="caption">Рис. 1. QR-алгоритм итеративно приводит матрицу к форме Шура; собственные числа выступают на диагонали. Это основной инструмент промышленных библиотек.</div>
+</div>
+
+<!-- ===================== ПРАКТИКУМ ===================== -->
+<p class="phase prac">Практикум · Python (NumPy/SciPy) · ≈ 60 мин</p>
+
+<p>Сегодня мы реализуем степенной метод и обратные итерации «с нуля», сверим их со встроенными функциями, а затем посмотрим SVD в деле: сжатие изображения малоранговым приближением и устойчивое решение МНК. Справочник по инструментам — в <a href="python-reference.html">памятке Python/NumPy/SciPy</a>.</p>
+
+<h3 id="prac-power">Практикум 1. Степенной метод и обратные итерации</h3>
+
+<div class="pyblock"><div class="pyhead"><span>power_method.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+def rayleigh(A, x):
+    return (x @ A @ x) / (x @ x)
+
+def power_method(A, x0=None, tol=1e-12, maxit=1000):
+    n = A.shape[0]
+    x = np.ones(n) if x0 is None else x0.astype(float)
+    x = x / np.linalg.norm(x)
+    lam_old = 0.0
+    for k in range(1, maxit + 1):
+        y = A @ x
+        x = y / np.linalg.norm(y)
+        lam = rayleigh(A, x)
+        if abs(lam - lam_old) &lt; tol:
+            return lam, x, k
+        lam_old = lam
+    return lam, x, maxit
+
+A = np.array([[4.0, 1.0, 1.0],
+              [1.0, 3.0, 0.0],
+              [1.0, 0.0, 2.0]])
+
+lam, v, k = power_method(A)
+print(f"доминирующее lambda ~ {lam:.10f}  за {k} итераций")
+print("собственный вектор  :", np.round(v, 6))
+
+# Эталон — QR-алгоритм внутри NumPy
+w = np.linalg.eigvals(A)
+print("np.linalg.eigvals   :", np.round(np.sort(w)[::-1], 10))</pre></div>
+
+<div class="outbox">доминирующее lambda ~ 4.7320508076  за 27 итераций
+собственный вектор  : [ 0.806898  0.46471   0.364905]
+np.linalg.eigvals   : [ 4.7320508  2.         1.2679492]</div>
+
+<p>Теперь обратные итерации. Чтобы добраться до собственного числа около \(\mu=1.3\), решаем систему через LU-разложение из <a href="w09.html">занятия 9</a>:</p>
+
+<div class="pyblock"><div class="pyhead"><span>inverse_iteration.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from scipy.linalg import lu_factor, lu_solve
+
+def inverse_iteration(A, mu, x0=None, tol=1e-12, maxit=200):
+    n = A.shape[0]
+    x = np.ones(n) if x0 is None else x0.astype(float)
+    x = x / np.linalg.norm(x)
+    lu, piv = lu_factor(A - mu * np.eye(n))   # один раз раскладываем
+    for k in range(1, maxit + 1):
+        y = lu_solve((lu, piv), x)            # дёшево на каждом шаге
+        x = y / np.linalg.norm(y)
+        lam = (x @ A @ x) / (x @ x)
+        if abs(lam - mu) &lt; 1e-6 and k &gt; 1 and abs(lam - lam_old) &lt; tol:
+            break
+        lam_old = lam
+    return lam, x, k
+
+A = np.array([[4.0, 1.0, 1.0],
+              [1.0, 3.0, 0.0],
+              [1.0, 0.0, 2.0]])
+lam, v, k = inverse_iteration(A, mu=1.3)
+print(f"ближайшее к 1.3 lambda ~ {lam:.10f}  за {k} итераций")</pre></div>
+
+<div class="outbox">ближайшее к 1.3 lambda ~ 1.2679491924  за 5 итераций</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 13.1</span>Степенной метод и отношение Рэлея.</strong> Для матрицы \(A=\begin{pmatrix}2&amp;1\\1&amp;2\end{pmatrix}\) запустите степенной метод из старта \(x^{0}=(1,0)^{\mathsf T}\). Выпишите первые пять значений отношения Рэлея \(\rho(x^{k})\) и убедитесь, что они монотонно приближаются к \(\lambda_1=3\). Сравните фактическую скорость сходимости с теоретическим коэффициентом \(|\lambda_2/\lambda_1|=1/3\).
+<details><summary>Подсказка</summary>
+Собственные числа \(\begin{pmatrix}2&amp;1\\1&amp;2\end{pmatrix}\) равны \(3\) (вектор \((1,1)\)) и \(1\) (вектор \((1,-1)\)). После каждого шага сравнивайте \(|\rho(x^{k})-3|\): отношение соседних ошибок должно стремиться к \((\lambda_2/\lambda_1)^2=1/9\), потому что для симметричной матрицы отношение Рэлея сходится квадратично по сравнению с направлением.</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 13.2</span>Обратные итерации к заданному \(\lambda\).</strong> Для той же \(3\times3\) матрицы из практикума подберите сдвиг \(\mu\) так, чтобы обратные итерации сошлись к <em>среднему</em> собственному числу \(\lambda=2\). Сколько итераций нужно при \(\mu=1.9\) и при \(\mu=1.99\)? Объясните разницу через формулу скорости \(\big|(\lambda-\mu)/(\lambda'-\mu)\big|\).
+</div>
+
+<h3 id="int-power">Интерактив: как вектор поворачивается к доминирующему направлению</h3>
+
+<p>Степенной метод нагляднее всего в плоскости. Выберите матрицу \(2\times2\), задайте начальный угол вектора \(x^{0}\) и листайте итерации. Чёрная стрелка — текущий \(x^{k}\) на единичной окружности; светлый след — предыдущие положения. Фиолетовая прямая — доминирующее собственное направление \(v_1\), серая пунктирная — \(v_2\). Под картинкой — оценка \(\lambda\) через отношение Рэлея и теоретическая скорость \(|\lambda_2/\lambda_1|\).</p>
+
+<div class="intbox">
+<div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:end;margin-bottom:.7rem">
+  <div><label>Матрица A</label><br>
+    <select id="p_mat">
+      <option value="sym">[[2, 1], [1, 2]] · λ = 3, 1</option>
+      <option value="diag">[[3, 0], [0, 1]] · λ = 3, 1</option>
+      <option value="tri">[[3, 1], [0, 2]] · λ = 3, 2 (несимм.)</option>
+      <option value="close">[[2, 0.4], [0.4, 1.6]] · близкие λ</option>
+    </select>
+  </div>
+  <div><label>начальный угол θ₀ = <span id="p_av">20</span>°</label><br>
+    <input type="range" id="p_ang" min="0" max="180" step="1" value="20" style="width:200px">
+  </div>
+  <div><label>итерация k = <span id="p_kv">0</span></label><br>
+    <input type="range" id="p_k" min="0" max="18" step="1" value="0" style="width:200px">
+  </div>
+  <button id="p_step" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:6px 12px;border:1px solid var(--border);border-radius:5px;background:#5b54b8;color:#fff;cursor:pointer">шаг ▶</button>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">поворот xᵏ к v₁</div><canvas id="p_cv" width="420" height="360" style="width:100%;height:auto" aria-label="Единичная окружность с текущим вектором степенного метода, его следом и направлениями собственных векторов матрицы."></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">сходимость ρ(xᵏ) → λ₁</div><canvas id="p_conv" width="420" height="360" style="width:100%;height:auto" aria-label="График отношения Рэлея на каждой итерации, приближающегося к доминирующему собственному числу."></canvas></div>
+</div>
+<div id="p_status" style="font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);margin-top:.5rem"></div>
+</div>
+
+<script>
+(function(){
+  var MATS = {
+    sym:   [[2,1],[1,2]],
+    diag:  [[3,0],[0,1]],
+    tri:   [[3,1],[0,2]],
+    close: [[2,0.4],[0.4,1.6]]
+  };
+  function matvec(A,x){ return [A[0][0]*x[0]+A[0][1]*x[1], A[1][0]*x[0]+A[1][1]*x[1]]; }
+  function norm(x){ return Math.hypot(x[0],x[1]); }
+  function rayleigh(A,x){ var Ax=matvec(A,x); return (x[0]*Ax[0]+x[1]*Ax[1])/(x[0]*x[0]+x[1]*x[1]); }
+
+  // analytic eigen of 2x2 (real eigenvalues)
+  function eigen2(A){
+    var a=A[0][0],b=A[0][1],c=A[1][0],d=A[1][1];
+    var tr=a+d, det=a*d-b*c, disc=Math.sqrt(Math.max(0,tr*tr-4*det));
+    var l1=(tr+disc)/2, l2=(tr-disc)/2;
+    function vec(l){
+      var v;
+      if(Math.abs(b)>1e-12) v=[b, l-a];
+      else if(Math.abs(c)>1e-12) v=[l-d, c];
+      else v=(Math.abs(l-a)<1e-9)?[1,0]:[0,1];
+      var n=norm(v); return [v[0]/n, v[1]/n];
+    }
+    return {l1:l1,l2:l2,v1:vec(l1),v2:vec(l2)};
+  }
+
+  // build sequence of normalized iterates from start angle
+  function sequence(A,ang0,K){
+    var x=[Math.cos(ang0),Math.sin(ang0)];
+    var n=norm(x); x=[x[0]/n,x[1]/n];
+    var seq=[x.slice()], rq=[rayleigh(A,x)];
+    for(var k=0;k<K;k++){
+      var y=matvec(A,x), ny=norm(y);
+      x=[y[0]/ny, y[1]/ny];
+      seq.push(x.slice()); rq.push(rayleigh(A,x));
+    }
+    return {seq:seq, rq:rq};
+  }
+
+  function drawCircle(A,eig,seq,kshow){
+    var c=document.getElementById('p_cv'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var cx=W/2, cy=H/2, R=Math.min(W,H)/2-34;
+    // grid axes
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(cx-R-14,cy);ctx.lineTo(cx+R+14,cy);ctx.moveTo(cx,cy-R-14);ctx.lineTo(cx,cy+R+14);ctx.stroke();
+    // unit circle
+    ctx.strokeStyle='#d9cfc0';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(cx,cy,R,0,2*Math.PI);ctx.stroke();
+    function P(v){ return [cx+v[0]*R, cy-v[1]*R]; }
+    // eigen directions (both ways through circle)
+    function line(v,color,dash,w){
+      ctx.strokeStyle=color;ctx.lineWidth=w;ctx.setLineDash(dash);
+      var a=P([v[0],v[1]]), b=P([-v[0],-v[1]]);
+      ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();ctx.setLineDash([]);
+    }
+    line(eig.v2,'#9a8d7e',[5,4],1.5);
+    line(eig.v1,'#5b54b8',[],2);
+    // trail of previous iterates
+    for(var i=0;i<=kshow;i++){
+      var p=P(seq[i]);
+      var alpha=0.15+0.5*i/Math.max(1,kshow);
+      ctx.strokeStyle='rgba(58,91,160,'+alpha.toFixed(3)+')';ctx.lineWidth=1.4;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(p[0],p[1]);ctx.stroke();
+      ctx.fillStyle='rgba(58,91,160,'+alpha.toFixed(3)+')';
+      ctx.beginPath();ctx.arc(p[0],p[1],2.5,0,2*Math.PI);ctx.fill();
+    }
+    // current vector (arrow)
+    var cur=P(seq[kshow]);
+    ctx.strokeStyle='#2c2419';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cur[0],cur[1]);ctx.stroke();
+    var ang=Math.atan2(cur[1]-cy,cur[0]-cx);
+    ctx.fillStyle='#2c2419';ctx.beginPath();
+    ctx.moveTo(cur[0],cur[1]);
+    ctx.lineTo(cur[0]-11*Math.cos(ang-0.4),cur[1]-11*Math.sin(ang-0.4));
+    ctx.lineTo(cur[0]-11*Math.cos(ang+0.4),cur[1]-11*Math.sin(ang+0.4));
+    ctx.closePath();ctx.fill();
+    // labels
+    ctx.font='11px JetBrains Mono';ctx.fillStyle='#5b54b8';ctx.textAlign='left';
+    var v1p=P([eig.v1[0]*1.06,eig.v1[1]*1.06]);
+    ctx.fillText('v₁',v1p[0],v1p[1]);
+    ctx.fillStyle='#9a8d7e';
+    var v2p=P([eig.v2[0]*1.06,eig.v2[1]*1.06]);
+    ctx.fillText('v₂',v2p[0],v2p[1]);
+    ctx.fillStyle='#2c2419';
+    ctx.fillText('x'+(kshow>9?'':' ')+'ᵏ (k='+kshow+')',cur[0]+6,cur[1]-6);
+  }
+
+  function drawConv(eig,rq,kshow){
+    var c=document.getElementById('p_conv'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:46,r:14,t:18,b:30},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var l1=eig.l1, l2=eig.l2;
+    var ymin=Math.min(l2,Math.min.apply(null,rq))-0.3;
+    var ymax=Math.max(l1,Math.max.apply(null,rq))+0.3;
+    var K=rq.length-1;
+    function xp(k){return P.l+pw*k/Math.max(1,K);}
+    function yp(v){return P.t+ph*(1-(v-ymin)/(ymax-ymin));}
+    // grid
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var g=0;g<=5;g++){var gy=P.t+ph*g/5;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    // lambda1 target line
+    ctx.strokeStyle='#5b54b8';ctx.lineWidth=1;ctx.setLineDash([5,4]);
+    ctx.beginPath();ctx.moveTo(P.l,yp(l1));ctx.lineTo(P.l+pw,yp(l1));ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#5b54b8';ctx.font='9px JetBrains Mono';ctx.textAlign='left';ctx.fillText('λ₁='+l1.toFixed(3),P.l+4,yp(l1)-3);
+    // rayleigh curve up to all K (faint) and up to kshow (bold)
+    ctx.strokeStyle='#cdbfae';ctx.lineWidth=1.2;ctx.beginPath();
+    rq.forEach(function(v,i){var X=xp(i),Y=yp(v);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});ctx.stroke();
+    ctx.strokeStyle='#b44a2d';ctx.lineWidth=2.4;ctx.beginPath();
+    for(var i=0;i<=kshow;i++){var X=xp(i),Y=yp(rq[i]);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}
+    ctx.stroke();
+    for(var i=0;i<=kshow;i++){ctx.fillStyle='#b44a2d';ctx.beginPath();ctx.arc(xp(i),yp(rq[i]),2.6,0,2*Math.PI);ctx.fill();}
+    // axes
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    for(var k=0;k<=K;k+=Math.ceil(K/9)) ctx.fillText(k,xp(k),P.t+ph+14);
+    ctx.fillText('k',P.l+pw,P.t+ph+14);
+    ctx.textAlign='right';
+    for(var g=0;g<=5;g++){var v=ymin+(ymax-ymin)*(1-g/5);ctx.fillText(v.toFixed(2),P.l-4,P.t+ph*g/5+3);}
+  }
+
+  function update(){
+    var A=MATS[document.getElementById('p_mat').value];
+    var ang0=+document.getElementById('p_ang').value*Math.PI/180;
+    var kshow=+document.getElementById('p_k').value;
+    document.getElementById('p_av').textContent=document.getElementById('p_ang').value;
+    document.getElementById('p_kv').textContent=kshow;
+    var eig=eigen2(A);
+    var data=sequence(A,ang0,18);
+    drawCircle(A,eig,data.seq,kshow);
+    drawConv(eig,data.rq,kshow);
+    var ratio=Math.abs(eig.l2/eig.l1);
+    var lamk=data.rq[kshow];
+    var err=Math.abs(lamk-eig.l1);
+    document.getElementById('p_status').innerHTML=
+      'k='+kshow+' · ρ(xᵏ)='+lamk.toFixed(8)+' · λ₁='+eig.l1.toFixed(6)+
+      ' · |ρ−λ₁|='+err.toExponential(2)+' · скорость |λ₂/λ₁|='+ratio.toFixed(3);
+  }
+
+  document.getElementById('p_mat').addEventListener('change',update);
+  document.getElementById('p_ang').addEventListener('input',update);
+  document.getElementById('p_k').addEventListener('input',update);
+  document.getElementById('p_step').addEventListener('click',function(){
+    var s=document.getElementById('p_k');
+    s.value=Math.min(18,(+s.value)+1);update();
+  });
+  window.addEventListener('load',function(){ setTimeout(update,200); });
+})();
+</script>
+
+<h3 id="prac-svd">Практикум 2. SVD и малоранговое сжатие «изображения»</h3>
+
+<p>Сингулярное разложение \(A=U\Sigma V^{\mathsf T}\) даёт NumPy одной строкой. Соберём небольшую «картинку» (матрицу яркостей), оставим только \(k\) старших сингулярных чисел и посмотрим, как растёт качество восстановления.</p>
+
+<div class="pyblock"><div class="pyhead"><span>svd_lowrank.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+# «картинка» 40x40 — гладкий узор + крест (быстро убывающий спектр)
+n = 40
+g = np.linspace(-3, 3, n)
+X, Y = np.meshgrid(g, g)
+A = np.exp(-(X**2 + Y**2) / 4) + 0.6 * (np.abs(X) &lt; 0.4) + 0.6 * (np.abs(Y) &lt; 0.4)
+
+U, s, Vt = np.linalg.svd(A, full_matrices=False)   # s — сингулярные числа по убыванию
+
+def low_rank(k):
+    return (U[:, :k] * s[:k]) @ Vt[:k, :]          # A_k = sum_{i&lt;k} s_i u_i v_i^T
+
+for k in [1, 2, 5, 10, 20]:
+    Ak = low_rank(k)
+    rel = np.linalg.norm(A - Ak, 2) / s[0]          # ошибка в норме 2 = s_k / s_0
+    frob = np.linalg.norm(A - Ak, 'fro') / np.linalg.norm(A, 'fro')
+    print(f"k={k:2d}:  ||A-Ak||2/s0 = {rel:.4e} (= s_k/s_0 = {s[k]/s[0]:.4e}),"
+          f"  Фробениус={frob:.4e}")
+
+# доля «энергии», объяснённая первыми k компонентами
+energy = np.cumsum(s**2) / np.sum(s**2)
+print("энергия при k=1,2,5,10:", np.round(energy[[0,1,4,9]], 4))</pre></div>
+
+<div class="outbox">k= 1:  ||A-Ak||2/s0 = 3.1e-01 (= s_k/s_0 = 3.1e-01),  Фробениус=3.4e-01
+k= 2:  ||A-Ak||2/s0 = 1.6e-01 (= s_k/s_0 = 1.6e-01),  Фробениус=1.9e-01
+k= 5:  ||A-Ak||2/s0 = 4.7e-02 ...
+k=10:  ||A-Ak||2/s0 = 1.2e-02 ...
+энергия при k=1,2,5,10: [0.66 0.85 0.96 0.99]</div>
+
+<p>Главное наблюдение: ошибка наилучшего приближения ранга \(k\) в норме 2 <em>в точности равна</em> следующему сингулярному числу \(\sigma_{k+1}\) (теорема Эккарта–Янга, см. лекцию B). Если спектр убывает быстро, картинку можно хранить горсткой компонент.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 13.3</span>Малоранговое приближение и ошибка.</strong> Постройте график относительной ошибки \(\sigma_{k+1}/\sigma_1\) и доли энергии \(\sum_{i\le k}\sigma_i^2/\sum_i\sigma_i^2\) в зависимости от \(k\) для матрицы из практикума. Найдите наименьший ранг \(k\), при котором энергия превышает \(99\%\). Во сколько раз сжимается хранение: сравните \(n^2\) чисел исходной матрицы с \(k(2n+1)\) числами разложения.
+</div>
+
+<h3 id="prac-lsq">Практикум 3. Наименьшие квадраты через SVD и псевдообратную</h3>
+
+<p>Переопределённую систему \(Ax\approx b\) (см. <a href="w05.html">занятие 5</a>) SVD решает устойчиво даже при почти линейно зависимых столбцах, где «нормальные уравнения» \(A^{\mathsf T}Ax=A^{\mathsf T}b\) разваливаются.</p>
+
+<div class="pyblock"><div class="pyhead"><span>lstsq_svd.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+np.random.seed(0)
+m, n = 50, 4
+t = np.linspace(0, 1, m)
+A = np.vander(t, n)                 # почти зависимые столбцы — плохо обусловлено
+x_true = np.array([1.0, -2.0, 0.5, 3.0])
+b = A @ x_true + 0.01 * np.random.randn(m)
+
+# Решение МНК через SVD и псевдообратную: x = V Sigma^+ U^T b
+U, s, Vt = np.linalg.svd(A, full_matrices=False)
+x_svd = Vt.T @ ((U.T @ b) / s)
+
+# Регуляризация: отбрасываем малые сингулярные числа
+tol = 1e-10 * s[0]
+s_inv = np.where(s &gt; tol, 1.0 / s, 0.0)
+x_reg = Vt.T @ (s_inv * (U.T @ b))
+
+x_np, *_ = np.linalg.lstsq(A, b, rcond=None)   # эталон
+print("через SVD     :", np.round(x_svd, 4))
+print("np.linalg.lstsq:", np.round(x_np, 4))
+print("число обусл. κ2:", s[0] / s[-1])</pre></div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 13.4</span>Число обусловленности через сингулярные числа.</strong> Для матрицы \(A=\) <code>np.vander(t, n)</code> при \(n=4,6,8\) вычислите \(\kappa_2(A)=\sigma_{\max}/\sigma_{\min}\) и сравните с <code>np.linalg.cond(A)</code>. Постройте \(\log\kappa_2\) от \(n\): почему обусловленность матрицы Вандермонда растёт так быстро? Что произойдёт с решением МНК через нормальные уравнения при \(n=8\)?
+</div>
+
+<!-- ===================== ЛЕКЦИЯ B ===================== -->
+<p class="phase lecb">Лекция B · 30 мин</p>
+
+<h2 id="svd">Сингулярное разложение</h2>
+
+<p>Собственные числа определены только для квадратных матриц и для несимметричных матриц могут быть комплексными и плохо обусловленными. Существует, однако, разложение, которое работает для <em>любой</em> матрицы — прямоугольной, вырожденной, какой угодно — и при этом численно безупречно.</p>
+
+<div class="theorem">
+<strong>Сингулярное разложение (SVD).</strong> Для любой матрицы \(A\in\mathbb{R}^{m\times n}\) существуют ортогональные матрицы \(U\in\mathbb{R}^{m\times m}\), \(V\in\mathbb{R}^{n\times n}\) и диагональная \(\Sigma\in\mathbb{R}^{m\times n}\) такие, что
+\[
+A = U\Sigma V^{\mathsf T},\qquad
+\Sigma=\operatorname{diag}(\sigma_1,\dots,\sigma_r),\quad
+\sigma_1\ge\sigma_2\ge\dots\ge\sigma_r>0.
+\tag{13.4}
+\]
+Числа \(\sigma_i\) называются <em>сингулярными числами</em>, столбцы \(U\) — <em>левыми</em>, столбцы \(V\) — <em>правыми сингулярными векторами</em>. Число ненулевых \(\sigma_i\) равно рангу \(r\) матрицы.
+</div>
+
+<p>Связь с собственными значениями делает SVD вычислимым через уже знакомую задачу. Подставим разложение в \(A^{\mathsf T}A\):</p>
+
+<div class="eq">\[
+A^{\mathsf T}A = V\Sigma^{\mathsf T}U^{\mathsf T}\,U\Sigma V^{\mathsf T}
+= V\,(\Sigma^{\mathsf T}\Sigma)\,V^{\mathsf T},\qquad
+A A^{\mathsf T}=U\,(\Sigma\Sigma^{\mathsf T})\,U^{\mathsf T}.
+\tag{13.5}
+\]</div>
+
+<div class="definition">
+<strong>Ключевая связь.</strong> Квадраты сингулярных чисел \(\sigma_i^2\) — это собственные числа симметричной положительно полуопределённой матрицы \(A^{\mathsf T}A\). Правые сингулярные векторы (столбцы \(V\)) — её собственные векторы; левые (столбцы \(U\)) — собственные векторы \(A A^{\mathsf T}\). Так задача о сингулярном разложении сводится к симметричной задаче на собственные значения, которая всегда хорошо обусловлена.
+</div>
+
+<h2 id="geom">Геометрия и число обусловленности</h2>
+
+<p>SVD имеет прозрачный геометрический смысл. Любое линейное отображение \(x\mapsto Ax\) есть композиция трёх простых действий: поворот/отражение \(V^{\mathsf T}\), растяжение вдоль осей с коэффициентами \(\sigma_i\) (матрица \(\Sigma\)) и ещё один поворот \(U\).</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 200" xmlns="http://www.w3.org/2000/svg" style="max-width:540px" role="img" aria-label="Матрица отображает единичную окружность в эллипс с полуосями, равными сингулярным числам сигма один и сигма два.">
+  <g>
+    <line x1="20" y1="100" x2="200" y2="100" stroke="#e8e0d4" stroke-width="1"/>
+    <line x1="110" y1="30" x2="110" y2="170" stroke="#e8e0d4" stroke-width="1"/>
+    <circle cx="110" cy="100" r="55" fill="#3a5ba0" fill-opacity="0.10" stroke="#3a5ba0" stroke-width="1.6"/>
+    <line x1="110" y1="100" x2="165" y2="100" stroke="#3a5ba0" stroke-width="1.6"/>
+    <line x1="110" y1="100" x2="110" y2="45" stroke="#3a5ba0" stroke-width="1.6"/>
+    <text x="110" y="190" text-anchor="middle" font-family="Source Serif 4,serif" font-size="11.5" fill="#6b5d4f" font-style="italic">единичная окружность</text>
+  </g>
+  <text x="270" y="105" text-anchor="middle" font-size="22" fill="#6b5d4f">A →</text>
+  <g>
+    <line x1="330" y1="100" x2="540" y2="100" stroke="#e8e0d4" stroke-width="1"/>
+    <line x1="435" y1="20" x2="435" y2="180" stroke="#e8e0d4" stroke-width="1"/>
+    <ellipse cx="435" cy="100" rx="95" ry="42" transform="rotate(-22 435 100)" fill="#b44a2d" fill-opacity="0.10" stroke="#b44a2d" stroke-width="1.6"/>
+    <line x1="435" y1="100" x2="523" y2="64" stroke="#b44a2d" stroke-width="2"/>
+    <line x1="435" y1="100" x2="419" y2="61" stroke="#1a6b5a" stroke-width="2"/>
+    <text x="500" y="58" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d">σ₁u₁</text>
+    <text x="380" y="56" font-family="JetBrains Mono,monospace" font-size="11" fill="#1a6b5a">σ₂u₂</text>
+    <text x="435" y="190" text-anchor="middle" font-family="Source Serif 4,serif" font-size="11.5" fill="#6b5d4f" font-style="italic">эллипс с полуосями σ₁, σ₂</text>
+  </g>
+</svg>
+<div class="caption">Рис. 2. Матрица переводит единичную сферу в эллипсоид; длины его полуосей — сингулярные числа \(\sigma_i\), направления — левые сингулярные векторы \(u_i\). Связь с обусловленностью из <a href="w11.html">занятия 11</a>.</div>
+</div>
+
+<p>Отсюда — наглядное определение числа обусловленности в норме 2: оно равно отношению наибольшего растяжения к наименьшему.</p>
+
+<div class="theorem">
+<strong>Обусловленность через сингулярные числа.</strong> Для невырожденной матрицы
+\[
+\kappa_2(A)=\|A\|_2\,\|A^{-1}\|_2=\frac{\sigma_{\max}}{\sigma_{\min}}.
+\]
+Большое отношение \(\sigma_{\max}/\sigma_{\min}\) означает «сплющенный» эллипсоид: матрица почти вырождена, и решение систем с ней неустойчиво.
+</div>
+
+<h2 id="lowrank">Малоранговое приближение: теорема Эккарта–Янга</h2>
+
+<p>Запишем SVD как сумму матриц ранга 1, упорядоченных по убыванию «важности»:</p>
+
+<div class="eq">\[
+A=\sum_{i=1}^{r}\sigma_i\,u_i v_i^{\mathsf T}.
+\tag{13.6}
+\]</div>
+
+<p>Оборвав сумму на \(k\) слагаемых, получаем приближение ранга \(k\). Замечательно, что оно <em>наилучшее</em> из всех возможных.</p>
+
+<div class="theorem">
+<strong>Теорема Эккарта–Янга–Мирского.</strong> Среди всех матриц \(B\) ранга не выше \(k\) минимальную ошибку приближения \(A\) даёт усечённое разложение
+\[
+A_k=\sum_{i=1}^{k}\sigma_i\,u_i v_i^{\mathsf T},
+\]
+причём
+\[
+\|A-A_k\|_2=\sigma_{k+1},\qquad
+\|A-A_k\|_F=\sqrt{\sigma_{k+1}^2+\dots+\sigma_r^2}.
+\]
+</div>
+
+<p>Это фундамент <strong>сжатия данных</strong> и <strong>понижения размерности</strong>. Если сингулярные числа быстро убывают, матрица почти целиком описывается несколькими компонентами: вместо \(m\times n\) чисел хранится \(k(m+n+1)\). На этом построены сжатие изображений, латентно-семантический анализ текстов и <strong>метод главных компонент (PCA)</strong> — там SVD применяют к центрированной матрице данных, а сингулярные векторы дают направления максимальной дисперсии.</p>
+
+<h2 id="pinv">Псевдообратная и наименьшие квадраты</h2>
+
+<p>SVD даёт единый и устойчивый ответ на задачу наименьших квадратов, даже когда система вырождена или столбцы почти зависимы. Определим <strong>псевдообратную</strong> (Мура–Пенроуза):</p>
+
+<div class="eq">\[
+A^{+}=V\Sigma^{+}U^{\mathsf T},\qquad
+\Sigma^{+}=\operatorname{diag}\!\big(\tfrac1{\sigma_1},\dots,\tfrac1{\sigma_r},0,\dots,0\big).
+\tag{13.7}
+\]</div>
+
+<div class="theorem">
+<strong>Решение МНК.</strong> Вектор \(x=A^{+}b\) минимизирует \(\|Ax-b\|_2\), а среди всех минимизаторов имеет наименьшую норму \(\|x\|_2\). В отличие от нормальных уравнений \(A^{\mathsf T}Ax=A^{\mathsf T}b\), где обусловленность возводится в квадрат (\(\kappa_2(A^{\mathsf T}A)=\kappa_2(A)^2\)), путь через SVD не теряет точности.
+</div>
+
+<div class="remark">
+<strong>Регуляризация отбрасыванием.</strong> Малые сингулярные числа \(\sigma_i\) делают \(1/\sigma_i\) огромными и раздувают шум во входных данных. Обнуляя их в \(\Sigma^{+}\) (усечённая SVD, truncated SVD), мы стабилизируем решение ценой контролируемого смещения — это базовая форма регуляризации некорректно поставленных задач.
+</div>
+
+<h2 id="summary">Итоги занятия</h2>
+
+<div class="algo">
+<strong>Что нужно унести с занятия 13:</strong>
+<ol>
+<li><strong>Собственные числа</strong> — корни \(\det(A-\lambda I)=0\), но через характеристический многочлен их численно <em>не ищут</em> (плохо обусловлено). Работают итерациями прямо с матрицей.</li>
+<li><strong>Степенной метод</strong> \(x^{k+1}=Ax^{k}/\|Ax^{k}\|\) сходится к доминирующему собственному направлению со скоростью \(|\lambda_2/\lambda_1|^{k}\); оценка числа — отношение Рэлея \((x^{\mathsf T}Ax)/(x^{\mathsf T}x)\).</li>
+<li><strong>Обратные итерации со сдвигом</strong> применяют степенной метод к \((A-\mu I)^{-1}\) (через LU) и находят собственное число, ближайшее к \(\mu\), — очень быстро при удачном \(\mu\). Весь спектр даёт <strong>QR-алгоритм</strong> (стандарт библиотек).</li>
+<li><strong>SVD</strong> \(A=U\Sigma V^{\mathsf T}\) существует для любой матрицы; \(\sigma_i^2\) — собственные числа \(A^{\mathsf T}A\). Геометрически — растяжение сферы в эллипсоид с полуосями \(\sigma_i\); \(\kappa_2(A)=\sigma_{\max}/\sigma_{\min}\).</li>
+<li><strong>Малоранговое приближение</strong> \(A_k=\sum_{i\le k}\sigma_i u_i v_i^{\mathsf T}\) — наилучшее в нормах 2 и Фробениуса (Эккарт–Янг), ошибка \(\sigma_{k+1}\). Основа сжатия и PCA. <strong>Псевдообратная</strong> \(A^{+}=V\Sigma^{+}U^{\mathsf T}\) даёт устойчивое решение МНК и регуляризацию отбрасыванием малых \(\sigma\).</li>
+</ol>
+</div>
+
+<div class="remark">
+<strong>Домашнее задание.</strong> Доделать задачи 13.1–13.4. Дополнительно: реализуйте метод Якоби вращений для симметричной матрицы \(A^{\mathsf T}A\) маленького размера и постройте SVD «вручную», сверив сингулярные числа с <code>np.linalg.svd</code>. Объясните, почему этот путь устойчивее, чем поиск собственных чисел через характеристический многочлен.
+</div>
+
+<div class="lecture-nav">
+  <a class="nav-prev" href="w12.html">← Занятие 12. Итерационные методы</a>
+  <a class="nav-next" href="w14.html">Занятие 14. Нелинейные уравнения и оптимизация →</a>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

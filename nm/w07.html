@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Занятие 7 курса «Численные методы»: численное интегрирование, формулы Ньютона–Котеса (прямоугольники, трапеции, Симпсон), составные квадратуры и их порядок точности, экстраполяция Ромберга. Практикум на Python (NumPy/SciPy).">
+<title>ЧМ · Занятие 7. Численное интегрирование. Ньютон–Котес</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.tag-nummet{background:#ece9fb;color:#5b54b8}
+html.dark .tag-nummet{background:#241f3a;color:#a39bea}
+.lecture-num{color:#5b54b8}
+.phase{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#fff;background:#5b54b8;padding:.3rem .7rem;border-radius:4px;display:inline-block;margin:1.8rem 0 .4rem}
+.phase.prac{background:#1a6b5a}
+.phase.lecb{background:#3a5ba0}
+.pyblock{margin:1rem 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.pyhead{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;display:flex;justify-content:space-between}
+.pyhead .run{color:#9ec97f}
+pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9rem 1.1rem;font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.6;overflow-x:auto;white-space:pre}
+.outbox{background:#f0f7f4;border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;padding:.6rem 1rem;margin:.6rem 0 1rem;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);white-space:pre-wrap}
+html.dark .outbox{background:#16241f}
+.exercise summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--accent2);margin-top:.6rem;font-weight:500}
+.exercise details{margin-top:.4rem}
+.exercise .extag{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:#5b54b8;background:#ece9fb;padding:1px 7px;border-radius:3px;margin-right:.4rem}
+html.dark .exercise .extag{background:#241f3a;color:#a39bea}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0}
+.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
+.intbox select,.intbox input[type=range]{font-family:'JetBrains Mono',monospace}
+.intbox select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+html.dark .intbox select{background:#1b1712;color:var(--text)}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:1px 5px;border-radius:3px}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>ЧМ · Занятие 7</h2>
+  <div class="g">Лекция A</div>
+  <a href="#quad">Идея квадратуры</a>
+  <a href="#newton-cotes">Формулы Ньютона–Котеса</a>
+  <a href="#midtrap">Прямоугольники и трапеции</a>
+  <a href="#simpson">Формула Симпсона</a>
+  <a href="#composite">Составные формулы</a>
+  <div class="g">Практикум</div>
+  <a href="#prac-comp">П1. Составные квадратуры</a>
+  <a href="#prac-order">П2. Порядок и Ромберг</a>
+  <a href="#prac-scipy">П3. scipy.integrate</a>
+  <a href="#int-quad">Интерактив: квадратуры</a>
+  <div class="g">Лекция B</div>
+  <a href="#order">Порядок точности</a>
+  <a href="#romberg">Экстраполяция Ромберга</a>
+  <a href="#warning">Опасность высоких НК</a>
+  <a href="#summary">Итоги занятия</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+  <a href="w08.html">→ Занятие 8</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-nummet">Численные методы</span>
+<div class="lecture-num">Занятие 7 · Блок III. Дифференцирование и интегрирование</div>
+<h1>Численное интегрирование I. Формулы Ньютона–Котеса</h1>
+
+<p class="phase">Лекция A · ≤ 30 мин</p>
+
+<h2 id="quad">Идея квадратурной формулы</h2>
+
+<p>Определённый интеграл \(\int_a^b f(x)\,dx\) почти никогда не выражается в элементарных функциях: уже \(\int e^{-x^2}dx\) или \(\int \frac{\sin x}{x}dx\) не берутся аналитически. Зато интеграл всегда можно вычислить <em>приближённо</em> — как взвешенную сумму значений подынтегральной функции в нескольких точках. Такая формула называется <strong>квадратурной</strong>:</p>
+
+<div class="eq">\[
+\int_a^b f(x)\,dx \;\approx\; \sum_{i=0}^{n} w_i\, f(x_i),
+\tag{7.1}
+\]</div>
+
+<p>где \(x_i\) — <strong>узлы</strong>, а \(w_i\) — <strong>веса</strong>. Вся теория сводится к тому, как выбрать узлы и веса, чтобы при минимальном числе вычислений \(f\) получить максимальную точность.</p>
+
+<div class="definition">
+<strong>Базовая идея.</strong> Заменим подынтегральную функцию \(f\) её <em>интерполяционным полиномом</em> \(P_n\) по узлам \(x_0,\dots,x_n\) и проинтегрируем точно <em>полином</em>:
+\[
+\int_a^b f\,dx \approx \int_a^b P_n(x)\,dx = \sum_{i=0}^{n} \Big(\underbrace{\int_a^b \ell_i(x)\,dx}_{w_i}\Big) f(x_i),
+\]
+где \(\ell_i\) — базисные полиномы Лагранжа. Веса \(w_i\) суть интегралы от \(\ell_i\) и <em>не зависят</em> от \(f\) — их считают один раз.
+</div>
+
+<p>Если узлы выбраны <strong>равноотстоящими</strong>, \(x_i = a + i h\), \(h = (b-a)/n\), получаются классические <strong>формулы Ньютона–Котеса</strong>. Качество квадратуры измеряют её <em>алгебраической точностью</em>.</p>
+
+<div class="definition">
+<strong>Алгебраическая точность.</strong> Квадратурная формула имеет алгебраическую точность \(m\), если она <em>точна</em> для всех многочленов степени \(\le m\) и неточна хотя бы для одного многочлена степени \(m+1\). Чем выше точность, тем быстрее формула сходится для гладких функций.
+</div>
+
+<h2 id="newton-cotes">Простейшие формулы Ньютона–Котеса</h2>
+
+<p>Рассмотрим три базовые формулы на отрезке \([a,b]\), отвечающие полиномам степени \(0\) (точнее — \(1\) по симметрии), \(1\) и \(2\).</p>
+
+<h2 id="midtrap">Прямоугольники и трапеции</h2>
+
+<div class="theorem">
+<strong>Формула средних прямоугольников (midpoint).</strong> Заменяем \(f\) её значением в середине отрезка:
+\[
+\int_a^b f\,dx \approx (b-a)\, f\!\Big(\frac{a+b}{2}\Big),\qquad
+R_{\text{mid}} = \frac{(b-a)^3}{24}\, f''(\xi).
+\]
+Хотя формула использует один узел (полином степени 0), за счёт симметрии она интегрирует <em>линейные</em> функции точно — алгебраическая точность \(1\).
+</div>
+
+<div class="theorem">
+<strong>Формула трапеций.</strong> Заменяем \(f\) хордой через концевые точки:
+\[
+\int_a^b f\,dx \approx \frac{b-a}{2}\big(f(a)+f(b)\big),\qquad
+R_{\text{trap}} = -\frac{(b-a)^3}{12}\, f''(\xi).
+\]
+Алгебраическая точность \(1\): формула точна для линейных \(f\), а ошибка пропорциональна \(f''\) — кривизне.
+</div>
+
+<p>Интересно, что прямоугольники <em>вдвое точнее</em> трапеций (коэффициент \(1/24\) против \(1/12\)) и противоположны по знаку: трапеция переоценивает интеграл выпуклой функции, средняя точка — недооценивает. Это наблюдение — зародыш идеи Симпсона.</p>
+
+<div class="figure">
+<svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg" style="max-width:560px" role="img" aria-label="Геометрия трёх квадратур: прямоугольник по средней точке, трапеция по хорде и парабола Симпсона по трём узлам, приближающие площадь под кривой.">
+  <g font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">
+    <text x="100" y="18">прямоугольник</text>
+    <text x="300" y="18">трапеция</text>
+    <text x="500" y="18">парабола (Симпсон)</text>
+  </g>
+  <!-- midpoint -->
+  <path d="M30,150 Q100,60 170,120" fill="none" stroke="#5b54b8" stroke-width="2"/>
+  <rect x="30" y="90" width="140" height="60" fill="#3a5ba0" fill-opacity="0.12" stroke="#3a5ba0" stroke-width="1.2"/>
+  <line x1="100" y1="90" x2="100" y2="150" stroke="#b44a2d" stroke-width="1" stroke-dasharray="3,2"/>
+  <!-- trapezoid -->
+  <path d="M230,150 Q300,60 370,120" fill="none" stroke="#5b54b8" stroke-width="2"/>
+  <polygon points="230,150 230,118 370,120 370,150" fill="#1a6b5a" fill-opacity="0.12" stroke="#1a6b5a" stroke-width="1.2"/>
+  <!-- simpson -->
+  <path d="M430,150 Q500,60 570,120" fill="none" stroke="#5b54b8" stroke-width="2"/>
+  <path d="M430,150 L430,118 Q500,58 570,118 L570,120 L570,150 Z" fill="#b44a2d" fill-opacity="0.12" stroke="#b44a2d" stroke-width="1.2"/>
+  <g fill="#2c2419"><circle cx="500" cy="60" r="2.6"/><circle cx="430" cy="118" r="2.6"/><circle cx="570" cy="118" r="2.6"/></g>
+  <g font-family="Source Serif 4,serif" font-size="10.5" fill="#6b5d4f" text-anchor="middle" font-style="italic">
+    <text x="100" y="178">точность 1</text>
+    <text x="300" y="178">точность 1</text>
+    <text x="500" y="178">точность 3</text>
+  </g>
+</svg>
+<div class="caption">Рис. 1. Три базовые квадратуры. Прямоугольник заменяет функцию константой по средней точке, трапеция — хордой, Симпсон — параболой по трём узлам. Парабола «ловит» кубические члены бесплатно.</div>
+</div>
+
+<h2 id="simpson">Формула Симпсона</h2>
+
+<p>Возьмём три равноотстоящих узла: концы \(a,b\) и середину \(m=(a+b)/2\). Через них проведём параболу и проинтегрируем её. Получается <strong>формула Симпсона</strong>:</p>
+
+<div class="theorem">
+<strong>Формула Симпсона (парабола по 3 узлам).</strong>
+\[
+\int_a^b f\,dx \approx \frac{b-a}{6}\Big(f(a)+4f\big(\tfrac{a+b}{2}\big)+f(b)\Big),\qquad
+R_{\text{Simp}} = -\frac{(b-a)^5}{2880}\, f^{(4)}(\xi).
+\]
+Алгебраическая точность <strong>3</strong> (!): несмотря на то, что мы интерполировали лишь параболой (степень 2), формула точна и для <em>кубических</em> функций.
+</div>
+
+<div class="proof">
+Почему точность не \(2\), а \(3\)? Ошибка интерполяции для кубического члена \(f(x)=x^3\) нечётна относительно середины \(m\), а формула Симпсона симметрична относительно \(m\). При интегрировании по симметричному отрезку нечётная добавка сокращается, и кубический член интегрируется точно. Первый «непокрытый» член — четвёртой степени, поэтому ошибка пропорциональна \(f^{(4)}\). Этот «бесплатный» лишний порядок — главная причина популярности Симпсона.
+</div>
+
+<h2 id="composite">Составные формулы</h2>
+
+<p>Одна парабола на всём \([a,b]\) хороша лишь для коротких отрезков: множитель \((b-a)^5\) в остатке губителен при большом \(b-a\). Стандартное лекарство — разбить отрезок на \(n\) равных частей шага \(h=(b-a)/n\), применить простую формулу на каждом подотрезке и сложить. Получаются <strong>составные</strong> (кусочные) квадратуры.</p>
+
+<div class="theorem">
+<strong>Составная формула трапеций.</strong> Узлы \(x_i=a+ih\), значения \(f_i=f(x_i)\):
+\[
+\int_a^b f\,dx \approx h\Big(\tfrac12 f_0 + f_1 + f_2 + \dots + f_{n-1} + \tfrac12 f_n\Big),\qquad
+R = -\frac{(b-a)\,h^2}{12}\, f''(\xi) = O(h^2).
+\]
+Внутренние узлы входят с весом \(h\), концевые — с весом \(h/2\).
+</div>
+
+<div class="theorem">
+<strong>Составная формула Симпсона</strong> (требует <em>чётного</em> \(n\)):
+\[
+\int_a^b f\,dx \approx \frac{h}{3}\Big(f_0 + 4f_1 + 2f_2 + 4f_3 + \dots + 2f_{n-2} + 4f_{n-1} + f_n\Big),\qquad
+R = -\frac{(b-a)\,h^4}{180}\, f^{(4)}(\xi) = O(h^4).
+\]
+Чередующиеся веса \(4,2,4,2,\dots\) на внутренних узлах — следствие склейки парабол по парам подотрезков.
+</div>
+
+<p>Ключевое различие: при измельчении сетки ошибка трапеций убывает как \(h^2\), а Симпсона — как \(h^4\). Каждое удвоение \(n\) уменьшает ошибку трапеций в \(4\) раза, а Симпсона — в \(16\). Это мы проверим численно прямо сейчас.</p>
+
+<!-- ===================== ПРАКТИКУМ ===================== -->
+<p class="phase prac">Практикум · Python (NumPy/SciPy) · ≈ 60 мин</p>
+
+<p>Запускайте код в Jupyter или любом редакторе: нужны NumPy и SciPy. Цель — реализовать составные квадратуры «руками», убедиться в их порядке точности по графику ошибки в log-log, построить таблицу Ромберга и сравнить с готовыми функциями <code>scipy.integrate</code>. Справочник по инструментам — в <a href="python-reference.html">памятке Python/NumPy/SciPy</a>.</p>
+
+<h3 id="prac-comp">Практикум 1. Составные трапеция и Симпсон</h3>
+
+<div class="pyblock"><div class="pyhead"><span>quadrature.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+def trapezoid(f, a, b, n):
+    """Составная формула трапеций, n подотрезков."""
+    x = np.linspace(a, b, n + 1)
+    y = f(x)
+    h = (b - a) / n
+    return h * (0.5 * y[0] + y[1:-1].sum() + 0.5 * y[-1])
+
+def simpson(f, a, b, n):
+    """Составная формула Симпсона, n чётное."""
+    if n % 2:
+        raise ValueError("n должно быть чётным")
+    x = np.linspace(a, b, n + 1)
+    y = f(x)
+    h = (b - a) / n
+    return h / 3 * (y[0] + y[-1]
+                    + 4 * y[1:-1:2].sum()
+                    + 2 * y[2:-2:2].sum())
+
+# Тест: интеграл sin на [0, pi] равен ровно 2
+f = np.sin
+I_exact = 2.0
+for n in (4, 8, 16, 32):
+    print(f"n={n:3d}  trap={trapezoid(f,0,np.pi,n):.10f}"
+          f"  simp={simpson(f,0,np.pi,n):.10f}")
+print("точное :", I_exact)</pre></div>
+
+<div class="outbox">n=  4  trap=1.8961188979  simp=2.0045597549
+n=  8  trap=1.9742316019  simp=2.0002691699
+n= 16  trap=1.9935703438  simp=2.0000165910
+n= 32  trap=1.9983933609  simp=2.0000010334</div>
+
+<p>Видно невооружённым глазом: при каждом удвоении \(n\) ошибка трапеций падает примерно вчетверо, а Симпсона — в \(16\) раз. Оформим это как проверку порядка.</p>
+
+<h3 id="prac-order">Практикум 2. Порядок сходимости и таблица Ромберга</h3>
+
+<div class="pyblock"><div class="pyhead"><span>order_check.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+f = np.sin; a, b, I = 0.0, np.pi, 2.0
+ns = 2 ** np.arange(2, 12)          # 4, 8, ..., 2048
+
+err_t = np.array([abs(trapezoid(f,a,b,n) - I) for n in ns])
+err_s = np.array([abs(simpson(f,a,b,n)   - I) for n in ns])
+
+# наклон log(err) по log(n): должен быть -2 и -4
+p_t = np.polyfit(np.log(ns), np.log(err_t), 1)[0]
+p_s = np.polyfit(np.log(ns), np.log(err_s), 1)[0]
+print(f"наклон трапеции : {p_t:.3f}  (ожидаем -2)")
+print(f"наклон Симпсона : {p_s:.3f}  (ожидаем -4)")</pre></div>
+
+<div class="outbox">наклон трапеции : -2.000  (ожидаем -2)
+наклон Симпсона : -4.000  (ожидаем -4)</div>
+
+<p>Наклоны подтверждают теорию: \(O(h^2)\) и \(O(h^4)\). Теперь — экстраполяция Ромберга. Она применяет экстраполяцию Ричардсона к составной трапеции и почти даром получает высокий порядок.</p>
+
+<div class="pyblock"><div class="pyhead"><span>romberg.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+def romberg(f, a, b, levels=6):
+    """Таблица Ромберга T[k][j], T[k][0] = трапеция с 2**k интервалами."""
+    T = np.zeros((levels, levels))
+    for k in range(levels):
+        T[k, 0] = trapezoid(f, a, b, 2 ** k)
+        for j in range(1, k + 1):
+            # T[k,j] = (4**j * T[k,j-1] - T[k-1,j-1]) / (4**j - 1)
+            T[k, j] = (4**j * T[k, j-1] - T[k-1, j-1]) / (4**j - 1)
+    return T
+
+T = romberg(np.sin, 0, np.pi, levels=6)
+for k in range(6):
+    print("  ".join(f"{T[k,j]:.10f}" for j in range(k + 1)))
+print("ошибка лучшего :", abs(T[5, 5] - 2.0))</pre></div>
+
+<div class="outbox">1.5707963268
+1.8961188979  2.0045597549
+1.9742316019  2.0002691699  1.9999831244
+1.9935703438  2.0000165910  1.9999997124  2.0000000692
+1.9983933609  2.0000010334  2.0000000295  2.0000000045  2.0000000040
+1.9995983886  2.0000000643  2.0000000000  2.0000000000  2.0000000000
+ошибка лучшего : 4.3e-12</div>
+
+<p>Первый столбец — трапеция (\(O(h^2)\)), второй совпадает с Симпсоном (\(O(h^4)\)), каждый следующий добавляет два порядка. Уже при \(32\) узлах ответ верен до \(10^{-12}\).</p>
+
+<h3 id="prac-scipy">Практикум 3. Готовые квадратуры SciPy</h3>
+
+<div class="pyblock"><div class="pyhead"><span>scipy_compare.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from scipy import integrate
+
+f = np.sin
+x = np.linspace(0, np.pi, 17)        # 17 узлов = 16 интервалов
+y = f(x)
+
+# по таблице значений на равномерной сетке:
+print("trapezoid :", integrate.trapezoid(y, x))
+print("simpson   :", integrate.simpson(y, x))
+
+# адаптивная квадратура по функции (на основе QUADPACK):
+val, err = integrate.quad(f, 0, np.pi)
+print("quad      :", val, " оценка ошибки:", err)</pre></div>
+
+<div class="outbox">trapezoid : 1.9935703437723393
+simpson   : 2.000000676544402
+quad      : 2.0000000000000004  оценка ошибки: 2.22e-14</div>
+
+<p><code>integrate.trapezoid</code> и <code>integrate.simpson</code> работают по готовой таблице значений (когда функция доступна лишь в узлах). <code>integrate.quad</code> — адаптивный алгоритм, сам выбирающий узлы и возвращающий оценку ошибки; это рабочая лошадка для гладких функций.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 7.1</span>Порядок численно.</strong> Для \(\int_0^1 e^x dx = e-1\) постройте график ошибки составных трапеции и Симпсона в зависимости от \(n\) в двойных логарифмических осях. Подгоните наклон прямой <code>np.polyfit</code> и убедитесь, что он близок к \(-2\) и \(-4\). Что происходит с наклоном Симпсона при \(n \gtrsim 10^4\) и почему (подсказка: ошибки округления)?
+<details><summary>Подсказка</summary>
+При очень больших \(n\) ошибка метода становится меньше уровня округления \(\sim u\,|I|\), и график «упирается в пол»: дальнейшее измельчение сетки уже не помогает, а накопление ошибок суммирования даже слегка ухудшает результат. Поэтому увеличивать \(n\) до бесконечности бессмысленно — есть оптимальный шаг.</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 7.2</span>Ромберг вручную.</strong> Для \(\int_0^1 \frac{dx}{1+x^2}=\frac{\pi}{4}\) вычислите трапеции \(T(h)\) с \(n=1,2,4\) подотрезками, затем постройте два столбца таблицы Ромберга по формуле \(T_{k,j}=\dfrac{4^j T_{k,j-1}-T_{k-1,j-1}}{4^j-1}\). Сравните \(T_{2,2}\) с \(\pi/4\) и с прямым Симпсоном при \(n=4\) — они должны совпасть.
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 7.3</span>Сколько узлов?</strong> Для \(\int_0^\pi \sin x\,dx = 2\) определите минимальное число интервалов \(n\), при котором составная трапеция даёт ответ с ошибкой \(< 10^{-6}\), и то же для Симпсона. Сравните с теоретической оценкой остатка \(|R_{\text{trap}}|\le \frac{(b-a)h^2}{12}\max|f''|\) и аналогичной для Симпсона.
+<details><summary>Подсказка</summary>
+Здесь \(\max|f''|=\max|f^{(4)}|=1\), \(b-a=\pi\). Из \(\frac{\pi h^2}{12}<10^{-6}\) получаем \(h\) и \(n=\pi/h\) для трапеции; из \(\frac{\pi h^4}{180}<10^{-6}\) — для Симпсона. Симпсон требует на порядки меньше узлов.</details>
+</div>
+
+<h3 id="int-quad">Интерактив: составная квадратура и её сходимость</h3>
+
+<p>Слева — график \(f(x)\) с закрашенной аппроксимацией: для трапеций это кусочно-линейная фигура, для Симпсона — кусочные параболы по парам подотрезков. Справа — ошибка \(|I_n-I|\) в зависимости от числа интервалов \(n\) в двойных логарифмических осях; пунктиром показаны эталонные наклоны \(-2\) и \(-4\). Меняйте метод, функцию и число разбиений и следите за численным значением приближения и ошибки.</p>
+
+<div class="intbox">
+<div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:end;margin-bottom:.7rem">
+  <div><label>Метод</label><br>
+    <select id="q_method">
+      <option value="trap">трапеции (O(h²))</option>
+      <option value="simp">Симпсон (O(h⁴))</option>
+    </select>
+  </div>
+  <div><label>Функция</label><br>
+    <select id="q_fn">
+      <option value="sin">sin x на [0, π],  I = 2</option>
+      <option value="exp">eˣ на [0, 1],  I = e − 1</option>
+      <option value="runge">1/(1+25x²) на [−1, 1]</option>
+    </select>
+  </div>
+  <div><label>число интервалов n = <span id="q_nv">8</span></label><br>
+    <input type="range" id="q_n" min="2" max="40" step="2" value="8" style="width:200px">
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1.1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">аппроксимация площади</div><canvas id="q_area" width="440" height="300" style="width:100%;height:auto" aria-label="График подынтегральной функции с закрашенной кусочной аппроксимацией трапециями или параболами Симпсона."></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">ошибка |Iₙ − I| vs n (log-log)</div><canvas id="q_err" width="440" height="300" style="width:100%;height:auto" aria-label="График ошибки квадратуры в зависимости от числа интервалов в двойных логарифмических осях с эталонными наклонами."></canvas></div>
+</div>
+<div id="q_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.5rem"></div>
+</div>
+
+<script>
+(function(){
+  var FN = {
+    sin:   {f:function(x){return Math.sin(x);},        a:0,         b:Math.PI, I:2.0},
+    exp:   {f:function(x){return Math.exp(x);},        a:0,         b:1,       I:Math.E-1},
+    runge: {f:function(x){return 1/(1+25*x*x);},       a:-1,        b:1,       I:(2/5)*Math.atan(5)}
+  };
+
+  function trap(o,n){
+    var h=(o.b-o.a)/n, s=0.5*(o.f(o.a)+o.f(o.b)), i;
+    for(i=1;i<n;i++) s+=o.f(o.a+i*h);
+    return s*h;
+  }
+  function simp(o,n){
+    if(n%2) n++;                       // Симпсону нужно чётное n
+    var h=(o.b-o.a)/n, s=o.f(o.a)+o.f(o.b), i;
+    for(i=1;i<n;i++) s+=(i%2?4:2)*o.f(o.a+i*h);
+    return s*h/3;
+  }
+  function quad(method,o,n){ return method==='trap'?trap(o,n):simp(o,n); }
+
+  // парабола Лагранжа по трём точкам (для рисунка Симпсона)
+  function parab(x0,y0,x1,y1,x2,y2,x){
+    var L0=((x-x1)*(x-x2))/((x0-x1)*(x0-x2));
+    var L1=((x-x0)*(x-x2))/((x1-x0)*(x1-x2));
+    var L2=((x-x0)*(x-x1))/((x2-x0)*(x2-x1));
+    return y0*L0+y1*L1+y2*L2;
+  }
+
+  function drawArea(method,o,n){
+    var c=document.getElementById('q_area'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:40,r:14,t:16,b:28},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    // диапазон по y
+    var ymin=Infinity,ymax=-Infinity,K=200,i,xx,yy;
+    for(i=0;i<=K;i++){xx=o.a+(o.b-o.a)*i/K;yy=o.f(xx);if(yy<ymin)ymin=yy;if(yy>ymax)ymax=yy;}
+    if(ymin>0)ymin=0; if(ymax<0)ymax=0;
+    var pad=(ymax-ymin)*0.08||1; ymin-=pad; ymax+=pad;
+    function xp(x){return P.l+pw*(x-o.a)/(o.b-o.a);}
+    function yp(y){return P.t+ph*(1-(y-ymin)/(ymax-ymin));}
+    // сетка
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var g=0;g<=4;g++){var gy=P.t+ph*g/4;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    // ось y=0
+    if(ymin<0&&ymax>0){ctx.strokeStyle='#c9bca8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,yp(0));ctx.lineTo(P.l+pw,yp(0));ctx.stroke();}
+    // закраска аппроксимации
+    var nn=method==='simp'&&n%2?n+1:n;
+    var h=(o.b-o.a)/nn;
+    if(method==='trap'){
+      for(i=0;i<nn;i++){
+        var xa=o.a+i*h, xb=xa+h;
+        ctx.fillStyle='rgba(58,91,160,0.14)';
+        ctx.beginPath();
+        ctx.moveTo(xp(xa),yp(0));ctx.lineTo(xp(xa),yp(o.f(xa)));
+        ctx.lineTo(xp(xb),yp(o.f(xb)));ctx.lineTo(xp(xb),yp(0));ctx.closePath();ctx.fill();
+        ctx.strokeStyle='#3a5ba0';ctx.lineWidth=1;
+        ctx.beginPath();ctx.moveTo(xp(xa),yp(o.f(xa)));ctx.lineTo(xp(xb),yp(o.f(xb)));ctx.stroke();
+      }
+    } else {
+      for(i=0;i<nn;i+=2){
+        var x0=o.a+i*h, x1=x0+h, x2=x0+2*h;
+        var y0=o.f(x0),y1=o.f(x1),y2=o.f(x2);
+        ctx.fillStyle='rgba(180,74,45,0.13)';
+        ctx.beginPath();ctx.moveTo(xp(x0),yp(0));
+        for(var s=0;s<=24;s++){var xs=x0+(x2-x0)*s/24;ctx.lineTo(xp(xs),yp(parab(x0,y0,x1,y1,x2,y2,xs)));}
+        ctx.lineTo(xp(x2),yp(0));ctx.closePath();ctx.fill();
+        ctx.strokeStyle='#b44a2d';ctx.lineWidth=1;ctx.beginPath();
+        for(var s2=0;s2<=24;s2++){var xs2=x0+(x2-x0)*s2/24;var X=xp(xs2),Y=yp(parab(x0,y0,x1,y1,x2,y2,xs2));s2?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}
+        ctx.stroke();
+      }
+    }
+    // узлы
+    ctx.fillStyle='#5b54b8';
+    for(i=0;i<=nn;i++){var xn=o.a+i*h;ctx.beginPath();ctx.arc(xp(xn),yp(o.f(xn)),2.2,0,7);ctx.fill();}
+    // точная кривая f
+    ctx.strokeStyle='#5b54b8';ctx.lineWidth=2;ctx.beginPath();
+    for(i=0;i<=K;i++){xx=o.a+(o.b-o.a)*i/K;var Xc=xp(xx),Yc=yp(o.f(xx));i?ctx.lineTo(Xc,Yc):ctx.moveTo(Xc,Yc);}
+    ctx.stroke();
+    // оси
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText(o.a.toFixed(2),P.l,P.t+ph+14);
+    ctx.fillText(o.b.toFixed(2),P.l+pw,P.t+ph+14);
+    ctx.fillText('x',P.l+pw,P.t+ph+14);
+  }
+
+  function drawErr(method,o,curN){
+    var c=document.getElementById('q_err'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:50,r:14,t:14,b:30},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var nmin=2,nmax=2048;
+    var lnmin=Math.log10(nmin),lnmax=Math.log10(nmax);
+    var emin=-16,emax=0;
+    function xp(ln){return P.l+pw*(ln-lnmin)/(lnmax-lnmin);}
+    function yp(le){return P.t+ph*(1-(le-emin)/(emax-emin));}
+    // сетка
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var g=0;g<=8;g++){var gy=P.t+ph*g/8;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    // данные обоих методов (для контекста рисуем оба бледно, активный ярко)
+    function curve(meth,color,wd,dash){
+      ctx.strokeStyle=color;ctx.lineWidth=wd;ctx.setLineDash(dash||[]);ctx.beginPath();
+      var first=true,nn;
+      for(nn=2;nn<=nmax;nn*=2){
+        var val=quad(meth,o,nn), err=Math.abs(val-o.I);
+        if(err<1e-16)err=1e-16;
+        var X=xp(Math.log10(nn)),Y=yp(Math.log10(err));
+        first?(ctx.moveTo(X,Y),first=false):ctx.lineTo(X,Y);
+      }
+      ctx.stroke();ctx.setLineDash([]);
+    }
+    // эталонные наклоны -2 и -4, заякоренные в (n=4, разумная высота)
+    function refLine(slope,le0,color){
+      ctx.strokeStyle=color;ctx.lineWidth=1;ctx.setLineDash([4,3]);ctx.beginPath();
+      var ln0=Math.log10(4);
+      ctx.moveTo(xp(lnmin),yp(le0+slope*(lnmin-ln0)));
+      ctx.lineTo(xp(lnmax),yp(le0+slope*(lnmax-ln0)));
+      ctx.stroke();ctx.setLineDash([]);
+    }
+    refLine(-2,-1.0,'#c9a23a');
+    refLine(-4,-2.5,'#9aa07a');
+    // неактивный метод бледно
+    var other=method==='trap'?'simp':'trap';
+    curve(other,'#c9bca8',1.2);
+    // активный метод ярко
+    var actCol=method==='trap'?'#3a5ba0':'#b44a2d';
+    curve(method,actCol,2.2);
+    // текущая точка n
+    var cv=quad(method,o,curN),ce=Math.abs(cv-o.I);if(ce<1e-16)ce=1e-16;
+    ctx.fillStyle='#1a6b5a';ctx.beginPath();ctx.arc(xp(Math.log10(curN)),yp(Math.log10(ce)),4.5,0,7);ctx.fill();
+    // оси
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    for(var t=1;t<=3;t++){var nn2=Math.pow(10,t);ctx.fillText(nn2,xp(t),P.t+ph+14);}
+    ctx.fillText('n',P.l+pw,P.t+ph+14);
+    ctx.textAlign='right';
+    for(var e=0;e>=-16;e-=4) ctx.fillText('1e'+e,P.l-4,yp(e)+3);
+    // легенда
+    ctx.textAlign='left';ctx.font='9px JetBrains Mono';
+    ctx.fillStyle='#c9a23a';ctx.fillText('наклон −2',P.l+pw-78,P.t+11);
+    ctx.fillStyle='#9aa07a';ctx.fillText('наклон −4',P.l+pw-78,P.t+22);
+  }
+
+  function update(){
+    var method=document.getElementById('q_method').value;
+    var key=document.getElementById('q_fn').value, o=FN[key];
+    var n=+document.getElementById('q_n').value;
+    document.getElementById('q_nv').textContent=n;
+    drawArea(method,o,n);
+    drawErr(method,o,n);
+    var val=quad(method,o,n), err=Math.abs(val-o.I);
+    var rate=method==='trap'?'O(h²) — наклон −2':'O(h⁴) — наклон −4';
+    document.getElementById('q_status').innerHTML=
+      'метод: '+(method==='trap'?'трапеции':'Симпсон')+' · '+rate+
+      ' · n='+n+' · I'+'ₙ'+'='+val.toFixed(8)+
+      ' · точное='+o.I.toFixed(8)+' · ошибка='+err.toExponential(2);
+  }
+  document.getElementById('q_method').addEventListener('change',update);
+  document.getElementById('q_fn').addEventListener('change',update);
+  document.getElementById('q_n').addEventListener('input',update);
+  window.addEventListener('load',function(){ setTimeout(update,200); });
+})();
+</script>
+
+<!-- ===================== ЛЕКЦИЯ B ===================== -->
+<p class="phase lecb">Лекция B · 30 мин</p>
+
+<h2 id="order">Порядок точности и что он даёт</h2>
+
+<p>Практикум численно подтвердил теоретические оценки остатков. Сведём их в одну картину. Говорят, что составная квадратура имеет <strong>порядок точности \(p\)</strong>, если её ошибка ведёт себя как \(O(h^p)\) при \(h\to0\).</p>
+
+<div class="definition">
+<strong>Итог по порядкам.</strong> Для гладкой \(f\):
+\[
+\text{трапеция: } R=O(h^2),\qquad \text{Симпсон: } R=O(h^4).
+\]
+Удвоение числа узлов (\(h\to h/2\)) уменьшает ошибку трапеций в \(2^2=4\) раза, ошибку Симпсона — в \(2^4=16\) раз. Поэтому на графике \(\log|R|\) против \(\log n\) точки ложатся на прямые с наклонами \(-2\) и \(-4\) — ровно это видно в интерактиве.
+</div>
+
+<p>Высокий порядок означает, что для заданной точности Симпсону нужно <em>радикально</em> меньше вычислений \(f\), чем трапеции. Естественно спросить: нельзя ли «выжать» высокий порядок из дешёвой трапеции, не программируя Симпсона напрямую? Можно — экстраполяцией.</p>
+
+<h2 id="romberg">Экстраполяция Ромберга</h2>
+
+<p>Составная трапеция обладает замечательным свойством: её ошибка раскладывается в ряд только по <em>чётным</em> степеням \(h\) (формула Эйлера–Маклорена):</p>
+
+<div class="eq">\[
+T(h) = I + c_1 h^2 + c_2 h^4 + c_3 h^6 + \dots
+\tag{7.2}
+\]</div>
+
+<p>Это идеальная ситуация для <strong>экстраполяции Ричардсона</strong>: зная \(T(h)\) и \(T(h/2)\), скомбинируем их так, чтобы убить ведущий член \(c_1 h^2\). Поскольку \(T(h/2)=I+c_1 h^2/4+\dots\), линейная комбинация \((4\,T(h/2)-T(h))/3\) обнуляет \(h^2\):</p>
+
+<div class="eq">\[
+R_1(h)=\frac{4\,T(h/2)-T(h)}{3}=I+O(h^4).
+\tag{7.3}
+\]</div>
+
+<div class="remark">
+<strong>Сюрприз.</strong> Полученная комбинация \(R_1\) — это в точности <em>составная формула Симпсона</em>! Симпсон оказывается «трапецией, проэкстраполированной по Ричардсону». Продолжив, убиваем \(h^4\): \(R_2=(16\,R_1(h/2)-R_1(h))/15=I+O(h^6)\), и так далее.
+</div>
+
+<p>Систематически это оформляют в <strong>таблицу Ромберга</strong>. Пусть \(T_{k,0}=T(h_k)\) — трапеция с \(h_k=(b-a)/2^k\). Тогда</p>
+
+<div class="eq">\[
+T_{k,j}=\frac{4^{\,j}\,T_{k,j-1}-T_{k-1,j-1}}{4^{\,j}-1},\qquad T_{k,j}=I+O\big(h_k^{\,2(j+1)}\big).
+\tag{7.4}
+\]</div>
+
+<p>Столбец \(j=0\) — трапеция (\(O(h^2)\)), столбец \(j=1\) — Симпсон (\(O(h^4)\)), \(j=2\) даёт \(O(h^6)\) и т. д. Диагональ \(T_{k,k}\) сходится исключительно быстро — в практикуме мы получили \(10^{-12}\) уже на шестой строке.</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 220" xmlns="http://www.w3.org/2000/svg" style="max-width:520px" role="img" aria-label="Схема таблицы Ромберга: первый столбец — формула трапеций, каждый следующий столбец получается комбинацией двух соседей слева и сверху, повышая порядок точности.">
+  <g font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">
+    <text x="90"  y="28">T₀₀</text>
+    <text x="90"  y="68">T₁₀</text><text x="200" y="68">T₁₁</text>
+    <text x="90"  y="108">T₂₀</text><text x="200" y="108">T₂₁</text><text x="310" y="108">T₂₂</text>
+    <text x="90"  y="148">T₃₀</text><text x="200" y="148">T₃₁</text><text x="310" y="148">T₃₂</text><text x="420" y="148">T₃₃</text>
+  </g>
+  <g stroke="#5b54b8" stroke-width="1.1" fill="none" marker-end="url(#rb)">
+    <defs><marker id="rb" markerWidth="7" markerHeight="6" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#5b54b8"/></marker></defs>
+    <path d="M104,104 L186,104"/>
+    <path d="M104,64 L186,100"/>
+  </g>
+  <g font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">
+    <text x="90"  y="190">j=0</text><text x="200" y="190">j=1</text><text x="310" y="190">j=2</text><text x="420" y="190">j=3</text>
+    <text x="90"  y="204">трапеция</text><text x="200" y="204">Симпсон</text><text x="310" y="204">O(h⁶)</text><text x="420" y="204">O(h⁸)</text>
+  </g>
+  <text x="280" y="172" font-family="Source Serif 4,serif" font-size="10.5" fill="#5b54b8" text-anchor="middle" font-style="italic">Tₖⱼ = (4ʲ·Tₖ,ⱼ₋₁ − Tₖ₋₁,ⱼ₋₁)/(4ʲ − 1)</text>
+</svg>
+<div class="caption">Рис. 2. Таблица Ромберга. Левый столбец — трапеции с удваивающимся числом узлов; каждый шаг вправо комбинирует соседа слева и левого-верхнего, повышая порядок на два.</div>
+</div>
+
+<h2 id="warning">Почему не брать просто много узлов Ньютона–Котеса</h2>
+
+<p>Раз Симпсон (3 узла) лучше трапеции (2 узла), не взять ли формулу Ньютона–Котеса с \(20\) равноотстоящими узлами и получить порядок \(O(h^{20})\)? <strong>Нет.</strong> Здесь повторяется беда интерполяции из занятия об интерполяционных полиномах.</p>
+
+<div class="theorem">
+<strong>Предупреждение.</strong> Формулы Ньютона–Котеса высокого порядка (много <em>равноотстоящих</em> узлов) <em>неустойчивы</em>: начиная примерно с \(8\)–\(10\) узлов среди весов \(w_i\) появляются <strong>отрицательные</strong>. Тогда сумма \(\sum w_i f(x_i)\) теряет значимость (вычитание близких больших чисел), а сама квадратура страдает от <em>феномена Рунге</em> — интерполяционный полином дико осциллирует у концов отрезка.
+</div>
+
+<p>Практический вывод: высокий порядок добывают <em>не</em> наращиванием числа равноотстоящих узлов в одной формуле, а одним из двух надёжных путей:</p>
+
+<ul>
+<li><strong>Составные формулы</strong> низкого порядка (трапеция, Симпсон) на мелкой сетке — все веса положительны, устойчиво;</li>
+<li><strong>Экстраполяция Ромберга</strong> над составной трапецией — высокий эффективный порядок без отрицательных весов;</li>
+<li><strong>Квадратуры Гаусса</strong> — <em>неравноотстоящие</em> узлы, подобранные оптимально: \(n\) узлов дают точность \(2n-1\) при положительных весах. Это тема следующего занятия.</li>
+</ul>
+
+<div class="remark">
+<strong>Анонс занятия 8.</strong> Откажемся от требования равноотстоящих узлов и спросим: где разместить \(n\) узлов и какие веса взять, чтобы точность была максимально возможной? Ответ — узлы в корнях ортогональных многочленов (Лежандра) — даёт <em>квадратуры Гаусса</em> с алгебраической точностью \(2n-1\).
+</div>
+
+<h2 id="summary">Итоги занятия</h2>
+
+<div class="algo">
+<strong>Что нужно унести с занятия 7:</strong>
+<ol>
+<li>Квадратурная формула \(\int_a^b f\approx\sum_i w_i f(x_i)\) получается интегрированием интерполяционного полинома. Равноотстоящие узлы ⟹ формулы Ньютона–Котеса.</li>
+<li>Базовые формулы: средние прямоугольники и трапеция — точность \(1\); Симпсон (парабола по 3 узлам) — точность \(3\) благодаря симметрии (кубический член «бесплатно»).</li>
+<li>Составные формулы: трапеция \(h(\tfrac12 f_0+f_1+\dots+\tfrac12 f_n)\), ошибка \(O(h^2)\); Симпсон \(\tfrac{h}{3}(f_0+4f_1+2f_2+\dots+f_n)\), \(n\) чётное, ошибка \(O(h^4)\).</li>
+<li>Порядок \(p\): удвоение \(n\) уменьшает ошибку в \(2^p\) раз (\(4\times\) для трапеции, \(16\times\) для Симпсона). Проверяется наклоном графика ошибки в log-log.</li>
+<li><strong>Ромберг</strong> = Ричардсон над трапецией: \(T_{k,j}=\dfrac{4^j T_{k,j-1}-T_{k-1,j-1}}{4^j-1}\); столбец \(j=1\) совпадает с Симпсоном, диагональ сходится очень быстро.</li>
+<li>Высокие формулы НК неустойчивы (отрицательные веса, Рунге). Надёжно: составные формулы, Ромберг или квадратуры Гаусса (зан. 8).</li>
+</ol>
+</div>
+
+<div class="remark">
+<strong>Домашнее задание.</strong> Доделать задачи 7.1–7.3. Дополнительно: реализуйте функцию <code>romberg(f,a,b,tol)</code>, которая наращивает строки таблицы, пока модуль разности соседних диагональных элементов \(|T_{k,k}-T_{k-1,k-1}|\) не станет меньше <code>tol</code>, и сравните число вычислений \(f\) с составным Симпсоном той же точности на \(\int_0^1 e^{-x^2}dx\).
+</div>
+
+<div class="lecture-nav">
+  <a class="nav-prev" href="w06.html">← Занятие 6. Численное дифференцирование</a>
+  <a class="nav-next" href="w08.html">Занятие 8. Квадратуры Гаусса →</a>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Занятие 15 курса «Численные методы»: безусловная многомерная оптимизация (градиентный спуск, метод Ньютона, BFGS, выпуклость), условная оптимизация — множители Лагранжа и условия ККТ, линейное программирование и симплекс-метод. Практикум на Python (NumPy/SciPy).">
+<title>ЧМ · Занятие 15. Многомерная оптимизация и линейное программирование</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.tag-nummet{background:#ece9fb;color:#5b54b8}
+html.dark .tag-nummet{background:#241f3a;color:#a39bea}
+.lecture-num{color:#5b54b8}
+.phase{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#fff;background:#5b54b8;padding:.3rem .7rem;border-radius:4px;display:inline-block;margin:1.8rem 0 .4rem}
+.phase.prac{background:#1a6b5a}
+.phase.lecb{background:#3a5ba0}
+.pyblock{margin:1rem 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.pyhead{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;display:flex;justify-content:space-between}
+.pyhead .run{color:#9ec97f}
+pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9rem 1.1rem;font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.6;overflow-x:auto;white-space:pre}
+.outbox{background:#f0f7f4;border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;padding:.6rem 1rem;margin:.6rem 0 1rem;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);white-space:pre-wrap}
+html.dark .outbox{background:#16241f}
+.exercise summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--accent2);margin-top:.6rem;font-weight:500}
+.exercise details{margin-top:.4rem}
+.exercise .extag{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:#5b54b8;background:#ece9fb;padding:1px 7px;border-radius:3px;margin-right:.4rem}
+html.dark .exercise .extag{background:#241f3a;color:#a39bea}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0}
+.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
+.intbox select,.intbox input[type=range]{font-family:'JetBrains Mono',monospace}
+.intbox select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+html.dark .intbox select{background:#1b1712;color:var(--text)}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:1px 5px;border-radius:3px}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>ЧМ · Занятие 15</h2>
+  <div class="g">Лекция A</div>
+  <a href="#multi">Многомерная задача</a>
+  <a href="#grad">Градиентный спуск</a>
+  <a href="#newton">Метод Ньютона и BFGS</a>
+  <a href="#convex">Выпуклость</a>
+  <div class="g">Практикум</div>
+  <a href="#prac-grad">П1. Градиентный спуск</a>
+  <a href="#int-grad">Интерактив: траектория</a>
+  <a href="#prac-scipy">П2. scipy.optimize</a>
+  <a href="#prac-lp">П3. Линейное программирование</a>
+  <div class="g">Лекция B</div>
+  <a href="#lagrange">Множители Лагранжа</a>
+  <a href="#kkt">Условия ККТ</a>
+  <a href="#lp">Линейное программирование</a>
+  <a href="#simplex">Симплекс-метод</a>
+  <a href="#summary">Итоги занятия</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+  <a href="w16.html">→ Занятие 16</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-nummet">Численные методы</span>
+<div class="lecture-num">Занятие 15 · Блок VI. Оптимизация и задачи программирования</div>
+<h1>Многомерная оптимизация и линейное программирование</h1>
+
+<p class="phase">Лекция A · ≤ 30 мин</p>
+
+<h2 id="multi">Многомерная задача минимизации</h2>
+
+<p>На прошлом занятии мы искали минимум функции одной переменной. Подавляющее большинство прикладных задач — подгонка модели по многим параметрам, обучение, проектирование, управление — это минимизация функции <em>многих</em> переменных. Формальная постановка <strong>безусловной оптимизации</strong>:</p>
+
+<div class="eq">\[
+\min_{\mathbf{x}\in\mathbb{R}^n} f(\mathbf{x}),\qquad \mathbf{x}=(x_1,\dots,x_n)^{\mathsf T}.
+\tag{15.1}
+\]</div>
+
+<p>Главные инструменты анализа — <strong>градиент</strong> (вектор первых производных) и <strong>гессиан</strong> (матрица вторых производных):</p>
+
+<div class="eq">\[
+\nabla f=\Big(\tfrac{\partial f}{\partial x_1},\dots,\tfrac{\partial f}{\partial x_n}\Big)^{\mathsf T},\qquad
+H=\nabla^2 f,\quad H_{ij}=\frac{\partial^2 f}{\partial x_i\,\partial x_j}.
+\tag{15.2}
+\]</div>
+
+<div class="theorem">
+<strong>Условия минимума.</strong> Пусть \(f\) дважды непрерывно дифференцируема. Тогда в точке локального минимума \(\mathbf{x}^\star\):
+<ul>
+<li><em>необходимое условие</em> (первого порядка): \(\nabla f(\mathbf{x}^\star)=\mathbf 0\) — точка стационарна;</li>
+<li><em>достаточное условие</em> (второго порядка): гессиан \(H(\mathbf{x}^\star)\) <strong>положительно определён</strong> (\(H\succ 0\), все собственные значения \(\lambda_i>0\)).</li>
+</ul>
+Если \(H\) знаконеопределён, стационарная точка — <em>седло</em>; если \(H\prec 0\) — локальный максимум.
+</div>
+
+<p>Решить систему \(\nabla f=\mathbf 0\) аналитически удаётся редко: это \(n\) нелинейных уравнений. Поэтому минимум ищут <em>итерационно</em>, двигаясь из начального приближения \(\mathbf{x}_0\) в сторону убывания \(f\).</p>
+
+<h2 id="grad">Градиентный спуск</h2>
+
+<p>Градиент \(\nabla f\) указывает направление <em>наибыстрейшего роста</em> функции; значит, \(-\nabla f\) — направление наибыстрейшего убывания. Простейший метод делает шаг против градиента:</p>
+
+<div class="eq">\[
+\mathbf{x}_{k+1}=\mathbf{x}_k-\alpha\,\nabla f(\mathbf{x}_k),
+\tag{15.3}
+\]</div>
+
+<p>где \(\alpha>0\) — <strong>длина шага</strong> (learning rate). Способы выбора \(\alpha\):</p>
+<ul>
+<li><strong>постоянный шаг</strong> — простейший, но требует аккуратной настройки: слишком малый \(\alpha\) — медленная сходимость, слишком большой — расходимость (итерации перепрыгивают минимум и растут);</li>
+<li><strong>линейный поиск</strong> (line search) — на каждом шаге подбирают \(\alpha\), минимизируя \(\varphi(\alpha)=f(\mathbf{x}_k-\alpha\nabla f_k)\) вдоль направления (точно или по условиям Армихо/Вольфе).</li>
+</ul>
+
+<div class="remark">
+<strong>Скорость сходимости.</strong> У градиентного спуска она <em>линейная</em> и сильно зависит от <strong>обусловленности гессиана</strong> \(\kappa(H)=\lambda_{\max}/\lambda_{\min}\) (см. зан. 11). Для квадратичной \(f\) ошибка убывает с множителем \(\big(\tfrac{\kappa-1}{\kappa+1}\big)^2\) за шаг. При \(\kappa\approx1\) (круглые линии уровня) спуск быстр; при \(\kappa\gg1\) линии уровня — вытянутые «овраги», и траектория мелко <em>зигзагует</em> поперёк оврага, почти не продвигаясь к минимуму.
+</div>
+
+<div class="figure">
+<svg viewBox="0 0 560 200" xmlns="http://www.w3.org/2000/svg" style="max-width:520px" role="img" aria-label="Слева круглые линии уровня хорошо обусловленной задачи и прямой спуск к центру; справа вытянутые эллипсы плохо обусловленной задачи и зигзагообразная траектория поперёк оврага.">
+  <text x="140" y="18" font-family="JetBrains Mono,monospace" font-size="11" fill="#1a6b5a" text-anchor="middle" font-weight="600">κ ≈ 1: прямой путь</text>
+  <ellipse cx="140" cy="110" rx="70" ry="62" fill="none" stroke="#5b54b8" stroke-width="1"/>
+  <ellipse cx="140" cy="110" rx="46" ry="40" fill="none" stroke="#5b54b8" stroke-width="1"/>
+  <ellipse cx="140" cy="110" rx="24" ry="21" fill="none" stroke="#5b54b8" stroke-width="1"/>
+  <polyline points="78,62 110,86 128,100 137,107 140,110" fill="none" stroke="#b44a2d" stroke-width="1.8"/>
+  <circle cx="78" cy="62" r="3.5" fill="#b44a2d"/><circle cx="140" cy="110" r="3.5" fill="#1a6b5a"/>
+  <text x="420" y="18" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle" font-weight="600">κ ≫ 1: зигзаг по оврагу</text>
+  <ellipse cx="420" cy="110" rx="120" ry="40" fill="none" stroke="#5b54b8" stroke-width="1"/>
+  <ellipse cx="420" cy="110" rx="80" ry="26" fill="none" stroke="#5b54b8" stroke-width="1"/>
+  <ellipse cx="420" cy="110" rx="40" ry="13" fill="none" stroke="#5b54b8" stroke-width="1"/>
+  <polyline points="312,82 350,134 378,92 398,124 410,102 416,116 420,110" fill="none" stroke="#b44a2d" stroke-width="1.8"/>
+  <circle cx="312" cy="82" r="3.5" fill="#b44a2d"/><circle cx="420" cy="110" r="3.5" fill="#1a6b5a"/>
+</svg>
+<div class="caption">Рис. 1. Геометрия градиентного спуска. При хорошей обусловленности (слева) направление антиградиента почти указывает на минимум; при плохой (справа) оно перпендикулярно вытянутым линиям уровня и почти не ведёт к центру — отсюда зигзаг.</div>
+</div>
+
+<h2 id="newton">Метод Ньютона и квазиньютоновские методы</h2>
+
+<p>Градиентный спуск использует только первую производную. <strong>Метод Ньютона</strong> привлекает и вторую: вблизи точки он заменяет \(f\) её квадратичной моделью (ряд Тейлора до 2-го порядка) и прыгает прямо в минимум этой модели. Шаг получается из условия \(\nabla\,(\text{модель})=\mathbf 0\):</p>
+
+<div class="eq">\[
+\mathbf{x}_{k+1}=\mathbf{x}_k-H(\mathbf{x}_k)^{-1}\,\nabla f(\mathbf{x}_k).
+\tag{15.4}
+\]</div>
+
+<p>На практике вместо явного обращения матрицы решают линейную систему \(H_k\,\mathbf{p}_k=-\nabla f_k\) (зан. 9–10) и делают шаг \(\mathbf{x}_{k+1}=\mathbf{x}_k+\mathbf{p}_k\).</p>
+
+<div class="theorem">
+<strong>Сходимость Ньютона.</strong> Вблизи минимума, где \(H\succ0\), метод Ньютона сходится <em>квадратично</em>: число верных цифр примерно удваивается за шаг. Это несравнимо быстрее линейного градиентного спуска и <em>не</em> чувствительно к обусловленности так, как спуск.
+</div>
+
+<div class="remark">
+<strong>Цена.</strong> На каждом шаге нужны гессиан \(H\) (\(n^2/2\) вторых производных) и решение системы (\(\sim n^3\) операций). Для больших \(n\) это дорого. Кроме того, вдали от минимума \(H\) может быть незнакоопределён и шаг — неверного направления. <strong>Квазиньютоновские методы</strong> (самый известный — <strong>BFGS</strong>) обходят обе проблемы: они <em>аппроксимируют</em> \(H^{-1}\) по накопленным значениям градиента, не вычисляя вторых производных, и поддерживают аппроксимацию положительно определённой. BFGS — рабочая лошадка <code>scipy.optimize.minimize</code>.
+</div>
+
+<h2 id="convex">Выпуклость — ключевое свойство</h2>
+
+<p>Все итерационные методы находят <em>локальный</em> минимум. Когда локальный минимум гарантированно глобален? Когда функция <strong>выпукла</strong>.</p>
+
+<div class="definition">
+<strong>Определение.</strong> Функция \(f\) <em>выпукла</em>, если её график лежит не выше любой хорды:
+\[
+f\big(t\mathbf{x}+(1-t)\mathbf{y}\big)\le t\,f(\mathbf{x})+(1-t)\,f(\mathbf{y}),\quad t\in[0,1].
+\]
+Для дважды дифференцируемой \(f\) это равносильно \(H(\mathbf{x})\succeq0\) (гессиан положительно полуопределён) во всех точках.
+</div>
+
+<div class="theorem">
+<strong>Главное свойство.</strong> Для выпуклой функции <em>любой локальный минимум является глобальным</em>, а множество минимумов выпукло. Поэтому стационарная точка \(\nabla f=\mathbf 0\) сразу даёт глобальный ответ. Выпуклость — водораздел: выпуклые задачи решаются надёжно и до глобального оптимума, невыпуклые (например, обучение нейросетей) — лишь до локального.
+</div>
+
+<!-- ===================== ПРАКТИКУМ ===================== -->
+<p class="phase prac">Практикум · Python (NumPy/SciPy) · ≈ 60 мин</p>
+
+<p>Цель практикума — увидеть, как обусловленность и длина шага управляют сходимостью градиентного спуска, сравнить его с методами из SciPy и решить настоящую задачу линейного программирования. Справочник по инструментам — в <a href="python-reference.html">памятке Python/NumPy/SciPy</a>.</p>
+
+<h3 id="prac-grad">Практикум 1. Градиентный спуск: обусловленность и шаг</h3>
+
+<p>Возьмём квадратичную функцию \(f(\mathbf{x})=\tfrac12(x^2+c\,y^2)\) с управляемой обусловленностью \(\kappa=c\) и функцию <strong>Розенброка</strong> \(f=(1-x)^2+100(y-x^2)^2\) — классический «банановый овраг» с минимумом в \((1,1)\).</p>
+
+<div class="pyblock"><div class="pyhead"><span>gradient_descent.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+def gradient_descent(grad, x0, alpha, n_iter=10000, tol=1e-8):
+    x = np.array(x0, dtype=float)
+    traj = [x.copy()]
+    for k in range(n_iter):
+        g = grad(x)
+        x = x - alpha * g
+        traj.append(x.copy())
+        if np.linalg.norm(g) &lt; tol:
+            break
+    return x, np.array(traj), k + 1
+
+# --- 1. Квадратичная функция f = 1/2 (x^2 + c y^2),  kappa = c ---
+def grad_quad(c):
+    return lambda v: np.array([v[0], c * v[1]])
+
+for c in [1.0, 10.0, 100.0]:
+    alpha = 1.0 / c            # устойчивый шаг: alpha &lt; 2/lambda_max = 2/c
+    x, traj, it = gradient_descent(grad_quad(c), [3.0, 3.0], alpha)
+    print(f"kappa={c:6.0f}: шагов={it:5d}  x*={x}")
+
+# --- 2. Розенброк ---
+def grad_rosen(v):
+    x, y = v
+    return np.array([-2*(1-x) - 400*x*(y-x**2), 200*(y-x**2)])
+
+x, traj, it = gradient_descent(grad_rosen, [-1.2, 1.0], alpha=1e-3, n_iter=50000)
+print(f"Розенброк: шагов={it}, x*={x}  (точный минимум (1,1))")</pre></div>
+
+<div class="outbox">kappa=     1: шагов=    2  x*=[0. 0.]
+kappa=    10: шагов=  168  x*=[~0 ~0]
+kappa=   100: шагов= 1832  x*=[~0 ~0]
+Розенброк: шагов=50000, x*=[~0.96 ~0.92]  (медленно — узкий овраг)</div>
+
+<p>Видно главное: при \(\kappa=1\) спуск попадает в минимум за один-два шага, а с ростом \(\kappa\) число итераций растёт пропорционально \(\kappa\). Розенброк с его искривлённым оврагом для чистого градиентного спуска — почти безнадёжен; нужны методы повыше.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 15.1</span>Влияние обусловленности.</strong> Для квадратичной \(f=\tfrac12(x^2+c\,y^2)\) при \(c=1,5,20,100\) и устойчивом шаге \(\alpha=1/c\) постройте зависимость числа итераций до сходимости от \(c\). Подтвердите линейный рост \(N\sim\kappa\). Постройте траектории и убедитесь, что при больших \(c\) появляется зигзаг.
+<details><summary>Подсказка</summary>
+Число шагов до достижения \(\|\nabla f\|&lt;\) tol для квадратичной функции с фиксированным \(\alpha=1/\lambda_{\max}\) растёт примерно как \(\tfrac12\kappa\ln(1/\text{tol})\). Логарифмически масштабируйте оси, чтобы линейный рост стал прямой.</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 15.2</span>Длина шага и расходимость.</strong> Для \(f=\tfrac12(x^2+10y^2)\) (\(\lambda_{\max}=10\)) запустите спуск с \(\alpha=0.05,\ 0.15,\ 0.19,\ 0.21\). Покажите, что при \(\alpha&lt;2/\lambda_{\max}=0.2\) метод сходится, а при \(\alpha=0.21\) итерации <em>расходятся</em> (\(\|\mathbf{x}_k\|\to\infty\)). Объясните порог \(\alpha=2/\lambda_{\max}\) через множитель \(|1-\alpha\lambda|\).
+<details><summary>Подсказка</summary>
+Вдоль собственного направления с собственным значением \(\lambda\) итерация даёт \(x_{k+1}=(1-\alpha\lambda)x_k\). Сходимость требует \(|1-\alpha\lambda|&lt;1\), то есть \(0&lt;\alpha&lt;2/\lambda\) для каждого \(\lambda\); критичен наибольший \(\lambda_{\max}\).</details>
+</div>
+
+<h3 id="int-grad">Интерактив: траектория градиентного спуска</h3>
+
+<p>Минимизируем \(f(x,y)=\tfrac12(x^2+c\,y^2)\) с минимумом в начале координат. Слайдер \(c=\kappa\) меняет обусловленность (вытянутость эллипсов-линий уровня), слайдер \(\alpha\) — длину шага. Синие эллипсы — линии уровня, красная ломаная — траектория \(\mathbf{x}_k\) от старта к минимуму. Увеличивайте \(c\), чтобы увидеть <strong>зигзаг по оврагу</strong>; увеличивайте \(\alpha\) выше порога \(2/c\), чтобы получить <strong>расходимость</strong>. Снизу — число итераций до сходимости.</p>
+
+<div class="intbox">
+<div style="display:flex;gap:1.4rem;flex-wrap:wrap;align-items:end;margin-bottom:.7rem">
+  <div><label>обусловленность c = κ = <span id="g_cv">10</span></label><br>
+    <input type="range" id="g_c" min="1" max="80" step="1" value="10" style="width:220px">
+  </div>
+  <div><label>шаг α = <span id="g_av">0.10</span></label><br>
+    <input type="range" id="g_a" min="0.01" max="0.40" step="0.005" value="0.10" style="width:220px">
+  </div>
+</div>
+<div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+  <canvas id="g_cv2" width="640" height="380" style="width:100%;height:auto" aria-label="Линии уровня квадратичной функции в виде эллипсов и ломаная траектория градиентного спуска от стартовой точки к минимуму в центре."></canvas>
+</div>
+<div id="g_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.5rem"></div>
+</div>
+
+<script>
+(function(){
+  var cEl=document.getElementById('g_c'), aEl=document.getElementById('g_a');
+  function draw(){
+    var c=+cEl.value, alpha=+aEl.value;
+    document.getElementById('g_cv').textContent=c;
+    document.getElementById('g_av').textContent=alpha.toFixed(3);
+    var cv=document.getElementById('g_cv2'), ctx=cv.getContext('2d'), W=cv.width, H=cv.height;
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+    var P={l:40,r:20,t:20,b:30}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+    // world coords: x in [-XR,XR], y in [-YR,YR]
+    var XR=4.0, YR=4.0;
+    function sx(x){ return P.l+pw*(x+XR)/(2*XR); }
+    function sy(y){ return P.t+ph*(1-(y+YR)/(2*YR)); }
+    // grid
+    ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+    for(var gx=-4;gx<=4;gx++){ctx.beginPath();ctx.moveTo(sx(gx),P.t);ctx.lineTo(sx(gx),P.t+ph);ctx.stroke();}
+    for(var gy=-4;gy<=4;gy++){ctx.beginPath();ctx.moveTo(P.l,sy(gy));ctx.lineTo(P.l+pw,sy(gy));ctx.stroke();}
+    // axes
+    ctx.strokeStyle='#bcae99'; ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(sx(-XR),sy(0));ctx.lineTo(sx(XR),sy(0));
+    ctx.moveTo(sx(0),sy(-YR));ctx.lineTo(sx(0),sy(YR));ctx.stroke();
+    // level ellipses f = 1/2(x^2 + c y^2) = L  ->  x = sqrt(2L)cos t, y = sqrt(2L/c) sin t
+    ctx.strokeStyle='#3a5ba0'; ctx.lineWidth=1;
+    var levels=[0.3,1.0,2.5,5.0,8.0];
+    levels.forEach(function(L){
+      ctx.beginPath();
+      for(var t=0;t<=64;t++){
+        var th=2*Math.PI*t/64;
+        var x=Math.sqrt(2*L)*Math.cos(th), y=Math.sqrt(2*L/c)*Math.sin(th);
+        var px=sx(x), py=sy(y);
+        t?ctx.lineTo(px,py):ctx.moveTo(px,py);
+      }
+      ctx.stroke();
+    });
+    // gradient descent trajectory from start
+    var x=3.0, y=3.0*0.9, pts=[[x,y]], diverged=false, it=0, maxit=2000;
+    for(var k=0;k<maxit;k++){
+      var gx2=x, gy2=c*y;                 // grad of 1/2(x^2 + c y^2)
+      x=x-alpha*gx2; y=y-alpha*gy2;
+      pts.push([x,y]); it=k+1;
+      var nrm=Math.sqrt(gx2*gx2+gy2*gy2);
+      if(!isFinite(x)||!isFinite(y)||Math.abs(x)>1e3||Math.abs(y)>1e3){diverged=true;break;}
+      if(nrm<1e-4) break;
+    }
+    // draw trajectory (clip to view for drawing)
+    ctx.strokeStyle='#b44a2d'; ctx.lineWidth=1.8; ctx.beginPath();
+    pts.forEach(function(p,i){
+      var px=sx(Math.max(-XR,Math.min(XR,p[0]))), py=sy(Math.max(-YR,Math.min(YR,p[1])));
+      i?ctx.lineTo(px,py):ctx.moveTo(px,py);
+    });
+    ctx.stroke();
+    // mark vertices
+    ctx.fillStyle='#b44a2d';
+    pts.forEach(function(p){
+      if(Math.abs(p[0])<=XR&&Math.abs(p[1])<=YR){
+        ctx.beginPath();ctx.arc(sx(p[0]),sy(p[1]),1.8,0,7);ctx.fill();
+      }
+    });
+    // start and minimum
+    ctx.fillStyle='#b44a2d';ctx.beginPath();ctx.arc(sx(3.0),sy(2.7),4.5,0,7);ctx.fill();
+    ctx.fillStyle='#1a6b5a';ctx.beginPath();ctx.arc(sx(0),sy(0),4.5,0,7);ctx.fill();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='left';
+    ctx.fillText('старт',sx(3.0)-44,sy(2.7)-6);
+    ctx.fillText('min',sx(0)+7,sy(0)+14);
+    // status
+    var thr=2/c;
+    var st=document.getElementById('g_status');
+    if(diverged){
+      st.innerHTML='α='+alpha.toFixed(3)+' > порог 2/c='+thr.toFixed(3)+
+        ' → <span style="color:#b44a2d">РАСХОДИМОСТЬ</span>: |x_k| растёт неограниченно.';
+    } else {
+      var zig = (c>=20 && alpha>0.04) ? ' (виден зигзаг поперёк оврага)' : '';
+      st.innerHTML='c=κ='+c+', α='+alpha.toFixed(3)+' (порог 2/c='+thr.toFixed(3)+
+        ') → сходимость за <strong>'+it+'</strong> итераций'+zig+'.';
+    }
+  }
+  cEl.addEventListener('input',draw);
+  aEl.addEventListener('input',draw);
+  window.addEventListener('load',function(){ setTimeout(draw,200); });
+})();
+</script>
+
+<h3 id="prac-scipy">Практикум 2. scipy.optimize.minimize на Розенброке</h3>
+
+<p>Готовые методы из SciPy справляются с оврагом куда лучше «голого» спуска. Сравним число итераций для трёх методов: <code>Nelder-Mead</code> (без производных), <code>BFGS</code> (квазиньютоновский, по градиенту) и <code>Newton-CG</code> (использует гессиан).</p>
+
+<div class="pyblock"><div class="pyhead"><span>scipy_minimize.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from scipy.optimize import minimize, rosen, rosen_der, rosen_hess
+
+x0 = np.array([-1.2, 1.0])
+
+for method, kw in [("Nelder-Mead", {}),
+                   ("BFGS",        {"jac": rosen_der}),
+                   ("Newton-CG",   {"jac": rosen_der, "hess": rosen_hess})]:
+    res = minimize(rosen, x0, method=method, **kw)
+    print(f"{method:12s}: x*={res.x.round(4)}  f={res.fun:.2e}  "
+          f"итераций={res.nit:4d}  вызовов f={res.nfev}")</pre></div>
+
+<div class="outbox">Nelder-Mead : x*=[1. 1.]      f=~1e-09  итераций=  79  вызовов f=146
+BFGS        : x*=[1. 1.]      f=~1e-11  итераций=  34  вызовов f=44
+Newton-CG   : x*=[1. 1.]      f=~1e-15  итераций=  24  вызовов f=...</div>
+
+<p>Чем больше информации о функции (градиент, затем гессиан) метод использует, тем меньше итераций ему нужно. Это типичный компромисс: производные дороги в вычислении, но резко ускоряют сходимость.</p>
+
+<h3 id="prac-lp">Практикум 3. Линейное программирование через linprog</h3>
+
+<p>Решим задачу <strong>распределения ресурсов</strong>. Цех выпускает два продукта; прибыль на единицу — \(3\) и \(5\). Ограничены два ресурса: \(x\le4\); \(2y\le12\); \(3x+2y\le18\); \(x,y\ge0\). Максимизируем прибыль \(3x+5y\). Функция <code>linprog</code> минимизирует, поэтому максимизацию задаём через \(\min(-c^{\mathsf T}x)\).</p>
+
+<div class="pyblock"><div class="pyhead"><span>linprog_demo.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from scipy.optimize import linprog
+
+# maximize 3x + 5y  ==  minimize -3x - 5y
+c = [-3, -5]
+A_ub = [[1, 0],      # x      &lt;= 4
+        [0, 2],      #    2y  &lt;= 12
+        [3, 2]]      # 3x + 2y &lt;= 18
+b_ub = [4, 12, 18]
+bounds = [(0, None), (0, None)]   # x, y &gt;= 0
+
+res = linprog(c, A_ub=A_ub, b_ub=b_ub, bounds=bounds, method="highs")
+print("оптимальная вершина x* =", res.x.round(3))
+print("макс. прибыль         =", -res.fun)</pre></div>
+
+<div class="outbox">оптимальная вершина x* = [2. 6.]
+макс. прибыль         = 36.0</div>
+
+<p>Оптимум достигается в <em>вершине</em> допустимого многоугольника \((x,y)=(2,6)\) с прибылью \(36\) — на пересечении ограничений \(2y\le12\) и \(3x+2y\le18\). Это не случайность, а общий факт линейного программирования (см. Лекцию B).</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 15.4</span>Своя задача ЛП.</strong> Фермер сеет пшеницу и кукурузу на \(\le 10\) га; пшеница требует \(3\) ч/га труда, кукуруза — \(1\) ч/га, всего \(\le 24\) ч; доход \(2\) и \(3\) на гектар. Сформулируйте задачу ЛП на максимум дохода, решите через <code>linprog(method="highs")</code>, выведите оптимальную вершину и значение. Проверьте графически, что оптимум — в вершине многоугольника.
+<details><summary>Подсказка</summary>
+\(\max(2w+3k)\) при \(w+k\le10\), \(3w+k\le24\), \(w,k\ge0\). Передавайте <code>c=[-2,-3]</code>. Оптимум окажется в вершине пересечения двух активных ограничений.</details>
+</div>
+
+<!-- ===================== ЛЕКЦИЯ B ===================== -->
+<p class="phase lecb">Лекция B · 30 мин</p>
+
+<h2 id="lagrange">Условная оптимизация: множители Лагранжа</h2>
+
+<p>До сих пор переменные были свободны. В большинстве задач есть <strong>ограничения</strong>: баланс ресурсов, физические законы, бюджет. Простейший случай — ограничения-<em>равенства</em>:</p>
+
+<div class="eq">\[
+\min_{\mathbf{x}} f(\mathbf{x})\quad\text{при}\quad g_i(\mathbf{x})=0,\ i=1,\dots,m.
+\tag{15.5}
+\]</div>
+
+<div class="theorem">
+<strong>Метод множителей Лагранжа.</strong> В точке условного экстремума градиент целевой функции есть линейная комбинация градиентов ограничений. Введя <em>множители</em> \(\lambda_i\) и <strong>функцию Лагранжа</strong>
+\[
+\mathcal L(\mathbf{x},\boldsymbol\lambda)=f(\mathbf{x})-\sum_{i=1}^{m}\lambda_i\,g_i(\mathbf{x}),
+\]
+получаем систему стационарности: \(\nabla_{\mathbf{x}}\mathcal L=\mathbf 0\) и \(g_i(\mathbf{x})=0\). То есть \(\nabla f=\sum_i\lambda_i\nabla g_i\).
+</div>
+
+<p><strong>Геометрия.</strong> В точке экстремума градиент \(\nabla f\) <em>коллинеарен</em> градиенту ограничения \(\nabla g\) (для одного равенства). Иначе у целевой функции была бы составляющая вдоль поверхности ограничения, по которой её ещё можно было бы уменьшить, не нарушая \(g=0\).</p>
+
+<div class="proof">
+<strong>Пример.</strong> \(\min(x^2+y^2)\) при \(x+y=1\). Лагранжиан \(\mathcal L=x^2+y^2-\lambda(x+y-1)\). Условия: \(\partial_x\mathcal L=2x-\lambda=0\), \(\partial_y\mathcal L=2y-\lambda=0\), откуда \(x=y=\lambda/2\). Подстановка в \(x+y=1\) даёт \(x=y=\tfrac12\), \(\lambda=1\), минимум \(f=\tfrac12\). Геометрически — ближайшая к началу точка прямой \(x+y=1\).
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 15.3</span>Множители Лагранжа аналитически.</strong> Решите методом Лагранжа: (а) \(\min(x^2+y^2)\) при \(x+2y=5\); (б) максимизируйте площадь прямоугольника \(xy\) при фиксированном периметре \(2(x+y)=P\). В каждом случае выпишите \(\mathcal L\), систему и найдите точку и значение \(\lambda\). Истолкуйте \(\lambda\) как «теневую цену» — чувствительность оптимума к сдвигу правой части ограничения.
+<details><summary>Подсказка</summary>
+(а) \(2x=\lambda\), \(2y=2\lambda\Rightarrow x=\tfrac{\lambda}{2},\,y=\lambda\); из \(x+2y=5\): \(\lambda=2,\ x=1,\ y=2,\ f=5\). (б) \(\nabla(xy)=\lambda\nabla(x+y)\Rightarrow y=\lambda,\ x=\lambda\Rightarrow x=y=P/4\) — квадрат.</details>
+</div>
+
+<h2 id="kkt">Условия Каруша–Куна–Таккера (обзор)</h2>
+
+<p>Для ограничений-<em>неравенств</em> \(g_i(\mathbf{x})\le0\) метод обобщается в <strong>условия ККТ</strong> — фундамент всей условной оптимизации. В точке минимума \(\mathbf{x}^\star\) (при подходящих условиях регулярности) существуют множители \(\lambda_i\ge0\), такие что:</p>
+
+<div class="eq">\[
+\begin{aligned}
+&\textbf{стационарность:} && \nabla f-\textstyle\sum_i\lambda_i\nabla g_i=\mathbf 0,\\
+&\textbf{допустимость:} && g_i(\mathbf{x}^\star)\le0,\\
+&\textbf{доп. нежёсткость:} && \lambda_i\,g_i(\mathbf{x}^\star)=0,\\
+&\textbf{неотрицательность:} && \lambda_i\ge0.
+\end{aligned}
+\tag{15.6}
+\]</div>
+
+<p>Ключевое — <strong>дополняющая нежёсткость</strong> \(\lambda_i g_i=0\): либо ограничение <em>активно</em> (\(g_i=0\), множитель работает), либо <em>неактивно</em> (\(g_i&lt;0\), тогда \(\lambda_i=0\) — оно не влияет). Условие \(\lambda_i\ge0\) отражает «одностороннесть» неравенства: давить можно только с одной стороны. Для выпуклых задач условия ККТ не только необходимы, но и <em>достаточны</em> для глобального минимума.</p>
+
+<h2 id="lp">Линейное программирование</h2>
+
+<p>Важнейший практический класс выпуклых задач — когда и целевая функция, и все ограничения <em>линейны</em>. Это <strong>линейное программирование</strong> (ЛП):</p>
+
+<div class="eq">\[
+\min_{\mathbf{x}}\ \mathbf{c}^{\mathsf T}\mathbf{x}\quad\text{при}\quad A\mathbf{x}\le\mathbf{b},\ \mathbf{x}\ge\mathbf 0.
+\tag{15.7}
+\]</div>
+
+<div class="definition">
+<strong>Допустимое множество.</strong> Множество точек, удовлетворяющих всем линейным ограничениям \(A\mathbf{x}\le\mathbf{b},\ \mathbf{x}\ge0\), есть пересечение полупространств — <em>выпуклый многогранник</em> (в 2D — многоугольник). Целевая функция \(\mathbf{c}^{\mathsf T}\mathbf{x}\) линейна, её линии уровня — параллельные плоскости.</p>
+</div>
+
+<div class="theorem">
+<strong>Фундаментальная теорема ЛП.</strong> Если задача ЛП имеет конечный оптимум, то он достигается <em>в вершине</em> (угловой точке) допустимого многогранника. Поэтому достаточно перебирать вершины — их конечное число, — а не всё множество.
+</div>
+
+<div class="figure">
+<svg viewBox="0 0 460 300" xmlns="http://www.w3.org/2000/svg" style="max-width:420px" role="img" aria-label="Выпуклый допустимый многоугольник в первом квадранте; пунктирные линии уровня целевой функции сдвигаются до касания дальней вершины, где достигается оптимум.">
+  <line x1="40" y1="260" x2="430" y2="260" stroke="#2c2419" stroke-width="1.2"/>
+  <line x1="40" y1="260" x2="40" y2="20" stroke="#2c2419" stroke-width="1.2"/>
+  <text x="424" y="278" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f">x</text>
+  <text x="22" y="26" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f">y</text>
+  <!-- feasible polygon: (0,0)(160,0)(160,90)(80,200)(0,200) -->
+  <polygon points="40,260 240,260 240,170 150,80 40,80" fill="#3a5ba0" fill-opacity="0.10" stroke="#3a5ba0" stroke-width="1.6"/>
+  <circle cx="40"  cy="260" r="3.5" fill="#3a5ba0"/>
+  <circle cx="240" cy="260" r="3.5" fill="#3a5ba0"/>
+  <circle cx="240" cy="170" r="3.5" fill="#3a5ba0"/>
+  <circle cx="150" cy="80"  r="4.5" fill="#b44a2d"/>
+  <circle cx="40"  cy="80"  r="3.5" fill="#3a5ba0"/>
+  <text x="120" y="76" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" font-weight="600">оптимум</text>
+  <!-- level lines of objective (dashed), increasing toward optimum -->
+  <g stroke="#1a6b5a" stroke-width="1" stroke-dasharray="5,4">
+    <line x1="40" y1="200" x2="180" y2="260"/>
+    <line x1="60" y1="120" x2="240" y2="196"/>
+    <line x1="110" y1="60" x2="290" y2="136"/>
+  </g>
+  <text x="300" y="130" font-family="Source Serif 4,serif" font-size="11" fill="#1a6b5a" font-style="italic">линии уровня cᵀx</text>
+  <text x="250" y="250" font-family="Source Serif 4,serif" font-size="11" fill="#3a5ba0" font-style="italic">допустимый</text>
+  <text x="250" y="264" font-family="Source Serif 4,serif" font-size="11" fill="#3a5ba0" font-style="italic">многогранник</text>
+</svg>
+<div class="caption">Рис. 2. Геометрия ЛП. Линии уровня целевой функции сдвигаются в направлении роста до тех пор, пока не коснутся многогранника в последней точке — это всегда вершина (или ребро при вырождении).</div>
+</div>
+
+<h2 id="simplex">Симплекс-метод и далее</h2>
+
+<p><strong>Симплекс-метод</strong> (Данциг, 1947) использует фундаментальную теорему напрямую: он стартует в одной вершине допустимого многогранника и переходит вдоль <em>ребра</em> к соседней вершине с <em>лучшим</em> значением целевой функции, повторяя это, пока улучшение возможно. Когда у текущей вершины нет улучшающего соседа — она оптимальна.</p>
+
+<div class="remark">
+<strong>На практике.</strong> Симплекс-метод в худшем случае экспоненциален, но на реальных задачах работает очень быстро. Альтернатива — <strong>методы внутренней точки</strong>, которые движутся <em>сквозь</em> внутренность многогранника к оптимуму и имеют полиномиальную сложность; именно они стоят за солвером <code>method="highs"</code> в SciPy. Для больших разреженных задач часто выигрывают они.
+</div>
+
+<div class="remark">
+<strong>Двойственность (кратко).</strong> Каждой задаче ЛП («прямой») отвечает <em>двойственная</em> задача: переменные двойственной — это множители \(\lambda_i\) ограничений прямой. Их оптимальные значения совпадают (теорема о сильной двойственности), а сами \(\lambda_i\) — «теневые цены» ресурсов: насколько вырастет оптимум при ослаблении \(i\)-го ограничения на единицу. Двойственность связывает ЛП с множителями Лагранжа и условиями ККТ из этой же лекции.
+</div>
+
+<h2 id="summary">Итоги занятия</h2>
+
+<div class="algo">
+<strong>Что нужно унести с занятия 15:</strong>
+<ol>
+<li><strong>Безусловный минимум:</strong> необходимое условие \(\nabla f=\mathbf 0\), достаточное — \(H\succ0\). Решаем итерационно.</li>
+<li><strong>Градиентный спуск</strong> \(\mathbf{x}_{k+1}=\mathbf{x}_k-\alpha\nabla f_k\): линейная сходимость, скорость \(\sim1/\kappa(H)\). Большое \(\kappa\) → зигзаг по оврагу; большое \(\alpha\) (> \(2/\lambda_{\max}\)) → расходимость.</li>
+<li><strong>Метод Ньютона</strong> \(\mathbf{x}_{k+1}=\mathbf{x}_k-H_k^{-1}\nabla f_k\): квадратичная сходимость, но дорог. <strong>BFGS</strong> аппроксимирует \(H\) по градиентам — компромисс цены и скорости.</li>
+<li><strong>Выпуклость</strong> (\(H\succeq0\)): локальный минимум глобален — водораздел между надёжными и трудными задачами.</li>
+<li><strong>Условная оптимизация:</strong> множители Лагранжа для равенств (\(\nabla f\parallel\nabla g\)), условия ККТ для неравенств (стационарность, допустимость, \(\lambda_i g_i=0\), \(\lambda_i\ge0\)).</li>
+<li><strong>Линейное программирование:</strong> \(\min\mathbf{c}^{\mathsf T}\mathbf{x}\) на многограннике; оптимум — в вершине. Симплекс-метод (по рёбрам), методы внутренней точки, двойственность.</li>
+</ol>
+</div>
+
+<div class="remark">
+<strong>Домашнее задание.</strong> Доделать задачи 15.1–15.4. Дополнительно: реализуйте метод Ньютона для Розенброка (используя <code>rosen_der</code>, <code>rosen_hess</code>) и сравните число итераций с градиентным спуском из практикума 1; убедитесь в квадратичной сходимости вблизи минимума \((1,1)\).
+</div>
+
+<div class="lecture-nav">
+  <a class="nav-prev" href="w14.html">← Занятие 14. Нелинейные уравнения и оптимизация</a>
+  <a class="nav-next" href="w16.html">Занятие 16. Зачётное занятие →</a>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

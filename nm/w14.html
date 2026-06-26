@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Занятие 14 курса «Численные методы»: решение нелинейных уравнений f(x)=0 — бисекция, метод Ньютона, секущих, простой итерации; порядок сходимости. Одномерная минимизация: золотое сечение, параболическая интерполяция, метод Брента. Практикум на Python (SciPy).">
+<title>ЧМ · Занятие 14. Нелинейные уравнения и одномерная оптимизация</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.tag-nummet{background:#ece9fb;color:#5b54b8}
+html.dark .tag-nummet{background:#241f3a;color:#a39bea}
+.lecture-num{color:#5b54b8}
+.phase{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#fff;background:#5b54b8;padding:.3rem .7rem;border-radius:4px;display:inline-block;margin:1.8rem 0 .4rem}
+.phase.prac{background:#1a6b5a}
+.phase.lecb{background:#3a5ba0}
+.pyblock{margin:1rem 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.pyhead{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;display:flex;justify-content:space-between}
+.pyhead .run{color:#9ec97f}
+pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9rem 1.1rem;font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.6;overflow-x:auto;white-space:pre}
+.outbox{background:#f0f7f4;border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;padding:.6rem 1rem;margin:.6rem 0 1rem;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);white-space:pre-wrap}
+html.dark .outbox{background:#16241f}
+.exercise summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--accent2);margin-top:.6rem;font-weight:500}
+.exercise details{margin-top:.4rem}
+.exercise .extag{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:#5b54b8;background:#ece9fb;padding:1px 7px;border-radius:3px;margin-right:.4rem}
+html.dark .exercise .extag{background:#241f3a;color:#a39bea}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0}
+.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
+.intbox select,.intbox input[type=range]{font-family:'JetBrains Mono',monospace}
+.intbox select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+html.dark .intbox select{background:#1b1712;color:var(--text)}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:1px 5px;border-radius:3px}
+table.cmp{border-collapse:collapse;margin:1.2rem 0;font-size:.86rem;width:100%}
+table.cmp th,table.cmp td{border:1px solid var(--border);padding:.5rem .7rem;text-align:left}
+table.cmp th{background:var(--bg2);font-family:'JetBrains Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text2)}
+table.cmp td:first-child{font-weight:600}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>ЧМ · Занятие 14</h2>
+  <div class="g">Лекция A</div>
+  <a href="#intro">Нелинейные уравнения</a>
+  <a href="#bisect">Метод бисекции</a>
+  <a href="#newton">Метод Ньютона</a>
+  <a href="#secant">Метод секущих</a>
+  <a href="#fixed">Простая итерация</a>
+  <a href="#cmp-root">Сравнение методов</a>
+  <div class="g">Практикум</div>
+  <a href="#prac-root">П1. Три метода для корня</a>
+  <a href="#prac-scipy">П2. SciPy: корни и минимум</a>
+  <a href="#int-root">Интерактив: поиск корня</a>
+  <div class="g">Лекция B</div>
+  <a href="#optlink">Минимум и корень f'</a>
+  <a href="#golden">Золотое сечение</a>
+  <a href="#parab">Парабола и Брент</a>
+  <a href="#summary">Итоги занятия</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+  <a href="w15.html">→ Занятие 15</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-nummet">Численные методы</span>
+<div class="lecture-num">Занятие 14 · Блок VI. Оптимизация и задачи программирования</div>
+<h1>Нелинейные уравнения и одномерная оптимизация</h1>
+
+<p class="phase">Лекция A · ≤ 30 мин</p>
+
+<h2 id="intro">Нелинейные уравнения \(f(x)=0\)</h2>
+
+<p>Огромный класс прикладных задач сводится к поиску <strong>корня</strong> уравнения \(f(x)=0\): найти ток, при котором цепь сбалансирована; температуру фазового перехода; точку, где спрос равен предложению; нуль производной при оптимизации. За редкими исключениями (квадратное уравнение, простейшая тригонометрия) замкнутой формулы для корня нет, и его приходится находить <em>итерационно</em> — строить последовательность \(x_0,x_1,x_2,\dots\), сходящуюся к корню \(x^\ast\).</p>
+
+<p>Итерационный метод оценивают по трём критериям: <strong>гарантирована</strong> ли сходимость, <em>как быстро</em> он сходится (порядок сходимости) и <em>что требуется</em> от функции (только значения или ещё производные). Между этими свойствами есть фундаментальный размен: самый надёжный метод — самый медленный, самый быстрый — самый капризный.</p>
+
+<div class="definition">
+<strong>Определение (порядок сходимости).</strong> Пусть \(e_k = x_k - x^\ast\) — ошибка на \(k\)-м шаге. Метод имеет <em>порядок</em> \(p\) и асимптотическую константу \(C\), если
+\[
+\lim_{k\to\infty}\frac{|e_{k+1}|}{|e_k|^{\,p}} = C,\qquad C\neq 0.
+\]
+При \(p=1\) (и \(C<1\)) сходимость называют <em>линейной</em> — ошибка убывает как геометрическая прогрессия. При \(p=2\) — <em>квадратичной</em>: число верных цифр <em>удваивается</em> за шаг. Случай \(1<p<2\) называют <em>сверхлинейной</em> сходимостью.
+</div>
+
+<h2 id="bisect">Метод бисекции (деления отрезка пополам)</h2>
+
+<p>Самый надёжный метод опирается лишь на <strong>теорему о промежуточном значении</strong>: если \(f\) непрерывна на \([a,b]\) и значения на концах имеют <em>разные знаки</em>, \(f(a)\,f(b)<0\), то внутри есть хотя бы один корень. Делим отрезок пополам точкой \(c=(a+b)/2\) и оставляем ту половину, на концах которой знаки по-прежнему различны.</p>
+
+<div class="algo">
+<strong>Алгоритм бисекции.</strong> Дано: непрерывная \(f\), отрезок \([a,b]\) с \(f(a)f(b)<0\), точность \(\varepsilon\).
+<ol>
+<li>\(c \leftarrow (a+b)/2\).</li>
+<li>Если \(f(a)\,f(c) < 0\), то \(b \leftarrow c\), иначе \(a \leftarrow c\).</li>
+<li>Повторять, пока \((b-a)/2 > \varepsilon\). Вернуть середину \(c\).</li>
+</ol>
+</div>
+
+<p>Длина отрезка <em>точно</em> делится на 2 каждый шаг, поэтому после \(n\) итераций ошибка не превосходит</p>
+
+<div class="eq">\[
+|x_n - x^\ast| \le \frac{b-a}{2^{\,n+1}}.
+\tag{14.1}
+\]</div>
+
+<p>Это <strong>линейная</strong> сходимость с константой \(C=\tfrac12\): за каждые \(\log_2 10 \approx 3.32\) итерации добавляется одна верная десятичная цифра, то есть <em>десять итераций дают примерно 3 цифры</em>. Метод медленный, зато сходимость <strong>гарантирована</strong> при единственном условии — наличии исходной смены знака.</p>
+
+<div class="remark">
+<strong>Цена надёжности.</strong> Бисекция не использует <em>значения</em> \(f\), только их знаки, поэтому не умеет «разгоняться» вблизи корня и не реагирует на гладкость. Чётный корень (где \(f\) касается оси, не меняя знак) она вовсе не видит. Зато её невозможно «сбить»: ни большие производные, ни плохое начальное приближение ей не страшны.
+</div>
+
+<h2 id="newton">Метод Ньютона (касательных)</h2>
+
+<p>Если \(f\) дифференцируема, можно использовать не только знак, но и <em>наклон</em>. Заменим \(f\) её касательной в точке \(x_k\) и возьмём за следующее приближение точку пересечения касательной с осью \(x\). Из уравнения касательной \(f(x_k)+f'(x_k)(x-x_k)=0\) получаем</p>
+
+<div class="eq">\[
+x_{k+1} = x_k - \frac{f(x_k)}{f'(x_k)}.
+\tag{14.2}
+\]</div>
+
+<div class="theorem">
+<strong>Квадратичная сходимость.</strong> Пусть \(x^\ast\) — <em>простой</em> корень (\(f(x^\ast)=0\), \(f'(x^\ast)\neq 0\)), \(f\) дважды непрерывно дифференцируема. Тогда для достаточно близкого \(x_0\) метод Ньютона сходится и
+\[
+e_{k+1} \;\approx\; \frac{f''(x^\ast)}{2 f'(x^\ast)}\, e_k^{\,2}.
+\]
+То есть порядок \(p=2\): число верных цифр удваивается на каждом шаге.
+</div>
+
+<div class="proof">
+Разложим \(f\) в ряд Тейлора в корне: \(0=f(x^\ast)=f(x_k)+f'(x_k)(x^\ast-x_k)+\tfrac12 f''(\xi)(x^\ast-x_k)^2\). Поделив на \(f'(x_k)\) и подставив \(x_{k+1}=x_k-f(x_k)/f'(x_k)\), находим \(x^\ast-x_{k+1} = -\dfrac{f''(\xi)}{2f'(x_k)}(x^\ast-x_k)^2\), откуда \(|e_{k+1}|=\dfrac{|f''(\xi)|}{2|f'(x_k)|}\,e_k^2\). При \(x_k\to x^\ast\) множитель стремится к \(\bigl|f''(x^\ast)/2f'(x^\ast)\bigr|\).
+</div>
+
+<p>Квадратичная сходимость впечатляет: ошибка \(10^{-2}\to10^{-4}\to10^{-8}\to10^{-16}\). Но у метода есть три слабых места: нужна <strong>производная</strong> \(f'\); нужно <strong>хорошее начальное приближение</strong>; вблизи точки с \(f'(x_k)\approx 0\) касательная почти горизонтальна и шаг \(f/f'\) «выстреливает» далеко — метод может <strong>расходиться</strong> или зациклиться. Сходимость Ньютона лишь <em>локальная</em>: гарантий «из любой точки» нет.</p>
+
+<h2 id="secant">Метод секущих</h2>
+
+<p>Чтобы избавиться от аналитической производной, заменим её разностным отношением по двум последним точкам — то есть проведём не касательную, а <strong>секущую</strong> через \((x_{k-1},f(x_{k-1}))\) и \((x_k,f(x_k))\):</p>
+
+<div class="eq">\[
+x_{k+1} = x_k - f(x_k)\,\frac{x_k - x_{k-1}}{f(x_k) - f(x_{k-1})}.
+\tag{14.3}
+\]</div>
+
+<p>Метод требует <em>двух</em> стартовых точек, но не требует \(f'\) — только значения функции. Его порядок сходимости равен <strong>золотому сечению</strong></p>
+
+<div class="eq">\[
+p = \varphi = \frac{1+\sqrt5}{2} \approx 1.618,
+\tag{14.4}
+\]</div>
+
+<p>то есть сходимость <em>сверхлинейная</em>: медленнее Ньютона, но быстрее бисекции. На один шаг приходится лишь <em>один</em> новый вызов \(f\) (значение в предыдущей точке переиспользуется), поэтому по числу <em>вычислений функции</em> секущие зачастую эффективнее Ньютона, у которого каждый шаг стоит вычисления и \(f\), и \(f'\).</p>
+
+<h2 id="fixed">Метод простой итерации \(x=g(x)\)</h2>
+
+<p>Многие итерационные схемы — частные случаи общей идеи <strong>неподвижной точки</strong>. Перепишем \(f(x)=0\) в эквивалентном виде \(x=g(x)\) и итерируем \(x_{k+1}=g(x_k)\). Корень уравнения становится неподвижной точкой отображения \(g\): \(x^\ast=g(x^\ast)\).</p>
+
+<div class="theorem">
+<strong>Принцип сжимающих отображений.</strong> Если \(g\) непрерывно дифференцируема в окрестности \(x^\ast\) и \(|g'(x^\ast)|<1\), то итерация \(x_{k+1}=g(x_k)\) сходится к \(x^\ast\) из любого достаточно близкого \(x_0\), причём линейно с константой \(C=|g'(x^\ast)|\). Если \(|g'(x^\ast)|>1\) — расходится.
+</div>
+
+<p>Множитель \(|g'(x^\ast)|\) управляет скоростью: чем он меньше, тем быстрее сходимость; при \(g'(x^\ast)=0\) линейная сходимость вырождается в сверхлинейную. Именно это объясняет силу Ньютона: для него \(g(x)=x-f(x)/f'(x)\), и прямое дифференцирование даёт \(g'(x)=\dfrac{f(x)f''(x)}{f'(x)^2}\). В простом корне \(f(x^\ast)=0\), поэтому \(g'(x^\ast)=0\) — отсюда и квадратичная скорость. Метод Ньютона есть простая итерация с <em>идеально подобранной</em> функцией \(g\).</p>
+
+<h2 id="cmp-root">Сравнение методов поиска корня</h2>
+
+<table class="cmp">
+<thead><tr><th>Метод</th><th>Порядок \(p\)</th><th>Нужна \(f'\)?</th><th>Гарантия сходимости</th></tr></thead>
+<tbody>
+<tr><td>Бисекция</td><td>1 (линейный, \(C=\tfrac12\))</td><td>нет</td><td>да, при \(f(a)f(b)<0\)</td></tr>
+<tr><td>Простая итерация</td><td>1 (линейный, \(C=|g'|\))</td><td>нет</td><td>при \(|g'(x^\ast)|<1\)</td></tr>
+<tr><td>Секущих</td><td>\(\varphi\approx1.618\) (сверхлинейный)</td><td>нет</td><td>только локальная</td></tr>
+<tr><td>Ньютона</td><td>2 (квадратичный)</td><td>да</td><td>только локальная</td></tr>
+</tbody>
+</table>
+
+<p>На практике лучшие библиотечные решатели <em>гибридны</em>: они держат корень в скобках (как бисекция, ради надёжности), но внутри скобок делают быстрые шаги секущих или обратной квадратичной интерполяции (ради скорости). Таков, например, метод Брента, который мы встретим в практикуме.</p>
+
+<!-- ===================== ПРАКТИКУМ ===================== -->
+<p class="phase prac">Практикум · Python (NumPy/SciPy) · ≈ 60 мин</p>
+
+<p>Цель — собственными руками увидеть разницу в скорости сходимости и научиться пользоваться готовыми решателями SciPy. Справочник по инструментам — в <a href="python-reference.html">памятке Python/NumPy/SciPy</a>.</p>
+
+<h3 id="prac-root">Практикум 1. Бисекция, Ньютон и секущие своими руками</h3>
+
+<p>Решим \(f(x)=x^2-2=0\) (корень \(x^\ast=\sqrt2\)) тремя методами и сравним, как убывает ошибка \(|x_k-x^\ast|\). Для Ньютона ожидаем удвоение числа верных цифр за шаг.</p>
+
+<div class="pyblock"><div class="pyhead"><span>rootfind.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+f  = lambda x: x**2 - 2.0
+df = lambda x: 2.0*x
+xstar = np.sqrt(2.0)
+
+def bisection(f, a, b, n):
+    xs = []
+    fa = f(a)
+    for _ in range(n):
+        c = 0.5*(a + b)
+        fc = f(c)
+        if fa*fc &lt; 0:
+            b = c
+        else:
+            a, fa = c, fc
+        xs.append(0.5*(a + b))
+    return xs
+
+def newton(f, df, x0, n):
+    xs, x = [], x0
+    for _ in range(n):
+        x = x - f(x)/df(x)
+        xs.append(x)
+    return xs
+
+def secant(f, x0, x1, n):
+    xs = []
+    f0, f1 = f(x0), f(x1)
+    for _ in range(n):
+        x2 = x1 - f1*(x1 - x0)/(f1 - f0)
+        xs.append(x2)
+        x0, f0, x1, f1 = x1, f1, x2, f(x2)
+    return xs
+
+bi = bisection(f, 1.0, 2.0, 8)
+nt = newton(f, df, 2.0, 6)
+se = secant(f, 1.0, 2.0, 7)
+
+print(" k |   бисекция   |    Ньютон    |   секущих")
+for k in range(6):
+    eb = abs(bi[k]   - xstar)
+    en = abs(nt[k]   - xstar)
+    es = abs(se[k]   - xstar)
+    print(f"{k:2d} | {eb:.3e} | {en:.3e} | {es:.3e}")</pre></div>
+
+<div class="outbox"> k |   бисекция   |    Ньютон    |   секущих
+ 0 | 2.500e-01 | 8.579e-02 | 8.088e-02
+ 1 | 1.250e-01 | 2.453e-03 | 1.115e-02
+ 2 | 6.250e-02 | 2.124e-06 | 1.946e-04
+ 3 | 3.125e-02 | 1.595e-12 | 2.751e-07
+ 4 | 1.562e-02 | 2.220e-16 | 6.792e-12
+ 5 | 7.812e-03 | 2.220e-16 | 2.220e-16</div>
+
+<p>Бисекция честно делит ошибку на 2 каждый шаг. Ньютон удваивает число верных цифр (\(10^{-3}\to10^{-6}\to10^{-12}\to\) предел машинной точности за 4 шага). Секущие — посередине: каждый шаг увеличивает число цифр примерно в \(1.618\) раза.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 14.1</span>Измерить порядок сходимости численно.</strong> По последовательности ошибок \(e_k=|x_k-x^\ast|\) метода Ньютона и секущих постройте точки \((\log|e_k|,\ \log|e_{k+1}|)\) и оцените наклон прямой методом наименьших квадратов. Наклон должен дать оценку порядка \(p\): \(\approx2\) для Ньютона и \(\approx1.62\) для секущих. Почему в оценку нельзя включать последние точки, где ошибка достигла \(\sim10^{-16}\)?
+<details><summary>Подсказка</summary>
+<div class="pyblock"><div class="pyhead"><span>order.py</span></div>
+<pre class="pycode">import numpy as np
+e = np.array([abs(x - xstar) for x in nt])
+e = e[e &gt; 1e-14]               # отбросить «дно» машинной точности
+le1, le0 = np.log(e[1:]), np.log(e[:-1])
+p = np.polyfit(le0, le1, 1)[0] # наклон ≈ порядок
+print("оценка порядка p =", p)</pre></div>
+Точки у машинного нуля «зашумлены» округлением и ложатся не на прямую \(\log e_{k+1}=p\log e_k+\text{const}\), портя регрессию.</details>
+</div>
+
+<h3 id="prac-scipy">Практикум 2. Готовые решатели SciPy и расходимость Ньютона</h3>
+
+<p>В реальном коде корень ищут библиотечными функциями. <code>brentq</code> требует скобку \([a,b]\) со сменой знака и <em>гарантирует</em> сходимость (бисекция + интерполяция). <code>newton</code> использует Ньютона (если дана <code>fprime</code>) или секущие (если нет). Для минимума гладкой функции служит <code>minimize_scalar</code>.</p>
+
+<div class="pyblock"><div class="pyhead"><span>scipy_solvers.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from scipy.optimize import brentq, newton, root_scalar, minimize_scalar
+
+f  = lambda x: x**2 - 2.0
+df = lambda x: 2.0*x
+
+print("brentq          :", brentq(f, 1.0, 2.0))            # надёжно, со скобкой
+print("newton (с f')   :", newton(f, x0=2.0, fprime=df))   # квадратично
+print("newton (секущих):", newton(f, x0=2.0))              # без f' -> секущие
+print("root_scalar     :", root_scalar(f, bracket=[1, 2], method='brentq').root)
+
+# минимум гладкой функции: g(x) = (x-3)^2 + 1, минимум в x=3
+g = lambda x: (x - 3.0)**2 + 1.0
+print("golden :", minimize_scalar(g, bracket=(0, 1, 5), method='golden').x)
+print("brent  :", minimize_scalar(g, method='brent').x)</pre></div>
+
+<p>Теперь — наглядный пример <strong>расходимости Ньютона</strong>. Для \(f(x)=\arctan x\) (корень \(x^\ast=0\)) метод сходится только при малом \(|x_0|\). При большом старте шаг \(f/f'=(1+x^2)\arctan x\) перебрасывает точку дальше от нуля, и итерации разлетаются.</p>
+
+<div class="pyblock"><div class="pyhead"><span>newton_diverge.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+f  = lambda x: np.arctan(x)
+df = lambda x: 1.0/(1.0 + x**2)
+
+for x0 in (1.0, 1.4, 1.5):
+    x = x0
+    for _ in range(8):
+        x = x - f(x)/df(x)
+    tag = "-> 0 (сходится)" if abs(x) &lt; 1 else "разлетается"
+    print(f"x0={x0}:  x8={x: .3e}   {tag}")</pre></div>
+
+<div class="outbox">x0=1.0:  x8= 1.355e-09   -> 0 (сходится)
+x0=1.4:  x8= 2.667e-01   -> 0 (сходится)
+x0=1.5:  x8= 1.696e+04   разлетается</div>
+
+<p>Граница примерно \(|x_0|\approx1.3917\) (корень уравнения \(\arctan x = 2x/(1+x^2)\)): за ней метод осциллирует с нарастающей амплитудой. Вывод практический — Ньютон без защиты (скобки, ограничения шага) опасен; именно поэтому библиотеки оборачивают его в гибридные схемы.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 14.2</span>Бассейны сходимости Ньютона.</strong> Для \(f(x)=x^3-x\) (корни \(-1,0,1\)) переберите стартовые точки \(x_0\) на сетке отрезка \([-2,2]\), сделайте по 30 шагов Ньютона и раскрасьте каждую точку по тому корню, к которому она сошлась. Получите «бассейны притяжения». Найдите точки вблизи \(x_0=\pm1/\sqrt5\), где \(f'\) мало и метод ведёт себя хаотично.
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 14.3</span>Золотое сечение против параболы.</strong> Минимизируйте \(g(x)=x^4-3x^2+x\) на \([0,2]\). Сравните число вызовов функции у <code>minimize_scalar(method='golden')</code> и <code>method='brent'</code> (используйте аргумент <code>options</code> и атрибут <code>nfev</code> результата). Объясните, почему Брент быстрее на гладком минимуме.
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 14.4</span>Минимум через корень производной.</strong> Найдите минимум \(g(x)=x-2\sin x\) на \([0,\pi]\) двумя путями: (а) напрямую <code>minimize_scalar</code>; (б) решив уравнение \(g'(x)=1-2\cos x=0\) методом <code>brentq</code>. Убедитесь, что обе точки совпадают и что \(g''>0\) там (достаточное условие минимума).
+</div>
+
+<h3 id="int-root">Интерактив: пошаговый поиск корня</h3>
+
+<p>График \(f(x)\) строится в браузере. Выберите функцию и метод, двигайте слайдер числа итераций — и наблюдайте геометрию: для Ньютона рисуются касательные, для секущих — секущие, для бисекции — сужающийся отрезок со средней точкой. Снизу выводится текущее приближение \(x_k\) и ошибка \(|x_k-x^\ast|\). Сравните, за сколько шагов каждый метод «упирается» в машинную точность.</p>
+
+<div class="intbox">
+<div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:end;margin-bottom:.7rem">
+  <div><label>Функция f(x)</label><br>
+    <select id="r_fn">
+      <option value="sq2">x² − 2 &nbsp;(корень √2)</option>
+      <option value="cub">x³ − x − 2 &nbsp;(корень ≈1.5214)</option>
+      <option value="cosx">cos x − x &nbsp;(корень ≈0.7391)</option>
+    </select>
+  </div>
+  <div><label>Метод</label><br>
+    <select id="r_method">
+      <option value="newton">Ньютона (касательные)</option>
+      <option value="secant">секущих</option>
+      <option value="bisect">бисекции</option>
+    </select>
+  </div>
+  <div><label>итераций k = <span id="r_kv">3</span></label><br>
+    <input type="range" id="r_k" min="0" max="10" step="1" value="3" style="width:200px">
+  </div>
+</div>
+<div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+  <canvas id="r_cv" width="860" height="380" style="width:100%;height:auto" aria-label="График выбранной функции и пошаговое геометрическое построение итераций выбранного метода поиска корня: касательные Ньютона, секущие или сужающийся отрезок бисекции."></canvas>
+</div>
+<div id="r_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.5rem"></div>
+</div>
+
+<script>
+(function(){
+  var FN = {
+    sq2 : {f:function(x){return x*x-2;},        df:function(x){return 2*x;},
+           root:Math.SQRT2, dom:[0.2,2.6], a:1.0, b:2.0, s0:2.5, s1:2.0},
+    cub : {f:function(x){return x*x*x-x-2;},     df:function(x){return 3*x*x-1;},
+           root:1.5213797068045676, dom:[0.0,2.4], a:1.0, b:2.0, s0:2.3, s1:1.0},
+    cosx: {f:function(x){return Math.cos(x)-x;}, df:function(x){return -Math.sin(x)-1;},
+           root:0.7390851332151607, dom:[-0.4,1.8], a:0.0, b:1.5, s0:1.6, s1:0.0}
+  };
+
+  function iterate(o, method, n){
+    // returns array of "steps"; each step carries enough to draw geometry
+    var steps=[];
+    if(method==='newton'){
+      var x=o.s0;
+      for(var k=0;k<n;k++){
+        var fx=o.f(x), d=o.df(x);
+        if(Math.abs(d)<1e-14) break;
+        var xn=x-fx/d;
+        steps.push({type:'newton', x:x, fx:fx, xn:xn});
+        x=xn;
+      }
+      steps.cur = (n>0 && steps.length) ? steps[steps.length-1].xn : o.s0;
+    } else if(method==='secant'){
+      var x0=o.s0, x1=o.s1, f0=o.f(x0), f1=o.f(x1);
+      for(var k=0;k<n;k++){
+        if(Math.abs(f1-f0)<1e-15) break;
+        var x2=x1-f1*(x1-x0)/(f1-f0);
+        steps.push({type:'secant', x0:x0, f0:f0, x1:x1, f1:f1, xn:x2});
+        x0=x1; f0=f1; x1=x2; f1=o.f(x2);
+      }
+      steps.cur = (n>0 && steps.length) ? steps[steps.length-1].xn : o.s1;
+    } else { // bisection
+      var a=o.a, b=o.b, fa=o.f(a), c=0.5*(a+b);
+      for(var k=0;k<n;k++){
+        c=0.5*(a+b);
+        var fc=o.f(c);
+        steps.push({type:'bisect', a:a, b:b, c:c});
+        if(fa*fc<0){ b=c; } else { a=c; fa=fc; }
+      }
+      steps.cur = 0.5*(a+b);
+      steps.lastA=a; steps.lastB=b;
+    }
+    return steps;
+  }
+
+  function draw(){
+    var key=document.getElementById('r_fn').value;
+    var method=document.getElementById('r_method').value;
+    var n=+document.getElementById('r_k').value;
+    document.getElementById('r_kv').textContent=n;
+    var o=FN[key];
+    var c=document.getElementById('r_cv'), ctx=c.getContext('2d'), W=c.width, H=c.height;
+    ctx.fillStyle='#fdf9f3'; ctx.fillRect(0,0,W,H);
+    var P={l:50,r:18,t:18,b:34}, pw=W-P.l-P.r, ph=H-P.t-P.b;
+    var xmin=o.dom[0], xmax=o.dom[1];
+    // y-range from function samples
+    var ymin=1e9, ymax=-1e9, NS=240;
+    for(var i=0;i<=NS;i++){ var xx=xmin+(xmax-xmin)*i/NS, yy=o.f(xx); if(yy<ymin)ymin=yy; if(yy>ymax)ymax=yy; }
+    var pad=0.12*(ymax-ymin); ymin-=pad; ymax+=pad;
+    if(ymin>0)ymin=-0.2*ymax; if(ymax<0)ymax=-0.2*ymin;
+    function xp(x){return P.l+pw*(x-xmin)/(xmax-xmin);}
+    function yp(y){return P.t+ph*(1-(y-ymin)/(ymax-ymin));}
+
+    // grid
+    ctx.strokeStyle='#e8e0d4'; ctx.lineWidth=0.5;
+    for(var g=0;g<=8;g++){var gx=P.l+pw*g/8;ctx.beginPath();ctx.moveTo(gx,P.t);ctx.lineTo(gx,P.t+ph);ctx.stroke();}
+    for(var g=0;g<=6;g++){var gy=P.t+ph*g/6;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    // x-axis (y=0)
+    ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(P.l,yp(0)); ctx.lineTo(P.l+pw,yp(0)); ctx.stroke();
+    // true root marker
+    ctx.strokeStyle='#1a6b5a'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(xp(o.root),P.t); ctx.lineTo(xp(o.root),P.t+ph); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='#1a6b5a'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+    ctx.fillText('x*', xp(o.root), P.t+ph+22);
+
+    // f(x) curve
+    ctx.strokeStyle='#5b54b8'; ctx.lineWidth=2.2; ctx.beginPath();
+    for(var i=0;i<=NS;i++){ var xx=xmin+(xmax-xmin)*i/NS, X=xp(xx), Y=yp(o.f(xx)); i?ctx.lineTo(X,Y):ctx.moveTo(X,Y); }
+    ctx.stroke();
+
+    var steps=iterate(o, method, n);
+
+    // draw geometry
+    steps.forEach(function(s,idx){
+      var fade = 0.35 + 0.65*(idx+1)/Math.max(1,steps.length);
+      if(s.type==='newton'){
+        // tangent line from (x,f(x)) down to (xn,0)
+        ctx.strokeStyle='rgba(180,74,45,'+fade+')'; ctx.lineWidth=1.4;
+        ctx.beginPath(); ctx.moveTo(xp(s.x),yp(s.fx)); ctx.lineTo(xp(s.xn),yp(0)); ctx.stroke();
+        // vertical from axis to curve point
+        ctx.strokeStyle='rgba(58,91,160,'+(0.5*fade)+')'; ctx.setLineDash([2,2]);
+        ctx.beginPath(); ctx.moveTo(xp(s.x),yp(0)); ctx.lineTo(xp(s.x),yp(s.fx)); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle='#b44a2d'; ctx.beginPath(); ctx.arc(xp(s.x),yp(s.fx),3,0,7); ctx.fill();
+      } else if(s.type==='secant'){
+        ctx.strokeStyle='rgba(180,74,45,'+fade+')'; ctx.lineWidth=1.4;
+        ctx.beginPath(); ctx.moveTo(xp(s.x0),yp(s.f0)); ctx.lineTo(xp(s.x1),yp(s.f1)); ctx.stroke();
+        ctx.fillStyle='#b44a2d'; ctx.beginPath(); ctx.arc(xp(s.x1),yp(s.f1),3,0,7); ctx.fill();
+      } else {
+        var yb = P.t+ph - 6 - idx*9;
+        if(yb<P.t+6) yb=P.t+6;
+        ctx.strokeStyle='rgba(26,107,90,'+fade+')'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.moveTo(xp(s.a),yb); ctx.lineTo(xp(s.b),yb); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(xp(s.a),yb-3); ctx.lineTo(xp(s.a),yb+3); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(xp(s.b),yb-3); ctx.lineTo(xp(s.b),yb+3); ctx.stroke();
+        ctx.fillStyle='#b44a2d'; ctx.beginPath(); ctx.arc(xp(s.c),yb,2.5,0,7); ctx.fill();
+      }
+    });
+
+    // current approximation marker on axis
+    var cur=steps.cur;
+    if(isFinite(cur)){
+      ctx.fillStyle='#b44a2d'; ctx.beginPath(); ctx.arc(xp(cur),yp(0),5,0,7); ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.2; ctx.beginPath(); ctx.arc(xp(cur),yp(0),5,0,7); ctx.stroke();
+    }
+
+    // axis frame + x ticks
+    ctx.strokeStyle='#6b5d4f'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(P.l,P.t); ctx.lineTo(P.l,P.t+ph); ctx.lineTo(P.l+pw,P.t+ph); ctx.stroke();
+    ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+    for(var t=Math.ceil(xmin);t<=Math.floor(xmax);t++) ctx.fillText(t, xp(t), P.t+ph+14);
+    ctx.fillText('x', P.l+pw, P.t+ph+14);
+
+    var err=Math.abs(cur-o.root);
+    var dig=Math.max(0,-Math.log10(err>0?err:1e-17));
+    document.getElementById('r_status').innerHTML =
+      'после '+n+' итер.: xₖ = '+cur.toFixed(12)+
+      ' · ошибка |xₖ−x*| = '+err.toExponential(2)+
+      ' · верных цифр ≈ '+dig.toFixed(1);
+  }
+
+  document.getElementById('r_fn').addEventListener('change',draw);
+  document.getElementById('r_method').addEventListener('change',draw);
+  document.getElementById('r_k').addEventListener('input',draw);
+  window.addEventListener('load',function(){ setTimeout(draw,200); });
+})();
+</script>
+
+<!-- ===================== ЛЕКЦИЯ B ===================== -->
+<p class="phase lecb">Лекция B · 30 мин</p>
+
+<h2 id="optlink">Минимум функции и корень производной</h2>
+
+<p>Задача <strong>одномерной минимизации</strong> — найти точку \(x^\ast\), где гладкая \(f\) принимает наименьшее значение. Из анализа известно <strong>необходимое условие</strong>: в точке локального минимума производная обращается в нуль,</p>
+
+<div class="eq">\[
+f'(x^\ast) = 0,\qquad\text{и достаточное:}\quad f''(x^\ast) > 0.
+\tag{14.5}
+\]</div>
+
+<p>Это сразу подсказывает мост к первой половине занятия: минимум \(f\) — это корень уравнения \(f'(x)=0\). Применив к нему метод Ньютона, получаем <strong>оптимизационный Ньютон</strong>:</p>
+
+<div class="eq">\[
+x_{k+1} = x_k - \frac{f'(x_k)}{f''(x_k)}.
+\tag{14.6}
+\]</div>
+
+<p>Он сходится квадратично к минимуму, но требует <em>двух</em> производных и хорошего старта, а ещё «не различает» минимум и максимум — он ищет любую критическую точку. Поэтому на практике часто предпочитают методы, которые работают <strong>только со значениями</strong> \(f\), не требуя производных и гарантируя движение именно к минимуму.</p>
+
+<div class="definition">
+<strong>Унимодальность.</strong> Функция \(f\) <em>унимодальна</em> на \([a,b]\), если у неё там единственный минимум \(x^\ast\) и она строго убывает на \([a,x^\ast]\) и строго возрастает на \([x^\ast,b]\). Для унимодальной \(f\) минимум можно «загнать в скобку» \([a,b]\) и систематически сужать интервал неопределённости — это аналог смены знака для бисекции.
+</div>
+
+<h2 id="golden">Метод золотого сечения</h2>
+
+<p>Чтобы сузить интервал \([a,b]\), где лежит минимум унимодальной \(f\), нужно <em>две</em> внутренние пробные точки \(x_1<x_2\): сравнив \(f(x_1)\) и \(f(x_2)\), мы отбрасываем один из концов. Если \(f(x_1)<f(x_2)\), минимум не может лежать правее \(x_2\) — отбрасываем \([x_2,b]\); иначе отбрасываем \([a,x_1]\).</p>
+
+<p>Хитрость в том, чтобы пробные точки располагать <em>симметрично</em> и так, чтобы одна из них <strong>переиспользовалась</strong> на следующем шаге — тогда каждая итерация стоит лишь <em>одного</em> нового вычисления \(f\). Этого добиваются делением в пропорции <strong>золотого сечения</strong>:</p>
+
+<div class="eq">\[
+\tau = \frac{\sqrt5 - 1}{2} \approx 0.618,\qquad \tau^2 = 1-\tau.
+\tag{14.7}
+\]</div>
+
+<div class="algo">
+<strong>Алгоритм золотого сечения.</strong> Дано: унимодальная \(f\), отрезок \([a,b]\), \(\tau=(\sqrt5-1)/2\).
+<ol>
+<li>\(x_1 = b-\tau(b-a)\), \(x_2 = a+\tau(b-a)\); вычислить \(f(x_1),f(x_2)\).</li>
+<li>Если \(f(x_1)<f(x_2)\): \(b\leftarrow x_2\), \(x_2\leftarrow x_1\), \(x_1\leftarrow b-\tau(b-a)\) (переиспользуем \(f(x_1)\)).</li>
+<li>Иначе: \(a\leftarrow x_1\), \(x_1\leftarrow x_2\), \(x_2\leftarrow a+\tau(b-a)\).</li>
+<li>Повторять, пока \(b-a>\varepsilon\).</li>
+</ol>
+</div>
+
+<p>Длина интервала умножается на \(\tau\approx0.618\) за каждое вычисление функции — это <strong>линейная</strong> сходимость, чуть медленнее бисекции (\(0.5\)), зато для <em>минимума</em>, а не корня, и без всяких производных. Метод исключительно надёжен: для любой унимодальной функции он гарантированно сходится.</p>
+
+<div class="remark">
+<strong>Почему именно золотое сечение.</strong> Условие переиспользования точки даёт уравнение \(\tau^2 = 1-\tau\), единственный положительный корень которого — \(\tau=(\sqrt5-1)/2\). Это «самая иррациональная» пропорция: она и обеспечивает, что каждая новая тройка точек снова делится в той же пропорции, экономя по одному вызову \(f\) на шаг.
+</div>
+
+<h2 id="parab">Параболическая интерполяция и метод Брента</h2>
+
+<p>Золотое сечение надёжно, но не использует <em>гладкость</em>: вблизи минимума хорошая функция почти параболична, и это можно эксплуатировать. По <strong>трём</strong> точкам \((x_0,f_0),(x_1,f_1),(x_2,f_2)\) проведём параболу и возьмём за новое приближение её <strong>вершину</strong>:</p>
+
+<div class="eq">\[
+x_{\min} = x_1 - \frac12\,
+\frac{(x_1-x_0)^2\,[f_1-f_2] - (x_1-x_2)^2\,[f_1-f_0]}
+     {(x_1-x_0)\,[f_1-f_2] - (x_1-x_2)\,[f_1-f_0]}.
+\tag{14.8}
+\]</div>
+
+<p>Вблизи гладкого минимума эта формула сходится <em>сверхлинейно</em> — намного быстрее золотого сечения. Но она ненадёжна: если три точки лежат почти на прямой, знаменатель мал, и вершина «выстреливает» далеко (как Ньютон вблизи \(f'\approx0\)); на невыпуклых данных парабола может указать вообще на максимум.</p>
+
+<div class="theorem">
+<strong>Метод Брента.</strong> Комбинирует обе идеи. На каждом шаге он <em>пытается</em> сделать шаг параболической интерполяции; если предложенная точка попадает внутрь текущей скобки и заметно сокращает интервал — шаг принимается (скорость). Иначе выполняется надёжный шаг золотого сечения (гарантия). Так Брент достигает сверхлинейной скорости на гладких функциях, не теряя гарантированной сходимости золотого сечения. Это метод по умолчанию в <code>scipy.optimize.minimize_scalar</code>.
+</div>
+
+<p>Та же связка «надёжная скобка + быстрая интерполяция» лежит и в основе решателя корней <code>brentq</code>: надёжность бисекции плюс скорость интерполяции. Это общий рецепт промышленных численных методов — <em>гибрид гарантированного и быстрого</em>.</p>
+
+<table class="cmp">
+<thead><tr><th>Задача / метод</th><th>Скорость</th><th>Производные</th><th>Гарантия</th></tr></thead>
+<tbody>
+<tr><td>Корень: бисекция</td><td>линейная</td><td>нет</td><td>да (скобка)</td></tr>
+<tr><td>Корень: Ньютон / секущих</td><td>2 / 1.618</td><td>да / нет</td><td>локальная</td></tr>
+<tr><td>Минимум: золотое сечение</td><td>линейная (×0.618)</td><td>нет</td><td>да (унимодальность)</td></tr>
+<tr><td>Минимум: парабола / Брент</td><td>сверхлинейная</td><td>нет</td><td>Брент — да</td></tr>
+</tbody>
+</table>
+
+<h2 id="summary">Итоги занятия</h2>
+
+<div class="algo">
+<strong>Что нужно унести с занятия 14:</strong>
+<ol>
+<li><strong>Корень \(f(x)=0\)</strong> ищут итерационно. Бисекция гарантирована, но линейна (\(C=\tfrac12\), ~3 цифры за 10 шагов). Ньютон \(x_{k+1}=x_k-f/f'\) квадратичен (удвоение цифр), но требует \(f'\), хорошего старта и может расходиться при \(f'\approx0\). Секущие — сверхлинейны (\(p=\varphi\approx1.618\)) без производной.</li>
+<li><strong>Простая итерация</strong> \(x_{k+1}=g(x_k)\) сходится при \(|g'(x^\ast)|<1\); Ньютон — её частный случай с \(g'(x^\ast)=0\), отсюда квадратичность.</li>
+<li><strong>Минимум</strong> гладкой \(f\) — точка, где \(f'=0\), \(f''>0\). Можно искать корень \(f'\) (Ньютон для оптимизации), но удобнее методы без производных.</li>
+<li><strong>Золотое сечение</strong> сужает интервал унимодальной функции с коэффициентом \(\tau\approx0.618\) за вызов — надёжно, линейно. <strong>Парабола</strong> по 3 точкам быстрее на гладком минимуме; <strong>Брент</strong> комбинирует их: скорость параболы + гарантия золотого сечения.</li>
+<li>Практический рецепт — <em>гибридные</em> решатели SciPy: <code>brentq</code>/<code>root_scalar</code> для корня, <code>minimize_scalar</code> для минимума. Ручной Ньютон без защиты опасен.</li>
+</ol>
+</div>
+
+<div class="remark">
+<strong>Домашнее задание.</strong> Доделать задачи 14.1–14.4. Дополнительно: реализуйте метод золотого сечения с нуля и подтвердите численно, что длина интервала на каждом шаге умножается ровно на \(\tau=(\sqrt5-1)/2\); сравните число шагов до точности \(10^{-6}\) с теоретической оценкой \(n\approx\log_\tau(\varepsilon/(b-a))\).
+</div>
+
+<div class="lecture-nav">
+  <a class="nav-prev" href="w13.html">← Занятие 13. Собственные числа и SVD</a>
+  <a class="nav-next" href="w15.html">Занятие 15. Многомерная оптимизация и ЛП →</a>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

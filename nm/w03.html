@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Занятие 3 курса «Численные методы»: полиномиальная интерполяция. Существование и единственность (матрица Вандермонда), формы Лагранжа и Ньютона с разделёнными разностями, погрешность интерполяции и феномен Рунге. Практикум на Python (NumPy/SciPy).">
+<title>ЧМ · Занятие 3. Полиномиальная интерполяция</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.tag-nummet{background:#ece9fb;color:#5b54b8}
+html.dark .tag-nummet{background:#241f3a;color:#a39bea}
+.lecture-num{color:#5b54b8}
+.phase{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#fff;background:#5b54b8;padding:.3rem .7rem;border-radius:4px;display:inline-block;margin:1.8rem 0 .4rem}
+.phase.prac{background:#1a6b5a}
+.phase.lecb{background:#3a5ba0}
+.pyblock{margin:1rem 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.pyhead{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;display:flex;justify-content:space-between}
+.pyhead .run{color:#9ec97f}
+pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9rem 1.1rem;font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.6;overflow-x:auto;white-space:pre}
+.outbox{background:#f0f7f4;border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;padding:.6rem 1rem;margin:.6rem 0 1rem;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);white-space:pre-wrap}
+html.dark .outbox{background:#16241f}
+.exercise summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--accent2);margin-top:.6rem;font-weight:500}
+.exercise details{margin-top:.4rem}
+.exercise .extag{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:#5b54b8;background:#ece9fb;padding:1px 7px;border-radius:3px;margin-right:.4rem}
+html.dark .exercise .extag{background:#241f3a;color:#a39bea}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0}
+.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
+.intbox select,.intbox input[type=range]{font-family:'JetBrains Mono',monospace}
+.intbox select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+html.dark .intbox select{background:#1b1712;color:var(--text)}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:1px 5px;border-radius:3px}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>ЧМ · Занятие 3</h2>
+  <div class="g">Лекция A</div>
+  <a href="#problem">Задача интерполяции</a>
+  <a href="#exist">Существование и единственность</a>
+  <a href="#lagrange">Форма Лагранжа</a>
+  <a href="#newton">Форма Ньютона</a>
+  <a href="#error">Погрешность интерполяции</a>
+  <div class="g">Практикум</div>
+  <a href="#prac-impl">П1. Лагранж и Ньютон с нуля</a>
+  <a href="#prac-runge">П2. Феномен Рунге</a>
+  <a href="#int-interp">Интерактив: интерполяция</a>
+  <div class="g">Лекция B</div>
+  <a href="#analysis">Анализ погрешности</a>
+  <a href="#cure">Что делать с Рунге</a>
+  <a href="#bary">Устойчивость форм</a>
+  <a href="#summary">Итоги занятия</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+  <a href="w04.html">→ Занятие 4</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-nummet">Численные методы</span>
+<div class="lecture-num">Занятие 3 · Блок II. Интерполяция</div>
+<h1>Полиномиальная интерполяция</h1>
+
+<p class="phase">Лекция A · ≤ 30 мин</p>
+
+<h2 id="problem">Задача интерполяции</h2>
+
+<p>Часто функция \(f\) известна не формулой, а <em>таблицей значений</em>: результаты измерений, выходы дорогого вычисления, узлы сетки. Возникает естественный вопрос — как восстановить значение между табличными точками. Простейший и исторически первый ответ: провести через все точки <strong>полином</strong> и пользоваться им как заменой неизвестной функции.</p>
+
+<div class="definition">
+<strong>Задача интерполяции.</strong> Даны \(n+1\) узлов \((x_0,y_0),(x_1,y_1),\dots,(x_n,y_n)\) с попарно <em>различными</em> абсциссами \(x_i\). Требуется найти полином \(p\) степени не выше \(n\), такой что
+\[
+p(x_i)=y_i,\qquad i=0,1,\dots,n.
+\]
+Точки \(x_i\) называют <em>узлами интерполяции</em>, а сам полином \(p\) — <em>интерполянтом</em>.
+</div>
+
+<p>Подчеркнём два момента. Во-первых, требуется <em>точное</em> совпадение в узлах — это отличает интерполяцию от <em>аппроксимации</em> (где допускается отклонение, например в методе наименьших квадратов). Во-вторых, степень ограничена сверху числом узлов: через \(n+1\) точку проходит ровно один полином степени \(\le n\), и это мы сейчас докажем.</p>
+
+<h2 id="exist">Существование и единственность</h2>
+
+<p>Будем искать интерполянт в виде \(p(x)=a_0+a_1x+\dots+a_nx^n\). Условия \(p(x_i)=y_i\) дают систему \(n+1\) линейных уравнений на коэффициенты \(a_0,\dots,a_n\):</p>
+
+<div class="eq">\[
+\underbrace{\begin{pmatrix}
+1 & x_0 & x_0^2 & \cdots & x_0^n\\
+1 & x_1 & x_1^2 & \cdots & x_1^n\\
+\vdots & & & & \vdots\\
+1 & x_n & x_n^2 & \cdots & x_n^n
+\end{pmatrix}}_{V}
+\begin{pmatrix}a_0\\a_1\\\vdots\\a_n\end{pmatrix}
+=
+\begin{pmatrix}y_0\\y_1\\\vdots\\y_n\end{pmatrix}.
+\tag{3.1}
+\]</div>
+
+<p>Матрица \(V\) называется <strong>матрицей Вандермонда</strong>. Её определитель вычисляется в замкнутом виде:</p>
+
+<div class="theorem">
+<strong>Теорема (существование и единственность).</strong> Если узлы \(x_0,\dots,x_n\) попарно различны, то определитель матрицы Вандермонда
+\[
+\det V=\prod_{0\le i<j\le n}(x_j-x_i)\neq 0,
+\]
+следовательно, система (3.1) имеет единственное решение. Значит, интерполяционный полином степени \(\le n\) существует и <em>единствен</em>.
+</div>
+
+<div class="proof">
+Каждый множитель \((x_j-x_i)\) при \(i<j\) отличен от нуля, поскольку абсциссы различны; значит и всё произведение ненулевое, а матрица невырождена. Единственность можно увидеть и напрямую: если бы существовали два интерполянта \(p\) и \(q\) степени \(\le n\), то их разность \(p-q\) — полином степени \(\le n\), обращающийся в нуль во всех \(n+1\) узлах. Но ненулевой полином степени \(\le n\) имеет не более \(n\) корней; значит \(p-q\equiv 0\).
+</div>
+
+<div class="remark">
+<strong>Осторожно.</strong> Существование интерполянта не означает, что его стоит искать решением системы (3.1). Матрица Вандермонда при больших \(n\) <em>катастрофически плохо обусловлена</em> (её число обусловленности растёт экспоненциально), а вычисление степеней \(x_i^k\) усиливает ошибки округления. Поэтому на практике коэффициенты в мономиальном базисе почти никогда не находят напрямую — используют формы Лагранжа и Ньютона, к которым мы переходим.
+</div>
+
+<h2 id="lagrange">Форма Лагранжа</h2>
+
+<p>Идея Лагранжа — построить интерполянт сразу, минуя решение системы. Для каждого узла \(x_i\) введём <strong>базисный полином</strong></p>
+
+<div class="eq">\[
+\ell_i(x)=\prod_{\substack{j=0\\ j\neq i}}^{n}\frac{x-x_j}{x_i-x_j}
+=\frac{(x-x_0)\cdots\widehat{(x-x_i)}\cdots(x-x_n)}{(x_i-x_0)\cdots\widehat{(x_i-x_i)}\cdots(x_i-x_n)},
+\tag{3.2}
+\]</div>
+
+<p>где шляпка означает пропуск множителя. Это полином степени ровно \(n\), и он обладает ключевым свойством «индикатора узла»:</p>
+
+<div class="eq">\[
+\ell_i(x_k)=\delta_{ik}=\begin{cases}1,& k=i,\\[2pt]0,& k\neq i.\end{cases}
+\tag{3.3}
+\]</div>
+
+<p>Действительно, при \(k\neq i\) среди множителей числителя оказывается \((x_k-x_k)=0\); а при \(k=i\) числитель и знаменатель совпадают. Тогда интерполянт записывается явной суммой:</p>
+
+<div class="eq">\[
+p(x)=\sum_{i=0}^{n} y_i\,\ell_i(x).
+\tag{3.4}
+\]</div>
+
+<p>Проверка тривиальна: \(p(x_k)=\sum_i y_i\,\ell_i(x_k)=\sum_i y_i\,\delta_{ik}=y_k\). Формула Лагранжа прозрачна и удобна для теории. Её недостаток — при добавлении нового узла <em>все</em> базисные полиномы \(\ell_i\) приходится пересчитывать заново.</p>
+
+<div class="figure">
+<svg viewBox="0 0 600 230" xmlns="http://www.w3.org/2000/svg" style="max-width:560px" role="img" aria-label="Три базисных полинома Лагранжа на четырёх узлах: каждый равен единице в своём узле и нулю в остальных.">
+  <line x1="40" y1="160" x2="575" y2="160" stroke="#2c2419" stroke-width="1"/>
+  <line x1="40" y1="40" x2="40" y2="200" stroke="#2c2419" stroke-width="1"/>
+  <g font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">
+    <text x="100" y="178">x₀</text><text x="240" y="178">x₁</text><text x="380" y="178">x₂</text><text x="520" y="178">x₃</text>
+  </g>
+  <line x1="40" y1="60" x2="575" y2="60" stroke="#e8e0d4" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="30" y="63" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="end">1</text>
+  <!-- l0 -->
+  <path d="M100,60 C160,120 200,158 240,160 C300,162 320,156 380,158 C440,160 480,160 520,160" fill="none" stroke="#5b54b8" stroke-width="1.8"/>
+  <!-- l1 -->
+  <path d="M100,160 C150,158 200,90 240,60 C290,92 320,156 380,160 C440,162 480,160 520,160" fill="none" stroke="#b44a2d" stroke-width="1.8"/>
+  <!-- l2 -->
+  <path d="M100,160 C150,162 200,160 240,160 C300,158 340,92 380,60 C430,92 480,158 520,160" fill="none" stroke="#1a6b5a" stroke-width="1.8"/>
+  <g fill="#2c2419">
+    <circle cx="100" cy="60" r="3" fill="#5b54b8"/><circle cx="240" cy="60" r="3" fill="#b44a2d"/><circle cx="380" cy="60" r="3" fill="#1a6b5a"/>
+  </g>
+  <g font-family="JetBrains Mono,monospace" font-size="10" text-anchor="middle">
+    <text x="120" y="48" fill="#5b54b8">ℓ₀</text><text x="262" y="48" fill="#b44a2d">ℓ₁</text><text x="402" y="48" fill="#1a6b5a">ℓ₂</text>
+  </g>
+  <text x="300" y="220" font-family="Source Serif 4,serif" font-size="11" fill="#6b5d4f" text-anchor="middle" font-style="italic">каждый ℓᵢ равен 1 в своём узле и 0 во всех остальных</text>
+</svg>
+<div class="caption">Рис. 1. Базисные полиномы Лагранжа \(\ell_i\) для набора узлов. Свойство \(\ell_i(x_k)=\delta_{ik}\) делает сумму (3.4) интерполянтом без решения системы.</div>
+</div>
+
+<h2 id="newton">Форма Ньютона и разделённые разности</h2>
+
+<p>Форма Ньютона устраняет главный недостаток Лагранжа: она строит интерполянт <em>инкрементно</em>, добавляя по одному узлу. Интерполянт записывается в базисе вложенных произведений:</p>
+
+<div class="eq">\[
+p(x)=f[x_0]+f[x_0,x_1](x-x_0)+f[x_0,x_1,x_2](x-x_0)(x-x_1)+\dots+f[x_0,\dots,x_n]\prod_{j=0}^{n-1}(x-x_j).
+\tag{3.5}
+\]</div>
+
+<p>Коэффициенты \(f[x_0,\dots,x_k]\) называются <strong>разделёнными разностями</strong> и определяются рекуррентно. Разность нулевого порядка — это просто значение, \(f[x_i]=y_i\); разность порядка \(k\) выражается через две разности порядка \(k-1\):</p>
+
+<div class="eq">\[
+f[x_i,\dots,x_{i+k}]=\frac{f[x_{i+1},\dots,x_{i+k}]-f[x_i,\dots,x_{i+k-1}]}{x_{i+k}-x_i}.
+\tag{3.6}
+\]</div>
+
+<p>Вычисление удобно организовать в виде <strong>треугольной таблицы</strong>: в первом столбце — значения \(y_i\), каждый следующий столбец получается по формуле (3.6) из соседних элементов предыдущего. Коэффициенты интерполянта — это <em>верхняя диагональ</em> таблицы \(f[x_0],\,f[x_0,x_1],\,f[x_0,x_1,x_2],\dots\)</p>
+
+<div class="figure">
+<svg viewBox="0 0 600 230" xmlns="http://www.w3.org/2000/svg" style="max-width:560px" role="img" aria-label="Треугольная таблица разделённых разностей: первый столбец значений, далее каждый столбец вычисляется из соседних элементов предыдущего, коэффициенты Ньютона лежат на верхней диагонали.">
+  <g font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle">
+    <text x="60" y="30" font-size="9" fill="#6b5d4f">xᵢ</text>
+    <text x="160" y="30" font-size="9" fill="#6b5d4f">f[·]</text>
+    <text x="280" y="30" font-size="9" fill="#6b5d4f">f[·,·]</text>
+    <text x="400" y="30" font-size="9" fill="#6b5d4f">f[·,·,·]</text>
+    <text x="520" y="30" font-size="9" fill="#6b5d4f">f[·,·,·,·]</text>
+    <text x="60" y="60">x₀</text><text x="60" y="110">x₁</text><text x="60" y="160">x₂</text><text x="60" y="210">x₃</text>
+    <text x="160" y="60" fill="#5b54b8" font-weight="600">f[x₀]</text>
+    <text x="160" y="110">f[x₁]</text>
+    <text x="160" y="160">f[x₂]</text>
+    <text x="160" y="210">f[x₃]</text>
+    <text x="280" y="85" fill="#5b54b8" font-weight="600">f[x₀,x₁]</text>
+    <text x="280" y="135">f[x₁,x₂]</text>
+    <text x="280" y="185">f[x₂,x₃]</text>
+    <text x="400" y="110" fill="#5b54b8" font-weight="600">f[x₀,x₁,x₂]</text>
+    <text x="400" y="160">f[x₁,x₂,x₃]</text>
+    <text x="520" y="135" fill="#5b54b8" font-weight="600">f[x₀..x₃]</text>
+  </g>
+  <g stroke="#b44a2d" stroke-width="1" fill="none" opacity="0.6">
+    <path d="M195,108 L250,90"/><path d="M195,152 L250,140"/>
+    <path d="M335,82 L360,108"/><path d="M335,132 L360,158"/>
+  </g>
+  <rect x="120" y="48" width="430" height="16" fill="#ece9fb" opacity="0.5"/>
+  <text x="300" y="225" font-family="Source Serif 4,serif" font-size="10.5" fill="#6b5d4f" text-anchor="middle" font-style="italic">коэффициенты Ньютона — верхняя диагональ (выделена)</text>
+</svg>
+<div class="caption">Рис. 2. Таблица разделённых разностей. Каждый элемент столбца \(k\) получается из двух соседей столбца \(k-1\) по формуле (3.6). Коэффициенты формулы (3.5) — верхняя диагональ.</div>
+</div>
+
+<div class="remark">
+<strong>Главное преимущество.</strong> Чтобы добавить новый узел \((x_{n+1},y_{n+1})\), не нужно ничего пересчитывать: достаточно дописать <em>одну строку</em> снизу таблицы и добавить <em>одно слагаемое</em> \(f[x_0,\dots,x_{n+1}]\prod_{j=0}^{n}(x-x_j)\) к (3.5). Уже найденные коэффициенты остаются прежними. Это делает форму Ньютона методом выбора для адаптивного добавления точек.</div>
+
+<p>Значение интерполянта в точке вычисляют по <strong>схеме Горнера</strong> вложенным образом, что требует лишь \(O(n)\) операций:</p>
+
+<div class="eq">\[
+p(x)=c_0+(x-x_0)\Big(c_1+(x-x_1)\big(c_2+\dots+(x-x_{n-1})c_n\big)\Big),\qquad c_k=f[x_0,\dots,x_k].
+\tag{3.7}
+\]</div>
+
+<h2 id="error">Погрешность интерполяции</h2>
+
+<p>Если узлы получены из гладкой функции \(f\), то отклонение интерполянта от неё описывается формулой, удивительно похожей на остаточный член Тейлора.</p>
+
+<div class="theorem">
+<strong>Теорема (остаток интерполяции).</strong> Пусть \(f\in C^{n+1}[a,b]\), а узлы \(x_0,\dots,x_n\) лежат в \([a,b]\). Тогда для любого \(x\in[a,b]\) найдётся точка \(\xi\) из наименьшего интервала, содержащего \(x\) и все узлы, такая что
+\[
+f(x)-p(x)=\frac{f^{(n+1)}(\xi)}{(n+1)!}\prod_{i=0}^{n}(x-x_i).
+\tag{3.8}
+\]
+</div>
+
+<p>Формула (3.8) распадается на два сомножителя, и каждый отвечает за свою «вину»:</p>
+
+<ul>
+<li>множитель \(\dfrac{f^{(n+1)}(\xi)}{(n+1)!}\) зависит только от <em>функции</em> — насколько она «изгибается» производными высокого порядка;</li>
+<li>узловой полином \(\omega(x)=\prod_{i=0}^{n}(x-x_i)\) зависит только от <em>расположения узлов</em> и совершенно нам подконтролен.</li>
+</ul>
+
+<p>Именно борьба этих двух множителей определяет, будет ли интерполяция точной или провальной. Узловой полином \(\omega(x)\) обращается в нуль в узлах, но <em>между</em> ними и особенно <em>у краёв</em> отрезка при равномерных узлах достигает больших значений. Это наблюдение — ключ к феномену Рунге, который мы сейчас увидим на практике.</p>
+
+<!-- ===================== ПРАКТИКУМ ===================== -->
+<p class="phase prac">Практикум · Python (NumPy/SciPy) · ≈ 60 мин</p>
+
+<p>Реализуем обе формы интерполяции «с нуля», проверим их против библиотечных функций и затем воспроизведём знаменитый феномен Рунге. Понадобятся NumPy, SciPy и Matplotlib. Справочник по инструментам — в <a href="python-reference.html">памятке Python/NumPy/SciPy</a>.</p>
+
+<h3 id="prac-impl">Практикум 1. Лагранж и Ньютон с нуля</h3>
+
+<div class="pyblock"><div class="pyhead"><span>interp.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+def lagrange_interp(xn, yn, x):
+    """Значение интерполянта в точках x по формуле Лагранжа (3.4)."""
+    x = np.asarray(x, dtype=float)
+    n = len(xn)
+    p = np.zeros_like(x)
+    for i in range(n):
+        # базисный полином l_i(x), формула (3.2)
+        li = np.ones_like(x)
+        for j in range(n):
+            if j != i:
+                li *= (x - xn[j]) / (xn[i] - xn[j])
+        p += yn[i] * li
+    return p
+
+def divided_differences(xn, yn):
+    """Верхняя диагональ таблицы разделённых разностей -> коэффициенты Ньютона."""
+    n = len(xn)
+    c = np.array(yn, dtype=float)          # столбец f[x_i]
+    for k in range(1, n):                  # столбцы 1..n-1
+        # обновляем снизу вверх, формула (3.6)
+        for i in range(n - 1, k - 1, -1):
+            c[i] = (c[i] - c[i-1]) / (xn[i] - xn[i-k])
+    return c                               # c[k] = f[x_0,...,x_k]
+
+def newton_eval(xn, c, x):
+    """Схема Горнера (3.7) для формы Ньютона."""
+    x = np.asarray(x, dtype=float)
+    p = np.full_like(x, c[-1])
+    for k in range(len(c) - 2, -1, -1):
+        p = p * (x - xn[k]) + c[k]
+    return p
+
+# --- демонстрация на f(x) = sin x, 5 узлов ---
+xn = np.linspace(0, np.pi, 5)
+yn = np.sin(xn)
+xx = np.linspace(0, np.pi, 7)
+
+pL = lagrange_interp(xn, yn, xx)
+c  = divided_differences(xn, yn)
+pN = newton_eval(xn, c, xx)
+
+print("совпадают ли Лагранж и Ньютон:", np.allclose(pL, pN))
+print("макс. отличие от sin:", np.max(np.abs(pL - np.sin(xx))))</pre></div>
+
+<p>Обе функции дают <em>один и тот же</em> полином (он единствен!) — формы различаются лишь способом записи и вычисления. Сверим теперь с библиотекой:</p>
+
+<div class="pyblock"><div class="pyhead"><span>check_lib.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from scipy.interpolate import lagrange
+
+xn = np.linspace(0, np.pi, 5)
+yn = np.sin(xn)
+
+# scipy строит объект-полином в мономиальном базисе
+P = lagrange(xn, yn)
+print(P)                                   # коэффициенты a_0..a_n
+print("в узлах совпадает:", np.allclose(P(xn), yn))
+
+# numpy.polynomial: подгонка полинома степени n по n+1 точкам = интерполяция
+coef = np.polynomial.polynomial.polyfit(xn, yn, deg=len(xn) - 1)
+print("узлы воспроизведены:",
+      np.allclose(np.polynomial.polynomial.polyval(xn, coef), yn))</pre></div>
+
+<div class="outbox">совпадают ли Лагранж и Ньютон: True
+макс. отличие от sin: 0.00539...
+в узлах совпадает: True
+узлы воспроизведены: True</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 3.1</span>Разделённые разности вручную.</strong> Постройте таблицу разделённых разностей для узлов \((0,1),(1,2),(2,9),(3,28)\) полностью на бумаге и выпишите полином Ньютона. Проверьте, что он проходит через все точки, и упростите его до мономиального вида. (Подсказка: данные взяты с \(f(x)=x^3+1\); интерполянт степени 3 обязан совпасть с ней точно.)
+<details><summary>Решение</summary>
+Первый столбец: \(1,2,9,28\). Первые разности: \(\tfrac{2-1}{1}=1,\ \tfrac{9-2}{1}=7,\ \tfrac{28-9}{1}=19\). Вторые: \(\tfrac{7-1}{2}=3,\ \tfrac{19-7}{2}=6\). Третья: \(\tfrac{6-3}{3}=1\). Коэффициенты Ньютона: \(c=(1,1,3,1)\), откуда
+\[p(x)=1+1\cdot x+3\,x(x-1)+1\cdot x(x-1)(x-2)=x^3+1.\]
+Совпало с \(f\), как и должно: интерполянт степени 3 по 4 узлам единствен.</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 3.2</span>Добавление узла к Ньютону.</strong> Напишите функцию <code>add_node(xn, c, x_new, y_new)</code>, которая принимает уже готовые узлы и коэффициенты Ньютона и возвращает <em>обновлённые</em> массивы при добавлении одной точки — без полного пересчёта таблицы. Убедитесь, что результат совпадает с <code>divided_differences</code>, построенной с нуля на расширенном наборе.
+<details><summary>Подсказка</summary>
+Новый коэффициент \(c_{n+1}=f[x_0,\dots,x_{n+1}]\) можно получить, протянув одну новую строку \(y_{\text{new}}\) через всю таблицу: на шаге \(k\) комбинируйте новое значение с \(c_k\) по формуле (3.6), где старший узел — \(x_{\text{new}}\), а младший — \(x_{n-k}\). Старые \(c_0,\dots,c_n\) не меняются — в этом весь смысл формы Ньютона.</details>
+</div>
+
+<h3 id="prac-runge">Практикум 2. Феномен Рунге</h3>
+
+<p>Возьмём «безобидную» гладкую функцию Рунге \(f(x)=\dfrac{1}{1+25x^2}\) на отрезке \([-1,1]\) и будем интерполировать её по <em>равномерным</em> узлам, увеличивая их число. Интуиция подсказывает: больше узлов — точнее. Проверим.</p>
+
+<div class="pyblock"><div class="pyhead"><span>runge.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+import matplotlib.pyplot as plt
+from interp import divided_differences, newton_eval   # из практикума 1
+
+runge = lambda x: 1.0 / (1.0 + 25.0 * x**2)
+xx = np.linspace(-1, 1, 1000)
+yy = runge(xx)
+
+plt.figure(figsize=(7, 4))
+plt.plot(xx, yy, 'k', lw=2, label='f(x) = 1/(1+25x²)')
+
+for n in (5, 10, 15):
+    xn = np.linspace(-1, 1, n + 1)         # равномерные узлы
+    c  = divided_differences(xn, runge(xn))
+    pp = newton_eval(xn, c, xx)
+    err = np.max(np.abs(pp - yy))
+    plt.plot(xx, pp, lw=1.2, label=f'n={n}, max|f-p|={err:.2f}')
+    print(f"n={n:2d}:  max|f-p| = {err:.4f}")
+
+plt.ylim(-1.0, 1.6); plt.legend(); plt.title('Феномен Рунге')
+plt.show()</pre></div>
+
+<div class="outbox">n= 5:  max|f-p| = 0.4327
+n=10:  max|f-p| = 1.9156
+n=15:  max|f-p| = 2.0990</div>
+
+<p>Вместо сходимости — <em>расходимость</em>: чем больше равномерных узлов, тем сильнее интерполянт осциллирует у краёв отрезка, и максимум ошибки <strong>растёт</strong>. В середине отрезка приближение остаётся приличным, но у концов \(x=\pm1\) полином высокой степени уходит в огромные «горбы». Это и есть феномен Рунге — наглядное опровержение наивной веры в то, что повышение степени всегда улучшает интерполяцию.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 3.3</span>Максимум ошибки против \(n\).</strong> Постройте график зависимости \(\max_{[-1,1]}|f-p|\) от числа узлов \(n=2,4,\dots,30\) для функции Рунге на равномерной сетке (ось ошибки логарифмическая). Убедитесь, что ошибка <em>растёт</em>, причём примерно геометрически. Затем повторите для \(f(x)=\sin(\pi x)\) — для неё ошибка, наоборот, быстро падает. Объясните разницу через формулу (3.8): что отличается в множителе \(f^{(n+1)}\)?
+<details><summary>Подсказка</summary>
+Для функции Рунге производные \(f^{(n+1)}\) растут с \(n\) быстрее, чем падает \(1/(n+1)!\), а узловой полином \(\omega\) у краёв велик — их произведение расходится. Для \(\sin(\pi x)\) производные ограничены (\(|f^{(n+1)}|\le\pi^{n+1}\)), и множитель \(\pi^{n+1}/(n+1)!\to 0\) пересиливает рост \(\omega\) — отсюда сходимость.</details>
+</div>
+
+<h3 id="int-interp">Интерактив: полиномиальная интерполяция и феномен Рунге</h3>
+
+<p>Ниже интерполянт строится прямо в браузере по \(N+1\) <em>равномерным</em> узлам выбранной функции на \([-1,1]\). Чёрная кривая — сама функция \(f\), фиолетовая — интерполянт \(p\) (форма Ньютона), точки — узлы. Двигайте слайдер \(N\) и наблюдайте, как для функции Рунге у краёв отрезка вырастают осцилляции, а подпись \(\max|f-p|\) увеличивается. Для \(\sin\), напротив, приближение быстро улучшается. (На занятии 4 мы заменим равномерные узлы на узлы Чебышёва и увидим, как осцилляции исчезают.)</p>
+
+<div class="intbox">
+<div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:end;margin-bottom:.7rem">
+  <div><label>Функция f(x)</label><br>
+    <select id="r_fn">
+      <option value="runge">1 / (1 + 25x²) &nbsp;(Рунге)</option>
+      <option value="abs">|x|</option>
+      <option value="sin">sin(πx)</option>
+    </select>
+  </div>
+  <div><label>число узлов N+1 = <span id="r_nv">11</span> &nbsp;(N = <span id="r_deg">10</span>)</label><br>
+    <input type="range" id="r_n" min="3" max="15" step="1" value="11" style="width:240px">
+  </div>
+</div>
+<div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+  <canvas id="r_cv" width="860" height="420" style="width:100%;height:auto" aria-label="График функции, её полиномиального интерполянта по равномерным узлам и самих узлов на отрезке от минус один до один; показаны осцилляции Рунге у краёв."></canvas>
+</div>
+<div id="r_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.5rem"></div>
+</div>
+
+<script>
+(function(){
+  var FN={
+    runge:function(x){return 1/(1+25*x*x);},
+    abs:  function(x){return Math.abs(x);},
+    sin:  function(x){return Math.sin(Math.PI*x);}
+  };
+
+  // разделённые разности -> коэффициенты Ньютона
+  function dividedDiff(xn,yn){
+    var n=xn.length, c=yn.slice();
+    for(var k=1;k<n;k++)
+      for(var i=n-1;i>=k;i--)
+        c[i]=(c[i]-c[i-1])/(xn[i]-xn[i-k]);
+    return c;
+  }
+  // схема Горнера для формы Ньютона
+  function newtonEval(xn,c,x){
+    var p=c[c.length-1];
+    for(var k=c.length-2;k>=0;k--) p=p*(x-xn[k])+c[k];
+    return p;
+  }
+
+  function draw(){
+    var key=document.getElementById('r_fn').value;
+    var Np1=+document.getElementById('r_n').value;     // число узлов
+    var deg=Np1-1;
+    document.getElementById('r_nv').textContent=Np1;
+    document.getElementById('r_deg').textContent=deg;
+    var f=FN[key];
+
+    var a=-1,b=1;
+    // равномерные узлы
+    var xn=[],yn=[];
+    for(var i=0;i<Np1;i++){var xv=a+(b-a)*i/(Np1-1);xn.push(xv);yn.push(f(xv));}
+    var c=dividedDiff(xn,yn);
+
+    var c2=document.getElementById('r_cv'),ctx=c2.getContext('2d'),W=c2.width,H=c2.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:54,r:16,t:18,b:34},pw=W-P.l-P.r,ph=H-P.t-P.b;
+
+    // выберем вертикальный диапазон с запасом на осцилляции
+    var M=400, fmin=1e9,fmax=-1e9, pmin=1e9,pmax=-1e9, maxerr=0, samples=[];
+    for(var s=0;s<=M;s++){
+      var x=a+(b-a)*s/M, fv=f(x), pv=newtonEval(xn,c,x);
+      samples.push({x:x,f:fv,p:pv});
+      if(fv<fmin)fmin=fv; if(fv>fmax)fmax=fv;
+      if(pv<pmin)pmin=pv; if(pv>pmax)pmax=pv;
+      var e=Math.abs(pv-fv); if(e>maxerr)maxerr=e;
+    }
+    var ymin=Math.min(fmin,pmin), ymax=Math.max(fmax,pmax);
+    // ограничим диапазон, чтобы редкие огромные выбросы не сплющивали картинку
+    ymin=Math.max(ymin,-3); ymax=Math.min(ymax,3);
+    var pad=0.12*(ymax-ymin||1); ymin-=pad; ymax+=pad;
+
+    function xp(x){return P.l+pw*(x-a)/(b-a);}
+    function yp(y){return P.t+ph*(1-(y-ymin)/(ymax-ymin));}
+
+    // сетка
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.6;
+    for(var g=0;g<=8;g++){var gx=P.l+pw*g/8;ctx.beginPath();ctx.moveTo(gx,P.t);ctx.lineTo(gx,P.t+ph);ctx.stroke();}
+    for(var h=0;h<=6;h++){var gy=P.t+ph*h/6;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    // ось y=0
+    if(ymin<0&&ymax>0){ctx.strokeStyle='#c9bca8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,yp(0));ctx.lineTo(P.l+pw,yp(0));ctx.stroke();}
+
+    // интерполянт p(x) (фиолетовый) — с отсечением по краю кадра
+    ctx.strokeStyle='#5b54b8';ctx.lineWidth=2;ctx.beginPath();
+    var started=false;
+    samples.forEach(function(d){
+      var X=xp(d.x), yc=Math.max(ymin,Math.min(ymax,d.p)), Y=yp(yc);
+      started?ctx.lineTo(X,Y):(ctx.moveTo(X,Y),started=true);
+    });
+    ctx.stroke();
+
+    // функция f(x) (чёрная)
+    ctx.strokeStyle='#2c2419';ctx.lineWidth=2;ctx.beginPath();
+    samples.forEach(function(d,i){var X=xp(d.x),Y=yp(d.f);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});
+    ctx.stroke();
+
+    // узлы
+    ctx.fillStyle='#b44a2d';
+    for(var k=0;k<xn.length;k++){
+      var X=xp(xn[k]), Y=yp(Math.max(ymin,Math.min(ymax,yn[k])));
+      ctx.beginPath();ctx.arc(X,Y,3.6,0,7);ctx.fill();
+    }
+
+    // оси
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();
+    ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    for(var tx=-1;tx<=1;tx+=0.5) ctx.fillText(tx.toFixed(1),xp(tx),P.t+ph+16);
+    ctx.fillText('x',P.l+pw,P.t+ph+16);
+    ctx.textAlign='right';
+    for(var ty=0;ty<=6;ty++){var v=ymin+(ymax-ymin)*(1-ty/6);ctx.fillText(v.toFixed(1),P.l-5,P.t+ph*ty/6+3);}
+
+    // легенда
+    ctx.textAlign='left';ctx.font='10px JetBrains Mono';
+    ctx.fillStyle='#2c2419';ctx.fillText('— f(x)',P.l+8,P.t+12);
+    ctx.fillStyle='#5b54b8';ctx.fillText('— p(x) интерполянт',P.l+8,P.t+25);
+    ctx.fillStyle='#b44a2d';ctx.fillText('● узлы',P.l+8,P.t+38);
+
+    var note = key==='runge'
+      ? (maxerr>1 ? 'осцилляции Рунге у краёв — ошибка растёт!' : 'пока умеренно')
+      : (key==='abs' ? 'излом в нуле — полином не сходится равномерно' : 'гладкая функция — приближение улучшается');
+    document.getElementById('r_status').innerHTML=
+      'узлов '+Np1+' (степень N='+deg+') · равномерная сетка на [-1,1] · '+
+      '<b>max|f-p| ≈ '+maxerr.toFixed(3)+'</b> · '+note;
+  }
+
+  document.getElementById('r_fn').addEventListener('change',draw);
+  document.getElementById('r_n').addEventListener('input',draw);
+  window.addEventListener('load',function(){ setTimeout(draw,200); });
+})();
+</script>
+
+<!-- ===================== ЛЕКЦИЯ B ===================== -->
+<p class="phase lecb">Лекция B · 30 мин</p>
+
+<h2 id="analysis">Анализ погрешности: откуда берётся Рунге</h2>
+
+<p>Вернёмся к формуле остатка (3.8) и разберём, почему равномерная интерполяция функции Рунге расходится. Ошибка — произведение двух множителей, и оба работают <em>против</em> нас.</p>
+
+<p><strong>Узловой полином у краёв.</strong> При равномерных узлах функция \(\omega(x)=\prod_i(x-x_i)\) ведёт себя резко несимметрично: в центре отрезка её значения малы, а вблизи концов резко возрастают. Между крайними узлами полином успевает «накопить» большое произведение расстояний, и амплитуда \(\omega\) у краёв оказывается на порядки больше, чем в середине. Именно поэтому осцилляции интерполянта максимальны у концов \(x=\pm1\), а не в центре.</p>
+
+<div class="figure">
+<svg viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg" style="max-width:560px" role="img" aria-label="Узловой полином при равномерных узлах: малые колебания в центре отрезка и резкий рост амплитуды у краёв.">
+  <line x1="40" y1="110" x2="575" y2="110" stroke="#2c2419" stroke-width="1"/>
+  <line x1="40" y1="20" x2="40" y2="200" stroke="#2c2419" stroke-width="1"/>
+  <path d="M60,110 Q80,70 100,110 Q120,135 140,110 Q160,98 180,110 Q200,116 220,110 Q240,107 260,110 Q280,111 300,110 Q320,109 340,110 Q360,107 380,110 Q400,116 420,110 Q440,98 460,110 Q480,135 500,110 Q520,70 540,110"
+        fill="none" stroke="#5b54b8" stroke-width="1.8"/>
+  <g fill="#b44a2d">
+    <circle cx="60" cy="110" r="2.6"/><circle cx="100" cy="110" r="2.6"/><circle cx="140" cy="110" r="2.6"/><circle cx="180" cy="110" r="2.6"/><circle cx="220" cy="110" r="2.6"/><circle cx="260" cy="110" r="2.6"/><circle cx="300" cy="110" r="2.6"/><circle cx="340" cy="110" r="2.6"/><circle cx="380" cy="110" r="2.6"/><circle cx="420" cy="110" r="2.6"/><circle cx="460" cy="110" r="2.6"/><circle cx="500" cy="110" r="2.6"/><circle cx="540" cy="110" r="2.6"/>
+  </g>
+  <text x="100" y="60" font-family="JetBrains Mono,monospace" font-size="10" fill="#5b54b8" text-anchor="middle">большой ↕</text>
+  <text x="500" y="60" font-family="JetBrains Mono,monospace" font-size="10" fill="#5b54b8" text-anchor="middle">большой ↕</text>
+  <text x="300" y="135" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">малый в центре</text>
+  <text x="300" y="215" font-family="Source Serif 4,serif" font-size="11" fill="#6b5d4f" text-anchor="middle" font-style="italic">ω(x)=∏(x−xᵢ) при равномерных узлах: амплитуда взрывается у краёв</text>
+</svg>
+<div class="caption">Рис. 3. Узловой полином \(\omega(x)\) на равномерной сетке. Малая амплитуда в центре и резкий рост у концов — геометрическая причина краевых осцилляций.</div>
+</div>
+
+<p><strong>Производные функции Рунге.</strong> Второй множитель \(f^{(n+1)}(\xi)/(n+1)!\) для «хороших» функций (вроде \(\sin\)) стремится к нулю: производные ограничены, а факториал растёт. Но у функции Рунге есть полюсы в комплексной плоскости при \(x=\pm i/5\), близко к отрезку \([-1,1]\). Из-за них производные \(f^{(n+1)}\) растут с \(n\) <em>быстрее</em>, чем падает \(1/(n+1)!\). Произведение двух растущих факторов и даёт расходимость:</p>
+
+<div class="eq">\[
+\underbrace{\big|f^{(n+1)}(\xi)\big|}_{\text{растёт быстро}}\cdot\underbrace{\frac{1}{(n+1)!}}_{\text{падает}}\cdot\underbrace{\big|\omega(x)\big|}_{\text{велик у краёв}}\;\xrightarrow{\;n\to\infty\;}\;\infty\quad\text{(у краёв)}.
+\tag{3.9}
+\]</div>
+
+<h2 id="cure">Вывод и что с этим делать</h2>
+
+<div class="theorem">
+<strong>Главный вывод.</strong> Комбинация «высокая степень + равномерные узлы» <em>опасна</em>: даже для бесконечно гладкой функции интерполяция может расходиться. Повышать степень полинома без оглядки нельзя.
+</div>
+
+<p>Из формулы (3.8) видны два независимых рычага против Рунге, и оба мы изучим на занятии 4:</p>
+
+<ul>
+<li><strong>Специальные узлы.</strong> Раз \(\omega(x)\) у нас под контролем, выберем узлы так, чтобы минимизировать его максимум \(\|\omega\|_\infty\). Оптимальны <em>узлы Чебышёва</em> — корни/экстремумы полиномов Чебышёва; они сгущаются у краёв отрезка и удерживают \(\|\omega\|_\infty\) малым. Осцилляции Рунге при этом исчезают.</li>
+<li><strong>Кусочная интерполяция.</strong> Откажемся от единого полинома высокой степени в пользу набора полиномов <em>низкой</em> степени на маленьких подотрезках — <em>сплайны</em>. Степень мала на каждом куске, поэтому \(f^{(n+1)}\) и \(\omega\) остаются скромными, а гладкость стыковки обеспечивается дополнительными условиями.</li>
+</ul>
+
+<h2 id="bary">Устойчивость форм записи</h2>
+
+<p>Отдельный вопрос — численная устойчивость <em>вычисления</em> уже выбранного интерполянта. Прямая форма Лагранжа (3.4) при больших \(n\) считается неаккуратно и стоит \(O(n^2)\) на точку. На практике используют эквивалентную, но численно устойчивую <strong>барицентрическую форму</strong>:</p>
+
+<div class="eq">\[
+p(x)=\frac{\displaystyle\sum_{i=0}^{n}\frac{w_i}{x-x_i}\,y_i}{\displaystyle\sum_{i=0}^{n}\frac{w_i}{x-x_i}},
+\qquad w_i=\frac{1}{\prod_{j\neq i}(x_i-x_j)}.
+\tag{3.10}
+\]</div>
+
+<p>Веса \(w_i\) вычисляются один раз за \(O(n^2)\), после чего каждое значение \(p(x)\) стоит лишь \(O(n)\), а добавление узла дёшево обновляет веса. Барицентрическая форма устойчива к ошибкам округления и используется в современных библиотеках (например, в <code>scipy.interpolate.BarycentricInterpolator</code>). Форма Ньютона хороша для символьных коэффициентов и адаптивного добавления узлов, барицентрический Лагранж — для быстрого и устойчивого вычисления значений.</p>
+
+<div class="remark">
+<strong>Связь занятий.</strong> На занятии 2 остаточный член Тейлора \(f^{(n+1)}(\xi)/(n+1)!\,(x-x_0)^{n+1}\) появлялся при разложении в одной точке. Формула интерполяции (3.8) — его прямое обобщение на \(n+1\) точек: вместо \((x-x_0)^{n+1}\) стоит узловой полином \(\prod_i(x-x_i)\). Тейлор — предельный случай интерполяции, когда все узлы сливаются в один.</div>
+
+<h2 id="summary">Итоги занятия</h2>
+
+<div class="algo">
+<strong>Что нужно унести с занятия 3:</strong>
+<ol>
+<li>Через \(n+1\) узлов с различными абсциссами проходит <em>единственный</em> полином степени \(\le n\) (невырожденность Вандермонда, \(\det V=\prod_{i&lt;j}(x_j-x_i)\)). Но решать систему с Вандермондом напрямую нельзя — она плохо обусловлена.</li>
+<li><strong>Форма Лагранжа</strong> \(p=\sum_i y_i\,\ell_i\) с \(\ell_i(x_k)=\delta_{ik}\) — явная и наглядная; неудобна при добавлении узла.</li>
+<li><strong>Форма Ньютона</strong> с разделёнными разностями (3.5)–(3.6) строится инкрементно: новый узел = одна строка таблицы + одно слагаемое. Вычисление по Горнеру за \(O(n)\).</li>
+<li><strong>Погрешность:</strong> \(f(x)-p(x)=\dfrac{f^{(n+1)}(\xi)}{(n+1)!}\prod_i(x-x_i)\) — произведение «функционального» и «узлового» множителей.</li>
+<li><strong>Феномен Рунге:</strong> высокая степень + равномерные узлы → расходимость у краёв. Лекарства (занятие 4): узлы Чебышёва (минимизируют \(\|\omega\|_\infty\)) и сплайны. Для устойчивого вычисления — барицентрическая форма.</li>
+</ol>
+</div>
+
+<div class="remark">
+<strong>Домашнее задание.</strong> Доделать задачи 3.1–3.3. Дополнительно: для функции Рунге сравните на одном графике максимум ошибки при равномерных узлах и при узлах \(x_k=\cos\!\big(\tfrac{k\pi}{n}\big)\) (Чебышёва–Лобатто) для \(n=4,8,\dots,24\). Убедитесь, что во втором случае ошибка <em>падает</em>. Это станет отправной точкой занятия 4.</div>
+
+<div class="lecture-nav">
+  <a class="nav-prev" href="w02.html">← Занятие 2. Ряд Тейлора</a>
+  <a class="nav-next" href="w04.html">Занятие 4. Чебышёв и сплайны →</a>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

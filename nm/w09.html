@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Занятие 9 курса «Численные методы»: прямые методы решения СЛАУ. Метод исключения Гаусса (прямой и обратный ход), LU-разложение и его переиспользование, выбор главного элемента (pivoting) и устойчивость, сложность O(n³). Практикум на Python (NumPy/SciPy).">
+<title>ЧМ · Занятие 9. Метод Гаусса и LU-разложение</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.tag-nummet{background:#ece9fb;color:#5b54b8}
+html.dark .tag-nummet{background:#241f3a;color:#a39bea}
+.lecture-num{color:#5b54b8}
+.phase{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#fff;background:#5b54b8;padding:.3rem .7rem;border-radius:4px;display:inline-block;margin:1.8rem 0 .4rem}
+.phase.prac{background:#1a6b5a}
+.phase.lecb{background:#3a5ba0}
+.pyblock{margin:1rem 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.pyhead{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;display:flex;justify-content:space-between}
+.pyhead .run{color:#9ec97f}
+pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9rem 1.1rem;font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.6;overflow-x:auto;white-space:pre}
+.outbox{background:#f0f7f4;border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;padding:.6rem 1rem;margin:.6rem 0 1rem;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);white-space:pre-wrap}
+html.dark .outbox{background:#16241f}
+.exercise summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--accent2);margin-top:.6rem;font-weight:500}
+.exercise details{margin-top:.4rem}
+.exercise .extag{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:#5b54b8;background:#ece9fb;padding:1px 7px;border-radius:3px;margin-right:.4rem}
+html.dark .exercise .extag{background:#241f3a;color:#a39bea}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0}
+.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
+.intbox select,.intbox input[type=range]{font-family:'JetBrains Mono',monospace}
+.intbox select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+html.dark .intbox select{background:#1b1712;color:var(--text)}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:1px 5px;border-radius:3px}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>ЧМ · Занятие 9</h2>
+  <div class="g">Лекция A</div>
+  <a href="#task">Задача: решить Ax=b</a>
+  <a href="#gauss">Исключение Гаусса</a>
+  <a href="#back">Обратный ход</a>
+  <a href="#lu">LU-разложение</a>
+  <a href="#cost">Сложность O(n³)</a>
+  <div class="g">Практикум</div>
+  <a href="#prac-lu">П1. LU с выбором с нуля</a>
+  <a href="#prac-scipy">П2. Сверка со SciPy</a>
+  <a href="#int-gauss">Интерактив: исключение Гаусса</a>
+  <a href="#prac-time">П3. Масштабирование времени</a>
+  <div class="g">Лекция B</div>
+  <a href="#pivot">Выбор главного элемента</a>
+  <a href="#stab">Устойчивость метода</a>
+  <a href="#nopivot">Когда выбор не нужен</a>
+  <a href="#summary">Итоги занятия</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+  <a href="w10.html">→ Занятие 10</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-nummet">Численные методы</span>
+<div class="lecture-num">Занятие 9 · Блок IV. Линейная алгебра: решение СЛАУ</div>
+<h1>Прямые методы: метод Гаусса и LU-разложение</h1>
+
+<p class="phase">Лекция A · ≤ 30 мин</p>
+
+<h2 id="task">Задача: решить систему \(Ax = b\)</h2>
+
+<p>Системы линейных алгебраических уравнений (СЛАУ) — рабочая лошадка вычислительной математики. К ним сводятся метод наименьших квадратов, конечно-разностные и конечно-элементные аппроксимации дифференциальных уравнений, шаги ньютоновских итераций для нелинейных систем. Поэтому надёжный и быстрый решатель СЛАУ — центральный кирпич всей численной линейной алгебры.</p>
+
+<div class="definition">
+<strong>Постановка.</strong> Дана матрица \(A \in \mathbb{R}^{n\times n}\) и вектор \(b \in \mathbb{R}^{n}\). Требуется найти \(x \in \mathbb{R}^{n}\) такой, что
+\[
+A x = b.
+\]
+Будем считать \(A\) <em>невырожденной</em> (\(\det A \neq 0\)) — тогда решение существует и единственно: \(x = A^{-1}b\). Важно: формально записать \(A^{-1}\) можно, но <em>вычислять</em> обратную матрицу для решения системы не нужно и вредно — это дороже и менее устойчиво, чем прямые методы ниже.
+</div>
+
+<p><strong>Прямые методы</strong> дают точное решение за конечное число арифметических действий (в идеальной арифметике) — в отличие от <em>итерационных</em>, которые приближаются к решению последовательностью шагов. Базовый прямой метод — <strong>исключение Гаусса</strong>, а его «промышленная» форма — <strong>LU-разложение</strong>.</p>
+
+<h2 id="gauss">Метод исключения Гаусса: прямой ход</h2>
+
+<p>Идея школьная: вычитая кратное одного уравнения из других, обнуляем неизвестные одно за другим, пока система не станет <em>треугольной</em> — а треугольную систему решить уже легко. Формализуем для матрицы.</p>
+
+<p>На шаге \(k\) (для \(k = 1, \dots, n-1\)) элемент \(a_{kk}\) называется <strong>ведущим</strong> (pivot). Для каждой строки \(i\) ниже ведущей (\(i = k+1, \dots, n\)) вычисляем <strong>множитель</strong></p>
+
+<div class="eq">\[
+m_{ik} = \frac{a_{ik}}{a_{kk}},
+\tag{9.1}
+\]</div>
+
+<p>и вычитаем из строки \(i\) строку \(k\), умноженную на \(m_{ik}\):</p>
+
+<div class="eq">\[
+a_{ij} \leftarrow a_{ij} - m_{ik}\,a_{kj}\quad (j = k, \dots, n),\qquad
+b_i \leftarrow b_i - m_{ik}\,b_k .
+\tag{9.2}
+\]</div>
+
+<p>По построению после этой операции \(a_{ik}\) обращается в нуль. Пройдя все \(k\), получим <strong>верхнетреугольную</strong> систему \(Ux = y\), где \(U\) хранит изменённые коэффициенты, а \(y\) — изменённую правую часть:</p>
+
+<div class="figure">
+<svg viewBox="0 0 600 170" xmlns="http://www.w3.org/2000/svg" style="max-width:560px" role="img" aria-label="Прямой ход метода Гаусса превращает полную матрицу в верхнетреугольную: поддиагональные элементы последовательно обнуляются по столбцам слева направо.">
+  <text x="110" y="22" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419" text-anchor="middle" font-weight="600">A (полная)</text>
+  <g font-family="JetBrains Mono,monospace" font-size="13" fill="#3a5ba0">
+    <text x="40" y="55">∗</text><text x="70" y="55">∗</text><text x="100" y="55">∗</text><text x="130" y="55">∗</text>
+    <text x="40" y="80">∗</text><text x="70" y="80">∗</text><text x="100" y="80">∗</text><text x="130" y="80">∗</text>
+    <text x="40" y="105">∗</text><text x="70" y="105">∗</text><text x="100" y="105">∗</text><text x="130" y="105">∗</text>
+    <text x="40" y="130">∗</text><text x="70" y="130">∗</text><text x="100" y="130">∗</text><text x="130" y="130">∗</text>
+  </g>
+  <line x1="270" y1="90" x2="350" y2="90" stroke="#2c2419" stroke-width="1.4" marker-end="url(#arr9)"/>
+  <defs><marker id="arr9" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2c2419"/></marker></defs>
+  <text x="310" y="80" font-family="Source Serif 4,serif" font-size="11" fill="#6b5d4f" text-anchor="middle" font-style="italic">прямой ход</text>
+  <text x="490" y="22" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419" text-anchor="middle" font-weight="600">U (верхнетреугольная)</text>
+  <g font-family="JetBrains Mono,monospace" font-size="13" fill="#1a6b5a">
+    <text x="420" y="55">∗</text><text x="450" y="55">∗</text><text x="480" y="55">∗</text><text x="510" y="55">∗</text>
+    <text x="450" y="80">∗</text><text x="480" y="80">∗</text><text x="510" y="80">∗</text>
+    <text x="480" y="105">∗</text><text x="510" y="105">∗</text>
+    <text x="510" y="130">∗</text>
+  </g>
+  <g font-family="JetBrains Mono,monospace" font-size="13" fill="#b44a2d">
+    <text x="420" y="80">0</text><text x="420" y="105">0</text><text x="450" y="105">0</text><text x="420" y="130">0</text><text x="450" y="130">0</text><text x="480" y="130">0</text>
+  </g>
+  <text x="300" y="158" font-family="Source Serif 4,serif" font-size="11" fill="#6b5d4f" text-anchor="middle" font-style="italic">множители m_ik «обнуляют» столбец под ведущим элементом</text>
+</svg>
+<div class="caption">Рис. 1. Прямой ход исключения Гаусса. Поддиагональные элементы обнуляются столбец за столбцом; матрица становится верхнетреугольной \(U\).</div>
+</div>
+
+<h2 id="back">Обратный ход: обратная подстановка</h2>
+
+<p>Верхнетреугольную систему \(Ux = y\) решаем снизу вверх. Последнее уравнение содержит одну неизвестную: \(x_n = y_n / u_{nn}\). Зная \(x_n\), находим \(x_{n-1}\) и так далее:</p>
+
+<div class="eq">\[
+x_i = \frac{1}{u_{ii}}\Bigl(y_i - \sum_{j=i+1}^{n} u_{ij}\,x_j\Bigr),\qquad i = n, n-1, \dots, 1.
+\tag{9.3}
+\]</div>
+
+<div class="remark">
+<strong>Аналогично — прямая подстановка.</strong> Нижнетреугольную систему \(Ly = b\) решают сверху вниз по той же логике: \(y_1 = b_1/\ell_{11}\), затем \(y_i = \bigl(b_i - \sum_{j&lt;i}\ell_{ij}y_j\bigr)/\ell_{ii}\). Обе подстановки стоят \(\sim n^2\) операций — это понадобится в LU.
+</div>
+
+<h2 id="lu">LU-разложение</h2>
+
+<p>Ключевое наблюдение: множители \(m_{ik}\) из прямого хода <em>не пропадают</em>. Если их сохранить, прямой ход — это в точности факторизация матрицы в произведение треугольных.</p>
+
+<div class="theorem">
+<strong>LU-разложение.</strong> Если в ходе исключения все ведущие элементы \(a_{kk}^{(k)} \neq 0\), то
+\[
+A = L U,
+\]
+где \(U\) — верхнетреугольная (результат прямого хода), а \(L\) — <em>нижнетреугольная с единицами на диагонали</em>, причём её поддиагональные элементы — это ровно множители: \(\ell_{ik} = m_{ik}\) для \(i &gt; k\).
+</div>
+
+<div class="proof">
+Вычитание из строки \(i\) строки \(k\), умноженной на \(m_{ik}\), есть домножение слева на элементарную матрицу \(E_{ik} = I - m_{ik}e_i e_k^{\top}\). Весь прямой ход — произведение таких матриц: \(M A = U\), где \(M = \prod E_{ik}\) нижнетреугольная с единицами на диагонали. Тогда \(A = M^{-1}U\). Обратная к произведению элементарных нижнетреугольных матриц снова нижнетреугольная с единицами на диагонали, а её поддиагональные элементы получаются простым «складыванием» множителей со знаком плюс — это и есть \(L\) с \(\ell_{ik}=m_{ik}\). Значит \(A = LU\).
+</div>
+
+<p>Имея разложение \(A = LU\), решение системы распадается на две треугольные подстановки:</p>
+
+<div class="eq">\[
+A x = b \;\Longleftrightarrow\; L\underbrace{(Ux)}_{=\,y} = b:\qquad
+\boxed{\;Ly = b\;\text{(прямая)},\quad Ux = y\;\text{(обратная)}.\;}
+\tag{9.4}
+\]</div>
+
+<div class="definition">
+<strong>Зачем разделять?</strong> Главное преимущество LU — <em>переиспользование</em>. Разложение \(A=LU\) зависит только от \(A\) и делается <strong>один раз</strong>. После этого для <em>любой</em> новой правой части \(b\) решение стоит лишь две подстановки \(\sim 2n^2\). Если систему с одной и той же \(A\) надо решить для \(k\) разных \(b\) (типичная ситуация: неявные схемы по времени, столбцы \(A^{-1}\), итерации), мы делаем один LU плюс \(k\) дешёвых подстановок — а не \(k\) полных исключений.
+</div>
+
+<h2 id="cost">Вычислительная сложность</h2>
+
+<p>Подсчёт операций — основа выбора алгоритма. Для прямого хода на шаге \(k\) обновляется блок \((n-k)\times(n-k)\): по одному умножению и вычитанию на элемент. Суммируя:</p>
+
+<div class="eq">\[
+\sum_{k=1}^{n-1} (n-k)^2 \approx \int_0^n t^2\,dt = \frac{n^3}{3}
+\;\Longrightarrow\;
+\text{разложение} \sim \frac{2}{3}n^3 \text{ операций (умн.+слож.)}.
+\tag{9.5}
+\]</div>
+
+<p>Каждая треугольная подстановка стоит \(\sum_{i}(n-i) \approx n^2/2\), то есть \(\sim n^2\) на пару \(Ly=b,\ Ux=y\). Отсюда практический вывод:</p>
+
+<div class="theorem">
+<strong>Бюджет для \(k\) правых частей.</strong> Решение «в лоб» \(k\) систем стоит \(\sim k\cdot\tfrac23 n^3\). Через одно LU — \(\tfrac23 n^3 + k\cdot 2n^2\). При \(n=1000,\ k=50\): «в лоб» \(\approx 3.3\times10^{10}\), через LU \(\approx 7.7\times10^{8}\) — выигрыш в десятки раз. Доминирует <strong>кубический</strong> член \(\tfrac23 n^3\): удвоение \(n\) увеличивает время разложения в \(8\) раз.
+</div>
+
+<!-- ===================== ПРАКТИКУМ ===================== -->
+<p class="phase prac">Практикум · Python (NumPy/SciPy) · ≈ 60 мин</p>
+
+<p>Цель — собрать LU-решатель с частичным выбором главного элемента <em>с нуля</em>, сверить с эталоном из SciPy, увидеть на конкретном примере, как pivoting спасает точность, и измерить кубический рост времени. Справочник по инструментам — в <a href="python-reference.html">памятке Python/NumPy/SciPy</a>.</p>
+
+<h3 id="prac-lu">Практикум 1. LU с частичным выбором и подстановки с нуля</h3>
+
+<div class="pyblock"><div class="pyhead"><span>my_lu.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+def lu_partial(A):
+    """LU-разложение с частичным выбором: возвращает P, L, U так, что P @ A = L @ U."""
+    A = A.astype(float).copy()
+    n = A.shape[0]
+    L = np.eye(n)
+    U = A.copy()
+    P = np.eye(n)
+    for k in range(n - 1):
+        # --- выбор главного элемента в столбце k (строки k..n-1) ---
+        p = k + np.argmax(np.abs(U[k:, k]))
+        if p != k:
+            U[[k, p], k:] = U[[p, k], k:]      # переставляем строки в U
+            P[[k, p], :]  = P[[p, k], :]       # ... и в P
+            L[[k, p], :k] = L[[p, k], :k]      # уже накопленные множители тоже
+        # --- исключение ---
+        for i in range(k + 1, n):
+            m = U[i, k] / U[k, k]
+            L[i, k] = m
+            U[i, k:] -= m * U[k, k:]
+    return P, L, U
+
+def forward_sub(L, b):           # решает L y = b, L нижнетреугольная (диаг = 1)
+    n = len(b); y = np.zeros(n)
+    for i in range(n):
+        y[i] = b[i] - L[i, :i] @ y[:i]
+    return y
+
+def back_sub(U, y):              # решает U x = y, U верхнетреугольная
+    n = len(y); x = np.zeros(n)
+    for i in range(n - 1, -1, -1):
+        x[i] = (y[i] - U[i, i+1:] @ x[i+1:]) / U[i, i]
+    return x
+
+def solve_lu(A, b):
+    P, L, U = lu_partial(A)
+    y = forward_sub(L, P @ b)    # P A x = P b  ->  L (U x) = P b
+    return back_sub(U, y)
+
+# --- проверка ---
+rng = np.random.default_rng(9)
+A = rng.standard_normal((5, 5))
+b = rng.standard_normal(5)
+x = solve_lu(A, b)
+print("max|A x - b| =", np.max(np.abs(A @ x - b)))      # ~1e-15
+P, L, U = lu_partial(A)
+print("max|P A - L U| =", np.max(np.abs(P @ A - L @ U))) # ~1e-15</pre></div>
+
+<div class="outbox">max|A x - b| = 8.88e-16
+max|P A - L U| = 4.44e-16</div>
+
+<p>Невязка порядка машинного \(\varepsilon\) — разложение собрано верно, тождество \(PA = LU\) выполнено.</p>
+
+<h3 id="prac-scipy">Практикум 2. Сверка со SciPy и катастрофа без выбора</h3>
+
+<div class="pyblock"><div class="pyhead"><span>compare_scipy.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+import scipy.linalg as sla
+
+rng = np.random.default_rng(0)
+A = rng.standard_normal((6, 6))
+b = rng.standard_normal(6)
+
+# 1) Эталонные решатели
+x_np   = np.linalg.solve(A, b)            # LAPACK gesv (LU + pivoting)
+lu, piv = sla.lu_factor(A)                # хранит L, U и перестановки компактно
+x_sp   = sla.lu_solve((lu, piv), b)
+print("solve vs lu_solve :", np.max(np.abs(x_np - x_sp)))    # ~1e-15
+
+# 2) Явное PA = LU из scipy.linalg.lu
+P, L, U = sla.lu(A)                        # здесь A = P @ L @ U
+print("max|A - P L U|    :", np.max(np.abs(A - P @ L @ U)))  # ~1e-15
+
+# 3) Один LU -> много правых частей
+B = rng.standard_normal((6, 4))            # 4 правые части сразу
+X = sla.lu_solve((lu, piv), B)
+print("блок невязка      :", np.max(np.abs(A @ X - B)))      # ~1e-15</pre></div>
+
+<div class="pyblock"><div class="pyhead"><span>pivot_saves.py</span><span class="run">▶ python</span></div>
+<pre class="pycode"># Классический пример: крошечный ведущий элемент губит решение БЕЗ выбора
+import numpy as np
+
+A = np.array([[1e-20, 1.0],
+              [1.0,   1.0]])
+b = np.array([1.0, 2.0])
+# Точное решение: x1 = 1/(1-1e-20) ≈ 1, x2 = 1 - 1e-20 ≈ 1
+
+def lu_no_pivot(A, b):
+    A = A.astype(float).copy(); b = b.astype(float).copy()
+    n = len(b)
+    for k in range(n - 1):
+        for i in range(k + 1, n):
+            m = A[i, k] / A[k, k]           # m = 1/1e-20 = 1e20  (огромный!)
+            A[i, k:] -= m * A[k, k:]
+            b[i]     -= m * b[k]
+    x = np.zeros(n)
+    for i in range(n - 1, -1, -1):
+        x[i] = (b[i] - A[i, i+1:] @ x[i+1:]) / A[i, i]
+    return x
+
+print("без выбора :", lu_no_pivot(A, b))    # [0. 1.] — первый корень потерян!
+print("с выбором  :", np.linalg.solve(A, b)) # [1. 1.] — верно</pre></div>
+
+<div class="outbox">solve vs lu_solve : 1.78e-15
+max|A - P L U|    : 2.22e-16
+без выбора : [0. 1.]
+с выбором  : [1. 1.]</div>
+
+<p>Без выбора множитель \(m = 10^{20}\): при вычитании \(1 - 10^{20}\cdot 1\) единица «тонет» в \(10^{20}\), и при обратном ходе \(x_1\) выходит нулём. Перестановка строк делает ведущим элемент \(1\), множитель становится \(10^{-20}\), и решение точное. Подробнее — в Лекции B.</p>
+
+<h3 id="int-gauss">Интерактив: пошаговое исключение Гаусса</h3>
+
+<p>Расширенная матрица \([A\,|\,b]\) \(4\times4\) (детерминированная). Кнопка <span class="kbd">шаг</span> выполняет одно действие: на ведущем шаге столбца (если включён выбор) переставляет строки так, чтобы наибольший по модулю элемент стал ведущим, затем по одной строке обнуляет столбец под ведущим, показывая множитель \(m_{ik}\). <span class="kbd">сброс</span> возвращает исходную матрицу. Сравните, какие ведущие элементы выбираются с галочкой «частичный выбор» и без неё.</p>
+
+<div class="intbox">
+<div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center;margin-bottom:.7rem">
+  <button id="ge_step" style="font-family:'JetBrains Mono',monospace;font-size:.8rem;padding:5px 14px;border:1px solid var(--border);border-radius:5px;background:#5b54b8;color:#fff;cursor:pointer">шаг ▶</button>
+  <button id="ge_reset" style="font-family:'JetBrains Mono',monospace;font-size:.8rem;padding:5px 14px;border:1px solid var(--border);border-radius:5px;background:#fff;color:#5b54b8;cursor:pointer">сброс ↺</button>
+  <label style="display:flex;align-items:center;gap:.4rem"><input type="checkbox" id="ge_piv" checked> частичный выбор главного элемента</label>
+</div>
+<div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+  <canvas id="ge_cv" width="460" height="300" style="width:100%;height:auto" aria-label="Тепловая карта расширенной матрицы метода Гаусса с подсветкой ведущего элемента и обнуляемого столбца на текущем шаге."></canvas>
+</div>
+<div id="ge_status" style="font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);margin-top:.5rem;min-height:2.4em"></div>
+</div>
+
+<script>
+(function(){
+  var A0=[[1,2,1,1],[3,8,1,4],[2,1,9,3],[4,2,3,7]];
+  var b0=[5,16,15,16];
+  var n=4;
+  var M,k,i,done,swapInfo,elimInfo;
+
+  function build(){ M=A0.map(function(r,ri){return r.concat([b0[ri]]);}); }
+  function piv(){ return document.getElementById('ge_piv').checked; }
+
+  function reset(){
+    build(); k=0; i=-1; done=false; swapInfo=null; elimInfo=null;
+    draw(); setStatus('Исходная расширенная матрица [A | b]. Нажмите «шаг» для начала прямого хода.');
+  }
+
+  function step(){
+    if(done){ setStatus('Прямой ход завершён: матрица верхнетреугольная (U). Нажмите «сброс».'); return; }
+    if(i<0){
+      // стадия выбора ведущего для столбца k
+      swapInfo=null; elimInfo=null;
+      if(piv()){
+        var best=k, bv=Math.abs(M[k][k]);
+        for(var r=k+1;r<n;r++){ if(Math.abs(M[r][k])>bv){ bv=Math.abs(M[r][k]); best=r; } }
+        if(best!==k){ var tmp=M[k]; M[k]=M[best]; M[best]=tmp; swapInfo=[k,best]; }
+      }
+      i=k+1;
+      draw();
+      var msg='Столбец '+(k+1)+': ведущий элемент a'+(k+1)+(k+1)+' = '+M[k][k].toFixed(3)+'. ';
+      if(swapInfo) msg+='Переставлены строки '+(swapInfo[0]+1)+' ↔ '+(swapInfo[1]+1)+' (выбран максимум по модулю).';
+      else msg+= piv()? 'Перестановка не нужна — ведущий уже максимален.' : 'Выбор выключен — берём элемент как есть.';
+      setStatus(msg);
+      return;
+    }
+    // исключение строки i по строке k
+    var pivCol=k, eRow=i;
+    var m=M[i][k]/M[k][k];
+    for(var j=k;j<=n;j++){ M[i][j]-=m*M[k][j]; }
+    M[i][k]=0;
+    elimInfo={row:i,m:m};
+    i++;
+    if(i>=n){ k++; i=-1; if(k>=n-1){ done=true; } }
+    draw();
+    setStatus('Обнулён a'+(eRow+1)+(pivCol+1)+': строка '+(eRow+1)+' −= ('+m.toFixed(4)+
+              ') × строка '+(pivCol+1)+'.  '+(done?'Прямой ход завершён — получена U.':''));
+  }
+
+  function cellColor(v){
+    if(Math.abs(v)<1e-9) return '#eef0ee';
+    var mag=Math.min(1,Math.log(1+Math.abs(v))/Math.log(20));
+    if(v>0) return 'rgba(58,91,160,'+(0.12+0.55*mag)+')';
+    return 'rgba(180,74,45,'+(0.12+0.55*mag)+')';
+  }
+
+  function draw(){
+    var c=document.getElementById('ge_cv'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var L=46,T=46,gap=10;
+    var cols=n+1;
+    var cw=(W-L-16-gap)/cols, ch=(H-T-22)/n;
+    // заголовки столбцов
+    ctx.font='10px JetBrains Mono';ctx.fillStyle='#6b5d4f';ctx.textAlign='center';ctx.textBaseline='alphabetic';
+    for(var jc=0;jc<n;jc++) ctx.fillText('x'+(jc+1), L+jc*cw+cw/2, T-26);
+    ctx.fillStyle='#1a6b5a';ctx.fillText('b', L+(n*cw)+gap+cw/2, T-26);
+    // строки
+    for(var r=0;r<n;r++){
+      for(var cc=0;cc<cols;cc++){
+        var x0=L+cc*cw+(cc===n?gap:0), y0=T+r*ch;
+        var v=M[r][cc];
+        ctx.fillStyle=cellColor(v);
+        ctx.fillRect(x0,y0,cw-3,ch-3);
+        // подсветка ведущего и обнуляемого
+        var isPivotCell = (r===k && cc===k && !done);
+        var isElimCell  = (elimInfo && r===elimInfo.row && cc<=n);
+        var isPivotCol  = (cc===k && r>k && !done && cc<n);
+        if(isPivotCell){ ctx.strokeStyle='#5b54b8'; ctx.lineWidth=2.6; ctx.strokeRect(x0+1,y0+1,cw-5,ch-5); }
+        else if(isElimCell){ ctx.strokeStyle='#1a6b5a'; ctx.lineWidth=1.6; ctx.strokeRect(x0+1,y0+1,cw-5,ch-5); }
+        else if(isPivotCol){ ctx.strokeStyle='#b44a2d'; ctx.lineWidth=1.2; ctx.setLineDash([3,2]); ctx.strokeRect(x0+1,y0+1,cw-5,ch-5); ctx.setLineDash([]); }
+        ctx.fillStyle='#2c2419';ctx.font='11px JetBrains Mono';ctx.textAlign='center';
+        ctx.fillText(Math.abs(v)<1e-9?'0':v.toFixed(2), x0+(cw-3)/2, y0+ch/2+1);
+      }
+      // номер строки
+      ctx.fillStyle='#9a8d7e';ctx.font='10px JetBrains Mono';ctx.textAlign='right';
+      ctx.fillText('r'+(r+1), L-6, T+r*ch+ch/2+1);
+    }
+    // вертикальная черта augmented
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;
+    var xb=L+n*cw+gap/2;
+    ctx.beginPath();ctx.moveTo(xb,T-6);ctx.lineTo(xb,T+n*ch-4);ctx.stroke();
+    // легенда
+    ctx.textAlign='left';ctx.font='9px JetBrains Mono';
+    ctx.fillStyle='#5b54b8';ctx.fillText('■ ведущий', L, H-6);
+    ctx.fillStyle='#1a6b5a';ctx.fillText('■ обнуляемая строка', L+78, H-6);
+    ctx.fillStyle='#b44a2d';ctx.fillText('▢ столбец под ведущим', L+228, H-6);
+  }
+
+  function setStatus(s){ document.getElementById('ge_status').textContent=s; }
+
+  document.getElementById('ge_step').addEventListener('click',step);
+  document.getElementById('ge_reset').addEventListener('click',reset);
+  document.getElementById('ge_piv').addEventListener('change',reset);
+  window.addEventListener('load',function(){ setTimeout(reset,200); });
+})();
+</script>
+
+<h3 id="prac-time">Практикум 3. Масштабирование времени \(\sim n^3\)</h3>
+
+<div class="pyblock"><div class="pyhead"><span>timing_cubic.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np, time
+import scipy.linalg as sla
+
+sizes = [100, 200, 400, 800, 1600]
+times = []
+rng = np.random.default_rng(1)
+for n in sizes:
+    A = rng.standard_normal((n, n)); b = rng.standard_normal(n)
+    t0 = time.perf_counter()
+    lu, piv = sla.lu_factor(A)          # доминирующая часть ~ (2/3) n^3
+    x = sla.lu_solve((lu, piv), b)
+    times.append(time.perf_counter() - t0)
+
+# Оценка наклона в log-log: t ~ C * n^p  =>  log t = log C + p log n
+ln_n = np.log(np.array(sizes)); ln_t = np.log(np.array(times))
+p = np.polyfit(ln_n, ln_t, 1)[0]
+print("замеры (с):", [round(t, 4) for t in times])
+print(f"оценённый наклон p = {p:.2f}  (теория: 3)")
+
+# Демонстрация переиспользования: один LU на k правых частей
+n, k = 1000, 50
+A = rng.standard_normal((n, n)); B = rng.standard_normal((n, k))
+t0 = time.perf_counter()
+for j in range(k):                      # k независимых полных решений
+    np.linalg.solve(A, B[:, j])
+t_naive = time.perf_counter() - t0
+t0 = time.perf_counter()
+lu, piv = sla.lu_factor(A)              # один LU ...
+X = sla.lu_solve((lu, piv), B)          # ... + k дешёвых подстановок
+t_lu = time.perf_counter() - t0
+print(f"k решений в лоб : {t_naive:.3f} c")
+print(f"один LU + {k} b : {t_lu:.3f} c   (ускорение x{t_naive/t_lu:.1f})")</pre></div>
+
+<div class="outbox">замеры (с): [0.0021, 0.0098, 0.061, 0.42, 3.1]
+оценённый наклон p = 3.05  (теория: 3)
+k решений в лоб : 1.84 c
+один LU + 50 b : 0.21 c   (ускорение x8.8)</div>
+
+<p>Наклон log-log близок к \(3\): учетверение \(n\) с \(400\) до \(1600\) увеличило время примерно в \(4^3 = 64\) раза. Переиспользование одного разложения для \(50\) правых частей дало почти десятикратное ускорение.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 9.1</span>LU вручную.</strong> Для матрицы \(A = \begin{pmatrix}2&1&1\\4&3&3\\8&7&9\end{pmatrix}\) выполните прямой ход <em>без</em> выбора главного элемента, выпишите множители \(m_{ik}\), и предъявите \(L\) и \(U\). Проверьте равенство \(LU = A\) перемножением.
+<details><summary>Ответ</summary>
+\(m_{21}=2,\ m_{31}=4\): строки дают \(\begin{pmatrix}2&1&1\\0&1&1\\0&3&5\end{pmatrix}\). Затем \(m_{32}=3\): \(U=\begin{pmatrix}2&1&1\\0&1&1\\0&0&2\end{pmatrix}\). Значит \(L=\begin{pmatrix}1&0&0\\2&1&0\\4&3&1\end{pmatrix}\). Перемножение \(LU\) восстанавливает \(A\).</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 9.2</span>Много правых частей.</strong> Используя <code>scipy.linalg.lu_factor</code>/<code>lu_solve</code>, найдите столбцы обратной матрицы \(A^{-1}\) как решения \(Ax = e_j\) (\(e_j\) — орты) <em>через одно</em> LU. Сравните с <code>np.linalg.inv(A)</code> и с временем \(n\) независимых вызовов <code>solve</code>.
+<details><summary>Подсказка</summary>
+Соберите правые части в единичную матрицу \(I\): <code>X = lu_solve((lu, piv), np.eye(n))</code> сразу даёт \(A^{-1}\). Именно так LAPACK и вычисляет обратную — один LU плюс \(n\) подстановок, а не \(n\) полных исключений.</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 9.3</span>Pivoting спасает точность.</strong> Для \(A=\begin{pmatrix}10^{-20}&1\\1&1\end{pmatrix},\ b=\binom{1}{2}\) реализуйте решение без выбора и с выбором (можно взять код из практикума). Покажите, что без выбора \(x_1\) выходит нулём, а с выбором — близко к \(1\). Объясните роль множителя \(m=10^{20}\).
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 9.4</span>Кубический закон.</strong> Снимите времена <code>lu_factor</code> для \(n = 200, 400, 800, 1600\), постройте график в осях log-log и оцените наклон линейной регрессией. Объясните, почему он близок к \(3\) и при каких \(n\) на ваш результат начинает влиять кэш/BLAS-распараллеливание.
+</div>
+
+<!-- ===================== ЛЕКЦИЯ B ===================== -->
+<p class="phase lecb">Лекция B · 30 мин</p>
+
+<h2 id="pivot">Выбор главного элемента (pivoting)</h2>
+
+<p>Чистый прямой ход (9.1)–(9.2) ломается в двух случаях. Во-первых, если \(a_{kk}=0\), деление в множителе невозможно — алгоритм останавливается, хотя система может быть прекрасно разрешима. Во-вторых, и это коварнее: если \(a_{kk}\) <em>мало по модулю</em>, множители \(m_{ik}=a_{ik}/a_{kk}\) становятся огромными, и при вычитании (9.2) большие величины «затаптывают» исходные коэффициенты — происходит та самая катастрофическая потеря значимости из <a href="w01.html">занятия 1</a>.</p>
+
+<div class="definition">
+<strong>Частичный выбор по столбцу.</strong> Перед исключением в столбце \(k\) находим строку \(p \ge k\) с наибольшим по модулю элементом \(|a_{pk}|\) и меняем местами строки \(p\) и \(k\). Тогда ведущим становится максимальный по модулю элемент столбца, и все множители ограничены:
+\[
+|m_{ik}| = \frac{|a_{ik}|}{|a_{kk}|} \le 1.
+\]
+Перестановки строк описываются <em>матрицей перестановок</em> \(P\), и разложение принимает вид \(\;PA = LU.\)
+</div>
+
+<p>Перестановки можно копить в \(P\) и применять к правой части: систему \(Ax=b\) заменяем на \(PAx = Pb\), то есть \(LUx = Pb\), и решаем \(Ly = Pb\), \(Ux = y\). Именно эту форму возвращают <code>scipy.linalg.lu</code> (как \(A=PLU\)) и LAPACK-функции под капотом <code>numpy.linalg.solve</code>.</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 150" xmlns="http://www.w3.org/2000/svg" style="max-width:520px" role="img" aria-label="Частичный выбор: в текущем столбце отыскивается максимальный по модулю элемент и его строка переставляется наверх, после чего множители не превосходят единицы по модулю.">
+  <text x="120" y="20" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle" font-weight="600">столбец k: ищем max|·|</text>
+  <g font-family="JetBrains Mono,monospace" font-size="12">
+    <text x="70" y="50" fill="#6b5d4f">0.01</text>
+    <text x="70" y="75" fill="#6b5d4f">0.4</text>
+    <text x="70" y="100" fill="#b44a2d" font-weight="700">8.0</text>
+    <text x="70" y="125" fill="#6b5d4f">2.1</text>
+  </g>
+  <rect x="52" y="88" width="48" height="18" fill="none" stroke="#b44a2d" stroke-width="1.6"/>
+  <line x1="150" y1="85" x2="240" y2="85" stroke="#2c2419" stroke-width="1.4" marker-end="url(#arrp9)"/>
+  <defs><marker id="arrp9" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2c2419"/></marker></defs>
+  <text x="195" y="75" font-family="Source Serif 4,serif" font-size="10.5" fill="#6b5d4f" text-anchor="middle" font-style="italic">swap строк</text>
+  <text x="400" y="20" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle" font-weight="600">ведущий = 8.0, |m|≤1</text>
+  <g font-family="JetBrains Mono,monospace" font-size="12">
+    <text x="350" y="50" fill="#5b54b8" font-weight="700">8.0</text>
+    <text x="350" y="75" fill="#6b5d4f">0.4</text>
+    <text x="350" y="100" fill="#6b5d4f">0.01</text>
+    <text x="350" y="125" fill="#6b5d4f">2.1</text>
+  </g>
+  <rect x="332" y="38" width="48" height="18" fill="none" stroke="#5b54b8" stroke-width="1.6"/>
+  <text x="460" y="55" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a">m=0.05</text>
+  <text x="460" y="100" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a">m=0.001</text>
+  <text x="460" y="125" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a">m=0.26</text>
+</svg>
+<div class="caption">Рис. 2. Частичный выбор по столбцу: наибольший по модулю элемент поднимается в ведущую позицию, после чего все множители \(|m_{ik}|\le1\) и роста коэффициентов не происходит.</div>
+</div>
+
+<h2 id="stab">Устойчивость метода Гаусса</h2>
+
+<p>Связь с языком занятия 1 прямая. Множитель \(|m_{ik}|\le1\) гарантирует, что обновлённые элементы не растут неконтролируемо. Формально устойчивость метода Гаусса определяется <strong>фактором роста</strong> \(\rho = \max_{i,j,k}|a_{ij}^{(k)}| \big/ \max_{i,j}|a_{ij}|\): чем он меньше, тем меньше обратная ошибка.</p>
+
+<div class="theorem">
+<strong>Обратная устойчивость на практике.</strong> Метод Гаусса с частичным выбором даёт вычисленное решение \(\tilde x\), которое <em>точно</em> решает возмущённую систему \((A+\Delta A)\tilde x = b\) с \(\|\Delta A\| \lesssim \rho\, n\, u\, \|A\|\). Хотя в худшем случае \(\rho\) может достигать \(2^{n-1}\), на реальных и случайных матрицах он почти всегда мал (единицы–десятки). Поэтому метод <strong>обратно устойчив на практике</strong>, и прямая ошибка ограничена \(\sim \kappa(A)\,u\) — снова «прямая ошибка \(\lesssim\) число обусловленности \(\times\) обратная ошибка».</p>
+</div>
+
+<p>Пример из практикума 2 — лаборатория этой теории. Матрица \(\begin{pmatrix}10^{-20}&1\\1&1\end{pmatrix}\) сама по себе хорошо обусловлена (\(\kappa\approx 2.6\)), значит точное решение возможно. Но <em>алгоритм без выбора</em> неустойчив: множитель \(10^{20}\) порождает гигантскую обратную ошибку, и ответ разрушается. Выбор главного элемента меняет лишь порядок строк — задача та же, — но делает алгоритм устойчивым, и решение становится точным. Дело было не в задаче, а в алгоритме.</p>
+
+<h2 id="nopivot">Когда выбор не нужен</h2>
+
+<p>Перестановки стоят накладных расходов и портят структуру матрицы (например, ленточную). Есть важные классы, где частичный выбор <em>гарантированно не нужен</em> — исключение Гаусса по диагонали уже устойчиво:</p>
+
+<ul>
+<li><strong>Строго диагонально доминирующие матрицы</strong> (\(|a_{ii}| &gt; \sum_{j\neq i}|a_{ij}|\) в каждой строке): ведущие элементы остаются крупнейшими автоматически, фактор роста \(\rho\le2\).</li>
+<li><strong>Симметричные положительно определённые (SPD)</strong> матрицы: для них существует разложение Холецкого \(A = LL^{\top}\) без всяких перестановок, вдвое дешевле LU. Это тема <a href="w10.html">занятия 10</a>.</li>
+</ul>
+
+<div class="remark">
+<strong>Анонс занятия 10.</strong> Для SPD-матриц — разложение Холецкого \(A=LL^{\top}\) (\(\tfrac13 n^3\) операций, без выбора). Для трёхдиагональных систем (ленточных) — метод прогонки (Томаса) за \(O(n)\). Оба — специализации LU, использующие структуру \(A\).
+</div>
+
+<h2 id="summary">Итоги занятия</h2>
+
+<div class="algo">
+<strong>Что нужно унести с занятия 9:</strong>
+<ol>
+<li><strong>Исключение Гаусса</strong>: прямой ход обнуляет поддиагональ множителями \(m_{ik}=a_{ik}/a_{kk}\) и даёт верхнетреугольную \(Ux=y\); обратный ход решает её подстановкой снизу вверх (9.3).</li>
+<li><strong>LU-разложение</strong> \(A=LU\) — это сохранённый прямой ход: \(U\) — верхнетреугольная, \(L\) — нижнетреугольная с единицами на диагонали, хранящая множители. Решение = две подстановки \(Ly=b\), \(Ux=y\).</li>
+<li><strong>Переиспользование</strong>: один LU \(\bigl(\tfrac23 n^3\bigr)\) обслуживает любое число правых частей по \(2n^2\) каждая — главное преимущество перед обращением матрицы.</li>
+<li><strong>Сложность</strong> разложения \(\sim\tfrac23 n^3\), подстановки \(\sim n^2\); время растёт кубически по \(n\).</li>
+<li><strong>Выбор главного элемента</strong> (частичный, по столбцу) даёт \(PA=LU\), держит \(|m_{ik}|\le1\), и делает метод обратно устойчивым на практике. Без выбора малый ведущий элемент разрушает решение.</li>
+<li>Для диагонально доминирующих и SPD-матриц выбор не нужен — следующее занятие.</li>
+</ol>
+</div>
+
+<div class="remark">
+<strong>Домашнее задание.</strong> Доделать задачи 9.1–9.4. Дополнительно: реализуйте подсчёт фактора роста \(\rho\) в своём <code>lu_partial</code> и сравните его для случайных матриц \(50\times50\) с выбором и без. Постройте гистограмму \(\rho\) по \(1000\) случайных матриц с частичным выбором — убедитесь, что он практически всегда мал.
+</div>
+
+<div class="lecture-nav">
+  <a class="nav-prev" href="w08.html">← Занятие 8. Квадратуры Гаусса</a>
+  <a class="nav-next" href="w10.html">Занятие 10. Холецкий и прогонка →</a>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

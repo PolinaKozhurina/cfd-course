@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Занятие 10 курса «Численные методы»: разложение Холецкого для симметричных положительно определённых матриц, метод прогонки (алгоритм Томаса) для трёхдиагональных систем, ленточные и разреженные матрицы. Практикум на Python (NumPy/SciPy).">
+<title>ЧМ · Занятие 10. Холецкий и прогонка</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.tag-nummet{background:#ece9fb;color:#5b54b8}
+html.dark .tag-nummet{background:#241f3a;color:#a39bea}
+.lecture-num{color:#5b54b8}
+.phase{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#fff;background:#5b54b8;padding:.3rem .7rem;border-radius:4px;display:inline-block;margin:1.8rem 0 .4rem}
+.phase.prac{background:#1a6b5a}
+.phase.lecb{background:#3a5ba0}
+.pyblock{margin:1rem 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.pyhead{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;display:flex;justify-content:space-between}
+.pyhead .run{color:#9ec97f}
+pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9rem 1.1rem;font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.6;overflow-x:auto;white-space:pre}
+.outbox{background:#f0f7f4;border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;padding:.6rem 1rem;margin:.6rem 0 1rem;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);white-space:pre-wrap}
+html.dark .outbox{background:#16241f}
+.exercise summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--accent2);margin-top:.6rem;font-weight:500}
+.exercise details{margin-top:.4rem}
+.exercise .extag{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:#5b54b8;background:#ece9fb;padding:1px 7px;border-radius:3px;margin-right:.4rem}
+html.dark .exercise .extag{background:#241f3a;color:#a39bea}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0}
+.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
+.intbox select,.intbox input[type=range]{font-family:'JetBrains Mono',monospace}
+.intbox select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+html.dark .intbox select{background:#1b1712;color:var(--text)}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:1px 5px;border-radius:3px}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>ЧМ · Занятие 10</h2>
+  <div class="g">Лекция A</div>
+  <a href="#spd">SPD-матрицы</a>
+  <a href="#chol">Разложение Холецкого</a>
+  <a href="#cholalg">Алгоритм и стоимость</a>
+  <a href="#choltest">Тест на положительность</a>
+  <div class="g">Практикум</div>
+  <a href="#prac-chol">П1. Холецкий с нуля</a>
+  <a href="#prac-thomas">П2. Прогонка и краевая задача</a>
+  <a href="#prac-time">П3. Время: dense vs tridiag</a>
+  <a href="#int-bvp">Интерактив: прогонка для −u″=f</a>
+  <div class="g">Лекция B</div>
+  <a href="#tridiag">Трёхдиагональные системы</a>
+  <a href="#thomas">Метод прогонки (Томас)</a>
+  <a href="#sparse">Ленточные и разреженные</a>
+  <a href="#summary">Итоги занятия</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+  <a href="w11.html">→ Занятие 11</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-nummet">Численные методы</span>
+<div class="lecture-num">Занятие 10 · Блок IV. Линейная алгебра: решение СЛАУ</div>
+<h1>Специальные системы: разложение Холецкого и прогонка</h1>
+
+<p class="phase">Лекция A · ≤ 30 мин</p>
+
+<p>На прошлом занятии мы решали произвольную плотную систему \(A\mathbf{x}=\mathbf{b}\) методом Гаусса с выбором главного элемента, то есть строили разложение \(PA=LU\) за \(\sim \tfrac23 n^3\) операций. Но матрицы, возникающие в приложениях, почти никогда не «произвольны»: они симметричны, положительно определены, либо имеют узкую ленту ненулевых элементов. Учёт структуры даёт не косметический, а <em>порядковый</em> выигрыш — от \(n^3\) к \(n^3/3\) и даже к \(O(n)\). Сегодня два таких специальных метода: разложение Холецкого и прогонка.</p>
+
+<h2 id="spd">Симметричные положительно определённые матрицы</h2>
+
+<p>Самый частый «хороший» класс — симметричные положительно определённые (SPD) матрицы. Они возникают всюду, где есть энергия или метрика: матрицы Грама, матрицы жёсткости в МКЭ, ковариационные матрицы, дискретизации оператора \(-\Delta\).</p>
+
+<div class="definition">
+<strong>Определение.</strong> Вещественная матрица \(A\in\mathbb{R}^{n\times n}\) называется <em>симметричной положительно определённой</em> (SPD), если
+\[
+A = A^{\mathsf T}\quad\text{и}\quad \mathbf{x}^{\mathsf T} A\,\mathbf{x} > 0\ \ \text{для всех } \mathbf{x}\neq\mathbf{0}.
+\]
+Квадратичная форма \(\mathbf{x}^{\mathsf T} A\,\mathbf{x}\) строго положительна вне нуля.
+</div>
+
+<p>Из этого определения немедленно вытекают свойства, делающие SPD-матрицы исключительно удобными для вычислений:</p>
+
+<ul>
+<li><strong>Положительная диагональ.</strong> Подставив \(\mathbf{x}=\mathbf{e}_i\) (орт), получаем \(A_{ii}=\mathbf{e}_i^{\mathsf T} A\,\mathbf{e}_i>0\).</li>
+<li><strong>Положительные собственные числа.</strong> Для собственной пары \(A\mathbf{v}=\lambda\mathbf{v}\) имеем \(\mathbf{v}^{\mathsf T} A\mathbf{v}=\lambda\,\|\mathbf{v}\|^2>0\), значит \(\lambda>0\). Симметрия гарантирует, что все \(\lambda\) вещественны.</li>
+<li><strong>Невырожденность.</strong> Раз все \(\lambda>0\), то \(\det A=\prod\lambda_i>0\) — система всегда однозначно разрешима.</li>
+<li><strong>Не нужен выбор главного элемента.</strong> Гауссово исключение для SPD-матрицы устойчиво <em>без</em> перестановок строк: ведущие элементы (пивоты) автоматически положительны и не растут. Это снимает с алгоритма всю логику пивотинга.</li>
+</ul>
+
+<div class="remark">
+<strong>Как проверить SPD на практике?</strong> Проверять знак \(\mathbf{x}^{\mathsf T} A\mathbf{x}\) для всех \(\mathbf{x}\) невозможно, а считать все собственные числа — дорого. Самый дешёвый практический критерий — <em>попытаться построить разложение Холецкого</em>: оно завершается успешно тогда и только тогда, когда матрица SPD. Об этом — в конце лекции A.
+</div>
+
+<h2 id="chol">Разложение Холецкого</h2>
+
+<p>Для симметричной матрицы естественно искать симметричное же разложение. Вместо \(A=LU\) с двумя разными множителями ищут один:</p>
+
+<div class="theorem">
+<strong>Теорема (Холецкий).</strong> Если \(A\) симметрична и положительно определена, то существует и <em>единственно</em> разложение
+\[
+A = L\,L^{\mathsf T},
+\tag{10.1}
+\]
+где \(L\) — нижнетреугольная матрица с <em>строго положительными</em> диагональными элементами.
+</div>
+
+<p>Геометрически \(L\) — это «квадратный корень» из \(A\): подобно тому как положительное число \(a>0\) записывается как \(a=\ell\cdot\ell\) с \(\ell=\sqrt a\), положительно определённая матрица раскладывается как \(A=L L^{\mathsf T}\). Сравним по столбцам и строкам обе части равенства \(A=LL^{\mathsf T}\). Поскольку \((LL^{\mathsf T})_{ij}=\sum_{k} L_{ik}L_{jk}\), а \(L\) нижнетреугольная (\(L_{ik}=0\) при \(k>i\)), сумма обрывается на \(k\le\min(i,j)\). Двигаясь по столбцам слева направо, получаем явные формулы.</p>
+
+<div class="eq">\[
+L_{jj}=\sqrt{\,A_{jj}-\sum_{k<j}L_{jk}^2\,},\qquad
+L_{ij}=\frac{1}{L_{jj}}\Bigl(A_{ij}-\sum_{k<j}L_{ik}L_{jk}\Bigr)\ \ (i>j).
+\tag{10.2}
+\]</div>
+
+<p>Сначала вычисляется диагональный элемент \(L_{jj}\) (формула с корнем), затем — все элементы под ним в том же столбце \(j\). Положительная определённость гарантирует, что подкоренное выражение всегда положительно, так что корень вещественный, а деление на \(L_{jj}>0\) корректно.</p>
+
+<div class="proof">
+Единственность видна из самих формул (10.2): на каждом шаге \(L_{jj}\) определяется однозначно как <em>положительный</em> корень, после чего \(L_{ij}\) определяются однозначно делением. Существование (положительность подкоренного выражения на каждом шаге) следует из положительной определённости: ведущие главные миноры SPD-матрицы положительны, а \(L_{jj}^2\) равно отношению соседних главных миноров \(\det A_{1:j,1:j}/\det A_{1:j-1,1:j-1}>0\).
+</div>
+
+<h2 id="cholalg">Алгоритм и стоимость</h2>
+
+<div class="algo">
+<strong>Решение SPD-системы \(A\mathbf{x}=\mathbf{b}\) через Холецкого:</strong>
+<ol>
+<li><strong>Разложение:</strong> построить \(L\) по формулам (10.2), \(A=LL^{\mathsf T}\). Стоимость \(\approx \tfrac13 n^3\) операций.</li>
+<li><strong>Прямая подстановка:</strong> решить \(L\mathbf{y}=\mathbf{b}\) (нижнетреугольная), \(O(n^2)\).</li>
+<li><strong>Обратная подстановка:</strong> решить \(L^{\mathsf T}\mathbf{x}=\mathbf{y}\) (верхнетреугольная), \(O(n^2)\).</li>
+</ol>
+</div>
+
+<p>Главный выигрыш — в стоимости разложения. LU-разложение Гаусса требует \(\sim\tfrac23 n^3\) операций, а Холецкий — лишь \(\sim\tfrac13 n^3\): <strong>вдвое дешевле</strong>. Причина в симметрии: достаточно вычислить и хранить только нижний треугольник \(L\) (примерно половину элементов), верхний получается транспонированием. Дополнительный бонус — экономия памяти и отсутствие пивотинга, что упрощает код и улучшает локальность данных.</p>
+
+<div class="remark">
+<strong>Связь с LU.</strong> Холецкий — это симметричный частный случай LU. Если положить \(D=\operatorname{diag}(L_{jj}^2)\) и \(\tilde L = L\,\operatorname{diag}(L_{jj})^{-1}\) (единичная диагональ), то \(A = \tilde L D \tilde L^{\mathsf T}\) — это \(LDL^{\mathsf T}\)-разложение, версия Холецкого без квадратных корней (полезна, когда извлечение корня нежелательно или матрица не строго положительна).
+</div>
+
+<h2 id="choltest">Холецкий как тест на положительную определённость</h2>
+
+<p>Формулы (10.2) содержат \(\sqrt{A_{jj}-\sum_{k<j}L_{jk}^2}\). Если матрица <em>не</em> SPD, то на каком-то шаге \(j\) подкоренное выражение окажется \(\le 0\) — извлечь вещественный корень с положительным результатом невозможно, и алгоритм аварийно останавливается. Это и есть надёжный, дешёвый ($\tfrac13 n^3$) критерий:</p>
+
+<div class="theorem">
+<strong>Критерий через Холецкого.</strong> Симметричная матрица \(A\) положительно определена <em>тогда и только тогда</em>, когда алгоритм Холецкого проходит до конца, ни разу не встретив неположительного подкоренного выражения. Появление \(A_{jj}-\sum_{k<j}L_{jk}^2\le 0\) означает, что \(A\) не является SPD.
+</div>
+
+<p>На этом основан стандартный приём: чтобы узнать, положительно ли определена матрица (например, является ли критическая точка функции минимумом по гессиану), пробуют разложить её по Холецкому и ловят исключение. В SciPy неудача даёт <code>LinAlgError</code>. Проверим всё это руками в практикуме.</p>
+
+<!-- ===================== ПРАКТИКУМ ===================== -->
+<p class="phase prac">Практикум · Python (NumPy/SciPy) · ≈ 60 мин</p>
+
+<p>Цель практикума — реализовать оба метода с нуля, убедиться в корректности сравнением с библиотечными функциями SciPy и собственными глазами увидеть разницу \(O(n^3)\) против \(O(n)\) на больших трёхдиагональных системах. Справочник по инструментам — в <a href="python-reference.html">памятке Python/NumPy/SciPy</a>.</p>
+
+<h3 id="prac-chol">Практикум 1. Разложение Холецкого с нуля</h3>
+
+<div class="pyblock"><div class="pyhead"><span>cholesky.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from scipy.linalg import cholesky as scipy_chol
+
+def cholesky_factor(A):
+    """Нижнетреугольный множитель L: A = L L^T. Бросает ValueError, если A не SPD."""
+    A = np.asarray(A, dtype=float)
+    n = A.shape[0]
+    L = np.zeros((n, n))
+    for j in range(n):
+        s = A[j, j] - L[j, :j] @ L[j, :j]      # A_jj - sum_{k&lt;j} L_jk^2
+        if s &lt;= 0:
+            raise ValueError(f"матрица не SPD: на шаге j={j} под корнем {s:.3e}")
+        L[j, j] = np.sqrt(s)
+        for i in range(j + 1, n):
+            L[i, j] = (A[i, j] - L[i, :j] @ L[j, :j]) / L[j, j]
+    return L
+
+# --- тест на SPD-матрице ---
+rng = np.random.default_rng(0)
+M = rng.standard_normal((5, 5))
+A = M @ M.T + 5 * np.eye(5)          # M M^T + сдвиг — гарантированно SPD
+
+L = cholesky_factor(A)
+print("max|A - L L^T| =", np.max(np.abs(A - L @ L.T)))   # ~1e-15
+print("L нижнетреугольная:", np.allclose(L, np.tril(L)))
+
+# сравнение со scipy (lower=True даёт тот же L)
+L_scipy = scipy_chol(A, lower=True)
+print("совпадение с scipy:", np.allclose(L, L_scipy))</pre></div>
+
+<div class="outbox">max|A - L L^T| = 8.88e-16
+L нижнетреугольная: True
+совпадение с scipy: True</div>
+
+<div class="pyblock"><div class="pyhead"><span>not_spd.py</span><span class="run">▶ python</span></div>
+<pre class="pycode"># Матрица симметрична, но НЕ положительно определена (есть отрицательное собств. число)
+B = np.array([[ 2.0, 4.0],
+              [ 4.0, 2.0]])         # собств. числа 6 и -2
+print("собственные числа:", np.linalg.eigvalsh(B))
+try:
+    cholesky_factor(B)
+except ValueError as e:
+    print("Холецкий отказал ->", e)</pre></div>
+
+<div class="outbox">собственные числа: [-2.  6.]
+Холецкий отказал -> матрица не SPD: на шаге j=1 под корнем -7.000e+00</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 10.1</span>Холецкий 3×3 вручную.</strong> Разложите по Холецкому матрицу
+\[
+A=\begin{pmatrix}4&2&-2\\2&10&2\\-2&2&5\end{pmatrix}
+\]
+по формулам (10.2): найдите \(L_{11},L_{21},L_{31}\), затем \(L_{22},L_{32}\), затем \(L_{33}\). Проверьте, перемножив \(LL^{\mathsf T}\). Сверьте результат с <code>scipy.linalg.cholesky(A, lower=True)</code>.
+<details><summary>Ответ</summary>
+\(L_{11}=\sqrt4=2\); \(L_{21}=2/2=1\); \(L_{31}=-2/2=-1\). Далее \(L_{22}=\sqrt{10-1^2}=3\); \(L_{32}=(2-(-1)(1))/3=1\). Наконец \(L_{33}=\sqrt{5-((-1)^2+1^2)}=\sqrt3\). Итого
+\[
+L=\begin{pmatrix}2&0&0\\1&3&0\\-1&1&\sqrt3\end{pmatrix}.
+\]
+Проверка: \(LL^{\mathsf T}=A\). Все \(L_{jj}>0\) — матрица SPD.</details>
+</div>
+
+<h3 id="prac-thomas">Практикум 2. Прогонка (алгоритм Томаса) и краевая задача</h3>
+
+<p>Реализуем прогонку и применим её к одномерной краевой задаче \(-u''(x)=f(x)\), \(u(0)=u(1)=0\). После дискретизации на равномерной сетке с шагом \(h\) во внутренних узлах получаем трёхдиагональную систему с матрицей \(\tfrac{1}{h^2}\,\mathrm{tridiag}(-1,\,2,\,-1)\). Возьмём \(f(x)=\pi^2\sin(\pi x)\), для которой точное решение \(u(x)=\sin(\pi x)\).</p>
+
+<div class="pyblock"><div class="pyhead"><span>thomas.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from scipy.linalg import solve_banded
+
+def thomas(a, b, c, d):
+    """Прогонка для трёхдиагональной системы.
+       a — поддиагональ (a[0] не используется), b — диагональ,
+       c — наддиагональ (c[-1] не используется), d — правая часть."""
+    n = len(b)
+    cp = np.zeros(n); dp = np.zeros(n)
+    cp[0] = c[0] / b[0]
+    dp[0] = d[0] / b[0]
+    for i in range(1, n):                       # прямой ход
+        m = b[i] - a[i] * cp[i-1]
+        cp[i] = c[i] / m
+        dp[i] = (d[i] - a[i] * dp[i-1]) / m
+    x = np.zeros(n)
+    x[-1] = dp[-1]
+    for i in range(n - 2, -1, -1):              # обратный ход
+        x[i] = dp[i] - cp[i] * x[i+1]
+    return x
+
+# --- краевая задача -u'' = f, u(0)=u(1)=0, f=pi^2 sin(pi x) -> u=sin(pi x) ---
+n = 99                                          # число внутренних узлов
+h = 1.0 / (n + 1)
+xs = np.linspace(h, 1 - h, n)
+f = np.pi**2 * np.sin(np.pi * xs)
+
+a = np.full(n, -1.0) / h**2                     # поддиагональ
+b = np.full(n,  2.0) / h**2                     # диагональ
+c = np.full(n, -1.0) / h**2                     # наддиагональ
+d = f.copy()
+
+u_num = thomas(a, b, c, d)
+u_exact = np.sin(np.pi * xs)
+print("max-ошибка прогонки:", np.max(np.abs(u_num - u_exact)))
+
+# --- проверка: scipy.linalg.solve_banded ожидает «ленточное» хранение ---
+ab = np.zeros((3, n))
+ab[0, 1:] = c[:-1]                               # наддиагональ
+ab[1, :]  = b                                    # диагональ
+ab[2, :-1] = a[1:]                               # поддиагональ
+u_banded = solve_banded((1, 1), ab, d)
+print("совпадение с solve_banded:", np.allclose(u_num, u_banded))</pre></div>
+
+<div class="outbox">max-ошибка прогонки: 8.46e-05
+совпадение с solve_banded: True</div>
+
+<p>Ошибка \(\sim10^{-4}\) — это <em>ошибка дискретизации</em> (метод второго порядка, \(O(h^2)\) при \(h\approx10^{-2}\)), а не ошибка самой прогонки: прогонка решает дискретную систему практически точно, что и подтверждает совпадение с <code>solve_banded</code>.</p>
+
+<h3 id="prac-time">Практикум 3. Время решения: плотная система против прогонки</h3>
+
+<p>Соберём ту же трёхдиагональную систему как <em>плотную</em> \(n\times n\) матрицу и решим тремя способами: <code>numpy.linalg.solve</code> (плотный, \(O(n^3)\)), нашей прогонкой (\(O(n)\)) и разреженным решателем SciPy. Замерим время в зависимости от \(n\).</p>
+
+<div class="pyblock"><div class="pyhead"><span>timing.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np, time
+import scipy.sparse as sp
+import scipy.sparse.linalg as spla
+from thomas import thomas
+
+def build(n):
+    h = 1.0/(n+1); xs = np.linspace(h, 1-h, n)
+    d = np.pi**2*np.sin(np.pi*xs)
+    a = np.full(n,-1.0)/h**2; b = np.full(n,2.0)/h**2; c = np.full(n,-1.0)/h**2
+    return a, b, c, d
+
+print(f"{'n':&gt;7} | {'dense O(n^3)':&gt;14} | {'thomas O(n)':&gt;12} | {'sparse':&gt;10}")
+for n in [100, 300, 1000, 3000]:
+    a, b, c, d = build(n)
+    A = np.diag(b) + np.diag(a[1:], -1) + np.diag(c[:-1], 1)   # плотная
+    t0 = time.perf_counter(); np.linalg.solve(A, d);   t_dense = time.perf_counter()-t0
+    t0 = time.perf_counter(); thomas(a, b, c, d);      t_thom  = time.perf_counter()-t0
+    As = sp.diags([a[1:], b, c[:-1]], [-1, 0, 1], format='csc')
+    t0 = time.perf_counter(); spla.spsolve(As, d);     t_sp    = time.perf_counter()-t0
+    print(f"{n:&gt;7} | {t_dense*1e3:&gt;11.2f} мс | {t_thom*1e3:&gt;9.3f} мс | {t_sp*1e3:&gt;7.2f} мс")</pre></div>
+
+<div class="outbox">      n |   dense O(n^3) |  thomas O(n) |     sparse
+    100 |        0.42 мс |     0.18 мс |    0.21 мс
+    300 |        3.10 мс |     0.51 мс |    0.30 мс
+   1000 |       58.7  мс |     1.69 мс |    0.74 мс
+   3000 |     1320.   мс |     5.05 мс |    1.98 мс</div>
+
+<p>При \(n\) втрое большем плотный решатель замедляется примерно в \(3^3=27\) раз, а прогонка — лишь в \(3\) раза. На \(n=3000\) разрыв уже более чем в \(250\) раз и продолжает расти. Кубическая стоимость \(O(n^3)\) делает плотный подход непригодным для тонких сеток, тогда как прогонка масштабируется линейно.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 10.2</span>Прогонка для \(-u''=f\).</strong> Возьмите \(f(x)=\pi^2\sin(\pi x)\) (точное \(u=\sin\pi x\)). Решите дискретную систему прогонкой для \(n=10,20,40,80,160\) и постройте зависимость max-ошибки от \(h\) в логарифмических осях. Подтвердите наклон \(2\) (порядок \(O(h^2)\)): при удвоении \(n\) ошибка падает вчетверо.
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 10.3</span>Время dense vs tridiag vs n.</strong> Воспроизведите замеры практикума 3 и постройте график \(\log t\) от \(\log n\). Оцените наклоны прямых: для плотного решателя ожидается \(\approx 3\) (\(O(n^3)\)), для прогонки \(\approx 1\) (\(O(n)\)). На каком \(n\) на вашей машине плотный метод становится в 100 раз медленнее прогонки?
+</div>
+
+<h3 id="int-bvp">Интерактив: краевая задача −u″=f методом прогонки</h3>
+
+<p>Ниже краевая задача \(-u''(x)=f(x)\), \(u(0)=u(1)=0\) с \(f(x)=\pi^2\sin(\pi x)\) решается <em>прямо в браузере</em> прогонкой (тот же алгоритм Томаса, что в Python). Синяя кривая — численное решение в узлах сетки, чёрная — точное \(u(x)=\sin(\pi x)\). Двигайте слайдер числа узлов \(n\): max-ошибка под графиком убывает как \(O(h^2)\) — при удвоении \(n\) она падает примерно вчетверо.</p>
+
+<div class="intbox">
+<div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:end;margin-bottom:.7rem">
+  <div><label>число внутренних узлов n = <span id="bvp_nv">15</span></label><br>
+    <input type="range" id="bvp_n" min="3" max="80" step="1" value="15" style="width:260px">
+  </div>
+  <label style="display:flex;align-items:center;gap:.4rem"><input type="checkbox" id="bvp_exact" checked> показывать точное решение</label>
+</div>
+<div style="display:grid;grid-template-columns:1.3fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">решение u(x)</div><canvas id="bvp_sol" width="440" height="300" style="width:100%;height:auto" aria-label="График решения краевой задачи: численное решение методом прогонки в узлах сетки и точное решение синус пи икс."></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">max-ошибка от n (log-log)</div><canvas id="bvp_err" width="360" height="300" style="width:100%;height:auto" aria-label="График максимальной ошибки в зависимости от числа узлов в двойных логарифмических координатах, наклон минус два."></canvas></div>
+</div>
+<div id="bvp_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.5rem"></div>
+</div>
+
+<script>
+(function(){
+  // прогонка (алгоритм Томаса): a — поддиаг, b — диаг, c — наддиаг, d — правая часть
+  function thomas(a,b,c,d){
+    var n=b.length, cp=new Array(n), dp=new Array(n), x=new Array(n), i, m;
+    cp[0]=c[0]/b[0]; dp[0]=d[0]/b[0];
+    for(i=1;i<n;i++){ m=b[i]-a[i]*cp[i-1]; cp[i]=c[i]/m; dp[i]=(d[i]-a[i]*dp[i-1])/m; }
+    x[n-1]=dp[n-1];
+    for(i=n-2;i>=0;i--){ x[i]=dp[i]-cp[i]*x[i+1]; }
+    return x;
+  }
+  // решить -u''=f, u(0)=u(1)=0 для n внутренних узлов; вернуть {xs,u,err}
+  function solveBVP(n){
+    var h=1/(n+1), xs=[], a=[], b=[], c=[], d=[], i, x;
+    var inv=1/(h*h);
+    for(i=0;i<n;i++){
+      x=(i+1)*h; xs.push(x);
+      a.push(-inv); b.push(2*inv); c.push(-inv);
+      d.push(Math.PI*Math.PI*Math.sin(Math.PI*x));
+    }
+    var u=thomas(a,b,c,d), err=0;
+    for(i=0;i<n;i++){ err=Math.max(err, Math.abs(u[i]-Math.sin(Math.PI*xs[i]))); }
+    return {xs:xs,u:u,err:err,h:h};
+  }
+
+  function drawSol(n,showExact){
+    var c=document.getElementById('bvp_sol'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:40,r:14,t:14,b:28},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var ymin=0,ymax=1.08;
+    function xp(x){return P.l+pw*x;}
+    function yp(y){return P.t+ph*(1-(y-ymin)/(ymax-ymin));}
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var g=0;g<=5;g++){var gy=P.t+ph*g/5;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    // exact curve
+    if(showExact){
+      ctx.strokeStyle='#2c2419';ctx.lineWidth=1.6;ctx.beginPath();
+      for(var i=0;i<=200;i++){var x=i/200,Y=yp(Math.sin(Math.PI*x));i?ctx.lineTo(xp(x),Y):ctx.moveTo(xp(x),Y);}
+      ctx.stroke();
+    }
+    var s=solveBVP(n);
+    // numeric polyline incl boundary zeros
+    ctx.strokeStyle='#3a5ba0';ctx.lineWidth=1.8;ctx.beginPath();
+    ctx.moveTo(xp(0),yp(0));
+    for(var k=0;k<n;k++) ctx.lineTo(xp(s.xs[k]),yp(s.u[k]));
+    ctx.lineTo(xp(1),yp(0));ctx.stroke();
+    // node markers
+    ctx.fillStyle='#3a5ba0';
+    for(var k2=0;k2<n;k2++){ctx.beginPath();ctx.arc(xp(s.xs[k2]),yp(s.u[k2]),2.6,0,7);ctx.fill();}
+    // axes
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    for(var t=0;t<=1.0001;t+=0.25) ctx.fillText(t.toFixed(2),xp(t),P.t+ph+14);
+    ctx.fillText('x',P.l+pw,P.t+ph+14);
+    ctx.textAlign='right';
+    for(var g2=0;g2<=4;g2++) ctx.fillText((ymax*(1-g2/4)).toFixed(1),P.l-4,P.t+ph*g2/4+3);
+    ctx.textAlign='left';ctx.font='9px JetBrains Mono';
+    ctx.fillStyle='#3a5ba0';ctx.fillText('— прогонка',P.l+6,P.t+11);
+    if(showExact){ctx.fillStyle='#2c2419';ctx.fillText('— точное',P.l+6,P.t+23);}
+    return s;
+  }
+
+  function drawErr(curN){
+    var c=document.getElementById('bvp_err'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:48,r:12,t:14,b:30},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var lxmin=Math.log10(3), lxmax=Math.log10(80);
+    var lymin=-4, lymax=-0.5;          // log10(err)
+    function xp(ln){return P.l+pw*(ln-lxmin)/(lxmax-lxmin);}
+    function yp(ly){return P.t+ph*(1-(ly-lymin)/(lymax-lymin));}
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var g=0;g<=4;g++){var gy=P.t+ph*g/4;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    // error curve over a range of n
+    var pts=[];
+    for(var nn=3;nn<=80;nn++){ var e=solveBVP(nn).err; pts.push({ln:Math.log10(nn),ly:Math.log10(e)}); }
+    ctx.strokeStyle='#b44a2d';ctx.lineWidth=2;ctx.beginPath();
+    pts.forEach(function(p,i){i?ctx.lineTo(xp(p.ln),yp(p.ly)):ctx.moveTo(xp(p.ln),yp(p.ly));});
+    ctx.stroke();
+    // reference slope -2 line through first point
+    var p0=pts[0];
+    ctx.strokeStyle='#1a6b5a';ctx.lineWidth=1;ctx.setLineDash([5,3]);ctx.beginPath();
+    ctx.moveTo(xp(p0.ln),yp(p0.ly));
+    ctx.lineTo(xp(lxmax),yp(p0.ly-2*(lxmax-p0.ln)));ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#1a6b5a';ctx.font='9px JetBrains Mono';ctx.textAlign='left';
+    ctx.fillText('наклон −2',xp(1.2),yp(p0.ly-2*(1.2-p0.ln))-4);
+    // current n marker
+    var ec=solveBVP(curN).err;
+    ctx.fillStyle='#5b54b8';ctx.beginPath();ctx.arc(xp(Math.log10(curN)),yp(Math.log10(ec)),4,0,7);ctx.fill();
+    // axes
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    [3,10,30,80].forEach(function(t){ctx.fillText(t,xp(Math.log10(t)),P.t+ph+14);});
+    ctx.fillText('n',P.l+pw,P.t+ph+14);
+    ctx.textAlign='right';
+    for(var e2=-1;e2>=-4;e2--) ctx.fillText('1e'+e2,P.l-4,yp(e2)+3);
+  }
+
+  function update(){
+    var n=+document.getElementById('bvp_n').value;
+    var showExact=document.getElementById('bvp_exact').checked;
+    document.getElementById('bvp_nv').textContent=n;
+    var s=drawSol(n,showExact);
+    drawErr(n);
+    var h=1/(n+1);
+    document.getElementById('bvp_status').innerHTML=
+      'n='+n+' внутренних узлов · h='+h.toFixed(4)+
+      ' · max-ошибка='+s.err.toExponential(2)+
+      ' (≈ '+(s.err/(h*h)).toFixed(2)+'·h², т.е. порядок O(h²))';
+  }
+  document.getElementById('bvp_n').addEventListener('input',update);
+  document.getElementById('bvp_exact').addEventListener('change',update);
+  window.addEventListener('load',function(){ setTimeout(update,200); });
+})();
+</script>
+
+<!-- ===================== ЛЕКЦИЯ B ===================== -->
+<p class="phase lecb">Лекция B · 30 мин</p>
+
+<h2 id="tridiag">Трёхдиагональные системы</h2>
+
+<p>Холецкий использует симметрию. Теперь используем <em>разреженность</em> — самую частую и самую выгодную структуру. Простейший её случай — трёхдиагональная матрица, у которой ненулевы лишь главная диагональ и две соседние с ней:</p>
+
+<div class="eq">\[
+a_i\,x_{i-1} + b_i\,x_i + c_i\,x_{i+1} = d_i,\qquad i=1,\dots,n,
+\tag{10.3}
+\]</div>
+
+<p>где \(a_1=0\) и \(c_n=0\) (нет элементов за границей). В матричном виде:</p>
+
+<div class="figure">
+<svg viewBox="0 0 560 200" xmlns="http://www.w3.org/2000/svg" style="max-width:500px" role="img" aria-label="Трёхдиагональная матрица: ненулевые элементы лежат на главной диагонали b, поддиагонали a и наддиагонали c, остальные нули.">
+  <text x="280" y="22" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419" text-anchor="middle" font-weight="600">трёхдиагональная структура</text>
+  <g font-family="JetBrains Mono,monospace" font-size="13">
+    <text x="60"  y="60" fill="#3a5ba0">b₁</text><text x="110" y="60" fill="#1a6b5a">c₁</text>
+    <text x="60"  y="90" fill="#b44a2d">a₂</text><text x="110" y="90" fill="#3a5ba0">b₂</text><text x="160" y="90" fill="#1a6b5a">c₂</text>
+    <text x="110" y="120" fill="#b44a2d">a₃</text><text x="160" y="120" fill="#3a5ba0">b₃</text><text x="210" y="120" fill="#1a6b5a">c₃</text>
+    <text x="160" y="150" fill="#b44a2d">a₄</text><text x="210" y="150" fill="#3a5ba0">b₄</text><text x="260" y="150" fill="#1a6b5a">c₄</text>
+    <text x="210" y="180" fill="#b44a2d">a₅</text><text x="260" y="180" fill="#3a5ba0">b₅</text>
+  </g>
+  <g fill="#cfc6b6" font-family="JetBrains Mono,monospace" font-size="13">
+    <text x="160" y="60">0</text><text x="210" y="60">0</text><text x="258" y="60">0</text>
+    <text x="210" y="90">0</text><text x="258" y="90">0</text>
+    <text x="60"  y="120">0</text><text x="258" y="120">0</text>
+    <text x="60"  y="150">0</text><text x="110" y="150">0</text>
+    <text x="60"  y="180">0</text><text x="110" y="180">0</text><text x="160" y="180">0</text>
+  </g>
+  <line x1="48" y1="42" x2="48" y2="190" stroke="#2c2419" stroke-width="1.4"/>
+  <line x1="48" y1="42" x2="56" y2="42"   stroke="#2c2419" stroke-width="1.4"/>
+  <line x1="48" y1="190" x2="56" y2="190" stroke="#2c2419" stroke-width="1.4"/>
+  <line x1="292" y1="42" x2="292" y2="190" stroke="#2c2419" stroke-width="1.4"/>
+  <line x1="284" y1="42" x2="292" y2="42"   stroke="#2c2419" stroke-width="1.4"/>
+  <line x1="284" y1="190" x2="292" y2="190" stroke="#2c2419" stroke-width="1.4"/>
+  <g font-family="Source Serif 4,serif" font-size="12" fill="#6b5d4f">
+    <text x="340" y="80"><tspan fill="#3a5ba0">bᵢ</tspan> — главная диагональ</text>
+    <text x="340" y="105"><tspan fill="#b44a2d">aᵢ</tspan> — поддиагональ</text>
+    <text x="340" y="130"><tspan fill="#1a6b5a">cᵢ</tspan> — наддиагональ</text>
+    <text x="340" y="160" font-style="italic">всего ≈ 3n ненулей вместо n²</text>
+  </g>
+</svg>
+<div class="caption">Рис. 1. Трёхдиагональная матрица хранит лишь три диагонали — порядка \(3n\) чисел вместо \(n^2\). На таких системах Гаусс не порождает заполнения вне ленты.</div>
+</div>
+
+<p>Такие системы вездесущи: они появляются при построении <strong>кубических сплайнов</strong> (занятие 4 — система на вторые производные трёхдиагональна с диагональным преобладанием), при дискретизации <strong>краевых задач</strong> вида \(-u''=f\) (как в практикуме), в <strong>неявных схемах</strong> для уравнения теплопроводности (метод прогонки исторически и придуман для них). Решать их полным Гауссом — расточительство: почти все операции пришлись бы на умножение нулей.</p>
+
+<h2 id="thomas">Метод прогонки (алгоритм Томаса)</h2>
+
+<p>Прогонка — это гауссово исключение, выписанное специально для структуры (10.3). Оно состоит из двух проходов по списку уравнений.</p>
+
+<div class="algo">
+<strong>Алгоритм прогонки (Томаса).</strong>
+<ol>
+<li><strong>Прямой ход.</strong> Последовательно исключаем поддиагональ, вводя прогоночные коэффициенты \(c'_i,\,d'_i\):
+\[
+c'_1=\frac{c_1}{b_1},\quad d'_1=\frac{d_1}{b_1};\qquad
+c'_i=\frac{c_i}{b_i-a_i c'_{i-1}},\quad
+d'_i=\frac{d_i-a_i d'_{i-1}}{b_i-a_i c'_{i-1}}.
+\tag{10.4}
+\]</li>
+<li><strong>Обратный ход.</strong> Восстанавливаем неизвестные с конца:
+\[
+x_n=d'_n,\qquad x_i=d'_i-c'_i\,x_{i+1}\quad (i=n-1,\dots,1).
+\tag{10.5}
+\]</li>
+</ol>
+</div>
+
+<p>Каждый из двух проходов — один цикл по \(i\) с фиксированным числом арифметических операций на шаг. Поэтому полная стоимость составляет</p>
+
+<div class="eq">\[
+\sim 8n \ \text{операций} \;=\; O(n)\quad\text{против}\quad \tfrac23 n^3\ \text{для плотного Гаусса.}
+\tag{10.6}
+\]</div>
+
+<p>Это <strong>линейная</strong> сложность — главный результат лекции B. Памяти тоже нужно \(O(n)\): хранятся четыре вектора длины \(n\), а не матрица \(n\times n\). Именно прогонка позволяет решать сплайн-системы и краевые задачи на десятках тысяч узлов мгновенно.</p>
+
+<div class="theorem">
+<strong>Устойчивость прогонки.</strong> Если матрица обладает <em>диагональным преобладанием</em>,
+\[
+|b_i|\ \ge\ |a_i|+|c_i|\quad\text{для всех } i,
+\]
+(хотя бы со строгим неравенством в одной строке), то знаменатели \(b_i-a_i c'_{i-1}\) в (10.4) не обращаются в нуль и остаются отделёнными от нуля. Прогонка тогда выполнима без перестановок и численно устойчива.
+</div>
+
+<p>Матрица \(\mathrm{tridiag}(-1,2,-1)\) из практикума удовлетворяет условию с равенством во внутренних строках (\(2=1+1\)) и строгим неравенством в крайних — поэтому прогонка для неё устойчива, что мы и наблюдали. Если же диагональное преобладание нарушено, прямой ход может встретить нулевой знаменатель, и тогда нужны перестановки (как полный пивотинг в Гауссе) либо иной метод.</p>
+
+<div class="proof">
+Покажем по индукции, что при диагональном преобладании \(|c'_i|<1\). База: \(|c'_1|=|c_1/b_1|\le|c_1|/(|a_1|+|c_1|)<1\), так как \(a_1=0\). Шаг: пусть \(|c'_{i-1}|<1\). Тогда знаменатель \(|b_i-a_i c'_{i-1}|\ge|b_i|-|a_i||c'_{i-1}|>|b_i|-|a_i|\ge|c_i|\), откуда \(|c'_i|=|c_i|/|b_i-a_i c'_{i-1}|<1\). Знаменатель строго положителен по модулю — деление корректно на каждом шаге.
+</div>
+
+<h2 id="sparse">Ленточные и разреженные матрицы</h2>
+
+<p>Трёхдиагональная матрица — частный случай <strong>ленточной</strong>: ненулевые элементы лежат внутри полосы шириной \(2p+1\) вокруг диагонали (для трёхдиагональной \(p=1\)). Ленточный Гаусс стоит \(O(p^2 n)\) — линейно по \(n\) при фиксированной ширине ленты. Двумерные краевые задачи дают ленту шириной \(\sim\sqrt n\), и стоимость растёт, но остаётся много меньше \(n^3\).</p>
+
+<p>Более общий случай — просто <strong>разреженная</strong> матрица, где ненулей \(O(n)\), но они разбросаны без регулярной полосы (графы, конечные элементы на неструктурированных сетках). Для них хранят только ненулевые элементы:</p>
+
+<ul>
+<li><strong>COO</strong> (coordinate) — тройки \((i,j,\text{value})\); удобно собирать, неудобно умножать.</li>
+<li><strong>CSR / CSC</strong> (compressed sparse row/column) — сжатое построчное/постолбцовое хранение; стандарт для матрично-векторного умножения и решателей.</li>
+<li><strong>DIA</strong> (diagonal) — хранение по диагоналям; идеально для ленточных и трёхдиагональных систем.</li>
+</ul>
+
+<div class="remark">
+<strong>Заполнение (fill-in).</strong> При исключении Гаусса в разреженной матрице на месте бывших нулей могут появляться ненули — это <em>заполнение</em>. Оно увеличивает память и стоимость. Для трёхдиагональной (и вообще ленточной) матрицы заполнения <em>вне ленты не возникает</em> — потому прогонка так дёшева. Для нерегулярной разреженности порядок исключения переменных подбирают специально (переупорядочение, напр. minimum degree, Cuthill–McKee), чтобы минимизировать fill-in. Это — предмет курсов по разреженной линейной алгебре; в SciPy за это отвечают <code>scipy.sparse</code> и <code>scipy.sparse.linalg.spsolve</code>.
+</div>
+
+<p>Главная идея блока: <em>структура матрицы — это ресурс</em>. Симметрия даёт Холецкого (вдвое дешевле), разреженность — прогонку и разреженные решатели (на порядки дешевле). Универсальный плотный Гаусс остаётся запасным вариантом для матриц без структуры.</p>
+
+<h2 id="summary">Итоги занятия</h2>
+
+<div class="algo">
+<strong>Что нужно унести с занятия 10:</strong>
+<ol>
+<li><strong>SPD-матрицы</strong> (\(A=A^{\mathsf T}\), \(\mathbf{x}^{\mathsf T}A\mathbf{x}>0\)) имеют положительную диагональ и положительные собственные числа; для них пивотинг не нужен.</li>
+<li><strong>Разложение Холецкого</strong> \(A=LL^{\mathsf T}\) существует и единственно для SPD; формулы (10.2) дают \(L\) за \(\sim\tfrac13 n^3\) — вдвое дешевле LU. Решение: \(L\mathbf{y}=\mathbf{b}\), затем \(L^{\mathsf T}\mathbf{x}=\mathbf{y}\).</li>
+<li>Неудача Холецкого (отрицательное подкоренное) — надёжный <strong>тест: матрица не SPD</strong>.</li>
+<li><strong>Трёхдиагональные системы</strong> решает <strong>прогонка (Томас)</strong>: прямой ход — коэффициенты (10.4), обратный ход (10.5). Сложность \(O(n)\) — линейная против \(n^3\). Устойчива при диагональном преобладании \(|b_i|\ge|a_i|+|c_i|\).</li>
+<li><strong>Структура — ресурс.</strong> Ленточные и разреженные форматы (CSR/CSC/DIA) хранят только ненули; ключевая забота — минимизировать <em>заполнение</em> при исключении.</li>
+</ol>
+</div>
+
+<div class="remark">
+<strong>Домашнее задание.</strong> Доделать задачи 10.1–10.3. Дополнительно: соберите трёхдиагональную систему кубического сплайна из занятия 4 и решите её прогонкой, сравнив с <code>scipy.interpolate.CubicSpline</code>. Убедитесь, что матрица сплайна обладает диагональным преобладанием.
+</div>
+
+<div class="lecture-nav">
+  <a class="nav-prev" href="w09.html">← Занятие 9. Метод Гаусса и LU</a>
+  <a class="nav-next" href="w11.html">Занятие 11. Нормы и число обусловленности →</a>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Зачётное занятие курса «Численные методы»: итоговый мини-проект на Python (линейный решатель и κ(A), адаптивная квадратура, интерполяция и сходимость), сводный задачник по всем темам и чек-лист освоения курса с контрольными значениями.">
+<title>ЧМ · Занятие 16. Зачётное занятие</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.tag-nummet{background:#ece9fb;color:#5b54b8}
+html.dark .tag-nummet{background:#241f3a;color:#a39bea}
+.lecture-num{color:#5b54b8}
+.phase{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#fff;background:#5b54b8;padding:.3rem .7rem;border-radius:4px;display:inline-block;margin:1.8rem 0 .4rem}
+.phase.prac{background:#1a6b5a}
+.phase.lecb{background:#3a5ba0}
+.pyblock{margin:1rem 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.pyhead{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;display:flex;justify-content:space-between}
+.pyhead .run{color:#9ec97f}
+pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9rem 1.1rem;font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.6;overflow-x:auto;white-space:pre}
+.outbox{background:#f0f7f4;border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;padding:.6rem 1rem;margin:.6rem 0 1rem;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);white-space:pre-wrap}
+html.dark .outbox{background:#16241f}
+.exercise summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--accent2);margin-top:.6rem;font-weight:500}
+.exercise details{margin-top:.4rem}
+.exercise details[open] summary{margin-bottom:.4rem}
+.exercise .extag{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:#5b54b8;background:#ece9fb;padding:1px 7px;border-radius:3px;margin-right:.4rem}
+html.dark .exercise .extag{background:#241f3a;color:#a39bea}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0}
+.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
+.intbox select,.intbox input[type=range]{font-family:'JetBrains Mono',monospace}
+.intbox select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+html.dark .intbox select{background:#1b1712;color:var(--text)}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:1px 5px;border-radius:3px}
+/* checklist (как в mke/practice.html) */
+.checklist{list-style:none;margin:.6rem 0 1.2rem;padding:0}
+.checklist li{margin:.35rem 0;font-size:.95rem;display:flex;align-items:flex-start;gap:.5rem}
+.checklist input[type=checkbox]{margin-top:.3rem;flex-shrink:0}
+.checklist .grp{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--accent);font-weight:600;margin:1.1rem 0 .3rem;text-transform:uppercase;letter-spacing:.04em;display:block}
+.checklist .ck{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#5b54b8;background:#ece9fb;padding:1px 6px;border-radius:3px;margin-left:.3rem;white-space:nowrap}
+html.dark .checklist .ck{background:#241f3a;color:#a39bea}
+.variant{background:#fff;border:1px solid var(--border);border-left:3px solid #5b54b8;border-radius:0 8px 8px 0;padding:1rem 1.2rem;margin:1.2rem 0}
+html.dark .variant{background:#231e18}
+.variant h3{margin-top:0;color:#5b54b8}
+.vlabel{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:#fff;background:#5b54b8;padding:2px 8px;border-radius:3px;letter-spacing:.06em}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>ЧМ · Занятие 16</h2>
+  <div class="g">Зачёт</div>
+  <a href="#intro">Цель занятия</a>
+  <div class="g">Мини-проект</div>
+  <a href="#project">Итоговый мини-проект</a>
+  <a href="#varA">Вариант A · решатель и κ(A)</a>
+  <a href="#varB">Вариант B · квадратура</a>
+  <a href="#varC">Вариант C · интерполяция</a>
+  <a href="#skeleton">Каркас оформления</a>
+  <div class="g">Задачник</div>
+  <a href="#tasks">Сводный задачник</a>
+  <div class="g">Самопроверка</div>
+  <a href="#checklist">Чек-лист курса</a>
+  <a href="#calc">Интерактив: κ(A)</a>
+  <a href="#criteria">Критерии зачёта</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+  <a href="w15.html">← Занятие 15</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-nummet">Численные методы</span>
+<div class="lecture-num">Занятие 16 · Блок VII. Итоговый контроль</div>
+<h1>Зачётное занятие: итоговый проект и чек-лист</h1>
+
+<h2 id="intro">Цель занятия</h2>
+
+<p>Курс пройден: от машинной арифметики и анализа ошибок до решения систем, квадратур, итераций, разложений матриц и оптимизации. Зачётное занятие не вводит нового материала — его цель <strong>продемонстрировать владение методами курса на сквозном мини-проекте на Python</strong> и пройти <a href="#checklist">чек-лист освоения</a>, проверяющий ключевые умения и контрольные значения.</p>
+
+<p>Зачёт состоит из двух частей. Первая — <strong>итоговый мини-проект</strong>: вы выбираете <em>один из трёх</em> вариантов, реализуете описанные методы своими руками (без обращения к готовым решателям там, где требуется собственная реализация), верифицируете результат на контрольных значениях и оформляете краткий отчёт с графиками. Вторая — <strong>сводный задачник</strong>: короткие задачи по каждой крупной теме курса для быстрой самопроверки. Чек-лист служит картой: незакрытые пункты подскажут, к какому занятию вернуться.</p>
+
+<div class="remark">
+<strong>Что разрешено.</strong> Стандартная библиотека, NumPy, Matplotlib. <code>numpy.linalg</code> и <code>scipy</code> используйте только как <em>эталон для сравнения</em> (<code>np.linalg.solve</code>, <code>np.linalg.cond</code>, <code>scipy.integrate.quad</code>), а не вместо собственной реализации. Справочник по инструментам — в <a href="python-reference.html">памятке Python/NumPy/SciPy</a>.
+</div>
+
+<!-- ===================== МИНИ-ПРОЕКТ ===================== -->
+<h2 id="project">1. Итоговый мини-проект</h2>
+
+<p>Выберите <strong>один</strong> из трёх вариантов. Каждый опирается на 3–4 занятия курса, имеет чёткую постановку, разбит на этапы и снабжён <em>контрольными значениями</em> для верификации. Объём — один скрипт на 150–300 строк плюс отчёт: код, 1–2 графика, таблица и краткий вывод.</p>
+
+<!-- ---------- ВАРИАНТ A ---------- -->
+<div class="variant">
+<span class="vlabel">ВАРИАНТ A</span>
+<h3 id="varA">Собственный линейный решатель и анализ обусловленности</h3>
+<p>Соберите свой набор прямых методов решения СЛАУ и исследуйте, как обусловленность матрицы ограничивает достижимую точность. Темы: LU с частичным выбором (зан. 9), разложение Холецкого (зан. 10), число обусловленности \(\kappa(A)\) (зан. 11).</p>
+
+<div class="exercise">
+<strong><span class="extag">Этапы A</span>Что реализовать.</strong>
+<ol>
+<li><strong>LU с частичным выбором ведущего элемента.</strong> Функция <code>lu_solve(A, b)</code>, возвращающая решение и факторы \(P, L, U\). Проверка тождества \(PA = LU\) по норме невязки.</li>
+<li><strong>Разложение Холецкого</strong> \(A = LL^\top\) для симметричных положительно определённых матриц; решение через две треугольные подстановки.</li>
+<li><strong>Число обусловленности</strong> \(\kappa_2(A) = \sigma_{\max}/\sigma_{\min}\) (через сингулярные числа) и/или \(\kappa_\infty(A) = \|A\|_\infty\|A^{-1}\|_\infty\). Сравнить со <code>np.linalg.cond</code>.</li>
+<li><strong>Серия систем</strong> с известным точным решением \(x^\ast=(1,1,\dots,1)^\top\), \(b = Ax^\ast\): случайные хорошо обусловленные матрицы и <em>матрицы Гильберта</em> \(H_{ij}=1/(i+j-1)\) размеров \(n=2\dots12\).</li>
+<li><strong>График потери точности.</strong> По оси \(x\) — \(\log_{10}\kappa(A)\), по оси \(y\) — число потерянных верных цифр \(-\log_{10}\big(\|\hat x-x^\ast\|_\infty/\|x^\ast\|_\infty\big)\). Нанести теоретическую прямую «потеря \(\approx\log_{10}\kappa\) цифр».</li>
+</ol>
+<details><summary>Эталонные контрольные значения</summary>
+<ul>
+<li>Матрица Гильберта \(H_5\): \(\kappa_2(H_5)\approx 4.8\times10^{5}\); \(H_8\): \(\kappa_2\approx 1.5\times10^{10}\); \(H_{10}\): \(\kappa_2\approx 1.6\times10^{13}\).</li>
+<li>Правило большого пальца: при решении в double (\(u\approx10^{-16}\)) относительная ошибка \(\delta\lesssim \kappa(A)\cdot u\), то есть теряется примерно \(\log_{10}\kappa(A)\) верных цифр. Для \(H_5\): \(\log_{10}(4.8\!\times\!10^5)\approx 5.7\) цифр потеряно — из ~16 остаётся ~10.</li>
+<li>Проверка факторизации: \(\|PA-LU\|_\infty/\|A\|_\infty \sim 10^{-16}\) (порядка машинной точности).</li>
+<li>Холецкий должен <em>падать</em> (отрицательное подкоренное) для несимметричных или незнакоопределённых матриц — используйте это как тест положительной определённости.</li>
+</ul>
+<div class="pyblock"><div class="pyhead"><span>variant_a_check.py</span></div>
+<pre class="pycode">import numpy as np
+from scipy.linalg import hilbert        # только как эталон
+
+for n in (2, 5, 8, 10):
+    H = hilbert(n)
+    xstar = np.ones(n)
+    b = H @ xstar
+    xhat = lu_solve(H, b)               # ваша реализация
+    rel = np.linalg.norm(xhat - xstar, np.inf) / np.linalg.norm(xstar, np.inf)
+    kappa = np.linalg.cond(H, 2)
+    lost = -np.log10(rel) if rel &gt; 0 else 16
+    print(f"n={n:2d}  cond={kappa:.2e}  rel.err={rel:.2e}  "
+          f"верных цифр≈{lost:4.1f}  (предсказано≈{16-np.log10(kappa):4.1f})")</pre></div>
+</details>
+</div>
+</div>
+
+<!-- ---------- ВАРИАНТ B ---------- -->
+<div class="variant">
+<span class="vlabel">ВАРИАНТ B</span>
+<h3 id="varB">Адаптивная квадратура</h3>
+<p>Постройте набор квадратур и адаптивную схему, которая сама сгущает разбиение там, где функция «трудная». Темы: составной метод Симпсона (зан. 7), квадратуры Гаусса–Лежандра (зан. 8), оценка ошибки и адаптивное деление.</p>
+
+<div class="exercise">
+<strong><span class="extag">Этапы B</span>Что реализовать.</strong>
+<ol>
+<li><strong>Составной Симпсон</strong> <code>simpson(f, a, b, n)</code> (\(n\) чётно) и проверка порядка \(O(h^4)\) на гладкой функции.</li>
+<li><strong>Гаусс–Лежандр</strong> на \(2,3,4\) узла (узлы и веса — табличные либо через <code>numpy.polynomial.legendre.leggauss</code>) с отображением \([-1,1]\to[a,b]\).</li>
+<li><strong>Адаптивное деление</strong>: на отрезке сравнить квадратуру с её разбиением пополам; если оценка локальной ошибки превышает допуск \(\varepsilon\,\frac{|h|}{b-a}\) — делить рекурсивно, иначе принять. Считать число вычислений \(f\).</li>
+<li><strong>Тесты</strong>: гладкий интеграл и интеграл с пиком/особенностью. Сравнить число вычислений \(f\) у равномерного и адаптивного метода при одинаковой достигнутой точности.</li>
+</ol>
+<details><summary>Эталонные контрольные значения</summary>
+<ul>
+<li>Гладкий: \(\displaystyle\int_0^1 \frac{4}{1+x^2}\,dx = \pi = 3.14159265358979\). Составной Симпсон с \(n=8\) даёт уже ~6 верных цифр; при удвоении \(n\) ошибка падает в \(\approx16\) раз (наклон \(-4\) на log–log).</li>
+<li>Особенность: \(\displaystyle\int_0^1 \frac{1}{\sqrt{x}}\,dx = 2\). У \(x=0\) подынтегральная функция неограничена — равномерный Симпсон сходится медленно (порядок падает), адаптивный сгущает узлы у нуля и достигает той же точности на порядок меньшим числом вычислений \(f\).</li>
+<li>Гаусс–Лежандр на \(n\) узлов точен для многочленов степени \(\le 2n-1\); на \(\int_{-1}^1(3x^4-2x^2+1)dx=28/15\) двухточечный даёт \(4/3\) (неточно), трёхточечный — точно.</li>
+<li>Контроль пика: \(\displaystyle\int_{-1}^1 \frac{1}{1+25x^2}\,dx = \tfrac{2}{5}\arctan 5 \approx 0.549360\) (функция Рунге) — адаптив сгущает у \(x=0\).</li>
+</ul>
+<div class="pyblock"><div class="pyhead"><span>variant_b_check.py</span></div>
+<pre class="pycode">import numpy as np
+
+f_smooth = lambda x: 4.0 / (1.0 + x*x)      # интеграл = pi на [0,1]
+f_sing   = lambda x: 1.0 / np.sqrt(x)       # интеграл = 2  на [0,1], особ. в 0
+
+I1, n1 = adaptive_quad(f_smooth, 0, 1, tol=1e-10)
+I2, n2 = adaptive_quad(f_sing,   1e-14, 1, tol=1e-8)   # обход x=0
+print(f"гладкий : I={I1:.12f}  err={abs(I1-np.pi):.2e}  вычислений f={n1}")
+print(f"особенн.: I={I2:.12f}  err={abs(I2-2.0):.2e}  вычислений f={n2}")
+# ожидание: n2 (адаптив) &lt;&lt; число узлов равномерной сетки той же точности</pre></div>
+</details>
+</div>
+</div>
+
+<!-- ---------- ВАРИАНТ C ---------- -->
+<div class="variant">
+<span class="vlabel">ВАРИАНТ C</span>
+<h3 id="varC">Интерполяция и сходимость</h3>
+<p>Сравните способы интерполяции и продемонстрируйте феномен Рунге и его подавление. Темы: интерполяция Ньютона по разделённым разностям (зан. 3), узлы Чебышёва (зан. 4), кубический сплайн.</p>
+
+<div class="exercise">
+<strong><span class="extag">Этапы C</span>Что реализовать.</strong>
+<ol>
+<li><strong>Полином Ньютона</strong> по разделённым разностям: <code>divided_diff(x, y)</code> и <code>newton_eval(coef, x, t)</code>.</li>
+<li><strong>Узлы Чебышёва</strong> \(x_k=\tfrac{a+b}{2}+\tfrac{b-a}{2}\cos\!\big(\tfrac{2k+1}{2n+2}\pi\big)\) и тот же интерполянт на них.</li>
+<li><strong>Кубический сплайн</strong> (естественный): прогонка трёхдиагональной системы на вторые производные (можно взять <code>scipy.interpolate.CubicSpline</code> как эталон).</li>
+<li><strong>Функция Рунге</strong> \(f(x)=\dfrac{1}{1+25x^2}\) на \([-1,1]\): для равномерных узлов, узлов Чебышёва и сплайна построить max-ошибку \(\max_x|f-p_n|\) на густой сетке как функцию числа узлов \(n\).</li>
+<li><strong>График</strong> max-ошибки vs \(n\) (полулог по \(y\)): показать <em>расходимость</em> равномерной интерполяции (феномен Рунге) и сходимость Чебышёва/сплайна.</li>
+</ol>
+<details><summary>Эталонные контрольные значения</summary>
+<ul>
+<li>Равномерные узлы на функции Рунге: max-ошибка <em>растёт</em> с \(n\) (у краёв возникают всё более сильные осцилляции). При \(n=10\) ошибка \(\approx 1.9\), при \(n=20\) — порядка десятков; рост \(\sim 2^n\). Это и есть феномен Рунге.</li>
+<li>Узлы Чебышёва: max-ошибка убывает экспоненциально; при \(n=20\) — порядка \(10^{-2}\), при \(n=40\) — \(\sim10^{-3}\) и ниже. Осцилляции у краёв подавлены.</li>
+<li>Естественный кубический сплайн на равномерной сетке: ошибка убывает как \(O(h^4)\sim O(n^{-4})\), монотонно и устойчиво (Рунге не возникает).</li>
+<li>Контроль: \(f(0)=1\), \(f(\pm1)=1/26\approx0.03846\). Любой интерполянт обязан проходить через узлы точно — проверьте \(p_n(x_k)=f(x_k)\) до машинной точности.</li>
+</ul>
+<div class="pyblock"><div class="pyhead"><span>variant_c_check.py</span></div>
+<pre class="pycode">import numpy as np
+
+runge = lambda x: 1.0 / (1.0 + 25.0*x*x)
+xx = np.linspace(-1, 1, 2001)            # густая сетка для оценки max-ошибки
+
+for n in (10, 20, 40):
+    xu = np.linspace(-1, 1, n+1)                         # равномерные
+    k  = np.arange(n+1)
+    xc = np.cos((2*k+1)*np.pi/(2*n+2))                   # Чебышёв на [-1,1]
+    eu = np.max(np.abs(runge(xx) - newton_interp(xu, runge(xu), xx)))
+    ec = np.max(np.abs(runge(xx) - newton_interp(xc, runge(xc), xx)))
+    print(f"n={n:2d}  равномерн.max-err={eu:.3e}  Чебышёв max-err={ec:.3e}")
+# ожидание: eu растёт (Рунге), ec убывает</pre></div>
+</details>
+</div>
+</div>
+
+<!-- ---------- КАРКАС ---------- -->
+<h3 id="skeleton">Общий каркас оформления</h3>
+
+<p>Независимо от выбранного варианта оформите проект единообразно: реализация → встроенные тесты на контрольных значениях → график. Ниже — заготовка структуры (функции, проверки, Matplotlib), которую достаточно заполнить телами методов под свой вариант.</p>
+
+<div class="pyblock"><div class="pyhead"><span>project.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">"""Итоговый мини-проект курса «Численные методы».
+Вариант: A / B / C  (оставьте нужное).
+Запуск:  python project.py
+"""
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+# ---------------------------------------------------------------
+# 1. РЕАЛИЗАЦИЯ МЕТОДОВ
+# ---------------------------------------------------------------
+def my_method(*args, **kwargs):
+    """Собственная реализация (LU / квадратура / интерполяция)."""
+    raise NotImplementedError
+
+
+# ---------------------------------------------------------------
+# 2. ТЕСТЫ НА КОНТРОЛЬНЫХ ЗНАЧЕНИЯХ
+# ---------------------------------------------------------------
+def run_tests():
+    """Сверка с эталоном; печать таблицы 'значение / эталон / ошибка'."""
+    cases = []          # список (имя, полученное, эталон)
+    # cases.append(("pi", my_quad(f, 0, 1), np.pi))
+    ok = True
+    print(f"{'тест':22s}{'получено':&gt;18s}{'эталон':&gt;18s}{'ошибка':&gt;12s}")
+    for name, got, ref in cases:
+        err = abs(got - ref)
+        flag = "OK" if err &lt; 1e-6 else "!!"
+        ok &amp;= err &lt; 1e-6
+        print(f"{name:22s}{got:18.10f}{ref:18.10f}{err:12.2e}  {flag}")
+    print("ИТОГ:", "все тесты пройдены" if ok else "есть расхождения")
+    return ok
+
+
+# ---------------------------------------------------------------
+# 3. ГРАФИК (потеря точности / порядок сходимости / max-ошибка)
+# ---------------------------------------------------------------
+def make_plot():
+    ns = np.array([2, 4, 8, 16, 32, 64])
+    errs = np.array([my_error(n) for n in ns])           # заполнить
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.loglog(ns, errs, "o-", color="#5b54b8", label="наблюдаемая ошибка")
+    # эталонный наклон p (например, -4 для Симпсона):
+    p = 4
+    ax.loglog(ns, errs[0]*(ns/ns[0])**(-p), "--", color="#b44a2d",
+              label=f"теор. наклон {-p}")
+    ax.set_xlabel("n"); ax.set_ylabel("ошибка")
+    ax.legend(); ax.grid(True, which="both", alpha=.3)
+    # наблюдаемый порядок по соседним точкам:
+    slope = np.log(errs[-1]/errs[-2]) / np.log(ns[-1]/ns[-2])
+    print(f"наблюдаемый порядок ≈ {slope:.2f}")
+    fig.tight_layout(); fig.savefig("convergence.png", dpi=130)
+
+
+if __name__ == "__main__":
+    run_tests()
+    make_plot()</pre></div>
+
+<div class="remark">
+<strong>Минимальный отчёт по проекту:</strong> (1) исходный код реализованных методов; (2) распечатка <code>run_tests()</code> — все контрольные значения совпали с эталоном; (3) один-два графика (потеря точности vs \(\kappa\) / порядок сходимости / max-ошибка vs \(n\)); (4) 3–5 предложений вывода: совпал ли наблюдаемый порядок/обусловленность с теорией и почему.
+</div>
+
+<!-- ===================== ЗАДАЧНИК ===================== -->
+<h2 id="tasks">2. Сводный задачник</h2>
+
+<p>Восемь коротких задач — по одной на крупную тему курса. Решайте устно или в пару строк кода; в каждой свёрнут ответ с числовым контрольным значением. Эти задачи — экспресс-проверка перед чек-листом.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 1</span>Округление и обусловленность (зан. 1, 11).</strong> (а) Чему равно машинное \(\varepsilon\) для double и единица округления \(u\)? (б) Матрица \(A=\begin{pmatrix}1 &amp; 1\\ 1 &amp; 1.0001\end{pmatrix}\): оцените порядок \(\kappa_\infty(A)\) и скажите, сколько верных цифр останется при решении \(Ax=b\) в double.
+<details><summary>Ответ</summary>
+(а) \(\varepsilon_{\text{маш}}=2^{-52}\approx 2.22\times10^{-16}\); единица округления \(u=2^{-53}\approx1.11\times10^{-16}\). (б) \(A^{-1}=\frac{1}{0.0001}\begin{pmatrix}1.0001 &amp; -1\\ -1 &amp; 1\end{pmatrix}\), \(\|A\|_\infty\approx2.0001\), \(\|A^{-1}\|_\infty\approx 2.0001/10^{-4}\approx2\times10^{4}\), так что \(\kappa_\infty\approx 4\times10^{4}\). Потеря \(\approx\log_{10}(4\times10^4)\approx4.6\) цифры — останется ~11 верных из 16.
+</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 2</span>Ряд Тейлора (зан. 2).</strong> Сколько членов ряда \(e^{x}=\sum x^k/k!\) нужно для вычисления \(e^{0.5}\) с абсолютной ошибкой \(&lt;10^{-8}\)? Используйте остаток в форме Лагранжа \(R_n=e^{\xi}x^{n+1}/(n+1)!\), \(0\le\xi\le0.5\).
+<details><summary>Ответ</summary>
+Оценка остатка \(R_n\le e^{0.5}\,0.5^{n+1}/(n+1)!\le 1.65\cdot0.5^{n+1}/(n+1)!\). Перебор: \(n=6\) даёт \(1.65\cdot0.5^{7}/5040\approx 2.6\times10^{-6}\) — мало; \(n=8\) даёт \(\approx 7\times10^{-9}&lt;10^{-8}\). Достаточно \(n=8\) (члены до \(x^8/8!\)). Контроль: \(e^{0.5}=1.6487212707\).
+</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 3</span>Интерполяция (зан. 3–4).</strong> По узлам \((0,1),(1,2),(2,5)\) постройте интерполяционный многочлен Ньютона и вычислите \(p(0.5)\). Почему узлы Чебышёва предпочтительнее равномерных при большом \(n\)?
+<details><summary>Ответ</summary>
+Разделённые разности: \(f[x_0]=1\), \(f[x_0,x_1]=(2-1)/1=1\), \(f[x_1,x_2]=(5-2)/1=3\), \(f[x_0,x_1,x_2]=(3-1)/2=1\). Многочлен \(p(x)=1+1\cdot x+1\cdot x(x-1)=x^2+1\). Тогда \(p(0.5)=1.25\). Узлы Чебышёва минимизируют норму узлового многочлена \(\prod(x-x_k)\), подавляя осцилляции у краёв (феномен Рунге) и обеспечивая сходимость для гладких функций.
+</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 4</span>МНК (зан. 5).</strong> Методом наименьших квадратов проведите прямую \(y=a+bx\) через точки \((0,1),(1,3),(2,4),(3,6)\). Найдите \(a,b\) из нормальных уравнений. Почему \(\kappa(A^\top A)=\kappa(A)^2\)?
+<details><summary>Ответ</summary>
+\(\sum x=6,\ \sum x^2=14,\ \sum y=14,\ \sum xy=29,\ N=4\). Нормальная система \(\begin{pmatrix}4 &amp; 6\\ 6 &amp; 14\end{pmatrix}\!\binom{a}{b}=\binom{14}{29}\), определитель \(56-36=20\). \(b=(4\cdot29-6\cdot14)/20=(116-84)/20=1.6\), \(a=(14-6\cdot1.6)/4=(14-9.6)/4=1.1\). Прямая \(y=1.1+1.6x\). Сингулярные числа \(A^\top A\) суть квадраты сингулярных чисел \(A\), поэтому \(\kappa_2(A^\top A)=\sigma_{\max}^2/\sigma_{\min}^2=\kappa_2(A)^2\) — нормальные уравнения квадратично хуже обусловлены (отсюда предпочтение QR/SVD).
+</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 5</span>Дифференцирование (зан. 6).</strong> Для \(f(x)=\sin x\) в точке \(x=1\) центральная разность \(f'\approx\frac{f(x+h)-f(x-h)}{2h}\). Каков порядок ошибки усечения по \(h\) и почему слишком малый \(h\) ухудшает результат?
+<details><summary>Ответ</summary>
+Ошибка усечения центральной разности \(=-\frac{h^2}{6}f'''(\xi)=O(h^2)\). Но в числителе вычитаются близкие значения, и ошибка округления растёт как \(O(u/h)\). Суммарная ошибка \(\sim c_1 h^2 + c_2 u/h\) минимальна при \(h_{\text{opt}}\sim u^{1/3}\approx 6\times10^{-6}\), давая минимальную ошибку \(\sim u^{2/3}\approx10^{-11}\). Контроль: \(f'(1)=\cos1=0.5403023\).
+</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 6</span>Интегрирование (зан. 7–8).</strong> Вычислите \(\int_0^1 x^2\,dx\) составным методом трапеций с \(n=2\) и Симпсона с \(n=2\). Сравните с точным \(1/3\). Каков порядок каждого метода?
+<details><summary>Ответ</summary>
+Узлы \(0,\,0.5,\,1\), \(h=0.5\). Трапеции: \(\frac{h}{2}[f_0+2f_1+f_2]=\frac{0.5}{2}[0+2\cdot0.25+1]=0.25\cdot1.5=0.375\) (ошибка \(0.0417\), порядок \(O(h^2)\)). Симпсон: \(\frac{h}{3}[f_0+4f_1+f_2]=\frac{0.5}{3}[0+1+1]=0.3333\overline{3}\) — точно, так как Симпсон точен для многочленов до 3-й степени (порядок \(O(h^4)\)).
+</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 7</span>СЛАУ и итерации (зан. 9–10, 12).</strong> Для системы с \(A=\begin{pmatrix}4 &amp; 1\\ 1 &amp; 3\end{pmatrix}\), \(b=\binom{1}{2}\) сделайте одну итерацию Якоби из \(x^{(0)}=0\). Сойдётся ли метод и почему?
+<details><summary>Ответ</summary>
+Якоби: \(x_i^{(1)}=(b_i-\sum_{j\ne i}a_{ij}x_j^{(0)})/a_{ii}\). При \(x^{(0)}=0\): \(x_1^{(1)}=1/4=0.25\), \(x_2^{(1)}=2/3\approx0.667\). Метод сходится: матрица строго диагонально доминантна (\(|4|>|1|\), \(|3|>|1|\)) — достаточное условие сходимости Якоби и Зейделя. Точное решение \(x=(1/11,\,7/11)\approx(0.0909,\,0.6364)\).
+</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 8</span>Собственные числа, SVD и оптимизация (зан. 13–15).</strong> (а) Степенной метод для \(A=\begin{pmatrix}2 &amp; 1\\ 1 &amp; 2\end{pmatrix}\): к какому \(\lambda\) сойдётся? (б) Минимум \(f(x)=x^2-4x+5\) — найдите его и один шаг градиентного спуска из \(x_0=0\) с шагом \(\alpha=0.1\).
+<details><summary>Ответ</summary>
+(а) Собственные числа \(2\pm1=\{3,1\}\); степенной метод сходится к доминирующему \(\lambda_{\max}=3\) с вектором \((1,1)/\sqrt2\). (б) \(f'(x)=2x-4=0\Rightarrow x^\ast=2\), \(f(2)=1\). Шаг спуска: \(x_1=x_0-\alpha f'(x_0)=0-0.1\cdot(-4)=0.4\) — движемся к минимуму \(x=2\).
+</details>
+</div>
+
+<!-- ===================== ЧЕК-ЛИСТ ===================== -->
+<h2 id="checklist">3. Чек-лист освоения курса</h2>
+
+<p>Отметьте умения, которыми уверенно владеете. Пункты помечены контрольными маркерами <span class="ck">CHECK</span> — числами, которые ваш код или расчёт должны воспроизводить. Незакрытые пункты указывают, к какому занятию и блоку вернуться.</p>
+
+<ul class="checklist">
+  <li class="grp">Блок I · Основы вычислений (зан. 1–2)</li>
+  <li><input type="checkbox"> вычисляю машинное \(\varepsilon\) и единицу округления <span class="ck">ε=2.22e-16, u=1.11e-16</span></li>
+  <li><input type="checkbox"> диагностирую и лечу катастрофическое вычитание (переписываю формулу) <span class="ck">(1−cos x)/x² → ½ при x→0</span></li>
+  <li><input type="checkbox"> оцениваю число членов ряда Тейлора по остатку Лагранжа <span class="ck">e^0.5: n=8</span></li>
+  <li><input type="checkbox"> различаю прямую и обратную ошибку, применяю правило «прямая ≲ κ·обратная»</li>
+
+  <li class="grp">Блок II · Аппроксимация и интерполяция (зан. 3–5)</li>
+  <li><input type="checkbox"> строю многочлен Ньютона по разделённым разностям <span class="ck">p(0.5)=1.25 для (0,1)(1,2)(2,5)</span></li>
+  <li><input type="checkbox"> объясняю феномен Рунге и подавляю его узлами Чебышёва <span class="ck">равномерн. растёт ~2^n, Чебышёв убывает</span></li>
+  <li><input type="checkbox"> строю кубический сплайн и знаю его порядок <span class="ck">O(h⁴)</span></li>
+  <li><input type="checkbox"> решаю задачу МНК через нормальные уравнения / QR <span class="ck">y=1.1+1.6x</span></li>
+
+  <li class="grp">Блок III · Дифференцирование и интегрирование (зан. 6–8)</li>
+  <li><input type="checkbox"> вывожу конечные разности и знаю их порядок; нахожу оптимальный шаг <span class="ck">центр. разн.: h_opt≈u^{1/3}≈6e-6</span></li>
+  <li><input type="checkbox"> достигаю порядка \(O(h^4)\) методом Симпсона (наклон −4 на log–log) <span class="ck">∫₀¹ x²=1/3 точно при n=2</span></li>
+  <li><input type="checkbox"> применяю квадратуры Гаусса–Лежандра <span class="ck">n узлов точны до степени 2n−1</span></li>
+  <li><input type="checkbox"> строю адаптивную квадратуру с оценкой ошибки <span class="ck">∫₀¹4/(1+x²)=π, ∫₀¹1/√x=2</span></li>
+
+  <li class="grp">Блок IV · Прямые методы СЛАУ (зан. 9–11)</li>
+  <li><input type="checkbox"> реализую LU с частичным выбором и проверяю \(PA=LU\) <span class="ck">‖PA−LU‖/‖A‖ ~ 1e-16</span></li>
+  <li><input type="checkbox"> реализую разложение Холецкого для SPD-матриц <span class="ck">A=LLᵀ</span></li>
+  <li><input type="checkbox"> вычисляю \(\kappa(A)\) и оцениваю потерю точности <span class="ck">κ(H₅)≈4.8e5 → потеря≈5.7 цифр</span></li>
+  <li><input type="checkbox"> объясняю, почему \(\kappa(A^\top A)=\kappa(A)^2\) и предпочитаю QR/SVD нормальным уравнениям</li>
+
+  <li class="grp">Блок V · Итерационные методы (зан. 12)</li>
+  <li><input type="checkbox"> реализую методы Якоби и Гаусса–Зейделя <span class="ck">диаг. доминантность ⇒ сходимость</span></li>
+  <li><input type="checkbox"> оцениваю скорость сходимости через спектральный радиус матрицы итерации <span class="ck">ρ(B)&lt;1</span></li>
+  <li><input type="checkbox"> формулирую критерий остановки по невязке/приращению</li>
+
+  <li class="grp">Блок VI · Спектральные задачи и SVD (зан. 13)</li>
+  <li><input type="checkbox"> применяю степенной метод к доминирующему собственному числу <span class="ck">[[2,1],[1,2]] → λ_max=3</span></li>
+  <li><input type="checkbox"> понимаю SVD \(A=U\Sigma V^\top\) и связь \(\kappa_2=\sigma_{\max}/\sigma_{\min}\)</li>
+  <li><input type="checkbox"> применяю SVD для низкоранговой аппроксимации и псевдообратной</li>
+
+  <li class="grp">Блок VII · Оптимизация (зан. 14–15)</li>
+  <li><input type="checkbox"> нахожу минимум 1D-функции (золотое сечение / парабол.) <span class="ck">x²−4x+5 → x*=2, f=1</span></li>
+  <li><input type="checkbox"> делаю шаг градиентного спуска и подбираю шаг <span class="ck">x₀=0,α=0.1 → x₁=0.4</span></li>
+  <li><input type="checkbox"> ставлю и решаю задачу линейного программирования (симплекс/угловые точки)</li>
+</ul>
+
+<!-- ===================== ИНТЕРАКТИВ ===================== -->
+<h2 id="calc">Интерактив: калькулятор κ(A) для 2×2 матрицы</h2>
+
+<p>Введите элементы матрицы \(A=\begin{pmatrix}a &amp; b\\ c &amp; d\end{pmatrix}\) — калькулятор вычислит сингулярные числа \(\sigma_{\max},\sigma_{\min}\), число обусловленности \(\kappa_2(A)=\sigma_{\max}/\sigma_{\min}\) и оценит, сколько верных десятичных цифр теряется при решении \(Ax=b\) в double. Это контрольное значение для самопроверки варианта A: задайте \(\begin{pmatrix}1 &amp; 0.5\\ 0.5 &amp; 1/3\end{pmatrix}\) (матрица Гильберта \(H_2\)) и сравните с \(\kappa(H_2)\approx 19.3\).</p>
+
+<div class="intbox">
+<div style="display:flex;gap:1.4rem;flex-wrap:wrap;align-items:flex-start">
+  <div style="display:grid;grid-template-columns:auto 70px 70px;gap:6px 10px;align-items:center;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+    <span style="color:var(--text2)">строка 1</span><input id="k_a" type="number" step="0.1" value="1" style="width:66px" aria-label="элемент a"><input id="k_b" type="number" step="0.1" value="0.5" style="width:66px" aria-label="элемент b">
+    <span style="color:var(--text2)">строка 2</span><input id="k_c" type="number" step="0.1" value="0.5" style="width:66px" aria-label="элемент c"><input id="k_d" type="number" step="0.001" value="0.3333" style="width:66px" aria-label="элемент d">
+  </div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+    <canvas id="k_canvas" width="260" height="180" style="width:100%;height:auto;max-width:260px" aria-label="Геометрия отображения единичной окружности матрицей A в эллипс; длины полуосей эллипса равны сингулярным числам."></canvas>
+  </div>
+</div>
+<div id="k_out" style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text);margin-top:.7rem;line-height:1.7"></div>
+</div>
+
+<script>
+(function(){
+  var ids=['k_a','k_b','k_c','k_d'];
+  function val(id){ return parseFloat(document.getElementById(id).value)||0; }
+  // сингулярные числа 2x2 в замкнутой форме через собств. числа A^T A
+  function svd2(a,b,c,d){
+    var m11=a*a+c*c, m22=b*b+d*d, m12=a*b+c*d;       // A^T A
+    var tr=m11+m22, det=m11*m22-m12*m12;
+    var disc=Math.sqrt(Math.max(0,tr*tr-4*det));
+    var l1=(tr+disc)/2, l2=(tr-disc)/2;
+    return [Math.sqrt(Math.max(0,l1)), Math.sqrt(Math.max(0,l2))];
+  }
+  function draw(a,b,c,d,s){
+    var cv=document.getElementById('k_canvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+    ctx.clearRect(0,0,W,H);
+    var cx=W/2, cy=H/2;
+    // масштаб под максимальную полуось
+    var smax=Math.max(s[0],1e-9), sc=(Math.min(W,H)/2-18)/smax;
+    // оси
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(W,cy);ctx.moveTo(cx,0);ctx.lineTo(cx,H);ctx.stroke();
+    // единичная окружность (вход)
+    ctx.strokeStyle='#9a8d7e';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+    ctx.beginPath();ctx.arc(cx,cy,sc,0,6.2832);ctx.stroke();ctx.setLineDash([]);
+    // эллипс-образ: точки A*[cosθ,sinθ]
+    ctx.strokeStyle='#5b54b8';ctx.lineWidth=2;ctx.beginPath();
+    for(var i=0;i<=120;i++){
+      var t=i/120*6.2832, x=Math.cos(t), y=Math.sin(t);
+      var X=cx+sc*(a*x+b*y), Y=cy-sc*(c*x+d*y);
+      i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);
+    }
+    ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='9px JetBrains Mono';ctx.textAlign='left';
+    ctx.fillText('— образ A·круг',6,12);
+    ctx.fillStyle='#9a8d7e';ctx.fillText('· · единичный круг',6,24);
+  }
+  function run(){
+    var a=val('k_a'),b=val('k_b'),c=val('k_c'),d=val('k_d');
+    var s=svd2(a,b,c,d), smax=s[0], smin=s[1];
+    var det=a*d-b*c;
+    var out=document.getElementById('k_out');
+    if(smin<1e-15){
+      out.innerHTML='σ_min ≈ 0 — матрица вырождена (det='+det.toFixed(4)+'): κ(A)=∞, система неразрешима единственным образом.';
+      draw(a,b,c,d,s);return;
+    }
+    var kappa=smax/smin;
+    var lost=Math.log10(kappa);
+    var left=Math.max(0,16-lost);
+    var verdict = kappa<10 ? 'хорошо обусловлена' : (kappa<1e4 ? 'умеренно обусловлена' : 'плохо обусловлена');
+    out.innerHTML=
+      'det A = '+det.toFixed(5)+'<br>'+
+      'σ_max = '+smax.toFixed(5)+',&nbsp; σ_min = '+smin.toFixed(6)+'<br>'+
+      'κ₂(A) = σ_max/σ_min = <strong style="color:#5b54b8">'+kappa.toFixed(3)+'</strong> &nbsp;('+verdict+')<br>'+
+      'потеря точности ≈ log₁₀κ ≈ '+lost.toFixed(2)+' цифр → останется ≈ '+left.toFixed(1)+' верных из 16';
+    draw(a,b,c,d,s);
+  }
+  ids.forEach(function(id){ document.getElementById(id).addEventListener('input',run); });
+  window.addEventListener('load',run);
+})();
+</script>
+
+<div class="remark">
+<strong>Самопроверка.</strong> При данных по умолчанию (матрица Гильберта \(H_2\): \(1,\,0.5,\,0.5,\,0.3333\)) калькулятор должен показать \(\kappa_2\approx 19.3\) и потерю \(\approx 1.3\) цифры. Увеличивая близость строк (например, \(d\to0.5\)), вы приближаетесь к вырожденности: \(\sigma_{\min}\to0\), \(\kappa\to\infty\), эллипс-образ вырождается в отрезок.
+</div>
+
+<!-- ===================== КРИТЕРИИ ===================== -->
+<h2 id="criteria">Критерии зачёта</h2>
+
+<div class="remark">
+<strong>Зачёт ставится при выполнении двух условий:</strong>
+<ol>
+<li><strong>Сдан мини-проект.</strong> Выбран и реализован один из вариантов A/B/C; <code>run_tests()</code> воспроизводит контрольные значения (κ(H₅)≈4.8·10⁵ / ∫₀¹4/(1+x²)=π и ∫₀¹1/√x=2 / расходимость равномерной и сходимость Чебышёв-интерполяции); построен график и сделан вывод о соответствии теории.</li>
+<li><strong>Пройден чек-лист.</strong> Закрыто большинство пунктов всех семи блоков; по каждому блоку студент может на месте воспроизвести хотя бы одно контрольное значение (CHECK-маркер).</li>
+</ol>
+Спорные пункты разбираются устно по сводному задачнику. Незакрытые умения — повод вернуться к соответствующему занятию блока.
+</div>
+
+<div class="algo">
+<strong>Чему вы научились за курс.</strong>
+<ol>
+<li>Понимать машинную арифметику, оценивать и контролировать погрешность, различать обусловленность задачи и устойчивость алгоритма.</li>
+<li>Аппроксимировать и интерполировать функции, избегая феномена Рунге, и решать задачи наименьших квадратов.</li>
+<li>Численно дифференцировать и интегрировать с контролем порядка точности, включая адаптивные схемы.</li>
+<li>Решать СЛАУ прямыми (LU, Холецкий) и итерационными (Якоби, Зейдель) методами, оценивая обусловленность.</li>
+<li>Работать со спектральными задачами и SVD, ставить и решать задачи оптимизации.</li>
+</ol>
+Эти навыки — фундамент для вычислительной гидродинамики, конечных элементов и любого моделирования. Удачи на зачёте!
+</div>
+
+<div class="lecture-nav">
+  <a class="nav-prev" href="w15.html">← Занятие 15. Многомерная оптимизация и ЛП</a>
+  <a class="nav-next" href="index.html">Обзор курса →</a>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

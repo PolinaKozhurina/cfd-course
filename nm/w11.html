@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Занятие 11 курса «Численные методы»: векторные и матричные нормы, индуцированные нормы, число обусловленности κ(A), анализ ошибок СЛАУ, невязка против ошибки, матрица Гильберта. Практикум на Python (NumPy/SciPy).">
+<title>ЧМ · Занятие 11. Нормы и число обусловленности</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.tag-nummet{background:#ece9fb;color:#5b54b8}
+html.dark .tag-nummet{background:#241f3a;color:#a39bea}
+.lecture-num{color:#5b54b8}
+.phase{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#fff;background:#5b54b8;padding:.3rem .7rem;border-radius:4px;display:inline-block;margin:1.8rem 0 .4rem}
+.phase.prac{background:#1a6b5a}
+.phase.lecb{background:#3a5ba0}
+.pyblock{margin:1rem 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.pyhead{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;display:flex;justify-content:space-between}
+.pyhead .run{color:#9ec97f}
+pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9rem 1.1rem;font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.6;overflow-x:auto;white-space:pre}
+.outbox{background:#f0f7f4;border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;padding:.6rem 1rem;margin:.6rem 0 1rem;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);white-space:pre-wrap}
+html.dark .outbox{background:#16241f}
+.exercise summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--accent2);margin-top:.6rem;font-weight:500}
+.exercise details{margin-top:.4rem}
+.exercise .extag{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:#5b54b8;background:#ece9fb;padding:1px 7px;border-radius:3px;margin-right:.4rem}
+html.dark .exercise .extag{background:#241f3a;color:#a39bea}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0}
+.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
+.intbox select,.intbox input[type=range]{font-family:'JetBrains Mono',monospace}
+.intbox select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+html.dark .intbox select{background:#1b1712;color:var(--text)}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:1px 5px;border-radius:3px}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>ЧМ · Занятие 11</h2>
+  <div class="g">Лекция A</div>
+  <a href="#vecnorm">Векторные нормы</a>
+  <a href="#equiv">Эквивалентность норм</a>
+  <a href="#matnorm">Матричные нормы</a>
+  <a href="#props">Свойства норм</a>
+  <div class="g">Практикум</div>
+  <a href="#prac-norm">П1. Нормы и κ в NumPy</a>
+  <a href="#prac-hilbert">П2. Матрица Гильберта</a>
+  <a href="#prac-resid">П3. Невязка и возмущение</a>
+  <div class="g">Лекция B</div>
+  <a href="#cond">Число обусловленности</a>
+  <a href="#perturb">Анализ ошибок СЛАУ</a>
+  <a href="#geom">Геометрический смысл</a>
+  <a href="#int-ellipse">Интерактив: эллипс κ</a>
+  <a href="#resid">Невязка против ошибки</a>
+  <a href="#summary">Итоги занятия</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+  <a href="w12.html">→ Занятие 12</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-nummet">Численные методы</span>
+<div class="lecture-num">Занятие 11 · Блок IV. Линейная алгебра: решение СЛАУ</div>
+<h1>Нормы, число обусловленности и анализ ошибок</h1>
+
+<p class="phase">Лекция A · ≤ 30 мин</p>
+
+<p>На прошлых занятиях мы научились <em>решать</em> систему \(Ax = b\) — методом Гаусса, через \(LU\)- и \(LL^\top\)-разложения, прогонкой. Теперь зададим неизбежный вопрос: <strong>насколько можно доверять полученному решению?</strong> Входные данные \(A\) и \(b\) приходят из измерений или предыдущих вычислений и уже содержат ошибку \(\sim u\) (машинное эпсилон, занятие 1). Сегодня мы построим аппарат, который связывает ошибку входа с ошибкой решения. Этот аппарат — <strong>нормы</strong> и <strong>число обусловленности</strong> — позволяет заранее оценить точность ещё до запуска счёта.</p>
+
+<h2 id="vecnorm">Векторные нормы</h2>
+
+<p>Чтобы говорить о «величине» ошибки вектора, нужна мера длины. <strong>Норма</strong> обобщает понятие длины на произвольное векторное пространство.</p>
+
+<div class="definition">
+<strong>Определение.</strong> <em>Нормой</em> на \(\mathbb{R}^n\) называется функция \(\|\cdot\|:\mathbb{R}^n\to\mathbb{R}\), удовлетворяющая трём аксиомам для любых \(x,y\in\mathbb{R}^n\) и \(\alpha\in\mathbb{R}\):
+<ol>
+<li><strong>положительность:</strong> \(\|x\|\ge 0\), причём \(\|x\| = 0 \iff x = 0\);</li>
+<li><strong>однородность:</strong> \(\|\alpha x\| = |\alpha|\,\|x\|\);</li>
+<li><strong>неравенство треугольника:</strong> \(\|x + y\| \le \|x\| + \|y\|\).</li>
+</ol>
+</div>
+
+<p>На практике используют три нормы из семейства \(p\)-норм \(\|x\|_p = \left(\sum_i |x_i|^p\right)^{1/p}\):</p>
+
+<div class="eq">\[
+\|x\|_1 = \sum_{i=1}^n |x_i|,\qquad
+\|x\|_2 = \sqrt{\sum_{i=1}^n x_i^2},\qquad
+\|x\|_\infty = \max_{1\le i\le n} |x_i|.
+\tag{11.1}
+\]</div>
+
+<p>Это, соответственно, <em>манхэттенская</em> норма (сумма модулей), привычная <em>евклидова</em> длина и <em>чебышёвская</em> (максимум-) норма. Геометрически «единичный шар» \(\{x : \|x\|\le 1\}\) для них — ромб, круг и квадрат соответственно.</p>
+
+<div class="figure">
+<svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg" style="max-width:540px" role="img" aria-label="Единичные шары трёх норм на плоскости: ромб для нормы 1, окружность для евклидовой нормы 2 и квадрат для максимум-нормы бесконечность.">
+  <g transform="translate(100,100)">
+    <line x1="-70" y1="0" x2="70" y2="0" stroke="#6b5d4f" stroke-width="0.8"/>
+    <line x1="0" y1="-70" x2="0" y2="70" stroke="#6b5d4f" stroke-width="0.8"/>
+    <polygon points="55,0 0,-55 -55,0 0,55" fill="#b44a2d" fill-opacity="0.12" stroke="#b44a2d" stroke-width="1.6"/>
+    <text x="0" y="88" font-family="JetBrains Mono,monospace" font-size="12" fill="#b44a2d" text-anchor="middle">‖x‖₁ ≤ 1</text>
+  </g>
+  <g transform="translate(300,100)">
+    <line x1="-70" y1="0" x2="70" y2="0" stroke="#6b5d4f" stroke-width="0.8"/>
+    <line x1="0" y1="-70" x2="0" y2="70" stroke="#6b5d4f" stroke-width="0.8"/>
+    <circle cx="0" cy="0" r="55" fill="#3a5ba0" fill-opacity="0.12" stroke="#3a5ba0" stroke-width="1.6"/>
+    <text x="0" y="88" font-family="JetBrains Mono,monospace" font-size="12" fill="#3a5ba0" text-anchor="middle">‖x‖₂ ≤ 1</text>
+  </g>
+  <g transform="translate(500,100)">
+    <line x1="-70" y1="0" x2="70" y2="0" stroke="#6b5d4f" stroke-width="0.8"/>
+    <line x1="0" y1="-70" x2="0" y2="70" stroke="#6b5d4f" stroke-width="0.8"/>
+    <rect x="-55" y="-55" width="110" height="110" fill="#1a6b5a" fill-opacity="0.12" stroke="#1a6b5a" stroke-width="1.6"/>
+    <text x="0" y="88" font-family="JetBrains Mono,monospace" font-size="12" fill="#1a6b5a" text-anchor="middle">‖x‖∞ ≤ 1</text>
+  </g>
+</svg>
+<div class="caption">Рис. 1. Единичные шары трёх стандартных норм на плоскости: ромб (\(\ell_1\)), круг (\(\ell_2\)) и квадрат (\(\ell_\infty\)). Видно вложение шаров — основа эквивалентности норм.</div>
+</div>
+
+<h2 id="equiv">Эквивалентность норм в конечномерном пространстве</h2>
+
+<div class="theorem">
+<strong>Теорема (эквивалентность норм).</strong> В конечномерном пространстве \(\mathbb{R}^n\) любые две нормы \(\|\cdot\|_a\) и \(\|\cdot\|_b\) <em>эквивалентны</em>: существуют константы \(0 < c \le C < \infty\), такие что для всех \(x\)
+\[
+c\,\|x\|_b \;\le\; \|x\|_a \;\le\; C\,\|x\|_b.
+\]
+</div>
+
+<p>Практический смысл: если ошибка мала в одной норме, она мала и в любой другой — выбор нормы не меняет качественного вывода о сходимости или точности. Для трёх стандартных норм константы явные:</p>
+
+<div class="eq">\[
+\|x\|_\infty \le \|x\|_2 \le \|x\|_1 \le \sqrt{n}\,\|x\|_2 \le n\,\|x\|_\infty.
+\tag{11.2}
+\]</div>
+
+<p>Например, \(\|x\|_2 \le \sqrt{n}\,\|x\|_\infty\): евклидова длина не превосходит максимальной координаты, умноженной на \(\sqrt n\). При этом константы <em>растут с размерностью</em> \(n\) — в очень больших задачах разница между нормами может быть существенной численно, хотя качественно эквивалентность сохраняется.</p>
+
+<h2 id="matnorm">Матричные (индуцированные) нормы</h2>
+
+<p>Чтобы оценивать, как матрица \(A\) <em>усиливает</em> вектор, вводят матричную норму, согласованную с векторной. Самый естественный способ — измерить максимальный коэффициент растяжения.</p>
+
+<div class="definition">
+<strong>Определение.</strong> <em>Операторная</em> (индуцированная) норма матрицы \(A\in\mathbb{R}^{m\times n}\), порождённая векторной нормой \(\|\cdot\|\), есть
+\[
+\|A\| = \max_{x\neq 0}\frac{\|Ax\|}{\|x\|} = \max_{\|x\|=1}\|Ax\|.
+\]
+Это наибольшее, во сколько раз \(A\) удлиняет вектор.
+</div>
+
+<p>Для трёх стандартных норм индуцированные нормы вычисляются явно:</p>
+
+<div class="eq">\[
+\|A\|_1 = \max_{1\le j\le n}\sum_{i=1}^m |a_{ij}|
+\quad(\text{макс. сумма по столбцу}),\qquad
+\|A\|_\infty = \max_{1\le i\le m}\sum_{j=1}^n |a_{ij}|
+\quad(\text{макс. сумма по строке}).
+\tag{11.3}
+\]</div>
+
+<div class="eq">\[
+\|A\|_2 = \sigma_{\max}(A)
+\quad(\text{максимальное сингулярное число}).
+\tag{11.4}
+\]</div>
+
+<div class="remark">
+<strong>Мнемоника.</strong> Единичка «стоит» вертикально (столбцы) — \(\|A\|_1\) суммирует по столбцам; бесконечность «лежит» горизонтально (строки) — \(\|A\|_\infty\) суммирует по строкам. Спектральная норма \(\|A\|_2\) равна максимальному сингулярному числу \(\sigma_{\max}\) — этот объект мы подробно разберём на занятии 13 (SVD).
+</div>
+
+<p>Отдельно стоит <strong>норма Фробениуса</strong> — она <em>не</em> индуцирована, а определяется как евклидова длина матрицы, «растянутой» в вектор:</p>
+
+<div class="eq">\[
+\|A\|_F = \sqrt{\sum_{i,j} a_{ij}^2} = \sqrt{\operatorname{tr}(A^\top A)} = \sqrt{\textstyle\sum_k \sigma_k^2}.
+\tag{11.5}
+\]</div>
+
+<p>Норму Фробениуса легко считать, и она удовлетворяет \(\|A\|_2 \le \|A\|_F \le \sqrt{r}\,\|A\|_2\), где \(r\) — ранг. Поэтому её часто используют как дешёвую оценку спектральной нормы.</p>
+
+<h2 id="props">Ключевые свойства</h2>
+
+<div class="theorem">
+<strong>Согласованность и субмультипликативность.</strong> Индуцированная норма по построению удовлетворяет
+\[
+\|Ax\| \le \|A\|\,\|x\|,\qquad \|AB\| \le \|A\|\,\|B\|.
+\]
+</div>
+
+<div class="proof">
+Первое неравенство — прямое следствие определения: для любого \(x\neq 0\) по максимальности \(\dfrac{\|Ax\|}{\|x\|}\le\|A\|\), откуда \(\|Ax\|\le\|A\|\,\|x\|\). Второе получаем дважды применив первое: для любого \(x\) имеем \(\|ABx\| \le \|A\|\,\|Bx\| \le \|A\|\,\|B\|\,\|x\|\); деля на \(\|x\|\) и беря максимум, получаем \(\|AB\|\le\|A\|\,\|B\|\).
+</div>
+
+<p>Эти два неравенства — рабочая лошадка всего анализа ошибок: они позволяют «протаскивать» норму сквозь умножение на матрицу. Именно из них мы выведем главную оценку точности решения СЛАУ.</p>
+
+<!-- ===================== ПРАКТИКУМ ===================== -->
+<p class="phase prac">Практикум · Python (NumPy/SciPy) · ≈ 60 мин</p>
+
+<p>Цель практикума — научиться измерять нормы и число обусловленности средствами NumPy и <em>увидеть собственными руками</em>, как плохая обусловленность разрушает точность. Главный инструмент — <code>np.linalg.norm</code> (с параметром <code>ord</code>) и <code>np.linalg.cond</code>. Справочник — в <a href="python-reference.html">памятке Python/NumPy/SciPy</a>.</p>
+
+<h3 id="prac-norm">Практикум 1. Нормы вектора и матрицы, число κ</h3>
+
+<div class="pyblock"><div class="pyhead"><span>norms.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+x = np.array([3.0, -4.0, 12.0])
+print("‖x‖₁  =", np.linalg.norm(x, 1))     # 19.0  = 3+4+12
+print("‖x‖₂  =", np.linalg.norm(x, 2))     # 13.0  = sqrt(9+16+144)
+print("‖x‖∞  =", np.linalg.norm(x, np.inf))# 12.0  = max|x_i|
+
+A = np.array([[1.0, 2.0],
+              [3.0, 4.0]])
+print("‖A‖₁  =", np.linalg.norm(A, 1))     # 6.0  = max столбц. сумма (2+4)
+print("‖A‖∞  =", np.linalg.norm(A, np.inf))# 7.0  = max строч. сумма (3+4)
+print("‖A‖₂  =", np.linalg.norm(A, 2))     # 5.464 = σ_max
+print("‖A‖_F =", np.linalg.norm(A, 'fro')) # 5.477 = sqrt(1+4+9+16)
+
+# Число обусловленности в разных нормах
+print("κ₂(A) =", np.linalg.cond(A, 2))     # σ_max/σ_min ≈ 14.93
+print("κ∞(A) =", np.linalg.cond(A, np.inf))</pre></div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 11.1</span>Нормы вручную.</strong> Для вектора \(x = (1,\,-2,\,2)^\top\) и матрицы \(A = \left(\begin{smallmatrix} 2 & 0 & 1\\ -1 & 3 & 0\\ 0 & 1 & -2 \end{smallmatrix}\right)\) вычислите <em>на бумаге</em> \(\|x\|_1,\|x\|_2,\|x\|_\infty\) и \(\|A\|_1,\|A\|_\infty,\|A\|_F\). Затем проверьте все шесть значений вызовами <code>np.linalg.norm</code>.
+<details><summary>Ответы для самопроверки</summary>
+\(\|x\|_1 = 5,\ \|x\|_2 = 3,\ \|x\|_\infty = 2\). Для матрицы: \(\|A\|_1 = \max(3,4,3) = 4\) (столбцовые суммы модулей), \(\|A\|_\infty = \max(3,4,3) = 4\) (строчные суммы), \(\|A\|_F = \sqrt{4+0+1+1+9+0+0+1+4} = \sqrt{20} \approx 4.472\). Спектральную норму \(\|A\|_2\) на бумаге не берём — её даёт <code>np.linalg.norm(A,2)</code>.
+</details>
+</div>
+
+<h3 id="prac-hilbert">Практикум 2. Матрица Гильберта — катастрофа обусловленности</h3>
+
+<p>Матрица Гильберта \(H_{ij} = 1/(i+j-1)\) — классический пример системы, которая выглядит безобидно, но обусловлена ужасающе плохо: \(\kappa(H_n)\) растёт с \(n\) <em>экспоненциально</em>. Решим \(Hx = b\) с заведомо известным точным решением \(x = (1,\dots,1)^\top\) (для этого берём \(b = Hx\)) и измерим, сколько цифр потерялось.</p>
+
+<div class="pyblock"><div class="pyhead"><span>hilbert.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from scipy.linalg import hilbert   # H[i,j] = 1/(i+j-1)
+
+print(f"{'n':&gt;3} {'κ₂(H)':&gt;12} {'отн.ошибка':&gt;12} {'log10 κ':&gt;8}")
+for n in range(2, 14):
+    H = hilbert(n)
+    x_true = np.ones(n)
+    b = H @ x_true
+    x_num = np.linalg.solve(H, b)        # численное решение
+    err = np.linalg.norm(x_num - x_true) / np.linalg.norm(x_true)
+    kappa = np.linalg.cond(H, 2)
+    print(f"{n:&gt;3} {kappa:&gt;12.2e} {err:&gt;12.2e} {np.log10(kappa):&gt;8.1f}")</pre></div>
+
+<div class="outbox">  n        κ₂(H)   отн.ошибка  log10 κ
+  2     1.93e+01     5.66e-16      1.3
+  4     1.55e+04     5.42e-13      4.2
+  6     1.50e+07     1.16e-10      7.2
+  8     1.53e+10     6.12e-08     10.2
+ 10     1.60e+13     5.24e-04     13.2
+ 12     1.75e+16     8.78e-01     16.2
+ 13     3.0e+18      ~1          18.5</div>
+
+<p>Закономерность бьёт в глаза: <strong>относительная ошибка решения примерно равна</strong> \(\kappa(H)\cdot u\), где \(u\approx10^{-16}\). При \(n=8\) число \(\kappa\approx10^{10}\), и ошибка \(\sim10^{10}\cdot10^{-16}=10^{-6}\) — потеряно около 10 значащих цифр. При \(n=13\) уже \(\kappa\sim10^{18} &gt; 1/u\): решение полностью разрушено, хотя сама матрица невырождена и алгоритм Гаусса безупречен. Виновата не программа — виновата <em>обусловленность задачи</em>.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 11.2</span>Рост κ Гильберта.</strong> Постройте график \(\log_{10}\kappa_2(H_n)\) против \(n\) для \(n=1,\dots,15\). Убедитесь, что зависимость близка к линейной (то есть \(\kappa\) растёт экспоненциально по \(n\)). Оцените угловой коэффициент: на сколько порядков растёт \(\kappa\) при увеличении \(n\) на единицу?
+<details><summary>Подсказка</summary>
+По точкам из практикума 2 наклон \(\approx 1.5\) порядка на единицу \(n\): известна асимптотика \(\kappa(H_n)\sim e^{3.5 n}\), то есть \(\log_{10}\kappa \approx 1.5\,n\). Это и есть «экспоненциальный рост».
+</details>
+</div>
+
+<h3 id="prac-resid">Практикум 3. Малая невязка ≠ малая ошибка; усиление возмущения</h3>
+
+<p>Опасная иллюзия: «если невязка \(r = b - A\tilde x\) мала, решение хорошее». На плохо обусловленной матрице это <strong>неверно</strong>. Проверим, а заодно возмутим правую часть на \(10^{-10}\) и измерим, во сколько раз усилилась ошибка.</p>
+
+<div class="pyblock"><div class="pyhead"><span>residual_vs_error.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from scipy.linalg import hilbert
+
+n = 10
+H = hilbert(n)
+x_true = np.ones(n)
+b = H @ x_true
+kappa = np.linalg.cond(H, 2)
+
+# --- решение и его невязка/ошибка ---
+x_num = np.linalg.solve(H, b)
+resid = np.linalg.norm(b - H @ x_num) / np.linalg.norm(b)
+error = np.linalg.norm(x_num - x_true) / np.linalg.norm(x_true)
+print(f"κ₂(H)        = {kappa:.2e}")
+print(f"невязка r/b  = {resid:.2e}")   # КРОШЕЧНАЯ ~1e-16
+print(f"ошибка Δx/x  = {error:.2e}")   # большая ~1e-4
+print(f"κ × невязка  = {kappa*resid:.2e}  (оценка сверху для ошибки)")
+
+# --- возмущение правой части на 1e-10 ---
+db = 1e-10 * np.random.default_rng(0).standard_normal(n)
+x_pert = np.linalg.solve(H, b + db)
+amp = (np.linalg.norm(x_pert - x_num)/np.linalg.norm(x_num)) \
+      / (np.linalg.norm(db)/np.linalg.norm(b))
+print(f"усиление Δb→Δx = {amp:.2e}   (теория: ≤ κ = {kappa:.2e})")</pre></div>
+
+<div class="outbox">κ₂(H)        = 1.60e+13
+невязка r/b  = 4.4e-16
+ошибка Δx/x  = 5.2e-04
+κ × невязка  = 7.0e-03  (оценка сверху для ошибки)
+усиление Δb→Δx = 3.1e+12   (теория: ≤ κ = 1.60e+13)</div>
+
+<p>Невязка порядка \(10^{-16}\) — машинная точность, идеал! — а ошибка решения \(5\cdot10^{-4}\): двенадцать порядков разницы. Возмущение правой части на \(10^{-10}\) раздувается в ошибку решения в \(\sim10^{12}\) раз — ровно как предсказывает \(\kappa\). Невязка обманывает; число обусловленности — нет.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 11.3</span>Невязка против ошибки.</strong> Возьмите \(2\times2\) матрицу \(A = \left(\begin{smallmatrix}1 & 1\\ 1 & 1.0001\end{smallmatrix}\right)\) и \(b=(2,\,2.0001)^\top\) (точное решение \(x=(1,1)^\top\)). Подсуньте «решение» \(\tilde x = (2,\,0)^\top\). Вычислите невязку \(\|b-A\tilde x\|\) и ошибку \(\|\tilde x-x\|\). Убедитесь, что невязка мала, а ошибка огромна, и сопоставьте отношение с \(\kappa(A)\).
+<details><summary>Подсказка</summary>
+\(A\tilde x = (2,\,2)^\top\), значит \(r = b - A\tilde x = (0,\,0.0001)^\top\), \(\|r\|_2 = 10^{-4}\) — мало. Но \(\|\tilde x - x\|_2 = \|(1,-1)\|_2 = \sqrt2 \approx 1.41\) — огромно. Здесь \(\kappa_2(A)\approx 4\times10^4\), и неравенство \(\|\tilde x-x\|/\|x\| \le \kappa\cdot\|r\|/\|b\|\) выполняется с запасом.
+</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 11.4</span>Потеря цифр ≈ log₁₀κ.</strong> Для \(n=2,4,6,8,10\) (матрица Гильберта) посчитайте число «верных цифр» решения как \(-\log_{10}(\text{отн.ошибка})\) и сравните с \(16 - \log_{10}\kappa(H_n)\) — теоретическим прогнозом числа уцелевших цифр в double. Постройте обе величины на одном графике.
+<details><summary>Подсказка</summary>
+Правило большого пальца: в double изначально \(\approx 16\) верных цифр, при решении теряется \(\approx\log_{10}\kappa\) из них, остаётся \(\approx 16-\log_{10}\kappa\). Для \(H_8\): \(\log_{10}\kappa\approx10\), значит остаётся \(\approx 6\) цифр — что и наблюдается (ошибка \(\sim10^{-6}\)).
+</details>
+</div>
+
+<!-- ===================== ЛЕКЦИЯ B ===================== -->
+<p class="phase lecb">Лекция B · 30 мин</p>
+
+<h2 id="cond">Число обусловленности матрицы</h2>
+
+<p>Практикум показал эмпирически: ошибка \(\approx \kappa\cdot u\). Теперь введём \(\kappa\) строго и докажем эту оценку.</p>
+
+<div class="definition">
+<strong>Определение.</strong> <em>Число обусловленности</em> невырожденной матрицы \(A\) относительно нормы \(\|\cdot\|\) есть
+\[
+\kappa(A) = \|A\|\cdot\|A^{-1}\|.
+\]
+Всегда \(\kappa(A)\ge 1\), поскольку \(1 = \|I\| = \|A A^{-1}\| \le \|A\|\,\|A^{-1}\| = \kappa(A)\). Для спектральной нормы
+\[
+\kappa_2(A) = \frac{\sigma_{\max}(A)}{\sigma_{\min}(A)}
+\]
+— отношение наибольшего и наименьшего сингулярных чисел (вывод — на занятии 13, SVD).
+</div>
+
+<p>Чем ближе \(\kappa\) к единице, тем «лучше» матрица; \(\kappa\gg1\) означает почти вырожденную матрицу. Для ортогональной матрицы \(Q\) (поворот/отражение) \(\kappa_2(Q)=1\) — она не искажает длины и потому идеальна численно.</p>
+
+<h2 id="perturb">Анализ ошибок СЛАУ</h2>
+
+<p>Рассмотрим систему \(Ax = b\). Пусть входные данные возмущены; как это сказывается на решении?</p>
+
+<div class="theorem">
+<strong>Возмущение правой части.</strong> Если \(Ax = b\) и \(A(x+\Delta x) = b + \Delta b\), то
+\[
+\frac{\|\Delta x\|}{\|x\|} \;\le\; \kappa(A)\,\frac{\|\Delta b\|}{\|b\|}.
+\]
+</div>
+
+<div class="proof">
+Вычитая \(Ax=b\) из \(A(x+\Delta x)=b+\Delta b\), получаем \(A\,\Delta x = \Delta b\), откуда \(\Delta x = A^{-1}\Delta b\), и по согласованности
+\[
+\|\Delta x\| \le \|A^{-1}\|\,\|\Delta b\|.
+\]
+С другой стороны, из \(b = Ax\) следует \(\|b\| \le \|A\|\,\|x\|\), то есть \(\dfrac{1}{\|x\|} \le \dfrac{\|A\|}{\|b\|}\). Перемножая два неравенства:
+\[
+\frac{\|\Delta x\|}{\|x\|} \le \|A^{-1}\|\,\|\Delta b\|\cdot\frac{\|A\|}{\|b\|}
+= \underbrace{\|A\|\,\|A^{-1}\|}_{\kappa(A)}\,\frac{\|\Delta b\|}{\|b\|}.
+\]
+</div>
+
+<p>Относительная ошибка решения может быть в \(\kappa(A)\) раз больше относительной ошибки данных. Аналогичный (с точностью до первого порядка) результат для возмущения <em>матрицы</em>:</p>
+
+<div class="theorem">
+<strong>Возмущение матрицы.</strong> Если \(Ax=b\) и \((A+\Delta A)(x+\Delta x)=b\), то в первом порядке по \(\|\Delta A\|\)
+\[
+\frac{\|\Delta x\|}{\|x\|} \;\lesssim\; \kappa(A)\,\frac{\|\Delta A\|}{\|A\|}.
+\]
+</div>
+
+<div class="proof">
+Раскрывая скобки и используя \(Ax=b\), получаем \(A\,\Delta x + \Delta A\,(x+\Delta x) = 0\), откуда \(\Delta x = -A^{-1}\Delta A\,(x+\Delta x)\). В первом порядке \(x+\Delta x\approx x\), поэтому \(\|\Delta x\| \lesssim \|A^{-1}\|\,\|\Delta A\|\,\|x\|\). Деля на \(\|x\|\) и домножая числитель и знаменатель на \(\|A\|\):
+\[
+\frac{\|\Delta x\|}{\|x\|} \lesssim \|A^{-1}\|\,\|\Delta A\| = \|A\|\,\|A^{-1}\|\,\frac{\|\Delta A\|}{\|A\|} = \kappa(A)\,\frac{\|\Delta A\|}{\|A\|}.
+\]
+</div>
+
+<p>Оба результата объединяются одним лозунгом: <strong>относительная ошибка решения \(\lesssim \kappa(A)\times\) (относительная ошибка данных)</strong>. Поскольку округление вносит в данные ошибку \(\sim u\), получаем оценку точности решения \(\sim\kappa(A)\cdot u\) — ровно то, что мы видели на матрице Гильберта.</p>
+
+<h2 id="geom">Геометрический смысл числа обусловленности</h2>
+
+<p>Откуда берётся \(\kappa_2 = \sigma_{\max}/\sigma_{\min}\)? Рассмотрим действие \(A\) на <em>единичную сферу</em> \(\{x:\|x\|_2 = 1\}\). Образ — <strong>эллипсоид</strong>, полуоси которого равны сингулярным числам \(\sigma_1\ge\sigma_2\ge\dots\ge\sigma_n\), а направлены вдоль левых сингулярных векторов.</p>
+
+<ul>
+<li>\(\sigma_{\max}\) — наибольшее растяжение (\(=\|A\|_2\)); \(\sigma_{\min}\) — наименьшее.</li>
+<li>\(\kappa_2 = \sigma_{\max}/\sigma_{\min}\) — <em>отношение макс. и мин. полуоси</em>, мера «вытянутости» эллипсоида.</li>
+<li>\(\kappa_2 = 1\): сфера переходит в сферу (ортогональная матрица с точностью до масштаба) — идеал.</li>
+<li>\(\kappa_2 \gg 1\): эллипсоид сильно вытянут, почти «схлопнут» в одном направлении — матрица близка к вырожденной (\(\sigma_{\min}\to0\)).</li>
+</ul>
+
+<p>Геометрически плохая обусловленность означает: вдоль «тонкого» направления эллипсоида крошечное смещение выхода соответствует огромному смещению входа — обратное отображение \(A^{-1}\) растягивает это направление в \(1/\sigma_{\min}\) раз. Поиграйте с этим ниже.</p>
+
+<h3 id="int-ellipse">Интерактив: эллипс числа обусловленности</h3>
+
+<p>Матрица \(A=\left(\begin{smallmatrix} s & k\\ 0 & 1 \end{smallmatrix}\right)\) задаётся двумя слайдерами: \(s\) — растяжение, \(k\) — сдвиг (shear). Слева — единичная окружность (входные векторы) и её образ-эллипс \(A\cdot(\text{окружность})\); красным и синим показаны главные полуоси \(\sigma_{\max}u_1\) и \(\sigma_{\min}u_2\). Справа — те же сингулярные числа столбиками. Увеличивая вытянутость эллипса, наблюдайте рост \(\kappa_2=\sigma_{\max}/\sigma_{\min}\).</p>
+
+<div class="intbox">
+<div style="display:flex;gap:1.4rem;flex-wrap:wrap;align-items:end;margin-bottom:.7rem">
+  <div><label>растяжение s = <span id="e_sv">1.00</span></label><br>
+    <input type="range" id="e_s" min="0.1" max="3" step="0.01" value="1" style="width:200px">
+  </div>
+  <div><label>сдвиг k = <span id="e_kv">0.00</span></label><br>
+    <input type="range" id="e_k" min="-2.5" max="2.5" step="0.01" value="0" style="width:200px">
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1.25fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">окружность → эллипс под действием A</div><canvas id="e_geo" width="430" height="360" style="width:100%;height:auto" aria-label="Единичная окружность и её образ-эллипс под действием матрицы A; показаны главные полуоси, равные сингулярным числам."></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">сингулярные числа</div><canvas id="e_bar" width="340" height="360" style="width:100%;height:auto" aria-label="Столбчатая диаграмма максимального и минимального сингулярных чисел матрицы A."></canvas></div>
+</div>
+<div id="e_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.5rem"></div>
+</div>
+
+<script>
+(function(){
+  // Аналитический SVD матрицы 2x2 через собственные числа A^T A
+  function svd2(a,b,c,d){
+    var p=a*a+c*c, q=b*b+d*d, r=a*b+c*d;      // M = A^T A = [[p,r],[r,q]]
+    var t=(p+q)/2, s=Math.sqrt(Math.max(0,((p-q)/2)*((p-q)/2)+r*r));
+    var l1=t+s, l2=Math.max(0,t-s);
+    var s1=Math.sqrt(l1), s2=Math.sqrt(l2);
+    // правый сингулярный вектор v1 (собств. вектор M для l1)
+    var v1x,v1y;
+    if(Math.abs(r)>1e-12){ v1x=l1-q; v1y=r; }
+    else { if(p>=q){v1x=1;v1y=0;} else {v1x=0;v1y=1;} }
+    var nv=Math.hypot(v1x,v1y)||1; v1x/=nv; v1y/=nv;
+    var v2x=-v1y, v2y=v1x;
+    // образы A v_i имеют длину sigma_i (это полуоси эллипса)
+    var u1x=a*v1x+b*v1y, u1y=c*v1x+d*v1y;
+    var u2x=a*v2x+b*v2y, u2y=c*v2x+d*v2y;
+    return {s1:s1,s2:s2,u1:[u1x,u1y],u2:[u2x,u2y]};
+  }
+
+  function getA(){
+    var s=+document.getElementById('e_s').value;
+    var k=+document.getElementById('e_k').value;
+    return {a:s,b:k,c:0,d:1};
+  }
+
+  function drawGeo(A,sv){
+    var c=document.getElementById('e_geo'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var cx=W/2, cy=H/2, sc=52;                 // px на единицу
+    // сетка
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var g=-3;g<=3;g++){
+      ctx.beginPath();ctx.moveTo(cx+g*sc,0);ctx.lineTo(cx+g*sc,H);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,cy+g*sc);ctx.lineTo(W,cy+g*sc);ctx.stroke();
+    }
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(W,cy);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx,0);ctx.lineTo(cx,H);ctx.stroke();
+    // единичная окружность (вход)
+    ctx.strokeStyle='#9a8d7e';ctx.lineWidth=1.4;ctx.setLineDash([4,3]);ctx.beginPath();
+    ctx.arc(cx,cy,sc,0,2*Math.PI);ctx.stroke();ctx.setLineDash([]);
+    // образ-эллипс
+    ctx.strokeStyle='#5b54b8';ctx.lineWidth=2.4;ctx.beginPath();
+    for(var i=0;i<=120;i++){
+      var th=2*Math.PI*i/120, x=Math.cos(th), y=Math.sin(th);
+      var X=A.a*x+A.b*y, Y=A.c*x+A.d*y;
+      var px=cx+X*sc, py=cy-Y*sc;
+      i?ctx.lineTo(px,py):ctx.moveTo(px,py);
+    }
+    ctx.closePath();ctx.stroke();
+    // главные полуоси: sigma_max u1 (красная), sigma_min u2 (синяя)
+    function axis(u,col){
+      ctx.strokeStyle=col;ctx.lineWidth=2.6;ctx.beginPath();
+      ctx.moveTo(cx,cy);ctx.lineTo(cx+u[0]*sc,cy-u[1]*sc);ctx.stroke();
+      ctx.fillStyle=col;ctx.beginPath();ctx.arc(cx+u[0]*sc,cy-u[1]*sc,3.5,0,7);ctx.fill();
+    }
+    axis(sv.u1,'#b44a2d');
+    axis(sv.u2,'#3a5ba0');
+    // подписи
+    ctx.fillStyle='#9a8d7e';ctx.font='10px JetBrains Mono';ctx.textAlign='left';
+    ctx.fillText('вход: окружность',8,16);
+    ctx.fillStyle='#5b54b8';ctx.fillText('выход: эллипс',8,30);
+    ctx.fillStyle='#b44a2d';ctx.fillText('σ_max',8,H-20);
+    ctx.fillStyle='#3a5ba0';ctx.fillText('σ_min',8,H-7);
+  }
+
+  function drawBar(sv){
+    var c=document.getElementById('e_bar'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:42,r:14,t:24,b:38},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var vmax=Math.max(3.2, sv.s1*1.1);
+    function yp(v){return P.t+ph*(1-v/vmax);}
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;ctx.fillStyle='#6b5d4f';
+    ctx.font='9px JetBrains Mono';ctx.textAlign='right';
+    for(var g=0;g<=4;g++){var v=vmax*g/4;var y=yp(v);ctx.beginPath();ctx.moveTo(P.l,y);ctx.lineTo(P.l+pw,y);ctx.stroke();ctx.fillText(v.toFixed(1),P.l-4,y+3);}
+    var bw=64;
+    ctx.fillStyle='#b44a2d';ctx.fillRect(P.l+24,yp(sv.s1),bw,ph-(yp(sv.s1)-P.t));
+    ctx.fillStyle='#3a5ba0';ctx.fillRect(P.l+24+bw+40,yp(sv.s2),bw,ph-(yp(sv.s2)-P.t));
+    ctx.fillStyle='#2c2419';ctx.font='11px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('σ_max',P.l+24+bw/2,P.t+ph+14);
+    ctx.fillText(sv.s1.toFixed(3),P.l+24+bw/2,P.t+ph+28);
+    ctx.fillText('σ_min',P.l+24+bw+40+bw/2,P.t+ph+14);
+    ctx.fillText(sv.s2.toFixed(3),P.l+24+bw+40+bw/2,P.t+ph+28);
+    ctx.fillStyle='#5b54b8';ctx.font='12px JetBrains Mono';
+    var k = sv.s2>1e-9 ? (sv.s1/sv.s2) : Infinity;
+    ctx.fillText('κ₂ = '+(isFinite(k)?k.toFixed(2):'∞'),W/2,P.t-8);
+  }
+
+  function update(){
+    var A=getA();
+    document.getElementById('e_sv').textContent=(+document.getElementById('e_s').value).toFixed(2);
+    document.getElementById('e_kv').textContent=(+document.getElementById('e_k').value).toFixed(2);
+    var sv=svd2(A.a,A.b,A.c,A.d);
+    drawGeo(A,sv);drawBar(sv);
+    var k = sv.s2>1e-9 ? sv.s1/sv.s2 : Infinity;
+    var verdict = k>50?'плохо обусловлена (эллипс сильно вытянут)':(k>5?'умеренно':'хорошо обусловлена');
+    document.getElementById('e_status').innerHTML=
+      'A = [['+A.a.toFixed(2)+', '+A.b.toFixed(2)+'], [0, 1]] · '+
+      'σ_max='+sv.s1.toFixed(3)+', σ_min='+sv.s2.toFixed(3)+
+      ' · κ₂='+(isFinite(k)?k.toFixed(2):'∞')+' → '+verdict+'.';
+  }
+  document.getElementById('e_s').addEventListener('input',update);
+  document.getElementById('e_k').addEventListener('input',update);
+  window.addEventListener('load',function(){ setTimeout(update,200); });
+})();
+</script>
+
+<h2 id="resid">Невязка против ошибки. Главное правило</h2>
+
+<p>Практикум 3 продемонстрировал ловушку: малая <em>невязка</em> не гарантирует малой <em>ошибки</em>. Свяжем их строго. Пусть \(\tilde x\) — приближённое решение, \(r = b - A\tilde x\) — невязка. Тогда \(A(x-\tilde x) = b - A\tilde x = r\), то есть \(x-\tilde x = A^{-1}r\), и повторяя выкладку доказательства выше:</p>
+
+<div class="theorem">
+<strong>Оценка ошибки через невязку.</strong>
+\[
+\frac{\|\tilde x - x\|}{\|x\|} \;\le\; \kappa(A)\,\frac{\|r\|}{\|b\|}.
+\]
+Малая невязка \(\|r\|\) даёт малую ошибку <em>только если</em> \(\kappa(A)\) умеренно. При большом \(\kappa\) даже машинно-точная невязка совместима с грубо неверным решением.
+</div>
+
+<p>Это утверждение — частный случай <strong>главного правила вычислительной математики</strong> из занятия 1: <em>прямая ошибка \(\lesssim\) обусловленность \(\times\) обратная ошибка</em>. Невязка играет роль обратной ошибки (метод Гаусса с выбором главного элемента обратно устойчив: \(\|r\|/\|b\|\sim u\)), а \(\kappa(A)\) — роль обусловленности задачи. Отсюда и практическое правило большого пальца:</p>
+
+<div class="remark">
+<strong>Правило большого пальца.</strong> При решении СЛАУ в формате double (\(\approx16\) значащих цифр) теряется примерно \(\log_{10}\kappa(A)\) значащих цифр. Уцелевает \(\approx 16 - \log_{10}\kappa(A)\) цифр. Если \(\kappa\sim10^{16}\), не уцелевает <em>ни одной</em> — решение бессмысленно. Матрица Гильберта \(H_{ij}=1/(i+j-1)\) достигает этого уже при \(n\approx13\).
+</div>
+
+<h2 id="summary">Итоги занятия</h2>
+
+<div class="algo">
+<strong>Что нужно унести с занятия 11:</strong>
+<ol>
+<li><strong>Нормы</strong> измеряют величину векторов и матриц. Векторные: \(\|x\|_1=\sum|x_i|\), \(\|x\|_2=\sqrt{\sum x_i^2}\), \(\|x\|_\infty=\max|x_i|\). В конечномерье все нормы эквивалентны.</li>
+<li><strong>Индуцированные матричные нормы:</strong> \(\|A\|_1\) — макс. столбцовая сумма, \(\|A\|_\infty\) — макс. строчная, \(\|A\|_2=\sigma_{\max}\). Свойства: \(\|Ax\|\le\|A\|\|x\|\) и \(\|AB\|\le\|A\|\|B\|\).</li>
+<li><strong>Число обусловленности</strong> \(\kappa(A)=\|A\|\,\|A^{-1}\|\ge1\); для 2-нормы \(\kappa_2=\sigma_{\max}/\sigma_{\min}\). Геометрически — вытянутость эллипсоида-образа единичной сферы.</li>
+<li><strong>Анализ ошибок:</strong> \(\dfrac{\|\Delta x\|}{\|x\|}\le\kappa(A)\dfrac{\|\Delta b\|}{\|b\|}\) и аналогично для \(\Delta A\). Относительная ошибка решения \(\lesssim\kappa\cdot u\).</li>
+<li><strong>Невязка \(\neq\) ошибка:</strong> \(\dfrac{\|\tilde x-x\|}{\|x\|}\le\kappa(A)\dfrac{\|r\|}{\|b\|}\). Малая невязка обманчива при большом \(\kappa\).</li>
+<li><strong>Правило большого пальца:</strong> теряется \(\approx\log_{10}\kappa\) значащих цифр. Матрица Гильберта — эталон катастрофической обусловленности.</li>
+</ol>
+</div>
+
+<div class="remark">
+<strong>Домашнее задание.</strong> Доделать задачи 11.1–11.4. Дополнительно: для случайных матриц \(A=\) <code>np.random.randn(n,n)</code> при \(n=5,\dots,50\) проследите, как растёт типичное \(\kappa_2(A)\) (медиана по 100 реализациям). Сравните с матрицей Гильтберта того же размера — почему случайная матрица обусловлена несравнимо лучше?
+</div>
+
+<div class="lecture-nav">
+  <a class="nav-prev" href="w10.html">← Занятие 10. Холецкий и прогонка</a>
+  <a class="nav-next" href="w12.html">Занятие 12. Итерационные методы →</a>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Семестровый курс «Численные методы» уровня бакалавриата (по образцу MIT 18.330 и Stanford CME): машинная арифметика и анализ ошибок, интерполяция и аппроксимация, численное дифференцирование и интегрирование, решение СЛАУ и их обусловленность, собственные числа, оптимизация. 16 занятий с практикумами на Python (NumPy/SciPy) и интерактивом в браузере.">
+<title>Численные методы · Курс лекций</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.course-hero{background:var(--bg2);border-radius:10px;padding:1.5rem 1.8rem;margin-bottom:1.5rem;border:1px solid var(--border)}
+.course-hero h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;margin-bottom:.4rem;color:var(--text)}
+.course-hero .tag{font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.1em;color:var(--accent);text-transform:uppercase;margin-bottom:.6rem;display:inline-block}
+.course-hero p.lead{font-size:1rem;color:var(--text2);max-width:740px;line-height:1.6}
+.course-meta{display:flex;gap:1rem;flex-wrap:wrap;margin-top:.8rem;font-size:.85rem;color:var(--text2)}
+.course-meta span{padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.75rem}
+html.dark .course-meta span{background:#231e18}
+.block-label{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin:1.6rem 0 .6rem;display:flex;align-items:center;gap:.6rem}
+.block-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.lec-block{background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.1rem 1.3rem;margin-bottom:.8rem;box-shadow:0 1px 3px var(--shadow);display:block;text-decoration:none;color:inherit;transition:all .18s}
+.lec-block:hover{border-color:var(--accent);box-shadow:0 4px 18px rgba(44,36,25,.08);transform:translateY(-2px)}
+.lec-block .lh{display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap;margin-bottom:.25rem}
+.lec-block .num{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#fff;background:#5b54b8;padding:2px 9px;border-radius:4px;font-weight:500}
+.lec-block h2{font-family:'Playfair Display',serif;font-size:1.18rem;font-weight:700;color:var(--text);margin:0}
+.lec-block:hover h2{color:var(--accent)}
+.lec-block p.desc{font-size:.9rem;color:var(--text2);margin:.2rem 0 .4rem;line-height:1.55}
+.lec-block .badges{display:flex;gap:.5rem;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--text3)}
+.lec-block .badges b{font-weight:500;color:#5b54b8;background:#ece9fb;padding:1px 7px;border-radius:3px}
+html.dark .lec-block .badges b{background:#241f3a;color:#a39bea}
+.lit-box{background:var(--bg2);border-radius:8px;padding:1rem 1.2rem;margin:1.5rem 0;font-size:.88rem}
+.lit-box ol{margin-left:1.4rem;color:var(--text2);line-height:1.7}
+.lit-box ol li{margin-bottom:.2rem}
+.format-box{background:#ece9fb;border-left:3px solid #5b54b8;border-radius:0 8px 8px 0;padding:1rem 1.2rem;margin:1.2rem 0;font-size:.92rem;color:var(--text2)}
+html.dark .format-box{background:#1f1b32;border-left-color:#7b73d6}
+.format-box strong{color:#5b54b8}
+html.dark .format-box strong{color:#a39bea}
+.flow{display:flex;align-items:stretch;gap:.5rem;flex-wrap:wrap;margin:.7rem 0 .2rem}
+.flow .seg{flex:1;min-width:120px;border-radius:6px;padding:.5rem .7rem;font-size:.8rem;text-align:center;border:1px solid var(--border)}
+.flow .seg.lec{background:#fff;color:var(--text)}
+html.dark .flow .seg.lec{background:#231e18}
+.flow .seg.prac{background:#5b54b8;color:#fff;border-color:#5b54b8}
+.flow .seg small{display:block;font-family:'JetBrains Mono',monospace;font-size:.64rem;opacity:.7;margin-top:.15rem}
+.flow .arr{align-self:center;color:var(--text3);font-size:1.1rem}
+html.dark .lec-block{background:#231e18}
+html.dark .lec-block:hover{box-shadow:0 4px 18px rgba(0,0,0,.4)}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<div class="main" style="max-width:900px;margin:0 auto;padding:1.5rem">
+
+<div class="course-hero">
+  <div class="tag">Курс · Численные методы</div>
+  <h1>Численные методы</h1>
+  <p class="lead">Семестровый курс уровня бакалавриата по образцу <strong>MIT 18.330 «Introduction to Numerical Analysis»</strong> и <strong>Stanford CME 302 / CS 205A</strong>. От машинной арифметики и анализа ошибок — через интерполяцию, численное дифференцирование и интегрирование — к решению систем линейных уравнений, их обусловленности, собственным числам и оптимизации. Каждое занятие строится по формату «полторы пары»: лекция, практикум на Python и снова лекция, с интерактивными демонстрациями прямо в браузере.</p>
+  <div class="course-meta">
+    <span>16 занятий</span>
+    <span>Python · NumPy · SciPy</span>
+    <span>Аппроксимация · квадратуры</span>
+    <span>СЛАУ · κ(A) · собств. числа</span>
+    <span>Оптимизация</span>
+  </div>
+</div>
+
+<div class="format-box">
+<strong>Формат занятия (полторы пары, ≈135 мин).</strong> Каждая страница-занятие построена по единой схеме: короткая лекция, практикум за компьютером и завершающая лекция, которая опирается на полученные на практике результаты.
+<div class="flow">
+  <div class="seg lec">Лекция A<small>≤ 30 мин</small></div>
+  <div class="arr">→</div>
+  <div class="seg prac">Практикум (Python)<small>≈ 60–70 мин</small></div>
+  <div class="arr">→</div>
+  <div class="seg lec">Лекция B<small>30 мин</small></div>
+</div>
+</div>
+
+<div class="block-label">Блок I · Основы вычислений и аппроксимация</div>
+
+<a class="lec-block" href="w01.html">
+  <div class="lh"><span class="num">Занятие 1</span><h2>Машинная арифметика и анализ ошибок</h2></div>
+  <p class="desc">Числа с плавающей точкой (IEEE 754), машинное ε, округление и потеря значимости. Обусловленность задачи против устойчивости алгоритма. Прямая и обратная ошибка, правило «обусловленность × устойчивость».</p>
+  <div class="badges"><b>IEEE 754</b><b>число обусловл.</b><b>backward error</b><span>интерактив</span><span>Python</span></div>
+</a>
+
+<a class="lec-block" href="w02.html">
+  <div class="lh"><span class="num">Занятие 2</span><h2>Ряд Тейлора и аппроксимация функций</h2></div>
+  <p class="desc">Разложение в ряд Тейлора, остаточный член Лагранжа, усечение ряда и асимптотические оценки. Постановка задачи аппроксимации, нормы функций и понятие наилучшего приближения.</p>
+  <div class="badges"><b>ряд Тейлора</b><b>остаток</b><b>нормы</b><span>интерактив</span><span>Python</span></div>
+</a>
+
+<div class="block-label">Блок II · Интерполяция и приближение</div>
+
+<a class="lec-block" href="w03.html">
+  <div class="lh"><span class="num">Занятие 3</span><h2>Полиномиальная интерполяция</h2></div>
+  <p class="desc">Интерполяционный полином: форма Лагранжа и Ньютона, разделённые разности. Единственность, погрешность интерполяции. Феномен Рунге на равномерной сетке.</p>
+  <div class="badges"><b>Лагранж</b><b>Ньютон</b><b>феномен Рунге</b><span>интерактив</span><span>Python</span></div>
+</a>
+
+<a class="lec-block" href="w04.html">
+  <div class="lh"><span class="num">Занятие 4</span><h2>Узлы Чебышёва и сплайны</h2></div>
+  <p class="desc">Оптимальное расположение узлов: точки Чебышёва и подавление феномена Рунге. Кусочная интерполяция, кубические сплайны, условия гладкости, обзор B-сплайнов.</p>
+  <div class="badges"><b>Чебышёв</b><b>кубич. сплайны</b><span>интерактив</span><span>Python</span></div>
+</a>
+
+<a class="lec-block" href="w05.html">
+  <div class="lh"><span class="num">Занятие 5</span><h2>Метод наименьших квадратов и ортогональные базисы</h2></div>
+  <p class="desc">Аппроксимация по МНК, нормальные уравнения, переопределённые системы. Ортогональные полиномы (Лежандр, Чебышёв). Тригонометрическая аппроксимация и обзор дискретного преобразования Фурье.</p>
+  <div class="badges"><b>МНК</b><b>ортогон. полиномы</b><b>DFT</b><span>интерактив</span><span>Python</span></div>
+</a>
+
+<div class="block-label">Блок III · Дифференцирование и интегрирование</div>
+
+<a class="lec-block" href="w06.html">
+  <div class="lh"><span class="num">Занятие 6</span><h2>Численное дифференцирование</h2></div>
+  <p class="desc">Конечные разности из ряда Тейлора, порядок аппроксимации. Баланс ошибки усечения и ошибки округления, оптимальный шаг. Экстраполяция Ричардсона.</p>
+  <div class="badges"><b>конечные разности</b><b>порядок</b><b>Ричардсон</b><span>интерактив</span><span>Python</span></div>
+</a>
+
+<a class="lec-block" href="w07.html">
+  <div class="lh"><span class="num">Занятие 7</span><h2>Численное интегрирование I. Ньютон–Котес</h2></div>
+  <p class="desc">Формулы прямоугольников, трапеций и Симпсона. Составные квадратуры и порядок точности. Оценки погрешности и экстраполяция Ромберга.</p>
+  <div class="badges"><b>трапеции</b><b>Симпсон</b><b>Ромберг</b><span>интерактив</span><span>Python</span></div>
+</a>
+
+<a class="lec-block" href="w08.html">
+  <div class="lh"><span class="num">Занятие 8</span><h2>Численное интегрирование II. Квадратуры Гаусса</h2></div>
+  <p class="desc">Квадратуры Гаусса и связь с ортогональными полиномами: максимальный алгебраический порядок точности. Адаптивные квадратуры, обработка особенностей и несобственных интегралов.</p>
+  <div class="badges"><b>Гаусс</b><b>адаптивность</b><b>особенности</b><span>интерактив</span><span>Python</span></div>
+</a>
+
+<div class="block-label">Блок IV · Линейная алгебра: решение СЛАУ</div>
+
+<a class="lec-block" href="w09.html">
+  <div class="lh"><span class="num">Занятие 9</span><h2>Прямые методы. Метод Гаусса и LU-разложение</h2></div>
+  <p class="desc">Метод исключения Гаусса, LU-разложение, выбор главного элемента (pivoting) и его необходимость. Вычислительная сложность \(O(n^3)\), решение для многих правых частей.</p>
+  <div class="badges"><b>Гаусс</b><b>LU</b><b>pivoting</b><span>интерактив</span><span>Python</span></div>
+</a>
+
+<a class="lec-block" href="w10.html">
+  <div class="lh"><span class="num">Занятие 10</span><h2>Специальные системы. Холецкий и прогонка</h2></div>
+  <p class="desc">Симметричные положительно определённые матрицы и разложение Холецкого. Трёхдиагональные системы и метод прогонки (Thomas). Ленточные и разреженные матрицы.</p>
+  <div class="badges"><b>Холецкий</b><b>прогонка</b><b>разреженность</b><span>интерактив</span><span>Python</span></div>
+</a>
+
+<a class="lec-block" href="w11.html">
+  <div class="lh"><span class="num">Занятие 11</span><h2>Нормы, число обусловленности, анализ ошибок</h2></div>
+  <p class="desc">Векторные и матричные нормы. Число обусловленности \(\kappa(A)\) и его геометрический смысл. Оценка ошибки решения СЛАУ, чувствительность к возмущениям данных.</p>
+  <div class="badges"><b>нормы</b><b>κ(A)</b><b>чувствительность</b><span>интерактив</span><span>Python</span></div>
+</a>
+
+<a class="lec-block" href="w12.html">
+  <div class="lh"><span class="num">Занятие 12</span><h2>Итерационные методы решения СЛАУ</h2></div>
+  <p class="desc">Методы Якоби, Гаусса–Зейделя и верхней релаксации (SOR). Условие сходимости через спектральный радиус матрицы перехода. Обзор метода сопряжённых градиентов.</p>
+  <div class="badges"><b>Якоби</b><b>Гаусс–Зейдель</b><b>SOR</b><span>интерактив</span><span>Python</span></div>
+</a>
+
+<div class="block-label">Блок V · Собственные значения</div>
+
+<a class="lec-block" href="w13.html">
+  <div class="lh"><span class="num">Занятие 13</span><h2>Собственные числа и сингулярное разложение</h2></div>
+  <p class="desc">Степенной метод и обратные итерации со сдвигом. Обзор QR-алгоритма. Сингулярное разложение (SVD) и его связь с числом обусловленности и наименьшими квадратами.</p>
+  <div class="badges"><b>степенной метод</b><b>QR</b><b>SVD</b><span>интерактив</span><span>Python</span></div>
+</a>
+
+<div class="block-label">Блок VI · Оптимизация и задачи программирования</div>
+
+<a class="lec-block" href="w14.html">
+  <div class="lh"><span class="num">Занятие 14</span><h2>Нелинейные уравнения и одномерная оптимизация</h2></div>
+  <p class="desc">Методы бисекции, Ньютона и секущих, порядок сходимости. Одномерная минимизация: золотое сечение и параболическая аппроксимация. Связь корней и экстремумов.</p>
+  <div class="badges"><b>Ньютон</b><b>секущих</b><b>золотое сечение</b><span>интерактив</span><span>Python</span></div>
+</a>
+
+<a class="lec-block" href="w15.html">
+  <div class="lh"><span class="num">Занятие 15</span><h2>Многомерная оптимизация и линейное программирование</h2></div>
+  <p class="desc">Градиентный спуск и метод Ньютона в многомерье, выпуклость. Задача линейного программирования и симплекс-метод (обзор). Ограничения: множители Лагранжа и условия ККТ.</p>
+  <div class="badges"><b>град. спуск</b><b>симплекс</b><b>ККТ</b><span>интерактив</span><span>Python</span></div>
+</a>
+
+<div class="block-label">Блок VII · Итоговый контроль</div>
+
+<a class="lec-block" href="w16.html">
+  <div class="lh"><span class="num" style="background:#1a6b5a">Занятие 16</span><h2>Зачётное занятие: итоговый проект и чек-лист</h2></div>
+  <p class="desc">Итоговый мини-проект на Python, объединяющий темы курса (собственный решатель СЛАУ с анализом обусловленности и адаптивная квадратура), чек-лист освоения и контрольные значения для самопроверки.</p>
+  <div class="badges"><b>мини-проект</b><b>чек-лист</b><b>зачёт</b></div>
+</a>
+
+<div class="block-label">Инструменты</div>
+
+<a class="lec-block" href="python-reference.html">
+  <div class="lh"><span class="num" style="background:#854f0b">Памятка</span><h2>📘 Python / NumPy / SciPy для практикумов</h2></div>
+  <p class="desc">Краткий справочник по инструментам курса: массивы NumPy, <code>numpy.linalg</code>, модули <code>scipy.integrate</code>, <code>scipy.interpolate</code>, <code>scipy.optimize</code>, <code>scipy.sparse</code> и построение графиков в Matplotlib.</p>
+  <div class="badges"><b>NumPy</b><b>SciPy</b><b>Matplotlib</b></div>
+</a>
+
+<div class="lit-box">
+<strong style="font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--accent)">Основная литература</strong>
+<ol>
+<li>Trefethen L. N., Bau D. Numerical Linear Algebra. — SIAM, 1997.</li>
+<li>Heath M. T. Scientific Computing: An Introductory Survey. — 2nd ed., SIAM, 2018.</li>
+<li>Süli E., Mayers D. An Introduction to Numerical Analysis. — Cambridge Univ. Press, 2003.</li>
+<li>Burden R., Faires J. D. Numerical Analysis. — 10th ed., Cengage, 2016.</li>
+<li>Nocedal J., Wright S. Numerical Optimization. — 2nd ed., Springer, 2006.</li>
+<li>Golub G., Van Loan C. Matrix Computations. — 4th ed., Johns Hopkins Univ. Press, 2013.</li>
+<li>Бахвалов Н. С., Жидков Н. П., Кобельков Г. М. Численные методы. — М.: БИНОМ, 2011.</li>
+</ol>
+<div style="margin-top:.6rem;font-size:.82rem;color:var(--text3)">Опорные курсы: MIT 18.330 (A. Edelman / L. Demanet), Stanford CME 302 «Numerical Linear Algebra», Stanford CS 205A «Mathematical Methods for Robotics, Vision, and Graphics».</div>
+</div>
+
+</div>
+
+</body>
+</html>

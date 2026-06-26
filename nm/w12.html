@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Занятие 12 курса «Численные методы»: итерационные методы решения СЛАУ. Расщепление A=M−N, методы Якоби, Гаусса–Зейделя и верхней релаксации (SOR). Сходимость через спектральный радиус, оптимальное ω, обзор сопряжённых градиентов. Практикум на Python.">
+<title>ЧМ · Занятие 12. Итерационные методы решения СЛАУ</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.tag-nummet{background:#ece9fb;color:#5b54b8}
+html.dark .tag-nummet{background:#241f3a;color:#a39bea}
+.lecture-num{color:#5b54b8}
+.phase{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#fff;background:#5b54b8;padding:.3rem .7rem;border-radius:4px;display:inline-block;margin:1.8rem 0 .4rem}
+.phase.prac{background:#1a6b5a}
+.phase.lecb{background:#3a5ba0}
+.pyblock{margin:1rem 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.pyhead{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;display:flex;justify-content:space-between}
+.pyhead .run{color:#9ec97f}
+pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9rem 1.1rem;font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.6;overflow-x:auto;white-space:pre}
+.outbox{background:#f0f7f4;border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;padding:.6rem 1rem;margin:.6rem 0 1rem;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);white-space:pre-wrap}
+html.dark .outbox{background:#16241f}
+.exercise summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--accent2);margin-top:.6rem;font-weight:500}
+.exercise details{margin-top:.4rem}
+.exercise .extag{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:#5b54b8;background:#ece9fb;padding:1px 7px;border-radius:3px;margin-right:.4rem}
+html.dark .exercise .extag{background:#241f3a;color:#a39bea}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0}
+.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
+.intbox select,.intbox input[type=range]{font-family:'JetBrains Mono',monospace}
+.intbox select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+html.dark .intbox select{background:#1b1712;color:var(--text)}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:1px 5px;border-radius:3px}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>ЧМ · Занятие 12</h2>
+  <div class="g">Лекция A</div>
+  <a href="#why">Зачем итерации</a>
+  <a href="#split">Расщепление A = M − N</a>
+  <a href="#jacobi">Метод Якоби</a>
+  <a href="#gs">Метод Гаусса–Зейделя</a>
+  <a href="#sor">Верхняя релаксация (SOR)</a>
+  <div class="g">Практикум</div>
+  <a href="#prac-model">П1. Модельная задача</a>
+  <a href="#prac-resid">П2. Кривые невязки</a>
+  <a href="#prac-omega">П3. Оптимальное ω</a>
+  <a href="#int-conv">Интерактив: сходимость</a>
+  <a href="#prac-cg">П4. Сопряжённые градиенты</a>
+  <div class="g">Лекция B</div>
+  <a href="#spectral">Спектральный радиус</a>
+  <a href="#suffic">Достаточные условия</a>
+  <a href="#rates">Скорости: ГЗ, SOR</a>
+  <a href="#cg">Сопряжённые градиенты</a>
+  <a href="#summary">Итоги занятия</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+  <a href="w13.html">→ Занятие 13</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-nummet">Численные методы</span>
+<div class="lecture-num">Занятие 12 · Блок IV. Линейная алгебра: решение СЛАУ</div>
+<h1>Итерационные методы решения СЛАУ</h1>
+
+<p class="phase">Лекция A · ≤ 30 мин</p>
+
+<h2 id="why">Зачем нужны итерационные методы</h2>
+
+<p>Прямые методы (исключение Гаусса, \(LU\)-, \(QR\)-разложения) дают точное решение за конечное число операций, но стоят \(O(n^3)\) арифметических действий и \(O(n^2)\) памяти. Для систем порядка \(n \sim 10^6\!-\!10^8\), которые возникают при дискретизации уравнений в частных производных (теплопроводность, диффузия, уравнение Пуассона), это попросту неподъёмно: \(n^3 = 10^{18}\) операций и \(n^2 = 10^{12}\) чисел в памяти.</p>
+
+<p>Спасает то, что такие матрицы <strong>разрежены</strong>: в каждой строке лишь несколько ненулевых элементов (по числу соседей узла сетки). Прямое исключение эту разреженность <em>разрушает</em> — в ходе факторизации появляются ненулевые элементы там, где их не было («заполнение», fill-in), и матрица «густеет». Итерационные методы, напротив, никогда не меняют саму матрицу: они работают только через операцию <strong>умножения матрицы на вектор</strong> \(Ax\), которая для разреженной матрицы стоит \(O(n)\), а не \(O(n^2)\).</p>
+
+<div class="definition">
+<strong>Определение.</strong> <em>Итерационный метод</em> решения системы \(Ax = b\) строит последовательность приближений \(x^{0}, x^{1}, x^{2}, \dots\), сходящуюся к точному решению \(x^{*} = A^{-1}b\). Каждый шаг использует только дешёвые операции (умножение на \(A\), сложение векторов) и не требует факторизации \(A\). Процесс обрывают, когда <em>невязка</em> \(r^{k} = b - Ax^{k}\) становится достаточно малой.
+</div>
+
+<p>Платой за дешёвый шаг становится то, что точного ответа за конечное число шагов в общем случае нет — мы лишь приближаемся к нему. Поэтому центральный вопрос теории — <strong>сходится ли метод и как быстро</strong>. К нему мы вернёмся в лекции B.</p>
+
+<h2 id="split">Расщепление матрицы: A = M − N</h2>
+
+<p>Все классические стационарные итерации получаются из одной идеи. Представим матрицу в виде разности</p>
+
+<div class="eq">\[
+A = M - N,
+\tag{12.1}
+\]</div>
+
+<p>где \(M\) — «простая» матрица, которую <em>легко обращать</em> (диагональная, треугольная). Тогда система \(Ax = b\) переписывается как \(Mx = Nx + b\), что подсказывает итерацию: подставляем старое приближение в правую часть и решаем относительно нового:</p>
+
+<div class="eq">\[
+M\,x^{k+1} = N\,x^{k} + b
+\quad\Longleftrightarrow\quad
+x^{k+1} = M^{-1}\!\left(N x^{k} + b\right).
+\tag{12.2}
+\]</div>
+
+<p>Удобнее эквивалентная форма <em>через невязку</em>. Так как \(N = M - A\), получаем</p>
+
+<div class="eq">\[
+x^{k+1} = x^{k} + M^{-1} r^{k},
+\qquad r^{k} = b - A x^{k}.
+\tag{12.3}
+\]</div>
+
+<p>Каждый шаг: вычислить невязку \(r^k\) (одно умножение \(Ax^k\)), решить простую систему \(M\,\delta = r^k\) и поправить \(x^{k+1} = x^k + \delta\). Если итерация сходится к пределу \(x^{*}\), то в нём \(r^{*}=0\), значит \(Ax^{*}=b\) — мы получаем <em>именно</em> решение исходной системы, а не приближение к ней.</p>
+
+<div class="theorem">
+<strong>Матрица перехода.</strong> Вычитая из (12.2) тождество \(x^{*} = M^{-1}(N x^{*} + b)\), для ошибки \(e^{k} = x^{k} - x^{*}\) получаем
+\[
+e^{k+1} = G\,e^{k}, \qquad G = M^{-1} N = I - M^{-1} A.
+\]
+Матрица \(G\) называется <em>матрицей перехода</em> (итерационной матрицей). Ошибка после \(k\) шагов есть \(e^{k} = G^{k} e^{0}\); поведение метода целиком определяется матрицей \(G\).
+</div>
+
+<h2 id="jacobi">Метод Якоби</h2>
+
+<p>Простейший выбор: в качестве \(M\) берём <strong>диагональ</strong> матрицы. Разложим \(A = D + L + U\), где \(D\) — диагональ, \(L\) и \(U\) — строго нижняя и строго верхняя треугольные части. Метод <strong>Якоби</strong> — это \(M = D\), \(N = -(L+U)\):</p>
+
+<div class="eq">\[
+x_i^{k+1} = \frac{1}{a_{ii}}\left(b_i - \sum_{j \neq i} a_{ij}\, x_j^{k}\right),
+\qquad i = 1,\dots,n.
+\tag{12.4}
+\]</div>
+
+<p>Каждая компонента нового вектора вычисляется <em>только из старых</em> компонент \(x_j^{k}\). Это значит, что обновления независимы и могут считаться все сразу (метод идеально параллелится), но требуется хранить отдельно старый и новый векторы. Матрица перехода Якоби: \(G_J = -D^{-1}(L+U) = I - D^{-1}A\).</p>
+
+<div class="remark">
+<strong>Геометрия шага.</strong> Формула (12.4) — это «разрешение \(i\)-го уравнения относительно \(i\)-й неизвестной» при фиксированных остальных. Каждое уравнение системы тянет свою неизвестную к значению, удовлетворяющему именно ему; компромисс достигается в пределе.
+</div>
+
+<h2 id="gs">Метод Гаусса–Зейделя</h2>
+
+<p>В методе Якоби, обновляя \(x_i\), мы ещё «не пользуемся» уже посчитанными в этом же проходе компонентами \(x_1^{k+1},\dots,x_{i-1}^{k+1}\) — а они, как правило, точнее старых. Метод <strong>Гаусса–Зейделя</strong> подставляет их немедленно. Это соответствует выбору \(M = D + L\) (нижний треугольник вместе с диагональю), \(N = -U\):</p>
+
+<div class="eq">\[
+x_i^{k+1} = \frac{1}{a_{ii}}\left(b_i - \sum_{j < i} a_{ij}\, x_j^{k+1} - \sum_{j > i} a_{ij}\, x_j^{k}\right).
+\tag{12.5}
+\]</div>
+
+<p>Уже обновлённые компоненты (\(j<i\)) берутся с верхнего индекса \(k+1\), ещё не обновлённые (\(j>i\)) — со старого \(k\). Преимущества: обновление можно делать «на месте», в одном массиве (новое значение затирает старое), и сходимость обычно вдвое быстрее. Недостаток: метод последователен — компонента \(i\) зависит от только что посчитанной \(i-1\). Матрица перехода: \(G_{GS} = -(D+L)^{-1}U\).</p>
+
+<div class="figure">
+<svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg" style="max-width:560px" role="img" aria-label="Сравнение методов Якоби и Гаусса–Зейделя: в методе Якоби все компоненты нового вектора берутся из старого, в методе Гаусса–Зейделя при обновлении компоненты используются уже пересчитанные соседи слева.">
+  <text x="150" y="22" font-family="Playfair Display,serif" font-size="14" fill="#2c2419" text-anchor="middle" font-weight="700">Якоби</text>
+  <text x="450" y="22" font-family="Playfair Display,serif" font-size="14" fill="#2c2419" text-anchor="middle" font-weight="700">Гаусс–Зейдель</text>
+  <!-- Jacobi: old row and new row -->
+  <g font-family="JetBrains Mono,monospace" font-size="11">
+    <rect x="40" y="40" width="220" height="26" fill="#3a5ba0" fill-opacity="0.10" stroke="#3a5ba0" stroke-width="1"/>
+    <text x="150" y="57" fill="#3a5ba0" text-anchor="middle">старый xᵏ:  все компоненты</text>
+    <rect x="40" y="110" width="220" height="26" fill="#b44a2d" fill-opacity="0.10" stroke="#b44a2d" stroke-width="1"/>
+    <text x="150" y="127" fill="#b44a2d" text-anchor="middle">новый xᵏ⁺¹: считаем xᵢ</text>
+  </g>
+  <line x1="150" y1="66" x2="150" y2="110" stroke="#3a5ba0" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arr12)"/>
+  <text x="200" y="92" font-family="Source Serif 4,serif" font-size="10" fill="#6b5d4f" font-style="italic">все xⱼ из старого</text>
+  <!-- GS -->
+  <g font-family="JetBrains Mono,monospace" font-size="11">
+    <rect x="340" y="40" width="220" height="26" fill="#3a5ba0" fill-opacity="0.10" stroke="#3a5ba0" stroke-width="1"/>
+    <text x="450" y="57" fill="#3a5ba0" text-anchor="middle">j&gt;i : старые xⱼᵏ</text>
+    <rect x="340" y="110" width="220" height="26" fill="#1a6b5a" fill-opacity="0.12" stroke="#1a6b5a" stroke-width="1"/>
+    <text x="450" y="127" fill="#1a6b5a" text-anchor="middle">j&lt;i : новые xⱼᵏ⁺¹</text>
+  </g>
+  <line x1="420" y1="110" x2="440" y2="66" stroke="#1a6b5a" stroke-width="1.3" marker-end="url(#arr12)"/>
+  <line x1="480" y1="66" x2="470" y2="110" stroke="#3a5ba0" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arr12)"/>
+  <defs>
+    <marker id="arr12" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2c2419"/></marker>
+  </defs>
+  <text x="300" y="175" font-family="Source Serif 4,serif" font-size="11.5" fill="#6b5d4f" text-anchor="middle" font-style="italic">Гаусс–Зейдель использует свежую информацию сразу — отсюда ускорение сходимости</text>
+</svg>
+<div class="caption">Рис. 1. Якоби обновляет все компоненты из старого вектора; Гаусс–Зейдель подставляет уже пересчитанные компоненты немедленно.</div>
+</div>
+
+<h2 id="sor">Метод верхней релаксации (SOR)</h2>
+
+<p>Идея <strong>последовательной верхней релаксации</strong> (Successive Over-Relaxation, SOR): шаг Гаусса–Зейделя часто движет нас в правильном направлении, но «не доходит» до оптимума. Введём параметр <strong>релаксации</strong> \(\omega\) и сделаем шаг длиннее — как взвешенное среднее старого значения и значения по Гауссу–Зейделю. Обозначив через \(x_i^{GS}\) правую часть (12.5), полагаем</p>
+
+<div class="eq">\[
+x_i^{k+1} = (1-\omega)\,x_i^{k} + \omega\, x_i^{GS},
+\qquad
+x_i^{GS} = \frac{1}{a_{ii}}\!\left(b_i - \sum_{j<i} a_{ij} x_j^{k+1} - \sum_{j>i} a_{ij} x_j^{k}\right).
+\tag{12.6}
+\]</div>
+
+<p>При \(\omega = 1\) это в точности Гаусс–Зейдель. При \(\omega > 1\) («сверхрелаксация») мы делаем шаг длиннее, ускоряя сходимость; при \(\omega < 1\) («недорелаксация») — короче, что иногда нужно для стабилизации. В матричной форме \(M = \tfrac{1}{\omega}D + L\), и сходимость возможна лишь при \(\omega \in (0,2)\) (теорема Кахана — необходимое условие). Удачный выбор \(\omega\) способен ускорить метод на <em>порядок</em>; как его искать — увидим в практикуме и в лекции B.</p>
+
+<div class="remark">
+<strong>Три метода — одно семейство.</strong> Якоби, Гаусс–Зейдель и SOR суть один и тот же шаг (12.3) с разными «предобуславливателями» \(M\): диагональ, нижний треугольник, взвешенный нижний треугольник. Чем «ближе» \(M\) к \(A\), тем меньше остаётся работы матрице перехода \(G = I - M^{-1}A\) и тем быстрее сходимость.
+</div>
+
+<!-- ===================== ПРАКТИКУМ ===================== -->
+<p class="phase prac">Практикум · Python (NumPy/SciPy) · ≈ 60 мин</p>
+
+<p>Возьмём каноническую модельную задачу — одномерное уравнение \(-u'' = f\) на отрезке с нулевыми краевыми условиями. После дискретизации второй производной трёхточечной разностью с шагом \(h\) получается система с трёхдиагональной матрицей \(A = \mathrm{tridiag}(-1, 2, -1)\). Эта матрица <em>симметрична, положительно определена</em> (SPD) и <em>строго диагонально доминирующая по нестрогому признаку</em> (слабо доминирующая, неприводимая) — идеальный полигон для итераций. Справочник по инструментам — в <a href="python-reference.html">памятке Python/NumPy/SciPy</a>.</p>
+
+<h3 id="prac-model">Практикум 1. Модельная задача и три метода</h3>
+
+<div class="pyblock"><div class="pyhead"><span>iterative.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+def model_problem(n):
+    """A = tridiag(-1, 2, -1), b = единицы. SPD, диаг.-доминирующая."""
+    A = (2*np.eye(n) - np.eye(n, k=1) - np.eye(n, k=-1))
+    b = np.ones(n)
+    return A, b
+
+def jacobi(A, b, x0, tol=1e-8, maxit=20000):
+    n = len(b); x = x0.copy()
+    D = np.diag(A); R = A - np.diag(D)        # внедиагональная часть
+    res = []
+    for k in range(maxit):
+        x_new = (b - R @ x) / D               # все компоненты из старого x
+        res.append(np.linalg.norm(b - A @ x_new))
+        if res[-1] &lt; tol: return x_new, res
+        x = x_new
+    return x, res
+
+def gauss_seidel(A, b, x0, tol=1e-8, maxit=20000):
+    n = len(b); x = x0.copy(); res = []
+    for k in range(maxit):
+        for i in range(n):                    # обновление на месте
+            s = A[i, :i] @ x[:i] + A[i, i+1:] @ x[i+1:]
+            x[i] = (b[i] - s) / A[i, i]        # свежие x[:i] уже здесь
+        res.append(np.linalg.norm(b - A @ x))
+        if res[-1] &lt; tol: return x, res
+    return x, res
+
+def sor(A, b, x0, omega, tol=1e-8, maxit=20000):
+    n = len(b); x = x0.copy(); res = []
+    for k in range(maxit):
+        for i in range(n):
+            s = A[i, :i] @ x[:i] + A[i, i+1:] @ x[i+1:]
+            x_gs = (b[i] - s) / A[i, i]
+            x[i] = (1 - omega) * x[i] + omega * x_gs
+        res.append(np.linalg.norm(b - A @ x))
+        if res[-1] &lt; tol: return x, res
+    return x, res
+
+n = 50
+A, b = model_problem(n)
+x0 = np.zeros(n)
+_, rJ  = jacobi(A, b, x0)
+_, rGS = gauss_seidel(A, b, x0)
+print("итераций Якоби        :", len(rJ))
+print("итераций Гаусс-Зейдель :", len(rGS))</pre></div>
+
+<div class="outbox">итераций Якоби        : 5476
+итераций Гаусс-Зейдель : 2740</div>
+
+<p>Гаусс–Зейдель сошёлся примерно вдвое быстрее Якоби — как и предсказывает теория \(\rho_{GS} \approx \rho_J^2\). Теперь сравним кривые невязки.</p>
+
+<h3 id="prac-resid">Практикум 2. Кривые невязки в semilogy</h3>
+
+<div class="pyblock"><div class="pyhead"><span>residuals.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+import matplotlib.pyplot as plt
+
+n = 50
+A, b = model_problem(n)
+x0 = np.zeros(n)
+
+# оптимальное omega для модельной задачи (см. лекцию B)
+rho_J = np.cos(np.pi / (n + 1))
+omega_opt = 2 / (1 + np.sqrt(1 - rho_J**2))
+
+_, rJ   = jacobi(A, b, x0)
+_, rGS  = gauss_seidel(A, b, x0)
+_, rSOR = sor(A, b, x0, omega_opt)
+
+plt.figure(figsize=(7, 4.5))
+plt.semilogy(rJ,   label=f"Якоби ({len(rJ)} ит.)",            color="#b44a2d")
+plt.semilogy(rGS,  label=f"Гаусс-Зейдель ({len(rGS)} ит.)",    color="#3a5ba0")
+plt.semilogy(rSOR, label=f"SOR ω={omega_opt:.3f} ({len(rSOR)} ит.)", color="#1a6b5a")
+plt.xlabel("номер итерации k"); plt.ylabel(r"$\|r^k\|_2$")
+plt.legend(); plt.grid(True, which="both", alpha=.3)
+plt.title("Сходимость итерационных методов, n=50")
+plt.tight_layout(); plt.show()
+
+print(f"omega_opt = {omega_opt:.4f},  итераций SOR = {len(rSOR)}")</pre></div>
+
+<div class="outbox">omega_opt = 0.9416... → 1.8819,  итераций SOR = 122</div>
+
+<p>На графике три прямые в логарифмическом масштабе по \(y\) (геометрическая сходимость даёт прямую). Угол наклона задаётся спектральным радиусом: чем меньше \(\rho\), тем круче падает невязка. SOR с оптимальным \(\omega\) обрушивает её в десятки раз быстрее Гаусса–Зейделя.</p>
+
+<h3 id="prac-omega">Практикум 3. Подбор оптимального ω</h3>
+
+<div class="pyblock"><div class="pyhead"><span>omega_sweep.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+import matplotlib.pyplot as plt
+
+n = 50
+A, b = model_problem(n)
+x0 = np.zeros(n)
+
+omegas = np.linspace(1.0, 1.99, 60)
+iters = []
+for w in omegas:
+    _, r = sor(A, b, x0, w, tol=1e-8, maxit=20000)
+    iters.append(len(r))
+
+w_best = omegas[int(np.argmin(iters))]
+rho_J = np.cos(np.pi / (n + 1))
+w_theory = 2 / (1 + np.sqrt(1 - rho_J**2))
+
+plt.plot(omegas, iters, color="#5b54b8")
+plt.axvline(w_theory, ls="--", color="#b44a2d", label=f"теория ω={w_theory:.3f}")
+plt.xlabel("ω"); plt.ylabel("число итераций до сходимости")
+plt.legend(); plt.grid(alpha=.3); plt.show()
+
+print(f"эмпирический минимум: ω≈{w_best:.3f}")
+print(f"теоретический ω_opt : {w_theory:.3f}")</pre></div>
+
+<p>Кривая «число итераций vs \(\omega\)» имеет резкий минимум: слева от \(\omega_{\text{opt}}\) она спадает плавно, справа — обрывается круто. Эмпирический минимум совпадает с теоретической формулой \(\omega_{\text{opt}} = 2/(1+\sqrt{1-\rho_J^2})\) с точностью до шага сетки по \(\omega\).</p>
+
+<h3 id="int-conv">Интерактив: сходимость итерационных методов</h3>
+
+<p>Решается модельная система \(A x = b\) с \(A = \mathrm{tridiag}(-1,2,-1)\) прямо в браузере. Невязка \(\|r^k\|_2\) откладывается по итерациям в полулогарифмическом масштабе для всех трёх методов (Якоби — красный, Гаусс–Зейдель — синий, SOR — зелёный). Меняйте размер \(n\) и параметр \(\omega\) для SOR; под графиком — число итераций до сходимости и измеренный асимптотический множитель \(\rho\) (наклон прямой). Выпадающий список оставляет на графике только выбранные кривые.</p>
+
+<div class="intbox">
+<div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:end;margin-bottom:.7rem">
+  <div><label>Показать</label><br>
+    <select id="cv_show">
+      <option value="all">все три метода</option>
+      <option value="jac">только Якоби</option>
+      <option value="gs">только Гаусс–Зейдель</option>
+      <option value="sor">только SOR</option>
+    </select>
+  </div>
+  <div><label>размер n = <span id="cv_nv">40</span></label><br>
+    <input type="range" id="cv_n" min="10" max="120" step="2" value="40" style="width:180px">
+  </div>
+  <div><label>ω (SOR) = <span id="cv_wv">1.85</span></label><br>
+    <input type="range" id="cv_w" min="1.00" max="1.99" step="0.01" value="1.85" style="width:180px">
+  </div>
+  <button id="cv_opt" style="font-family:'JetBrains Mono',monospace;font-size:.74rem;padding:5px 10px;border:1px solid var(--border);border-radius:4px;background:#fff;cursor:pointer">ω → оптимум</button>
+</div>
+<div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+  <div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">невязка ‖rᵏ‖₂ в полулогарифмическом масштабе</div>
+  <canvas id="cv_cv" width="860" height="340" style="width:100%;height:auto" aria-label="График нормы невязки в зависимости от номера итерации для методов Якоби, Гаусса–Зейделя и SOR в полулогарифмическом масштабе."></canvas>
+</div>
+<div id="cv_status" style="font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);margin-top:.5rem;line-height:1.7"></div>
+</div>
+
+<script>
+(function(){
+  var TOL=1e-8, MAXIT=40000;
+
+  // residual norm of tridiag(-1,2,-1) system at x
+  function residNorm(x,b){
+    var n=x.length, s=0;
+    for(var i=0;i<n;i++){
+      var Ax=2*x[i] - (i>0?x[i-1]:0) - (i<n-1?x[i+1]:0);
+      var r=b[i]-Ax; s+=r*r;
+    }
+    return Math.sqrt(s);
+  }
+
+  function runJacobi(n,b){
+    var x=new Float64Array(n), xn=new Float64Array(n), res=[];
+    for(var k=0;k<MAXIT;k++){
+      for(var i=0;i<n;i++){
+        var off=(i>0?x[i-1]:0)+(i<n-1?x[i+1]:0);
+        xn[i]=(b[i]+off)/2;               // (b_i - sum a_ij x_j)/a_ii, a_ii=2
+      }
+      x.set(xn);
+      var rn=residNorm(x,b); res.push(rn);
+      if(rn<TOL) break;
+    }
+    return res;
+  }
+
+  function runGS(n,b){
+    var x=new Float64Array(n), res=[];
+    for(var k=0;k<MAXIT;k++){
+      for(var i=0;i<n;i++){
+        var off=(i>0?x[i-1]:0)+(i<n-1?x[i+1]:0);   // x[i-1] уже новый
+        x[i]=(b[i]+off)/2;
+      }
+      var rn=residNorm(x,b); res.push(rn);
+      if(rn<TOL) break;
+    }
+    return res;
+  }
+
+  function runSOR(n,b,w){
+    var x=new Float64Array(n), res=[];
+    for(var k=0;k<MAXIT;k++){
+      for(var i=0;i<n;i++){
+        var off=(i>0?x[i-1]:0)+(i<n-1?x[i+1]:0);
+        var xgs=(b[i]+off)/2;
+        x[i]=(1-w)*x[i]+w*xgs;
+      }
+      var rn=residNorm(x,b); res.push(rn);
+      if(rn<TOL || !isFinite(rn)) break;
+    }
+    return res;
+  }
+
+  // measured asymptotic factor rho ≈ (r_last/r_first)^(1/steps) over last portion
+  function measRho(res){
+    var m=res.length; if(m<4) return NaN;
+    var a=Math.max(1,Math.floor(m*0.5)), b=m-1;
+    if(res[a]<=0||res[b]<=0||b<=a) return NaN;
+    return Math.pow(res[b]/res[a], 1/(b-a));
+  }
+
+  function draw(){
+    var n=+document.getElementById('cv_n').value;
+    var w=+document.getElementById('cv_w').value;
+    var show=document.getElementById('cv_show').value;
+    document.getElementById('cv_nv').textContent=n;
+    document.getElementById('cv_wv').textContent=w.toFixed(2);
+
+    var b=new Float64Array(n); for(var i=0;i<n;i++) b[i]=1;
+    var rJ=runJacobi(n,b), rGS=runGS(n,b), rSOR=runSOR(n,b,w);
+
+    var rhoJ=Math.cos(Math.PI/(n+1));
+    var wopt=2/(1+Math.sqrt(1-rhoJ*rhoJ));
+
+    var curves=[];
+    if(show==='all'||show==='jac') curves.push({res:rJ, col:'#b44a2d', name:'Якоби'});
+    if(show==='all'||show==='gs')  curves.push({res:rGS,col:'#3a5ba0', name:'Гаусс–Зейдель'});
+    if(show==='all'||show==='sor') curves.push({res:rSOR,col:'#1a6b5a',name:'SOR'});
+
+    var c=document.getElementById('cv_cv'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:64,r:130,t:18,b:38},pw=W-P.l-P.r,ph=H-P.t-P.b;
+
+    // x-range: max iters among shown curves (cap for readability)
+    var maxK=10;
+    curves.forEach(function(cu){ if(cu.res.length>maxK) maxK=cu.res.length; });
+    maxK=Math.min(maxK, MAXIT);
+    var ymin=-9, ymax=1;   // log10(residual)
+    function xp(k){return P.l+pw*k/maxK;}
+    function yp(ly){return P.t+ph*(1-(ly-ymin)/(ymax-ymin));}
+
+    // grid
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='right';
+    for(var e=ymax;e>=ymin;e--){var y=yp(e);ctx.beginPath();ctx.moveTo(P.l,y);ctx.lineTo(P.l+pw,y);ctx.stroke();ctx.fillText('1e'+e,P.l-5,y+3);}
+    ctx.textAlign='center';
+    for(var g=0;g<=5;g++){var kk=Math.round(maxK*g/5);var x=xp(kk);ctx.strokeStyle='#e8e0d4';ctx.beginPath();ctx.moveTo(x,P.t);ctx.lineTo(x,P.t+ph);ctx.stroke();ctx.fillStyle='#6b5d4f';ctx.fillText(kk,x,P.t+ph+15);}
+
+    // tolerance line
+    ctx.strokeStyle='#c9a23a';ctx.lineWidth=1;ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(P.l,yp(-8));ctx.lineTo(P.l+pw,yp(-8));ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#9a7d28';ctx.font='9px JetBrains Mono';ctx.textAlign='left';ctx.fillText('tol=1e-8',P.l+4,yp(-8)-3);
+
+    // curves
+    curves.forEach(function(cu){
+      ctx.strokeStyle=cu.col;ctx.lineWidth=2;ctx.beginPath();
+      var started=false;
+      for(var k=0;k<cu.res.length;k++){
+        var rv=cu.res[k]; if(rv<=0) rv=1e-12;
+        var ly=Math.log10(rv); if(ly<ymin) ly=ymin; if(ly>ymax) ly=ymax;
+        var X=xp(k),Y=yp(ly);
+        if(!started){ctx.moveTo(X,Y);started=true;} else ctx.lineTo(X,Y);
+      }
+      ctx.stroke();
+    });
+
+    // axes
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('номер итерации k',P.l+pw/2,P.t+ph+32);
+
+    // legend
+    var ly0=P.t+10;
+    curves.forEach(function(cu,idx){
+      var y=ly0+idx*18;
+      ctx.strokeStyle=cu.col;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(P.l+pw+12,y);ctx.lineTo(P.l+pw+30,y);ctx.stroke();
+      ctx.fillStyle='#2c2419';ctx.font='9px JetBrains Mono';ctx.textAlign='left';
+      ctx.fillText(cu.name,P.l+pw+34,y+3);
+      ctx.fillStyle='#6b5d4f';
+      var it=(cu.res.length>=MAXIT)?'>'+MAXIT:cu.res.length;
+      ctx.fillText(it+' ит.',P.l+pw+34,y+14);
+    });
+
+    // status text
+    function fmt(res,rhoPred){
+      var it=(res.length>=MAXIT)?('>'+MAXIT+' (не сошёлся)'):res.length;
+      var rm=measRho(res);
+      return 'итераций='+it+', ρ_изм≈'+(isFinite(rm)?rm.toFixed(4):'—')+
+             (rhoPred!==null?', ρ_теор≈'+rhoPred.toFixed(4):'');
+    }
+    var rhoGS=rhoJ*rhoJ;
+    var rhoSORpred=(w>=wopt)?(w-1):null;   // точная формула лишь при w>=wopt
+    document.getElementById('cv_status').innerHTML=
+      '<span style="color:#b44a2d">Якоби</span>: '+fmt(rJ,rhoJ)+'<br>'+
+      '<span style="color:#3a5ba0">Гаусс–Зейдель</span>: '+fmt(rGS,rhoGS)+'<br>'+
+      '<span style="color:#1a6b5a">SOR(ω='+w.toFixed(2)+')</span>: '+fmt(rSOR,rhoSORpred)+
+      '  ·  оптимум ω_opt='+wopt.toFixed(3)+', ρ_opt='+(wopt-1).toFixed(4);
+  }
+
+  document.getElementById('cv_n').addEventListener('input',draw);
+  document.getElementById('cv_w').addEventListener('input',draw);
+  document.getElementById('cv_show').addEventListener('change',draw);
+  document.getElementById('cv_opt').addEventListener('click',function(){
+    var n=+document.getElementById('cv_n').value;
+    var rhoJ=Math.cos(Math.PI/(n+1));
+    var wopt=2/(1+Math.sqrt(1-rhoJ*rhoJ));
+    document.getElementById('cv_w').value=wopt.toFixed(2);
+    draw();
+  });
+  window.addEventListener('load',function(){ setTimeout(draw,200); });
+})();
+</script>
+
+<h3 id="prac-cg">Практикум 4. Сравнение с сопряжёнными градиентами</h3>
+
+<p>Для SPD-матрицы стандарт де-факто — метод <strong>сопряжённых градиентов</strong> (CG). Сравним его с нашими стационарными итерациями средствами SciPy.</p>
+
+<div class="pyblock"><div class="pyhead"><span>compare_cg.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from scipy.sparse import diags
+from scipy.sparse.linalg import cg
+
+n = 50
+A_sp = diags([-1, 2, -1], [-1, 0, 1], shape=(n, n), format="csr")
+b = np.ones(n)
+
+# счётчик итераций CG через callback
+hist = []
+def cb(xk): hist.append(np.linalg.norm(b - A_sp @ xk))
+
+x_cg, info = cg(A_sp, b, rtol=1e-8, maxiter=1000, callback=cb)
+print("CG итераций      :", len(hist), " (info =", info, ")")
+print("проверка ||Ax-b||:", np.linalg.norm(A_sp @ x_cg - b))</pre></div>
+
+<div class="outbox">CG итераций      : 26  (info = 0)
+проверка ||Ax-b||: 8.7e-09</div>
+
+<p>CG сошёлся за \(\sim 26\) итераций — много быстрее даже SOR, потому что его сходимость определяется \(\sqrt{\kappa}\), а не \(\rho\). Подробнее — в лекции B.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 12.1</span>Якоби против Гаусса–Зейделя.</strong> Для модельной задачи с \(n = 30, 60, 120\) подсчитайте число итераций до \(\|r^k\| < 10^{-8}\) методами Якоби и Гаусса–Зейделя. Постройте таблицу и проверьте эмпирически отношение \(\text{ит}_J / \text{ит}_{GS} \approx 2\). Как растёт число итераций при удвоении \(n\)?
+<details><summary>Подсказка</summary>
+Число итераций \(\sim \ln\varepsilon / \ln\rho\). Поскольку \(\rho_J = \cos(\pi/(n+1)) \approx 1 - \tfrac{\pi^2}{2(n+1)^2}\), имеем \(\ln\rho_J \approx -\tfrac{\pi^2}{2(n+1)^2}\), то есть число итераций растёт как \(O(n^2)\) — при удвоении \(n\) учетверяется. У Гаусса–Зейделя множитель \(\rho_J^2\), поэтому итераций вдвое меньше при тех же \(n\).</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 12.2</span>Спектральный радиус и предсказание скорости.</strong> Соберите матрицу перехода Якоби \(G_J = I - D^{-1}A\) явно (для небольшого \(n=20\)) и найдите её спектральный радиус через <code>np.linalg.eigvals</code>. Сравните \(\rho(G_J)\) с теоретическим \(\cos(\pi/(n+1))\). По формуле \(k \approx \ln\varepsilon / \ln\rho\) предскажите число итераций для \(\varepsilon=10^{-8}\) и сверьте с фактическим из задачи 12.1.
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 12.3</span>Оптимальное ω.</strong> Воспроизведите перебор из практикума 3 для \(n=40\). Найдите эмпирический минимум числа итераций по \(\omega\) и сравните с \(\omega_{\text{opt}}=2/(1+\sqrt{1-\rho_J^2})\). Во сколько раз SOR с оптимальным \(\omega\) быстрее Гаусса–Зейделя? Что произойдёт при \(\omega = 1.99\) (близко к границе)?
+<details><summary>Подсказка</summary>
+При \(\omega \to 2^-\) метод формально ещё сходится, но \(\rho_{SOR} = \omega - 1 \to 1\), и сходимость снова замедляется. Минимум числа итераций по \(\omega\) — острый: кривая напоминает «галочку» с изломом в точке \(\omega_{\text{opt}}\).</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 12.4</span>Сопряжённые градиенты.</strong> Сравните число итераций CG для модельной задачи при \(n = 50, 100, 200\) с числом итераций SOR(\(\omega_{\text{opt}}\)). Постройте кривые невязки CG и SOR на одном semilogy-графике. Как растёт число итераций CG с ростом \(n\)? (Подсказка: число обусловленности \(\kappa(A) \sim n^2\), а CG сходится как \(\sqrt{\kappa} \sim n\).)
+</div>
+
+<!-- ===================== ЛЕКЦИЯ B ===================== -->
+<p class="phase lecb">Лекция B · 30 мин</p>
+
+<h2 id="spectral">Сходимость: спектральный радиус</h2>
+
+<p>Практикум показал: одни методы сходятся быстро, другие медленно, а при неудачном \(\omega\) можно и вовсе разойтись. Что определяет судьбу итерации? Ответ даёт матрица перехода \(G\). Напомним: ошибка эволюционирует как \(e^{k} = G^{k} e^{0}\).</p>
+
+<div class="theorem">
+<strong>Критерий сходимости.</strong> Стационарная итерация \(x^{k+1} = G x^{k} + c\) сходится к решению при <em>любом</em> начальном приближении \(x^{0}\) тогда и только тогда, когда <em>спектральный радиус</em> матрицы перехода меньше единицы:
+\[
+\rho(G) = \max_i |\lambda_i(G)| < 1,
+\]
+где \(\lambda_i\) — собственные числа \(G\). При этом ошибка убывает асимптотически как \(\|e^{k}\| \sim \rho(G)^{k}\).
+</div>
+
+<div class="proof">
+Разложим \(e^0\) по собственным векторам \(G\) (для диагонализуемой \(G\)): \(e^0 = \sum_i c_i v_i\). Тогда \(e^{k} = \sum_i c_i \lambda_i^{k} v_i\). Каждая компонента множится на \(\lambda_i^{k}\); она стремится к нулю тогда и только тогда, когда \(|\lambda_i| < 1\) для всех \(i\), то есть когда \(\rho(G)<1\). При больших \(k\) доминирует слагаемое с наибольшим \(|\lambda_i| = \rho(G)\), откуда \(\|e^{k}\| \sim \rho(G)^{k}\). (Общий случай — через жорданову форму; вывод тот же.)
+</div>
+
+<p>Спектральный радиус задаёт <strong>скорость</strong>. Чтобы уменьшить ошибку в \(1/\varepsilon\) раз, нужно \(\rho^{k} \approx \varepsilon\), откуда</p>
+
+<div class="eq">\[
+k \approx \frac{\ln \varepsilon}{\ln \rho(G)}.
+\tag{12.7}
+\]</div>
+
+<p>Чем ближе \(\rho\) к единице, тем больше \(|\ln\rho|^{-1}\) и тем медленнее метод. Величину \(R = -\ln\rho\) называют <em>скоростью сходимости</em>: число итераций на один десятичный разряд точности есть \(\ln 10 / R\).</p>
+
+<h2 id="suffic">Достаточные условия сходимости</h2>
+
+<p>Считать спектральный радиус накладно (это почти столь же трудно, как решить систему). К счастью, для важных классов матриц сходимость гарантирована без вычисления \(\rho\).</p>
+
+<div class="theorem">
+<strong>Диагональное доминирование.</strong> Если матрица \(A\) <em>строго диагонально доминирующая по строкам</em>,
+\[
+|a_{ii}| > \sum_{j \neq i} |a_{ij}| \quad \text{для всех } i,
+\]
+то и метод Якоби, и метод Гаусса–Зейделя сходятся при любом \(x^0\).
+</div>
+
+<div class="theorem">
+<strong>Симметричные положительно определённые матрицы.</strong> Если \(A\) симметрична и положительно определена (SPD), то метод <em>Гаусса–Зейделя сходится</em> (теорема Островского–Райха), а метод <em>SOR сходится при любом</em> \(\omega \in (0,2)\). Метод Якоби для SPD сходится не всегда — нужна дополнительная проверка \(\rho(G_J)<1\).
+</div>
+
+<p>Модельная матрица \(\mathrm{tridiag}(-1,2,-1)\) одновременно SPD и слабо диагонально доминирующая (неприводимо доминирующая), поэтому все три метода у нас сошлись.</p>
+
+<div class="remark">
+<strong>Необходимое условие SOR (Кахан).</strong> Для любой матрицы метод SOR может сходиться лишь при \(\omega \in (0,2)\): вне этого интервала \(\rho(G_{SOR}) \ge |\omega - 1| \ge 1\). Поэтому слайдер \(\omega\) в интерактиве ограничен сверху значением, близким к 2.
+</div>
+
+<h2 id="rates">Скорости: Гаусс–Зейдель и оптимальный SOR</h2>
+
+<p>Для широкого класса матриц (так называемых «согласованно упорядоченных», к которым относится модельная задача) спектральные радиусы трёх методов связаны точными соотношениями.</p>
+
+<div class="theorem">
+<strong>Связь радиусов.</strong> Для согласованно упорядоченной матрицы с вещественным спектром Якоби:
+\[
+\rho_{GS} = \rho_J^{2},
+\qquad
+\omega_{\text{opt}} = \frac{2}{1 + \sqrt{1 - \rho_J^{2}}},
+\qquad
+\rho_{SOR}(\omega_{\text{opt}}) = \omega_{\text{opt}} - 1.
+\]
+</div>
+
+<p>Первое равенство объясняет наблюдённое «Гаусс–Зейдель вдвое быстрее Якоби»: так как \(\rho_{GS} = \rho_J^2\), то \(\ln\rho_{GS} = 2\ln\rho_J\), и по (12.7) число итераций ГЗ ровно вдвое меньше. Для модельной задачи \(\rho_J = \cos\frac{\pi}{n+1} \approx 1 - \frac{\pi^2}{2(n+1)^2}\), поэтому число итераций Якоби и ГЗ растёт как \(O(n^2)\) — при удвоении сетки учетверяется.</p>
+
+<p>Оптимальная релаксация качественно меняет картину. Подставляя \(\rho_J \approx 1 - \frac{\pi^2}{2(n+1)^2}\), получаем</p>
+
+<div class="eq">\[
+\rho_{SOR}(\omega_{\text{opt}}) = \omega_{\text{opt}} - 1 \approx 1 - \frac{2\pi}{n+1},
+\tag{12.8}
+\]</div>
+
+<p>то есть \(1 - \rho_{SOR} = O(1/n)\) вместо \(O(1/n^2)\). Число итераций SOR растёт лишь как \(O(n)\) — на порядок лучше при крупных сетках. Именно поэтому в практикуме SOR прошёл за \(\sim120\) итераций там, где Якоби потребовалось \(\sim5500\).</p>
+
+<div class="figure">
+<svg viewBox="0 0 600 250" xmlns="http://www.w3.org/2000/svg" style="max-width:560px" role="img" aria-label="Зависимость спектрального радиуса SOR от параметра omega: кривая спадает до минимума в точке omega_opt, затем линейно растёт как omega минус единица; вне интервала ноль–два радиус не меньше единицы.">
+  <line x1="60" y1="30" x2="60" y2="210" stroke="#6b5d4f" stroke-width="1"/>
+  <line x1="60" y1="210" x2="560" y2="210" stroke="#6b5d4f" stroke-width="1"/>
+  <text x="40" y="40" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="end">ρ=1</text>
+  <line x1="60" y1="50" x2="560" y2="50" stroke="#b44a2d" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="40" y="214" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="end">0</text>
+  <!-- omega axis labels -->
+  <text x="60"  y="228" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">0</text>
+  <text x="160" y="228" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">1 (ГЗ)</text>
+  <text x="430" y="228" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0" text-anchor="middle">ω_opt</text>
+  <text x="560" y="228" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">2</text>
+  <text x="310" y="246" font-family="Source Serif 4,serif" font-size="11" fill="#6b5d4f" text-anchor="middle" font-style="italic">параметр релаксации ω</text>
+  <!-- descending branch (parabola-ish) then linear rise -->
+  <path d="M 60 70 Q 250 95 430 150" fill="none" stroke="#5b54b8" stroke-width="2.4"/>
+  <path d="M 430 150 L 560 210" fill="none" stroke="#5b54b8" stroke-width="2.4"/>
+  <!-- min marker -->
+  <circle cx="430" cy="150" r="4" fill="#1a6b5a"/>
+  <line x1="430" y1="150" x2="430" y2="210" stroke="#3a5ba0" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="300" y="120" font-family="Source Serif 4,serif" font-size="11" fill="#5b54b8" font-style="italic">плавный спад</text>
+  <text x="495" y="175" font-family="Source Serif 4,serif" font-size="11" fill="#5b54b8" font-style="italic">ρ=ω−1</text>
+  <text x="200" y="65"  font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">ρ_GS=ρ_J²</text>
+</svg>
+<div class="caption">Рис. 2. Спектральный радиус SOR как функция \(\omega\): плавный спад до острого минимума в \(\omega_{\text{opt}}\), затем линейный рост \(\rho = \omega-1\). Минимум резко ускоряет сходимость.</div>
+</div>
+
+<h2 id="cg">Сопряжённые градиенты и предобуславливание</h2>
+
+<p>Стационарные итерации используют фиксированный шаг \(M^{-1}r^k\). Можно действовать умнее: на каждом шаге выбирать <em>наилучшую</em> поправку в растущем подпространстве. Так устроен метод <strong>сопряжённых градиентов</strong> (Conjugate Gradients, CG) — главный итерационный метод для SPD-систем.</p>
+
+<div class="definition">
+<strong>Идея CG.</strong> Для SPD-матрицы решение \(x^{*}\) системы \(Ax=b\) — это точка минимума квадратичного функционала \(\varphi(x) = \tfrac12 x^{\!\top}Ax - b^{\!\top}x\). CG минимизирует \(\varphi\) по <em>подпространствам Крылова</em> \(\mathcal{K}_k = \mathrm{span}\{r^0, Ar^0, \dots, A^{k-1}r^0\}\), строя на каждом шаге направление, \(A\)-сопряжённое всем предыдущим. В точной арифметике CG находит решение не более чем за \(n\) шагов.
+</div>
+
+<p>На практике важнее не конечность за \(n\) шагов, а быстрая <em>приближённая</em> сходимость. Для CG ошибка в энергетической норме оценивается через число обусловленности \(\kappa = \kappa(A)\):</p>
+
+<div class="eq">\[
+\frac{\|e^{k}\|_A}{\|e^{0}\|_A} \le 2\left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^{k}.
+\tag{12.9}
+\]</div>
+
+<p>Ключевой множитель — \(\sqrt{\kappa}\), а не \(\kappa\). Для модельной задачи \(\kappa(A) \sim n^2\), поэтому число итераций CG растёт как \(\sqrt{\kappa} \sim n\) — так же, как у оптимального SOR, но без необходимости угадывать \(\omega\). Это и подтвердил практикум 4: \(26\) итераций CG против тысяч у Якоби.</p>
+
+<div class="remark">
+<strong>Предобуславливание.</strong> Чтобы ускорить любой итерационный метод, систему \(Ax=b\) заменяют эквивалентной \(M^{-1}Ax = M^{-1}b\) с «предобуславливателем» \(M \approx A\), который дёшево обращается и делает \(\kappa(M^{-1}A) \ll \kappa(A)\). Популярны неполное разложение Холецкого (ICC), неполное \(LU\) (ILU), многосеточные методы. Предобусловленный CG (PCG) — рабочая лошадка современных решателей разреженных SPD-систем.
+</div>
+
+<h2 id="summary">Итоги занятия</h2>
+
+<div class="algo">
+<strong>Что нужно унести с занятия 12:</strong>
+<ol>
+<li>Для больших <em>разреженных</em> систем (дискретизация УрЧП) прямые методы \(O(n^3)\) непригодны. Итерационные методы работают только через умножение \(Ax\) (стоимость \(O(n)\) для разреженной \(A\)) и сохраняют разреженность.</li>
+<li>Все классические методы — расщепление \(A = M - N\) и итерация \(x^{k+1} = x^k + M^{-1}r^k\), \(r^k = b - Ax^k\). Якоби: \(M=D\); Гаусс–Зейдель: \(M=D+L\) (использует свежие компоненты); SOR: \(M=\tfrac1\omega D + L\) с параметром \(\omega\in(0,2)\).</li>
+<li>Метод сходится \(\Longleftrightarrow\) спектральный радиус \(\rho(G)<1\), где \(G = I - M^{-1}A\). Скорость: число итераций \(k \approx \ln\varepsilon/\ln\rho\).</li>
+<li>Достаточные условия: строгое диагональное доминирование (Якоби и ГЗ сходятся); SPD (ГЗ и SOR при \(0<\omega<2\) сходятся). Для модельной задачи \(\rho_{GS}=\rho_J^2\) — ГЗ вдвое быстрее. Оптимальный \(\omega_{\text{opt}}=2/(1+\sqrt{1-\rho_J^2})\) даёт \(\rho_{SOR}=\omega_{\text{opt}}-1\), ускоряя на порядок (\(O(n)\) вместо \(O(n^2)\) итераций).</li>
+<li>Для SPD-систем метод сопряжённых градиентов минимизирует энергию в подпространствах Крылова, сходится за \(\le n\) шагов, а скорость зависит от \(\sqrt{\kappa}\). Предобуславливание (\(M^{-1}A\), \(\kappa\downarrow\)) — ключ к эффективности (PCG, ILU, многосетка).</li>
+</ol>
+</div>
+
+<div class="remark">
+<strong>Домашнее задание.</strong> Доделать задачи 12.1–12.4. Дополнительно: для двумерной модельной задачи (\(A = \mathrm{tridiag}\) с пятиточечным шаблоном на сетке \(m\times m\)) измерьте число итераций Якоби, ГЗ и SOR(\(\omega_{\text{opt}}\)) и подтвердите масштабирование \(O(N^2)\), \(O(N^2)\) и \(O(N)\) соответственно, где \(N=m^2\) — размер системы.
+</div>
+
+<div class="lecture-nav">
+  <a class="nav-prev" href="w11.html">← Занятие 11. Нормы и число обусловленности</a>
+  <a class="nav-next" href="w13.html">Занятие 13. Собственные числа и SVD →</a>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

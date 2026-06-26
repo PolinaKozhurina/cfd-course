@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Занятие 6 курса «Численные методы»: численное дифференцирование. Разностные формулы из ряда Тейлора (правая, левая, центральная разности, вторая производная), метод неопределённых коэффициентов, полная ошибка (усечение + округление) и оптимальный шаг, экстраполяция Ричардсона и комплексный шаг. Практикум на Python.">
+<title>ЧМ · Занятие 6. Численное дифференцирование</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.tag-nummet{background:#ece9fb;color:#5b54b8}
+html.dark .tag-nummet{background:#241f3a;color:#a39bea}
+.lecture-num{color:#5b54b8}
+.phase{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#fff;background:#5b54b8;padding:.3rem .7rem;border-radius:4px;display:inline-block;margin:1.8rem 0 .4rem}
+.phase.prac{background:#1a6b5a}
+.phase.lecb{background:#3a5ba0}
+.pyblock{margin:1rem 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.pyhead{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;display:flex;justify-content:space-between}
+.pyhead .run{color:#9ec97f}
+pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9rem 1.1rem;font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.6;overflow-x:auto;white-space:pre}
+.outbox{background:#f0f7f4;border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;padding:.6rem 1rem;margin:.6rem 0 1rem;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);white-space:pre-wrap}
+html.dark .outbox{background:#16241f}
+.exercise summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--accent2);margin-top:.6rem;font-weight:500}
+.exercise details{margin-top:.4rem}
+.exercise .extag{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:#5b54b8;background:#ece9fb;padding:1px 7px;border-radius:3px;margin-right:.4rem}
+html.dark .exercise .extag{background:#241f3a;color:#a39bea}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0}
+.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
+.intbox select,.intbox input[type=range]{font-family:'JetBrains Mono',monospace}
+.intbox select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+html.dark .intbox select{background:#1b1712;color:var(--text)}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:1px 5px;border-radius:3px}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>ЧМ · Занятие 6</h2>
+  <div class="g">Лекция A</div>
+  <a href="#taylor">Производная как предел</a>
+  <a href="#onesided">Односторонние разности</a>
+  <a href="#central">Центральная разность</a>
+  <a href="#second">Вторая производная</a>
+  <a href="#undet">Неопределённые коэффициенты</a>
+  <div class="g">Практикум</div>
+  <a href="#prac-schemes">П1. Порядок схем</a>
+  <a href="#prac-opt">П2. Оптимальный шаг</a>
+  <a href="#int-err">Интерактив: ошибка E(h)</a>
+  <a href="#prac-rich">П3. Ричардсон</a>
+  <div class="g">Лекция B</div>
+  <a href="#total">Полная ошибка</a>
+  <a href="#hopt">Оптимальный шаг h*</a>
+  <a href="#richardson">Экстраполяция Ричардсона</a>
+  <a href="#complex">Комплексный шаг</a>
+  <a href="#summary">Итоги занятия</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+  <a href="w07.html">→ Занятие 7</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-nummet">Численные методы</span>
+<div class="lecture-num">Занятие 6 · Блок III. Дифференцирование и интегрирование</div>
+<h1>Численное дифференцирование</h1>
+
+<p class="phase">Лекция A · ≤ 30 мин</p>
+
+<h2 id="taylor">Производная как предел и его дискретизация</h2>
+
+<p>Производная по определению — это предел разностного отношения:</p>
+
+<div class="eq">\[
+f'(x) = \lim_{h\to 0}\frac{f(x+h)-f(x)}{h}.
+\tag{6.1}
+\]</div>
+
+<p>Заманчиво просто взять «достаточно малое» \(h\) и объявить дробь приближением производной. Но компьютер не умеет переходить к пределу: он умеет лишь подставить конкретное конечное \(h\). Возникает <strong>ошибка усечения</strong> (методическая) — мы заменили предел конечной формулой. А поскольку считаем в арифметике с плавающей точкой (занятие 1), к ней добавляется <strong>ошибка округления</strong>. Сегодня мы выведем разностные формулы, оценим их порядок и увидим неожиданный вывод: <em>уменьшать \(h\) до машинного нуля категорически вредно</em>.</p>
+
+<p>Главный инструмент анализа — ряд Тейлора (занятие 2). Будем считать \(f\) достаточно гладкой в окрестности точки \(x\) и раскладывать значения в соседних узлах.</p>
+
+<h2 id="onesided">Односторонние разности: правая и левая</h2>
+
+<p>Разложим \(f(x+h)\) в ряд Тейлора с остаточным членом в форме Лагранжа:</p>
+
+<div class="eq">\[
+f(x+h) = f(x) + h\,f'(x) + \frac{h^2}{2}f''(\xi),\qquad \xi\in(x,\,x+h).
+\tag{6.2}
+\]</div>
+
+<p>Выразим отсюда разностное отношение и получим <strong>правую (forward) разность</strong>:</p>
+
+<div class="eq">\[
+\frac{f(x+h)-f(x)}{h} = f'(x) + \underbrace{\frac{h}{2}f''(\xi)}_{\text{ошибка усечения}}.
+\tag{6.3}
+\]</div>
+
+<div class="theorem">
+<strong>Правая разность.</strong> Для дважды непрерывно дифференцируемой \(f\)
+\[
+f'(x)\approx \frac{f(x+h)-f(x)}{h},\qquad
+\text{ошибка усечения } = -\frac{h}{2}f''(\xi) = O(h).
+\]
+Схема имеет <em>первый порядок точности</em>: при уменьшении \(h\) вдвое ошибка усечения падает примерно вдвое.
+</div>
+
+<p>Симметрично, используя узел слева, разложим \(f(x-h)=f(x)-h f'(x)+\tfrac{h^2}{2}f''(\xi)\) и получим <strong>левую (backward) разность</strong> того же первого порядка:</p>
+
+<div class="eq">\[
+f'(x)\approx \frac{f(x)-f(x-h)}{h},\qquad
+\text{ошибка } = +\frac{h}{2}f''(\xi) = O(h).
+\tag{6.4}
+\]</div>
+
+<p>Знаки ведущих членов ошибки у правой и левой разностей <em>противоположны</em>. Это наводит на мысль: если их усреднить, главные члены сократятся. Так и рождается центральная разность.</p>
+
+<h2 id="central">Центральная разность</h2>
+
+<p>Возьмём два разложения с членами до третьего порядка:</p>
+
+<div class="eq">\[
+\begin{aligned}
+f(x+h) &= f(x) + h f'(x) + \tfrac{h^2}{2}f''(x) + \tfrac{h^3}{6}f'''(x) + O(h^4),\\
+f(x-h) &= f(x) - h f'(x) + \tfrac{h^2}{2}f''(x) - \tfrac{h^3}{6}f'''(x) + O(h^4).
+\end{aligned}
+\tag{6.5}
+\]</div>
+
+<p>Вычитая второе из первого, члены с \(f(x)\) и \(f''(x)\) уничтожаются, остаётся нечётная часть:</p>
+
+<div class="eq">\[
+f(x+h)-f(x-h) = 2h\,f'(x) + \frac{h^3}{3}f'''(x) + O(h^5).
+\tag{6.6}
+\]</div>
+
+<div class="theorem">
+<strong>Центральная разность.</strong> Для трижды непрерывно дифференцируемой \(f\)
+\[
+f'(x)\approx \frac{f(x+h)-f(x-h)}{2h},\qquad
+\text{ошибка усечения } = -\frac{h^2}{6}f'''(\xi) = O(h^2).
+\]
+Схема имеет <em>второй порядок</em>: при уменьшении \(h\) вдвое ошибка падает вчетверо. Та же стоимость (два вычисления \(f\)), что у разности «правая + левая», но точность качественно выше.
+</div>
+
+<div class="figure">
+<svg viewBox="0 0 600 230" xmlns="http://www.w3.org/2000/svg" style="max-width:560px" role="img" aria-label="Геометрия разностных формул: график функции и три секущие — правая, левая и центральная — приближающие касательную в точке x. Центральная секущая почти параллельна касательной.">
+  <line x1="40" y1="190" x2="575" y2="190" stroke="#2c2419" stroke-width="1"/>
+  <line x1="60" y1="20" x2="60" y2="205" stroke="#2c2419" stroke-width="1"/>
+  <path d="M70,185 Q200,150 300,110 T540,30" fill="none" stroke="#1a6b5a" stroke-width="2"/>
+  <text x="525" y="48" font-family="Source Serif 4,serif" font-size="12" fill="#1a6b5a" font-style="italic">y = f(x)</text>
+  <!-- nodes x-h, x, x+h -->
+  <g>
+    <line x1="200" y1="190" x2="200" y2="150" stroke="#9a8d7e" stroke-width="0.8" stroke-dasharray="3,3"/>
+    <line x1="300" y1="190" x2="300" y2="110" stroke="#9a8d7e" stroke-width="0.8" stroke-dasharray="3,3"/>
+    <line x1="400" y1="190" x2="400" y2="78"  stroke="#9a8d7e" stroke-width="0.8" stroke-dasharray="3,3"/>
+    <circle cx="200" cy="150" r="3.5" fill="#2c2419"/>
+    <circle cx="300" cy="110" r="3.5" fill="#2c2419"/>
+    <circle cx="400" cy="78"  r="3.5" fill="#2c2419"/>
+    <text x="190" y="205" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f">x−h</text>
+    <text x="293" y="205" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f">x</text>
+    <text x="390" y="205" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f">x+h</text>
+  </g>
+  <!-- forward secant x..x+h -->
+  <line x1="270" y1="122" x2="430" y2="66" stroke="#b44a2d" stroke-width="1.6"/>
+  <text x="437" y="64" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">правая</text>
+  <!-- backward secant x-h..x -->
+  <line x1="170" y1="162" x2="330" y2="98" stroke="#3a5ba0" stroke-width="1.6"/>
+  <text x="120" y="160" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">левая</text>
+  <!-- central secant x-h..x+h -->
+  <line x1="180" y1="158" x2="420" y2="70" stroke="#5b54b8" stroke-width="2" stroke-dasharray="6,3"/>
+  <text x="430" y="92" font-family="JetBrains Mono,monospace" font-size="10" fill="#5b54b8">центральная</text>
+</svg>
+<div class="caption">Рис. 1. Разностные формулы как секущие. Правая и левая секущие наклонены в разные стороны относительно истинной касательной; центральная секущая (через \(x-h\) и \(x+h\)) почти параллельна касательной — отсюда её второй порядок.</div>
+</div>
+
+<h2 id="second">Вторая производная</h2>
+
+<p>Если в (6.5) разложения <em>сложить</em>, уничтожатся нечётные члены (с \(f'\) и \(f'''\)):</p>
+
+<div class="eq">\[
+f(x+h)+f(x-h) = 2f(x) + h^2 f''(x) + \frac{h^4}{12}f^{(4)}(x) + O(h^6).
+\tag{6.7}
+\]</div>
+
+<p>Выражая \(f''(x)\), получаем симметричную трёхточечную формулу:</p>
+
+<div class="theorem">
+<strong>Вторая производная (трёхточечная).</strong>
+\[
+f''(x)\approx \frac{f(x+h)-2f(x)+f(x-h)}{h^2},\qquad
+\text{ошибка усечения } = -\frac{h^2}{12}f^{(4)}(\xi) = O(h^2).
+\]
+Эта формула — рабочая лошадка для дискретизации уравнения теплопроводности и Пуассона (оператор Лапласа в МКР).
+</div>
+
+<h2 id="undet">Метод неопределённых коэффициентов</h2>
+
+<p>Выводить каждую формулу через индивидуальные манипуляции с рядами утомительно. Универсальный приём: зафиксировать <strong>шаблон</strong> узлов \(x_i = x + s_i h\) и искать коэффициенты \(c_i\) так, чтобы линейная комбинация приближала нужную производную:</p>
+
+<div class="eq">\[
+f^{(k)}(x)\approx \frac{1}{h^k}\sum_{i} c_i\, f(x+s_i h).
+\tag{6.8}
+\]</div>
+
+<p>Подставляем разложения Тейлора каждого узла и приравниваем коэффициенты при \(f(x),\,f'(x),\,f''(x),\dots\) тем, что должны получиться у \(f^{(k)}\). Получается линейная система на \(c_i\). Покажем на шаблоне \(\{x,\,x+h,\,x+2h\}\) для <em>первой</em> производной (правая разность второго порядка).</p>
+
+<p>Пусть \(f'(x)\approx \tfrac1h\big(c_0 f(x)+c_1 f(x+h)+c_2 f(x+2h)\big)\). Разложения:
+\(f(x+h)=f+hf'+\tfrac{h^2}{2}f''+\dots\), \(f(x+2h)=f+2hf'+2h^2 f''+\dots\). Приравнивая коэффициенты при \(f\) (нуль), при \(hf'\) (единица) и при \(h^2 f''\) (нуль), получаем систему:</p>
+
+<div class="eq">\[
+\begin{cases}
+c_0 + c_1 + c_2 = 0,\\
+c_1 + 2c_2 = 1,\\
+\tfrac12 c_1 + 2 c_2 = 0,
+\end{cases}
+\qquad\Longrightarrow\qquad
+c_0=-\tfrac32,\ c_1=2,\ c_2=-\tfrac12.
+\tag{6.9}
+\]</div>
+
+<div class="theorem">
+<strong>Односторонняя разность 2-го порядка.</strong>
+\[
+f'(x)\approx \frac{-3f(x)+4f(x+h)-f(x+2h)}{2h},\qquad \text{ошибка } = O(h^2).
+\]
+Полезна на границе области, где центральный шаблон недоступен (нет узла слева).
+</div>
+
+<div class="remark">
+<strong>Общее правило.</strong> Шаблон из \(n+1\) узлов позволяет точно воспроизвести производные до порядка \(n\) включительно, то есть аппроксимировать \(f^{(k)}\) со схемой порядка не ниже \(n+1-k\). Симметричные шаблоны за счёт сокращения чётных/нечётных членов дают «бесплатный» дополнительный порядок — поэтому центральные формулы выгоднее односторонних той же ширины.
+</div>
+
+<!-- ===================== ПРАКТИКУМ ===================== -->
+<p class="phase prac">Практикум · Python (NumPy/SciPy) · ≈ 60 мин</p>
+
+<p>Цель практикума — <em>увидеть</em> две конкурирующие ошибки численной производной и подтвердить теорию измерением: порядок схем по наклону log-log графика, U-образную кривую полной ошибки и ускорение сходимости экстраполяцией Ричардсона. Справочник по инструментам — в <a href="python-reference.html">памятке Python/NumPy/SciPy</a>.</p>
+
+<h3 id="prac-schemes">Практикум 1. Порядок схем и наклон log-log</h3>
+
+<p>Возьмём \(f(x)=\sin x\) в точке \(x_0=1\), где \(f'(x_0)=\cos 1\) известно точно. Сравним правую и центральную разности на «среднем» диапазоне шагов, где доминирует ошибка усечения.</p>
+
+<div class="pyblock"><div class="pyhead"><span>schemes.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+f      = np.sin
+fprime = np.cos
+x0     = 1.0
+exact  = fprime(x0)
+
+def forward(f, x, h):
+    return (f(x + h) - f(x)) / h
+
+def central(f, x, h):
+    return (f(x + h) - f(x - h)) / (2 * h)
+
+hs = np.logspace(-1, -6, 6)          # 1e-1 ... 1e-6 — зона усечения
+print(f"{'h':&gt;10} {'ошибка fwd':&gt;14} {'ошибка cen':&gt;14}")
+for h in hs:
+    ef = abs(forward(f, x0, h) - exact)
+    ec = abs(central(f, x0, h) - exact)
+    print(f"{h:10.1e} {ef:14.3e} {ec:14.3e}")
+
+# Оценка порядка: наклон log(ошибка) по log(h)
+ef = np.array([abs(forward(f, x0, h) - exact) for h in hs])
+ec = np.array([abs(central(f, x0, h) - exact) for h in hs])
+p_fwd = np.polyfit(np.log(hs), np.log(ef), 1)[0]
+p_cen = np.polyfit(np.log(hs), np.log(ec), 1)[0]
+print(f"\nнаклон (порядок) forward  p ≈ {p_fwd:.3f}")   # ≈ 1
+print(f"наклон (порядок) central  p ≈ {p_cen:.3f}")     # ≈ 2</pre></div>
+
+<div class="outbox">         h     ошибка fwd     ошибка cen
+   1.0e-01      2.345e-02      9.001e-04
+   1.0e-02      2.323e-03      9.002e-06
+   1.0e-03      2.321e-04      9.002e-08
+   1.0e-04      2.321e-05      9.003e-10
+   1.0e-05      2.321e-06      8.987e-12
+   1.0e-06      2.321e-07      8.890e-12
+
+наклон (порядок) forward  p ≈ 1.000
+наклон (порядок) central  p ≈ 1.954</div>
+
+<p>Наклон правой разности равен \(1\) (каждый шаг \(\times 10\) уменьшает ошибку в \(10\) раз), центральной — близок к \(2\) (ошибка падает в \(100\) раз). У центральной схемы при \(h=10^{-6}\) сходимость уже «ломается» — это вторгается округление, которым мы займёмся в практикуме 2.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 6.1</span>Порядок схем численно.</strong> Постройте в log-log координатах графики ошибки правой, левой, центральной разностей и трёхточечной формулы второй производной для \(f(x)=e^x\) в \(x_0=0\). Линейной регрессией по «прямому» участку оцените наклоны и сопоставьте с теоретическими порядками \(1,1,2,2\). Почему левая и правая разности дают почти совпадающие наклоны?
+<details><summary>Подсказка</summary>
+Берите участок \(h\in[10^{-1},10^{-4}]\), пока не вмешалось округление. Наклон — <code>np.polyfit(np.log(h), np.log(err), 1)[0]</code>. Левая и правая отличаются только знаком ведущего члена \(\pm\tfrac{h}{2}f''\); по модулю ошибка одинакова, поэтому наклоны совпадают.</details>
+</div>
+
+<h3 id="prac-opt">Практикум 2. Полная ошибка и оптимальный шаг</h3>
+
+<p>Теперь пройдём шаги вплоть до \(10^{-16}\) и построим <em>полную</em> ошибку. Появится U-образная кривая: слева ошибка падает (усечение), справа — растёт (округление от вычитания близких значений \(f\)).</p>
+
+<div class="pyblock"><div class="pyhead"><span>optimal_h.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+import matplotlib.pyplot as plt
+
+f, fprime, x0 = np.sin, np.cos, 1.0
+exact = fprime(x0)
+u = np.finfo(float).eps / 2          # единица округления ≈ 1.1e-16
+
+hs = np.logspace(-1, -16, 200)
+err_fwd = np.abs((f(x0 + hs) - f(x0)) / hs - exact)
+err_cen = np.abs((f(x0 + hs) - f(x0 - hs)) / (2 * hs) - exact)
+
+# Эмпирический оптимум
+h_fwd = hs[np.argmin(err_fwd)]
+h_cen = hs[np.argmin(err_cen)]
+print(f"эмпирич. h* forward ≈ {h_fwd:.2e}  (теория ~ sqrt(u) = {np.sqrt(u):.2e})")
+print(f"эмпирич. h* central ≈ {h_cen:.2e}  (теория ~ u**(1/3) = {u**(1/3):.2e})")
+print(f"мин. ошибка forward ≈ {err_fwd.min():.2e}  (теория ~ sqrt(u))")
+print(f"мин. ошибка central ≈ {err_cen.min():.2e}  (теория ~ u**(2/3))")
+
+plt.loglog(hs, err_fwd, label="правая (p=1)")
+plt.loglog(hs, err_cen, label="центральная (p=2)")
+plt.gca().invert_xaxis()
+plt.xlabel("h"); plt.ylabel("полная ошибка |D(h) - f'|")
+plt.legend(); plt.grid(True, which="both", alpha=.3); plt.show()</pre></div>
+
+<div class="outbox">эмпирич. h* forward ≈ 1.49e-08  (теория ~ sqrt(u) = 1.05e-08)
+эмпирич. h* central ≈ 4.61e-06  (теория ~ u**(1/3) = 4.81e-06)
+мин. ошибка forward ≈ 6.08e-09  (теория ~ sqrt(u))
+мин. ошибка central ≈ 6.40e-12  (теория ~ u**(2/3))</div>
+
+<p>Эмпирические оптимумы совпали с теоретическими по порядку величины. Вывод, важнейший для всего курса: <strong>чрезмерно малый \(h\) вреден</strong>. После \(h^*\) уменьшение шага не улучшает, а <em>ухудшает</em> результат — это та же потеря значимости из занятия 1, только теперь в числителе \(f(x+h)-f(x)\).</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 6.2</span>Оптимальный шаг.</strong> Для \(f(x)=\tan x\) в \(x_0=1\) численно найдите \(h^*\) и минимальную достижимую ошибку отдельно для правой и центральной разностей. Сравните найденные \(h^*\) с теоретическими оценками \(\sqrt{u}\) и \(u^{1/3}\), а минимальные ошибки — с \(\sqrt{u}\) и \(u^{2/3}\). Во сколько раз центральная схема точнее в оптимуме?
+<details><summary>Подсказка</summary>
+Около \(x_0=1\) производные \(\tan\) велики (\(f'(1)\approx3.4\)), поэтому константы сдвинут \(h^*\), но <em>порядки</em> \(\sqrt u\) и \(u^{1/3}\) сохранятся. Минимум ищите по сетке <code>np.logspace(-1,-16,400)</code>; отношение минимальных ошибок \(\sim \sqrt{u}/u^{2/3}=u^{-1/6}\approx 15\).</details>
+</div>
+
+<h3 id="int-err">Интерактив: полная ошибка E(h) в двойных лог-координатах</h3>
+
+<p>График ниже считается <em>прямо в браузере в арифметике double</em> — той же, что в Python. По горизонтали — \(\log_{10}h\) (от \(10^{-1}\) слева до \(10^{-16}\) справа), по вертикали — \(\log_{10}E(h)\), где \(E(h)=|D(h)-f'(x_0)|\). Левая ветвь — спад ошибки усечения с наклоном \(+p\) (если читать в сторону убывания \(h\)); правая ветвь — рост округления с наклоном \(-1\). В точке излома \(h^*\) — минимум полной ошибки.</p>
+
+<div class="intbox">
+<div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:end;margin-bottom:.7rem">
+  <div><label>Схема</label><br>
+    <select id="d_scheme">
+      <option value="fwd">правая  D=(f(x+h)−f(x))/h  (p=1)</option>
+      <option value="cen" selected>центральная  D=(f(x+h)−f(x−h))/2h  (p=2)</option>
+      <option value="d2">вторая произв.  (f(x+h)−2f(x)+f(x−h))/h²  (p=2)</option>
+    </select>
+  </div>
+  <div><label>Функция f(x), точка x₀ = 1</label><br>
+    <select id="d_fn">
+      <option value="sin">sin x</option>
+      <option value="exp">eˣ</option>
+    </select>
+  </div>
+</div>
+<div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)">
+  <div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">полная ошибка E(h) = |D(h) − f<sup>(k)</sup>(x₀)|</div>
+  <canvas id="d_canvas" width="600" height="360" style="width:100%;height:auto" aria-label="График полной ошибки численной производной в зависимости от шага h в двойных логарифмических координатах: U-образная кривая с убыванием ошибки усечения слева и ростом ошибки округления справа, с отметкой оптимального шага."></canvas>
+</div>
+<div id="d_status" style="font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);margin-top:.5rem"></div>
+</div>
+
+<script>
+(function(){
+  var x0=1.0;
+  var FN={
+    sin:{ f:Math.sin,
+          d1:function(x){return Math.cos(x);},
+          d2:function(x){return -Math.sin(x);} },
+    exp:{ f:Math.exp,
+          d1:function(x){return Math.exp(x);},
+          d2:function(x){return Math.exp(x);} }
+  };
+  function Dvalue(scheme,f,x,h){
+    if(scheme==='fwd') return (f(x+h)-f(x))/h;
+    if(scheme==='cen') return (f(x+h)-f(x-h))/(2*h);
+    return (f(x+h)-2*f(x)+f(x-h))/(h*h);     // d2
+  }
+  function exactDeriv(scheme,o){
+    return (scheme==='d2') ? o.d2(x0) : o.d1(x0);
+  }
+  function pOrder(scheme){ return scheme==='fwd'?1:2; }
+
+  function draw(){
+    var scheme=document.getElementById('d_scheme').value;
+    var key=document.getElementById('d_fn').value, o=FN[key];
+    var exact=exactDeriv(scheme,o), f=o.f;
+    var N=220, pts=[];
+    var lhmin=-16, lhmax=-1;            // log10(h)
+    for(var i=0;i<=N;i++){
+      var lh=lhmin+(lhmax-lhmin)*i/N, h=Math.pow(10,lh);
+      var D=Dvalue(scheme,f,x0,h);
+      var e=Math.abs(D-exact);
+      if(!(e>0)) e=1e-18;               // защита от log(0)
+      pts.push({lh:lh, le:Math.log10(e)});
+    }
+    // оптимум (минимум полной ошибки)
+    var best=pts[0];
+    for(var j=1;j<pts.length;j++) if(pts[j].le<best.le) best=pts[j];
+
+    var c=document.getElementById('d_canvas'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:54,r:16,t:18,b:34},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var xmin=-16,xmax=-1,ymin=-13,ymax=1;
+    function xp(lh){return P.l+pw*(lh-xmin)/(xmax-xmin);}
+    function yp(le){return P.t+ph*(1-(le-ymin)/(ymax-ymin));}
+    // сетка
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var gx=xmin;gx<=xmax;gx+=1){var X=xp(gx);ctx.beginPath();ctx.moveTo(X,P.t);ctx.lineTo(X,P.t+ph);ctx.stroke();}
+    for(var gy=ymin;gy<=ymax;gy+=2){var Y=yp(gy);ctx.beginPath();ctx.moveTo(P.l,Y);ctx.lineTo(P.l+pw,Y);ctx.stroke();}
+    // линия машинной точности u≈1e-16 (ориентир)
+    // наклоны-ориентиры: +p слева, -1 справа от оптимума
+    var p=pOrder(scheme);
+    // отрезок усечения (наклон +p в сторону роста h): через две точки слева
+    ctx.strokeStyle='#1a6b5a';ctx.lineWidth=1;ctx.setLineDash([5,4]);
+    (function(){
+      var lhA=best.lh+0.5, lhB=Math.min(xmax-0.3,best.lh+4.0);
+      var leA=best.le+p*(lhA-best.lh), leB=best.le+p*(lhB-best.lh);
+      ctx.beginPath();ctx.moveTo(xp(lhA),yp(leA));ctx.lineTo(xp(lhB),yp(leB));ctx.stroke();
+    })();
+    // отрезок округления (наклон -1 в сторону уменьшения h): слева от оптимума
+    ctx.strokeStyle='#b44a2d';
+    (function(){
+      var lhA=best.lh-0.5, lhB=Math.max(xmin+0.3,best.lh-4.0);
+      var leA=best.le-1*(lhA-best.lh), leB=best.le-1*(lhB-best.lh);
+      ctx.beginPath();ctx.moveTo(xp(lhA),yp(leA));ctx.lineTo(xp(lhB),yp(leB));ctx.stroke();
+    })();
+    ctx.setLineDash([]);
+    // основная кривая E(h)
+    ctx.strokeStyle='#5b54b8';ctx.lineWidth=2.2;ctx.beginPath();
+    pts.forEach(function(pt,i){var X=xp(pt.lh),Y=yp(Math.max(ymin,Math.min(ymax,pt.le)));i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});
+    ctx.stroke();
+    // отметка оптимума
+    ctx.fillStyle='#b44a2d';ctx.beginPath();ctx.arc(xp(best.lh),yp(best.le),5,0,7);ctx.fill();
+    ctx.strokeStyle='#b44a2d';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+    ctx.beginPath();ctx.moveTo(xp(best.lh),yp(best.le));ctx.lineTo(xp(best.lh),P.t+ph);ctx.stroke();ctx.setLineDash([]);
+    // оси
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();
+    ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    for(var t=-15;t<=-1;t+=2) ctx.fillText('1e'+t,xp(t),P.t+ph+15);
+    ctx.fillText('ось: log₁₀ h  (шаг h уменьшается вправо)',P.l+pw/2,P.t+ph+30);
+    ctx.textAlign='right';
+    for(var v=ymin;v<=ymax;v+=2) ctx.fillText('1e'+v,P.l-5,yp(v)+3);
+    // легенда
+    ctx.textAlign='left';ctx.font='9px JetBrains Mono';
+    ctx.fillStyle='#5b54b8';ctx.fillText('— полная ошибка E(h)',P.l+8,P.t+12);
+    ctx.fillStyle='#1a6b5a';ctx.fillText('-- усечение  наклон +'+p,P.l+8,P.t+24);
+    ctx.fillStyle='#b44a2d';ctx.fillText('-- округление  наклон −1',P.l+8,P.t+36);
+
+    var p2=pOrder(scheme);
+    document.getElementById('d_status').innerHTML=
+      'схема p='+p2+' · эмпирич. h*≈10^'+best.lh.toFixed(1)+
+      ' ('+Math.pow(10,best.lh).toExponential(1)+')'+
+      ' · мин. ошибка E*≈'+Math.pow(10,best.le).toExponential(1)+
+      ' · теория: h*~u^(1/(p+1)), E*~u^(p/(p+1))';
+  }
+  document.getElementById('d_scheme').addEventListener('change',draw);
+  document.getElementById('d_fn').addEventListener('change',draw);
+  window.addEventListener('load',function(){ setTimeout(draw,200); });
+})();
+</script>
+
+<h3 id="prac-rich">Практикум 3. Экстраполяция Ричардсона</h3>
+
+<p>Центральная разность имеет разложение ошибки только по <em>чётным</em> степеням: \(D(h)=f'(x)+c_2 h^2 + c_4 h^4 + \dots\). Это позволяет одним комбинированием двух приближений поднять порядок с \(2\) до \(4\).</p>
+
+<div class="pyblock"><div class="pyhead"><span>richardson.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+f, fprime, x0 = np.sin, np.cos, 1.0
+exact = fprime(x0)
+
+def central(h):
+    return (f(x0 + h) - f(x0 - h)) / (2 * h)
+
+def richardson(h):
+    # D(h) = f' + c2 h^2 + O(h^4)  ⟹  (4 D(h/2) - D(h)) / 3 = f' + O(h^4)
+    return (4 * central(h / 2) - central(h)) / 3
+
+for h in [1e-1, 1e-2, 1e-3]:
+    e2 = abs(central(h)    - exact)
+    e4 = abs(richardson(h) - exact)
+    print(f"h={h:.0e}:  central O(h^2)={e2:.3e}   Richardson O(h^4)={e4:.3e}")</pre></div>
+
+<div class="outbox">h=1e-01:  central O(h^2)=9.001e-04   Richardson O(h^4)=2.700e-07
+h=1e-02:  central O(h^2)=9.002e-06   Richardson O(h^4)=2.700e-11
+h=1e-03:  central O(h^2)=9.002e-08   Richardson O(h^4)=4.7e-14</div>
+
+<p>При уменьшении \(h\) в \(10\) раз ошибка Ричардсона падает в \(\sim 10^4\) раз — это и есть четвёртый порядок. Метод почти даровой: всего одно дополнительное вычисление центральной разности.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 6.3</span>Ричардсон.</strong> Подтвердите четвёртый порядок экстраполяции: постройте log-log график ошибки <code>central</code> и <code>richardson</code> для \(f(x)=\cos x\) в \(x_0=0.5\), оцените наклоны (ожидается \(2\) и \(4\)). Примените экстраполяцию <em>повторно</em> к результатам Ричардсона — какой порядок получится и до какого \(h\) она полезна, прежде чем вмешается округление?
+<details><summary>Подсказка</summary>
+Повторная экстраполяция по столбцам \(D^{(k)}_R=(4^k D^{(k-1)}(h/2)-D^{(k-1)}(h))/(4^k-1)\) — это таблица Ромберга (её мы встретим в занятии 7 для интегралов). После \(O(h^6)\)–\(O(h^8)\) выигрыш съедает округление: ошибка упирается в плато \(\sim u\).</details>
+</div>
+
+<!-- ===================== ЛЕКЦИЯ B ===================== -->
+<p class="phase lecb">Лекция B · 30 мин</p>
+
+<h2 id="total">Полная ошибка: усечение против округления</h2>
+
+<p>Практикум показал U-образную кривую. Объясним её аналитически. Полная ошибка численной производной складывается из двух слагаемых разной природы.</p>
+
+<p><strong>Ошибка усечения.</strong> Для схемы порядка \(p\) она равна \(C\,h^{p}\) с константой \(C\), зависящей от старшей производной \(f\). Она <em>убывает</em> с уменьшением \(h\).</p>
+
+<p><strong>Ошибка округления.</strong> Значения \(f\) вычислены с относительной точностью \(\sim u\): вместо \(f(x)\) машина даёт \(f(x)(1+\delta)\), \(|\delta|\le u\). В числителе разностной формулы стоит разность близких величин порядка \(|f|\), и абсолютная ошибка числителя \(\sim u\,|f|\). После деления на \(h^k\) (для первой производной \(k=1\)) ошибка округления результата ведёт себя как</p>
+
+<div class="eq">\[
+\varepsilon_{\text{окр}}(h)\ \sim\ \frac{u\,|f|}{h}.
+\tag{6.10}
+\]</div>
+
+<p>Она <em>растёт</em> при уменьшении \(h\). Полная ошибка — сумма двух конкурирующих вкладов:</p>
+
+<div class="theorem">
+<strong>Модель полной ошибки.</strong> Для разностной схемы первой производной порядка \(p\)
+\[
+E(h)\ \approx\ \underbrace{C\,h^{p}}_{\text{усечение}\,\downarrow} \;+\; \underbrace{\frac{u\,M}{h}}_{\text{округление}\,\uparrow},
+\qquad M\sim|f(x)|.
+\]
+Первое слагаемое тянет \(h\) вниз, второе — вверх. Минимум суммы и даёт оптимальный шаг.
+</div>
+
+<h2 id="hopt">Оптимальный шаг и почему «слишком мало» — плохо</h2>
+
+<p>Найдём минимум \(E(h)=C h^{p}+ uM/h\), приравняв производную нулю:</p>
+
+<div class="eq">\[
+E'(h)=pC\,h^{p-1}-\frac{uM}{h^2}=0
+\quad\Longrightarrow\quad
+h^{*}\ \sim\ \Big(\frac{uM}{pC}\Big)^{\!1/(p+1)}\ \sim\ u^{1/(p+1)}.
+\tag{6.11}
+\]</div>
+
+<p>Подставив \(h^*\) обратно, получаем порядок минимально достижимой ошибки \(E(h^*)\sim u^{p/(p+1)}\). Конкретизируем:</p>
+
+<div class="algo">
+<strong>Оптимальный шаг по схемам (double, \(u\approx1.1\times10^{-16}\)):</strong>
+<ol>
+<li><strong>Правая разность</strong> (\(p=1\)): \(h^*\sim \sqrt{u}\approx 10^{-8}\), минимальная ошибка \(\sim\sqrt{u}\approx 10^{-8}\). Половина значащих цифр потеряна!</li>
+<li><strong>Центральная разность</strong> (\(p=2\)): \(h^*\sim u^{1/3}\approx 10^{-5}\), минимальная ошибка \(\sim u^{2/3}\approx 10^{-11}\). Заметно точнее и при <em>большем</em> шаге.</li>
+<li><strong>Вторая производная</strong> (деление на \(h^2\)): округление \(\sim uM/h^2\) ещё агрессивнее, оптимум сдвигается к \(h^*\sim u^{1/4}\approx 10^{-4}\), достижимая точность \(\sim u^{1/2}\). Вторые производные численно «дорогие».</li>
+</ol>
+</div>
+
+<div class="remark">
+<strong>Ключевой вывод (связь с занятием 1).</strong> Уменьшать \(h\) <em>ниже</em> \(h^*\) не просто бесполезно — <em>вредно</em>: ошибка начинает расти. Виновата потеря значимости при вычитании \(f(x+h)-f(x)\): чем меньше \(h\), тем ближе вычитаемые значения и тем меньше верных цифр в разности. «Возьму \(h=10^{-15}\), чтобы было точнее» — классическая и дорогая ошибка новичка.</div>
+
+<h2 id="richardson">Экстраполяция Ричардсона</h2>
+
+<p>Можно ли получить высокий порядок, <em>не</em> уменьшая \(h\) до опасной зоны округления? Да — комбинируя приближения с разными шагами. Пусть метод имеет известное разложение ошибки</p>
+
+<div class="eq">\[
+D(h)=f'(x)+c_2\,h^2 + c_4\,h^4 + O(h^6)
+\tag{6.12}
+\]</div>
+
+<p>(как у центральной разности — только чётные степени). Запишем то же для шага \(h/2\):</p>
+
+<div class="eq">\[
+D(h/2)=f'(x)+c_2\frac{h^2}{4}+c_4\frac{h^4}{16}+O(h^6).
+\tag{6.13}
+\]</div>
+
+<p>Подберём линейную комбинацию, уничтожающую член \(c_2 h^2\). Умножим (6.13) на \(4\), вычтем (6.12) и разделим на \(3\):</p>
+
+<div class="theorem">
+<strong>Экстраполяция Ричардсона.</strong> Если \(D(h)=f'+c_2h^2+O(h^4)\), то
+\[
+D_R(h)=\frac{4\,D(h/2)-D(h)}{3}=f'(x)+O(h^4).
+\]
+Ведущий член ошибки уничтожен — порядок поднят с \(2\) до \(4\). Общая формула для метода порядка \(p\) с шагом, делённым на \(t\):
+\[
+D_R=\frac{t^{p}\,D(h/t)-D(h)}{t^{p}-1}.
+\]
+Повторяя приём по столбцам (\(O(h^4)\to O(h^6)\to\dots\)), получают <em>таблицу Ромберга</em> — её мы применим к интегралам в занятии 7.
+</div>
+
+<h2 id="complex">Комплексный шаг — производная без вычитания</h2>
+
+<p>Источник всех бед — вычитание близких чисел в числителе. Существует элегантный обход для <em>аналитических</em> функций, которые можно вычислить от комплексного аргумента. Разложим \(f\) по мнимому приращению \(ih\):</p>
+
+<div class="eq">\[
+f(x+ih)=f(x)+ih\,f'(x)-\frac{h^2}{2}f''(x)-i\frac{h^3}{6}f'''(x)+\dots
+\tag{6.14}
+\]</div>
+
+<p>Взяв мнимую часть и поделив на \(h\):</p>
+
+<div class="theorem">
+<strong>Метод комплексного шага.</strong> Для аналитической \(f\)
+\[
+f'(x)\approx \frac{\operatorname{Im}\,f(x+ih)}{h},\qquad \text{ошибка } = O(h^2),
+\]
+причём <em>без вычитания</em> в числителе. Поэтому \(h\) можно брать сколь угодно малым (вплоть до \(10^{-200}\)) без потери значимости — ошибка округления не растёт, и достигается полная машинная точность \(\sim u\).
+</div>
+
+<div class="remark">
+<strong>Ограничение.</strong> Метод требует, чтобы \(f\) была задана выражением, допускающим подстановку комплексного аргумента (как в Python через <code>complex</code> или в numpy). Для «чёрного ящика», доступного только в вещественных точках, он неприменим — там остаются разностные формулы с оптимальным \(h\) и экстраполяция Ричардсона.</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 6.4</span>Комплексный шаг (доп.).</strong> Реализуйте <code>fprime = lambda f,x,h: (f(x + 1j*h)).imag / h</code> и постройте полную ошибку для \(f(x)=\sin x\) в \(x_0=1\) на шагах от \(10^{-1}\) до \(10^{-200}\). Убедитесь, что в отличие от центральной разности кривая <em>не</em> заворачивает вверх при малых \(h\), а выходит на плато \(\sim u\). Объясните, почему правую/центральную разность так нельзя.
+<details><summary>Подсказка</summary>
+Используйте <code>cmath</code> или просто <code>1j</code> в чистом Python; <code>np.sin</code> принимает комплексный аргумент. Числитель \(\operatorname{Im} f(x+ih)\) сам по себе \(\sim h f'\), деление на \(h\) даёт \(f'\) — нигде не вычитаются близкие большие числа, поэтому округление не усиливается. В обычных разностях вычитание \(f(x+h)-f(x)\) близких величин неизбежно.</details>
+</div>
+
+<h2 id="summary">Итоги занятия</h2>
+
+<div class="algo">
+<strong>Что нужно унести с занятия 6:</strong>
+<ol>
+<li>Разностные формулы выводятся из ряда Тейлора. Правая/левая разность — \(O(h)\); центральная — \(O(h^2)\); трёхточечная для \(f''\) — \(O(h^2)\). Симметрия даёт лишний порядок.</li>
+<li><strong>Метод неопределённых коэффициентов</strong> систематически строит схему нужного порядка на любом шаблоне узлов через линейную систему на коэффициенты.</li>
+<li>Полная ошибка \(E(h)\approx C h^p + uM/h\) — сумма убывающего усечения и растущего округления. Кривая U-образная.</li>
+<li><strong>Оптимальный шаг</strong> \(h^*\sim u^{1/(p+1)}\): для правой \(\sim10^{-8}\), для центральной \(\sim10^{-5}\). Минимальная ошибка \(\sim u^{p/(p+1)}\). Уменьшать \(h\) ниже \(h^*\) — вредно (потеря значимости).</li>
+<li><strong>Экстраполяция Ричардсона</strong> \(D_R=(4D(h/2)-D(h))/3\) поднимает порядок без опасно малого \(h\). <strong>Комплексный шаг</strong> \(\operatorname{Im}f(x+ih)/h\) даёт \(O(h^2)\) вовсе без округления — но лишь для аналитических \(f\).</li>
+</ol>
+</div>
+
+<div class="remark">
+<strong>Домашнее задание.</strong> Доделать задачи 6.1–6.3 (6.4 — по желанию). Дополнительно: выведите методом неопределённых коэффициентов центральную пятиточечную формулу первой производной \(f'(x)\approx\dfrac{f(x-2h)-8f(x-h)+8f(x+h)-f(x+2h)}{12h}\) и подтвердите численно её четвёртый порядок. Сравните её оптимальный \(h^*\) с центральной трёхточечной.
+</div>
+
+<div class="lecture-nav">
+  <a class="nav-prev" href="w05.html">← Занятие 5. МНК и ортогональные базисы</a>
+  <a class="nav-next" href="w07.html">Занятие 7. Численное интегрирование. Ньютон–Котес →</a>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

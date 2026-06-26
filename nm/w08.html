@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Занятие 8 курса «Численные методы»: квадратуры Гаусса. Оптимальный выбор узлов и весов, связь с ортогональными полиномами Лежандра, алгебраическая точность 2n−1, перенос на отрезок [a,b]. Сравнение с формулами Ньютона–Котеса, адаптивные квадратуры, взвешенные квадратуры Гаусса для несобственных интегралов. Практикум на Python (NumPy/SciPy).">
+<title>ЧМ · Занятие 8. Квадратуры Гаусса</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.tag-nummet{background:#ece9fb;color:#5b54b8}
+html.dark .tag-nummet{background:#241f3a;color:#a39bea}
+.lecture-num{color:#5b54b8}
+.phase{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#fff;background:#5b54b8;padding:.3rem .7rem;border-radius:4px;display:inline-block;margin:1.8rem 0 .4rem}
+.phase.prac{background:#1a6b5a}
+.phase.lecb{background:#3a5ba0}
+.pyblock{margin:1rem 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.pyhead{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;display:flex;justify-content:space-between}
+.pyhead .run{color:#9ec97f}
+pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9rem 1.1rem;font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.6;overflow-x:auto;white-space:pre}
+.outbox{background:#f0f7f4;border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;padding:.6rem 1rem;margin:.6rem 0 1rem;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);white-space:pre-wrap}
+html.dark .outbox{background:#16241f}
+.exercise summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--accent2);margin-top:.6rem;font-weight:500}
+.exercise details{margin-top:.4rem}
+.exercise .extag{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:#5b54b8;background:#ece9fb;padding:1px 7px;border-radius:3px;margin-right:.4rem}
+html.dark .exercise .extag{background:#241f3a;color:#a39bea}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0}
+.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
+.intbox select,.intbox input[type=range]{font-family:'JetBrains Mono',monospace}
+.intbox select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+html.dark .intbox select{background:#1b1712;color:var(--text)}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:1px 5px;border-radius:3px}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>ЧМ · Занятие 8</h2>
+  <div class="g">Лекция A</div>
+  <a href="#idea">Идея Гаусса</a>
+  <a href="#gauss-legendre">Квадратура Гаусса–Лежандра</a>
+  <a href="#ortho">Связь с ортогональными полиномами</a>
+  <a href="#small">Малые формулы n = 1, 2, 3</a>
+  <a href="#transfer">Перенос на отрезок [a, b]</a>
+  <div class="g">Практикум</div>
+  <a href="#prac-leggauss">П1. leggauss и точность</a>
+  <a href="#prac-conv">П2. Гаусс vs Симпсон</a>
+  <a href="#int-conv">Интерактив: сходимость</a>
+  <a href="#prac-sing">П3. Особенность и quad</a>
+  <div class="g">Лекция B</div>
+  <a href="#compare">Гаусс против Ньютона–Котеса</a>
+  <a href="#adaptive">Адаптивные квадратуры</a>
+  <a href="#improper">Особенности и несобственные интегралы</a>
+  <a href="#summary">Итоги занятия</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+  <a href="w09.html">→ Занятие 9</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-nummet">Численные методы</span>
+<div class="lecture-num">Занятие 8 · Блок III. Дифференцирование и интегрирование</div>
+<h1>Численное интегрирование II. Квадратуры Гаусса</h1>
+
+<p class="phase">Лекция A · ≤ 30 мин</p>
+
+<h2 id="idea">Идея Гаусса: освободить узлы</h2>
+
+<p>На прошлом занятии мы строили формулы <strong>Ньютона–Котеса</strong>: фиксировали узлы <em>равномерно</em>, проводили через значения \(f\) интерполяционный полином и интегрировали его. При \(n+1\) узле такая формула точна для полиномов степени \(\le n\) (а из соображений симметрии — иногда \(n+1\)). Узлы заданы заранее, и единственная свобода — это \(n+1\) вес.</p>
+
+<p>Карл Фридрих Гаусс задал вопрос иначе: <em>а зачем фиксировать узлы?</em> Если позволить узлам \(x_i\) тоже быть свободными параметрами, то у формулы с \(n\) узлами появляется не \(n\), а <strong>\(2n\) степеней свободы</strong> — \(n\) узлов и \(n\) весов. Полином степени \(2n-1\) задаётся как раз \(2n\) коэффициентами. Значит, удачно распорядившись \(2n\) параметрами, можно надеяться точно проинтегрировать <em>любой</em> полином степени до \(2n-1\) включительно.</p>
+
+<div class="definition">
+<strong>Постановка.</strong> Ищем квадратурную формулу вида
+\[
+\int_{-1}^{1} f(x)\,dx \;\approx\; \sum_{i=1}^{n} w_i\, f(x_i),
+\]
+в которой <em>и</em> узлы \(x_i \in (-1,1)\), <em>и</em> веса \(w_i\) выбираются так, чтобы <strong>алгебраическая точность</strong> была максимальной. <em>Алгебраическая точность</em> \(d\) — наибольшая степень, при которой формула точна для всех полиномов степени \(\le d\).
+</div>
+
+<p>Сравните бюджеты: Ньютон–Котес с \(n\) узлами даёт точность \(\sim n-1\); Гаусс с теми же \(n\) узлами — точность \(2n-1\), <em>вдвое выше</em> при том же числе вычислений \(f\). Каждое вычисление подынтегральной функции — это работа (часто дорогая), поэтому экономия принципиальна.</p>
+
+<h2 id="gauss-legendre">Квадратура Гаусса–Лежандра</h2>
+
+<p>Наводящий подсчёт уравнений: потребуем точности для базиса \(1, x, x^2, \dots, x^{2n-1}\). Получаем \(2n\) нелинейных уравнений (условия моментов)
+\[
+\sum_{i=1}^{n} w_i\, x_i^{\,k} \;=\; \int_{-1}^{1} x^{k}\,dx \;=\;
+\begin{cases}\dfrac{2}{k+1}, & k \text{ чётно},\\[4pt] 0, & k \text{ нечётно},\end{cases}
+\qquad k = 0,1,\dots,2n-1,
+\]
+относительно \(2n\) неизвестных \(\{x_i, w_i\}\). Решать их «в лоб» тяжело, но у системы есть замечательное замкнутое решение.</p>
+
+<div class="theorem">
+<strong>Теорема (Гаусс–Лежандр).</strong> Существует единственная (с точностью до нумерации) формула
+\[
+\int_{-1}^{1} f(x)\,dx \;\approx\; \sum_{i=1}^{n} w_i\, f(x_i)
+\tag{8.1}
+\]
+с алгебраической точностью \(2n-1\). Её узлы \(x_1,\dots,x_n\) — это <em>корни полинома Лежандра</em> \(P_n(x)\) (все они вещественны, различны и лежат в \((-1,1)\)), а веса равны
+\[
+w_i \;=\; \frac{2}{\bigl(1-x_i^2\bigr)\,\bigl[P_n'(x_i)\bigr]^{2}}\,.
+\tag{8.2}
+\]
+Все веса положительны, и \(\sum_i w_i = 2\) (длина отрезка). Точность \(2n-1\) — максимально возможная: формулы с большей точностью при \(n\) узлах не существует.
+</div>
+
+<p>Положительность весов — не косметика, а гарантия <strong>устойчивости</strong>: при суммировании \(\sum w_i f(x_i)\) нет вычитания близких величин, ошибки округления не усиливаются (в отличие от формул Ньютона–Котеса высокого порядка, где появляются отрицательные веса и формула перестаёт сходиться).</p>
+
+<div class="remark">
+<strong>Почему именно \(2n-1\), а не \(2n\)?</strong> Возьмём полином \(q(x) = \bigl[P_n(x)\bigr]^2\) степени \(2n\). Он неотрицателен, так что \(\int_{-1}^1 q\,dx > 0\). Но \(P_n\) обращается в нуль во всех узлах \(x_i\), поэтому \(\sum_i w_i q(x_i) = 0\). Формула дала бы \(0\) вместо положительного интеграла — значит, точность для степени \(2n\) недостижима. Граница \(2n-1\) точна.
+</div>
+
+<h2 id="ortho">Связь с ортогональными полиномами</h2>
+
+<p>Откуда корни Лежандра? Здесь напрямую работает аппарат <strong>ортогональных полиномов</strong> из занятия 5. Полиномы Лежандра \(P_0, P_1, P_2,\dots\) ортогональны на \([-1,1]\) с весом \(1\):
+\[
+\langle P_m, P_n\rangle = \int_{-1}^{1} P_m(x)\,P_n(x)\,dx = 0 \quad (m \neq n).
+\]
+Ключевое следствие: \(P_n\) ортогонален <em>каждому</em> полиному степени \(< n\).</p>
+
+<div class="proof">
+Пусть \(f\) — произвольный полином степени \(\le 2n-1\). Поделим его с остатком на \(P_n\):
+\[
+f(x) = q(x)\,P_n(x) + r(x),\qquad \deg q \le n-1,\ \ \deg r \le n-1.
+\]
+Интегрируем. Первое слагаемое исчезает по ортогональности: \(\int_{-1}^1 q\,P_n\,dx = 0\), ибо \(\deg q < n\). Значит \(\int_{-1}^1 f\,dx = \int_{-1}^1 r\,dx\). Теперь применим квадратуру. В узлах \(P_n(x_i)=0\), поэтому \(f(x_i) = r(x_i)\), и \(\sum_i w_i f(x_i) = \sum_i w_i r(x_i)\). Веса подобраны так, что формула точна хотя бы для полиномов степени \(\le n-1\) (это интерполяционная квадратура по \(n\) узлам), поэтому \(\sum_i w_i r(x_i) = \int_{-1}^1 r\,dx\). Сравнивая, получаем \(\sum_i w_i f(x_i) = \int_{-1}^1 f\,dx\) для всех \(\deg f \le 2n-1\).
+</div>
+
+<p>Итак, рецепт универсален: <em>узлы оптимальной квадратуры — корни ортогонального полинома, соответствующего весовой функции интеграла</em>. Для веса \(1\) на \([-1,1]\) это Лежандр; ниже мы увидим, что для других весов (\(1/\sqrt{1-x^2}\), \(e^{-x}\), \(e^{-x^2}\)) получаются квадратуры Чебышёва, Лагерра, Эрмита.</p>
+
+<h2 id="small">Малые формулы n = 1, 2, 3</h2>
+
+<p>Полиномы Лежандра: \(P_1 = x\), \(P_2 = \tfrac12(3x^2-1)\), \(P_3 = \tfrac12(5x^3-3x)\). Их корни и веса (8.2) дают первые формулы Гаусса–Лежандра на \([-1,1]\):</p>
+
+<div class="figure">
+<svg viewBox="0 0 600 230" xmlns="http://www.w3.org/2000/svg" style="max-width:560px" role="img" aria-label="Расположение узлов квадратур Гаусса-Лежандра на отрезке от минус единицы до единицы для n равного 1, 2 и 3, с указанием весов и алгебраической точности.">
+  <g font-family="JetBrains Mono,monospace" font-size="11">
+    <!-- axis n=1 -->
+    <text x="20" y="44" fill="#2c2419" font-weight="600">n=1</text>
+    <line x1="120" y1="40" x2="500" y2="40" stroke="#2c2419" stroke-width="1"/>
+    <line x1="120" y1="35" x2="120" y2="45" stroke="#6b5d4f"/><line x1="500" y1="35" x2="500" y2="45" stroke="#6b5d4f"/>
+    <circle cx="310" cy="40" r="5" fill="#5b54b8"/>
+    <text x="310" y="26" fill="#5b54b8" text-anchor="middle">0</text>
+    <text x="310" y="62" fill="#6b5d4f" text-anchor="middle" font-size="9">w=2</text>
+    <text x="520" y="44" fill="#1a6b5a" font-size="10">точн. 1</text>
+    <!-- axis n=2 -->
+    <text x="20" y="114" fill="#2c2419" font-weight="600">n=2</text>
+    <line x1="120" y1="110" x2="500" y2="110" stroke="#2c2419" stroke-width="1"/>
+    <line x1="120" y1="105" x2="120" y2="115" stroke="#6b5d4f"/><line x1="500" y1="105" x2="500" y2="115" stroke="#6b5d4f"/>
+    <circle cx="200" cy="110" r="5" fill="#5b54b8"/><circle cx="420" cy="110" r="5" fill="#5b54b8"/>
+    <text x="200" y="96" fill="#5b54b8" text-anchor="middle" font-size="10">−1/√3</text>
+    <text x="420" y="96" fill="#5b54b8" text-anchor="middle" font-size="10">+1/√3</text>
+    <text x="200" y="132" fill="#6b5d4f" text-anchor="middle" font-size="9">w=1</text>
+    <text x="420" y="132" fill="#6b5d4f" text-anchor="middle" font-size="9">w=1</text>
+    <text x="520" y="114" fill="#1a6b5a" font-size="10">точн. 3</text>
+    <!-- axis n=3 -->
+    <text x="20" y="184" fill="#2c2419" font-weight="600">n=3</text>
+    <line x1="120" y1="180" x2="500" y2="180" stroke="#2c2419" stroke-width="1"/>
+    <line x1="120" y1="175" x2="120" y2="185" stroke="#6b5d4f"/><line x1="500" y1="175" x2="500" y2="185" stroke="#6b5d4f"/>
+    <circle cx="162" cy="180" r="5" fill="#5b54b8"/><circle cx="310" cy="180" r="5" fill="#b44a2d"/><circle cx="458" cy="180" r="5" fill="#5b54b8"/>
+    <text x="162" y="166" fill="#5b54b8" text-anchor="middle" font-size="10">−√(3/5)</text>
+    <text x="310" y="166" fill="#b44a2d" text-anchor="middle" font-size="10">0</text>
+    <text x="458" y="166" fill="#5b54b8" text-anchor="middle" font-size="10">+√(3/5)</text>
+    <text x="162" y="202" fill="#6b5d4f" text-anchor="middle" font-size="9">5/9</text>
+    <text x="310" y="202" fill="#b44a2d" text-anchor="middle" font-size="9">8/9</text>
+    <text x="458" y="202" fill="#6b5d4f" text-anchor="middle" font-size="9">5/9</text>
+    <text x="520" y="184" fill="#1a6b5a" font-size="10">точн. 5</text>
+    <text x="120" y="220" fill="#9a8d7e" font-size="9" text-anchor="middle">−1</text>
+    <text x="500" y="220" fill="#9a8d7e" font-size="9" text-anchor="middle">+1</text>
+  </g>
+</svg>
+<div class="caption">Рис. 1. Узлы и веса первых квадратур Гаусса–Лежандра. Узлы симметричны относительно нуля и сгущаются к концам отрезка; при нечётном \(n\) один узел всегда в нуле. Сумма весов везде равна 2.</div>
+</div>
+
+<ul>
+<li><strong>\(n=1\):</strong> единственный узел \(x_1=0\), вес \(w_1=2\). Это формула <em>средней точки</em> \(\int_{-1}^1 f\,dx \approx 2f(0)\), точная для линейных функций — алгебраическая точность \(1 = 2\cdot1-1\).</li>
+<li><strong>\(n=2\):</strong> узлы \(x_{1,2}=\mp 1/\sqrt3 \approx \mp 0{,}5774\), веса \(w_1=w_2=1\). Точность \(3\): двумя вычислениями \(f\) точно интегрируется любая кубика.</li>
+<li><strong>\(n=3\):</strong> узлы \(0\) и \(\pm\sqrt{3/5} \approx \pm 0{,}7746\), веса \(8/9\) (центр) и \(5/9\) (края). Точность \(5\).</li>
+</ul>
+
+<div class="eq">\[
+\int_{-1}^{1} f\,dx \approx f\!\left(-\tfrac{1}{\sqrt3}\right) + f\!\left(\tfrac{1}{\sqrt3}\right)
+\quad(n=2),\qquad
+\int_{-1}^{1} f\,dx \approx \tfrac{5}{9}f\!\left(-\sqrt{\tfrac35}\right) + \tfrac{8}{9}f(0) + \tfrac{5}{9}f\!\left(\sqrt{\tfrac35}\right)\quad(n=3).
+\tag{8.3}
+\]</div>
+
+<h2 id="transfer">Перенос на произвольный отрезок [a, b]</h2>
+
+<p>Таблицы узлов и весов даются для канонического отрезка \([-1,1]\). Чтобы интегрировать по \([a,b]\), делаем линейную замену переменной, переводящую \([-1,1]\) в \([a,b]\):</p>
+
+<div class="eq">\[
+x = \frac{a+b}{2} + \frac{b-a}{2}\,t,\qquad dx = \frac{b-a}{2}\,dt,
+\tag{8.4}
+\]</div>
+
+<p>откуда квадратурная формула на \([a,b]\) принимает вид</p>
+
+<div class="eq">\[
+\int_{a}^{b} f(x)\,dx \;=\; \frac{b-a}{2}\int_{-1}^{1} f\!\left(\tfrac{a+b}{2}+\tfrac{b-a}{2}\,t\right)dt
+\;\approx\; \frac{b-a}{2}\sum_{i=1}^{n} w_i\, f\!\left(\frac{a+b}{2}+\frac{b-a}{2}\,t_i\right).
+\tag{8.5}
+\]</div>
+
+<p>Множитель \(\tfrac{b-a}{2}\) — это якобиан замены. Узлы \(t_i\) и веса \(w_i\) берутся из таблицы для \([-1,1]\); масштаб и сдвиг отрезка на них не влияют. Алгебраическая точность \(2n-1\) сохраняется (линейная замена переводит полиномы в полиномы той же степени).</p>
+
+<!-- ===================== ПРАКТИКУМ ===================== -->
+<p class="phase prac">Практикум · Python (NumPy/SciPy) · ≈ 60 мин</p>
+
+<p>Сегодня инструменты — <code>numpy.polynomial.legendre.leggauss</code> (узлы и веса Гаусса–Лежандра) и <code>scipy.integrate.quad</code> (адаптивная квадратура). Цель — убедиться руками в точности \(2n-1\), увидеть экспоненциальную сходимость Гаусса против степенной у Симпсона и научиться брать интегралы с особенностью. Справочник — в <a href="python-reference.html">памятке Python/NumPy/SciPy</a>.</p>
+
+<h3 id="prac-leggauss">Практикум 1. leggauss и проверка точности 2n−1</h3>
+
+<div class="pyblock"><div class="pyhead"><span>gauss_quad.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from numpy.polynomial.legendre import leggauss
+
+def gauss(f, a, b, n):
+    """Квадратура Гаусса-Лежандра с n узлами на [a, b]."""
+    t, w = leggauss(n)                 # узлы и веса на [-1, 1]
+    c, h = 0.5 * (a + b), 0.5 * (b - a)
+    x = c + h * t                      # перенос узлов на [a, b]
+    return h * np.sum(w * f(x))        # формула (8.5)
+
+# Узлы и веса для малых n совпадают с таблицей из лекции
+for n in (1, 2, 3):
+    t, w = leggauss(n)
+    print(f"n={n}: узлы={np.round(t, 4)}  веса={np.round(w, 4)}")
+
+# Точность 2n-1: интеграл x^k на [-1, 1] равен 2/(k+1) при чётном k, иначе 0
+n = 3                                   # точна до степени 2n-1 = 5
+for k in range(0, 8):
+    approx = gauss(lambda x: x**k, -1, 1, n)
+    exact  = 2.0 / (k + 1) if k % 2 == 0 else 0.0
+    flag   = "точно" if abs(approx - exact) &lt; 1e-12 else "ОШИБКА"
+    print(f"k={k}: Гаусс={approx:+.6f}  точно={exact:+.6f}  [{flag}]")</pre></div>
+
+<div class="outbox">n=1: узлы=[0.]            веса=[2.]
+n=2: узлы=[-0.5774  0.5774] веса=[1. 1.]
+n=3: узлы=[-0.7746  0.      0.7746] веса=[0.5556 0.8889 0.5556]
+k=0..5: [точно]   k=6: Гаусс=0.228571 точно=0.285714 [ОШИБКА]   k=7: [точно]</div>
+
+<p>Ровно как обещано: \(n=3\) точна до степени \(5\) и впервые ошибается на \(x^6\) (степень \(2n=6\)). На нечётной \(x^7\) обе стороны равны нулю по симметрии — поэтому формула снова «угадывает».</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 8.1</span>Узлы и веса вручную.</strong> Для \(n=2\) выпишите систему условий моментов для \(k=0,1,2,3\) и решите её, получив \(x_{1,2}=\mp1/\sqrt3\), \(w_1=w_2=1\). Для \(n=3\) проверьте по формуле (8.2), что корни \(P_3=\tfrac12(5x^3-3x)\) дают веса \(5/9, 8/9, 5/9\). Затем кодом из П1 убедитесь, что формула точна до степени \(2n-1\) и ошибается на степени \(2n\).
+<details><summary>Подсказка к n=2</summary>
+Из симметрии узлы \(\pm x_1\), веса равны \(w\). Условие \(k=0\): \(2w=2 \Rightarrow w=1\). Условие \(k=2\): \(w\bigl((-x_1)^2+x_1^2\bigr)=2x_1^2 = \int_{-1}^1 x^2 dx = \tfrac23 \Rightarrow x_1^2=\tfrac13\). Условия \(k=1,3\) выполнены автоматически по нечётности. Отсюда \(x_1=1/\sqrt3\).</details>
+</div>
+
+<h3 id="prac-conv">Практикум 2. Гаусс против составного Симпсона</h3>
+
+<p>Сравним сходимость на гладкой (аналитической) функции \(\int_0^1 e^x\,dx = e-1\). По оси абсцисс — <em>число вычислений</em> \(f\) (это и есть «цена»): для Гаусса оно равно \(n\), для составного Симпсона с \(m\) подотрезками — \(m+1\).</p>
+
+<div class="pyblock"><div class="pyhead"><span>gauss_vs_simpson.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from numpy.polynomial.legendre import leggauss
+
+f = np.exp
+a, b = 0.0, 1.0
+exact = np.e - 1.0
+
+def gauss(n):
+    t, w = leggauss(n)
+    c, h = 0.5*(a+b), 0.5*(b-a)
+    return h * np.sum(w * f(c + h*t))
+
+def simpson(m):                         # m чётное число подотрезков
+    x = np.linspace(a, b, m + 1)
+    y = f(x)
+    h = (b - a) / m
+    return h/3 * (y[0] + y[-1] + 4*np.sum(y[1:-1:2]) + 2*np.sum(y[2:-1:2]))
+
+print(" вычислений |   Гаусс-ошибка |  Симпсон-ошибка")
+for n in (2, 4, 6, 8):
+    eg = abs(gauss(n) - exact)
+    es = abs(simpson(n) - exact)        # тот же бюджет ~ n вычислений
+    print(f"   {n:3d}     | {eg:.3e}    | {es:.3e}")</pre></div>
+
+<div class="outbox"> вычислений |   Гаусс-ошибка |  Симпсон-ошибка
+    2      | 6.83e-04       | 2.20e-02
+    4      | 1.10e-08       | 4.13e-04
+    6      | 6.75e-14       | 3.32e-05
+    8      | 4.44e-16       | 5.18e-06</div>
+
+<p>Картина показательна: ошибка Симпсона падает как \(O(m^{-4})\) — степенная сходимость, на графике \(\log\)-ошибки это прямая. Ошибка Гаусса для аналитической функции падает <strong>экспоненциально</strong> (\(\sim C\rho^{-2n}\)) — на \(\log\)-графике это кривая, круто уходящая вниз, и уже при \(n=8\) она упирается в уровень машинной точности \(\sim10^{-16}\). Те же 8 вычислений \(f\) дают Гауссу 15 верных цифр, а Симпсону — лишь 5.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 8.2</span>Сходимость на гладкой функции.</strong> Возьмите \(\int_{-1}^{1}\frac{dx}{1+x^2} = \frac{\pi}{2}\). Постройте график ошибки (в \(\log\)-шкале по \(y\)) против числа вычислений \(f\) для Гаусса (\(n=1,\dots,14\)) и составного Симпсона (\(m=2,4,\dots,28\)). Убедитесь, что кривая Гаусса лежит существенно ниже. На каком числе вычислений Гаусс достигает \(10^{-12}\), а Симпсон — нет даже близко?
+<details><summary>Подсказка</summary>
+Используйте <code>matplotlib</code> с <code>plt.semilogy</code>. По оси \(x\) откладывайте <code>n</code> для Гаусса и <code>m+1</code> для Симпсона. Гаусс достигает \(10^{-12}\) примерно при \(n\approx12\); прямая Симпсона на этом масштабе не опускается ниже \(\sim10^{-7}\).</details>
+</div>
+
+<h3 id="int-conv">Интерактив: сходимость Гаусса и Симпсона</h3>
+
+<p>Слева — ошибка обоих методов в \(\log\)-шкале как функция <em>числа вычислений</em> \(f\). Узлы и веса Гаусса вычисляются в браузере методом Ньютона по рекуррентности Лежандра, интеграл считается в арифметике double. Справа показаны узлы выбранной формулы Гаусса на \([-1,1]\): видно, как они сгущаются к концам отрезка. Меняйте подынтегральную функцию и наблюдайте, насколько круче падает кривая Гаусса.</p>
+
+<div class="intbox">
+<div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:end;margin-bottom:.7rem">
+  <div><label>Подынтегральная функция</label><br>
+    <select id="g_fn">
+      <option value="exp">eˣ на [0, 1]&nbsp; (точно e−1)</option>
+      <option value="run">1/(1+x²) на [−1, 1]&nbsp; (точно π/2)</option>
+      <option value="cos">cos x на [0, π]&nbsp; (точно 0)</option>
+    </select>
+  </div>
+  <div><label>узлов Гаусса для правого графика: n = <span id="g_nv">5</span></label><br>
+    <input type="range" id="g_n" min="1" max="12" step="1" value="5" style="width:220px">
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1.25fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">ошибка vs число вычислений f</div><canvas id="g_err" width="440" height="300" style="width:100%;height:auto" aria-label="График абсолютной ошибки квадратур Гаусса-Лежандра и составного Симпсона в логарифмической шкале в зависимости от числа вычислений подынтегральной функции."></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">узлы Гаусса на [−1, 1]</div><canvas id="g_nodes" width="360" height="300" style="width:100%;height:auto" aria-label="Расположение узлов квадратуры Гаусса-Лежандра на отрезке от минус единицы до единицы для выбранного n."></canvas></div>
+</div>
+<div id="g_status" style="font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);margin-top:.5rem"></div>
+</div>
+
+<script>
+(function(){
+  // --- узлы и веса Гаусса-Лежандра на [-1,1] методом Ньютона ---
+  function leggauss(n){
+    var x=[], w=[];
+    for(var i=0;i<n;i++){
+      var xi=Math.cos(Math.PI*(i+0.75)/(n+0.5));   // начальное приближение корня
+      for(var it=0;it<100;it++){
+        var p0=1, p1=xi;                            // P_0, P_1
+        for(var k=1;k<n;k++){ var p2=((2*k+1)*xi*p1-k*p0)/(k+1); p0=p1; p1=p2; }
+        var dp=n*(xi*p1-p0)/(xi*xi-1);              // P_n'(xi)
+        var dx=p1/dp; xi-=dx;
+        if(Math.abs(dx)<1e-15) break;
+      }
+      var q0=1, q1=xi;
+      for(var k=1;k<n;k++){ var q2=((2*k+1)*xi*q1-k*q0)/(k+1); q0=q1; q1=q2; }
+      var dpn=n*(xi*q1-q0)/(xi*xi-1);
+      x[i]=xi; w[i]=2/((1-xi*xi)*dpn*dpn);
+    }
+    return {x:x, w:w};
+  }
+  function gaussInt(f,a,b,n){
+    var g=leggauss(n), c=0.5*(a+b), h=0.5*(b-a), s=0;
+    for(var i=0;i<n;i++) s+=g.w[i]*f(c+h*g.x[i]);
+    return h*s;
+  }
+  function simpson(f,a,b,m){              // m чётно
+    var h=(b-a)/m, s=f(a)+f(b);
+    for(var i=1;i<m;i++) s+=(i%2?4:2)*f(a+i*h);
+    return s*h/3;
+  }
+
+  var FN={
+    exp:{f:Math.exp,           a:0, b:1,         I:Math.E-1},
+    run:{f:function(x){return 1/(1+x*x);}, a:-1, b:1, I:Math.PI/2},
+    cos:{f:Math.cos,           a:0, b:Math.PI,   I:0}
+  };
+  function clampErr(e){ return e>1e-16 ? e : 1e-16; }
+
+  function drawErr(){
+    var key=document.getElementById('g_fn').value, o=FN[key];
+    var c=document.getElementById('g_err'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:50,r:12,t:14,b:32},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var xmin=1,xmax=30, ymin=-16,ymax=0;     // x: число вычислений, y: log10(ошибки)
+    function xp(v){return P.l+pw*(v-xmin)/(xmax-xmin);}
+    function yp(ly){return P.t+ph*(1-(ly-ymin)/(ymax-ymin));}
+    // сетка
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var g=0;g<=8;g++){var gy=P.t+ph*g/8;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    // линия машинной точности
+    ctx.strokeStyle='#c9a23a';ctx.lineWidth=1;ctx.setLineDash([4,3]);ctx.beginPath();
+    ctx.moveTo(P.l,yp(-16));ctx.lineTo(P.l+pw,yp(-16));ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#9a7d28';ctx.font='9px JetBrains Mono';ctx.textAlign='left';ctx.fillText('машинная точность',P.l+4,yp(-16)-3);
+    // кривая Симпсона (m = 2,4,...,28 -> вычислений m+1)
+    ctx.strokeStyle='#3a5ba0';ctx.lineWidth=2;ctx.beginPath();var first=true;
+    for(var m=2;m<=28;m+=2){
+      var e=clampErr(Math.abs(simpson(o.f,o.a,o.b,m)-o.I));
+      var X=xp(m+1),Y=yp(Math.log10(e));first?(ctx.moveTo(X,Y),first=false):ctx.lineTo(X,Y);
+    }
+    ctx.stroke();
+    // кривая Гаусса (n = 1..14 -> вычислений n)
+    ctx.strokeStyle='#b44a2d';ctx.lineWidth=2;ctx.beginPath();first=true;
+    for(var n=1;n<=14;n++){
+      var e=clampErr(Math.abs(gaussInt(o.f,o.a,o.b,n)-o.I));
+      var X=xp(n),Y=yp(Math.log10(e));first?(ctx.moveTo(X,Y),first=false):ctx.lineTo(X,Y);
+      ctx.save();ctx.fillStyle='#b44a2d';ctx.beginPath();ctx.arc(X,Y,2.2,0,7);ctx.fill();ctx.restore();
+    }
+    ctx.stroke();
+    // оси
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    for(var t=5;t<=30;t+=5) ctx.fillText(t,xp(t),P.t+ph+14);
+    ctx.fillText('число вычислений f',P.l+pw/2,P.t+ph+27);
+    ctx.textAlign='right';
+    for(var g=0;g<=4;g++){var v=ymin+(ymax-ymin)*(1-g/4);ctx.fillText('1e'+v.toFixed(0),P.l-4,P.t+ph*g/4+3);}
+    ctx.textAlign='left';ctx.font='9px JetBrains Mono';
+    ctx.fillStyle='#b44a2d';ctx.fillText('— Гаусс',P.l+pw-66,P.t+11);
+    ctx.fillStyle='#3a5ba0';ctx.fillText('— Симпсон',P.l+pw-66,P.t+23);
+  }
+
+  function drawNodes(){
+    var n=+document.getElementById('g_n').value;
+    var g=leggauss(n);
+    var c=document.getElementById('g_nodes'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:30,r:30,t:30,b:30},pw=W-P.l-P.r;
+    var ay=H/2;
+    function xp(t){return P.l+pw*(t+1)/2;}      // t in [-1,1]
+    // ось
+    ctx.strokeStyle='#2c2419';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,ay);ctx.lineTo(P.l+pw,ay);ctx.stroke();
+    ctx.fillStyle='#9a8d7e';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('−1',P.l,ay+22);ctx.fillText('0',xp(0),ay+22);ctx.fillText('+1',P.l+pw,ay+22);
+    ctx.strokeStyle='#e8e0d4';ctx.beginPath();ctx.moveTo(xp(0),P.t);ctx.lineTo(xp(0),H-P.t);ctx.stroke();
+    // узлы; высота столбика пропорциональна весу
+    var wmax=Math.max.apply(null,g.w);
+    for(var i=0;i<n;i++){
+      var X=xp(g.x[i]), hbar=40+90*(g.w[i]/wmax);
+      ctx.strokeStyle='#5b54b8';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(X,ay);ctx.lineTo(X,ay-hbar);ctx.stroke();
+      ctx.fillStyle='#5b54b8';ctx.beginPath();ctx.arc(X,ay,4,0,7);ctx.fill();
+      ctx.fillStyle='#1a6b5a';ctx.beginPath();ctx.arc(X,ay-hbar,3,0,7);ctx.fill();
+    }
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('n = '+n+' узлов · высота ∝ весу',W/2,P.t-12);
+  }
+
+  function update(){
+    document.getElementById('g_nv').textContent=document.getElementById('g_n').value;
+    drawErr();drawNodes();
+    var key=document.getElementById('g_fn').value, o=FN[key];
+    var n=+document.getElementById('g_n').value;
+    var eg=Math.abs(gaussInt(o.f,o.a,o.b,n)-o.I);
+    var es=Math.abs(simpson(o.f,o.a,o.b,Math.max(2,2*Math.round(n/2)))-o.I);
+    document.getElementById('g_status').innerHTML=
+      'при '+n+' вычислениях: ошибка Гаусса ≈ '+eg.toExponential(1)+
+      ', ошибка Симпсона ≈ '+es.toExponential(1)+
+      ' → выигрыш ×'+(es/Math.max(eg,1e-16)).toExponential(1);
+  }
+  document.getElementById('g_fn').addEventListener('change',update);
+  document.getElementById('g_n').addEventListener('input',update);
+  window.addEventListener('load',function(){ setTimeout(update,200); });
+})();
+</script>
+
+<h3 id="prac-sing">Практикум 3. Особенность и адаптивная quad</h3>
+
+<p>Гаусс хорош для <em>гладких</em> функций. На интеграле с особенностью \(\int_0^1 \frac{dx}{\sqrt{x}} = 2\) подынтегральная функция уходит в бесконечность при \(x\to0\) — ни Гаусс, ни Симпсон с равномерным узлом тут не блещут. Адаптивная <code>scipy.integrate.quad</code> справляется автоматически, а ручная замена переменной устраняет особенность вовсе.</p>
+
+<div class="pyblock"><div class="pyhead"><span>singular.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from scipy.integrate import quad
+
+# 1. Адаптивная квадратура напрямую (quad сама сгущает узлы у особенности)
+val, err = quad(lambda x: 1/np.sqrt(x), 0, 1)
+print(f"quad:           {val:.12f}  (оценка ошибки {err:.1e})")   # ~ 2.0
+
+# 2. Замена x = t^2  =>  dx = 2t dt,  1/sqrt(x) dx = 2 dt  — особенность исчезла
+val2, _ = quad(lambda t: 2.0, 0, 1)
+print(f"замена x=t^2:    {val2:.12f}")                            # ровно 2.0
+
+# 3. Логарифмическая особенность: int_0^1 ln(x) dx = -1
+#    подсказываем quad точку излома через points
+val3, _ = quad(lambda x: np.log(x), 0, 1, points=[0])
+print(f"int ln x dx:    {val3:.12f}")                            # ~ -1.0
+
+# 4. Бесконечный предел: int_0^inf e^{-x} dx = 1 (quad принимает np.inf)
+val4, _ = quad(lambda x: np.exp(-x), 0, np.inf)
+print(f"int_0^inf e^-x: {val4:.12f}")                            # ~ 1.0</pre></div>
+
+<div class="outbox">quad:           2.000000000002  (оценка ошибки 3.6e-11)
+замена x=t^2:    2.000000000000
+int ln x dx:    -1.000000000000
+int_0^inf e^-x: 1.000000000000</div>
+
+<p>Замена переменной \(x=t^2\) превратила особый интеграл в интеграл от константы — после этого его точно берёт даже формула Гаусса с \(n=1\). Это общий приём: <em>подбором замены сделать подынтегральную функцию гладкой</em>, и тогда вся мощь Гаусса возвращается.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 8.3</span>Особенность через замену.</strong> Возьмите \(\int_0^1 \frac{\cos x}{\sqrt{x}}\,dx\). (а) Примените <code>quad</code> напрямую. (б) Сделайте замену \(x=t^2\) и проинтегрируйте получившуюся гладкую \(2\cos(t^2)\) формулой Гаусса с \(n=4,8\). (в) Сравните число вычислений \(f\), нужное каждому методу для 8 верных цифр. Объясните, почему после замены Гаусс резко выигрывает.
+<details><summary>Подсказка</summary>
+После замены \(\int_0^1 \frac{\cos x}{\sqrt x}dx = \int_0^1 2\cos(t^2)\,dt\) — гладкая аналитическая функция, для неё Гаусс сходится экспоненциально и \(n=8\) даёт уже больше 10 верных цифр. Прямой <code>quad</code> сходится, но тратит десятки вычислений на сгущение узлов у нуля.</details>
+</div>
+
+<!-- ===================== ЛЕКЦИЯ B ===================== -->
+<p class="phase lecb">Лекция B · 30 мин</p>
+
+<h2 id="compare">Гаусс против Ньютона–Котеса</h2>
+
+<p>Подведём теоретический итог сравнения. При <em>одинаковом числе узлов</em> \(n\):</p>
+
+<ul>
+<li><strong>Ньютон–Котес:</strong> узлы равномерны, точность \(\sim n-1\), при больших \(n\) появляются отрицательные веса (феномен Рунге для квадратур), формула теряет устойчивость и может расходиться. На практике берут составные формулы низкого порядка (трапеции, Симпсон) с измельчением шага — это степенная сходимость \(O(h^p)\).</li>
+<li><strong>Гаусс:</strong> узлы — корни ортогонального полинома, точность \(2n-1\), все веса положительны (устойчивость гарантирована при любом \(n\)). Для функций, <em>аналитических</em> в окрестности отрезка, сходимость <strong>экспоненциальная</strong>: ошибка \(\sim C\,\rho^{-2n}\), где \(\rho>1\) зависит от того, насколько далеко от отрезка лежат особенности \(f\) в комплексной плоскости.</li>
+</ul>
+
+<div class="theorem">
+<strong>Оценка погрешности Гаусса–Лежандра.</strong> Для \(f\in C^{2n}[a,b]\) существует точка \(\xi\in(a,b)\), для которой
+\[
+\int_a^b f\,dx - \sum_{i=1}^n w_i f(x_i)
+= \frac{(b-a)^{2n+1}\,(n!)^4}{(2n+1)\,\bigl[(2n)!\bigr]^3}\,f^{(2n)}(\xi).
+\tag{8.6}
+\]
+Ошибка пропорциональна \(2n\)-й производной — поэтому формула точна для полиномов степени \(\le 2n-1\) (там \(f^{(2n)}\equiv0\)). Для гладких \(f\) множитель \((n!)^4/[(2n)!]^3\) убывает быстрее любой степени, что и даёт спектральную (экспоненциальную) сходимость.
+</div>
+
+<p>Оговорка важна: выигрыш Гаусса опирается на <em>гладкость</em>. Если \(f\) имеет излом, особенность производной или разрыв внутри отрезка, то \(f^{(2n)}\) велика, экспоненциальная сходимость пропадает, и Гаусс вырождается до того же степенного порядка, что и составные формулы. Для негладких задач нужны другие средства — измельчение у особенности (адаптивность) или устранение особенности заменой.</p>
+
+<h2 id="adaptive">Адаптивные квадратуры</h2>
+
+<p>Идея адаптивности: <em>тратить вычисления там, где функция «трудная»</em>. Алгоритм рекурсивно делит отрезок и сгущает узлы только в тех его частях, где локальная ошибка велика. Локальную ошибку оценивают, сравнивая грубую и точную формулы на одном отрезке (например, Симпсон по всему отрезку против суммы двух Симпсонов по половинкам).</p>
+
+<div class="algo">
+<strong>Адаптивный Симпсон (рекурсивная схема):</strong>
+<pre class="pycode" style="border:none;background:transparent;color:inherit;padding:.3rem 0">функция adaptive(f, a, b, tol):
+    c   = (a + b) / 2
+    S   = simpson(f, a, b)            # грубая оценка по всему [a, b]
+    Sl  = simpson(f, a, c)            # по левой половине
+    Sr  = simpson(f, c, b)            # по правой половине
+    err = (Sl + Sr - S) / 15         # оценка ошибки (правило Рунге)
+    если |err| &lt; tol:
+        вернуть Sl + Sr + (Sl + Sr - S)/15   # уточнённый ответ
+    иначе:                            # точности не хватило — делим пополам
+        вернуть adaptive(f, a, c, tol/2)
+             +  adaptive(f, c, b, tol/2)</pre>
+Деление продолжается, пока локальная оценка ошибки не уложится в допуск. У гладких участков рекурсия обрывается сразу, у особенностей — сгущается до нужной глубины. Именно так устроена <code>scipy.integrate.quad</code> (на адаптивном алгоритме QUADPACK с правилами Гаусса–Кронрода).
+</div>
+
+<div class="remark">
+<strong>Правила Гаусса–Кронрода.</strong> Чтобы оценить ошибку формулы Гаусса, не выбрасывая уже вычисленные значения \(f\), к \(n\) узлам Гаусса добавляют \(n+1\) узел и строят формулу точности \(3n+1\). Разность двух оценок (Гаусс и Гаусс–Кронрод) служит оценкой локальной ошибки «бесплатно» — это и есть рабочая лошадка <code>quad</code>.
+</div>
+
+<h2 id="improper">Особенности и несобственные интегралы</h2>
+
+<p>Принцип «узлы = корни ортогонального полинома с весом интеграла» обобщается на интегралы со встроенной весовой функцией \(\omega(x)\):</p>
+
+<div class="eq">\[
+\int_a^b \omega(x)\,f(x)\,dx \;\approx\; \sum_{i=1}^n w_i\, f(x_i),
+\tag{8.7}
+\]</div>
+
+<p>где узлы \(x_i\) — корни полинома, ортогонального с весом \(\omega\). Несколько классических семейств:</p>
+
+<ul>
+<li><strong>Гаусс–Чебышёв</strong> — вес \(\omega(x)=1/\sqrt{1-x^2}\) на \([-1,1]\). Узлы и веса в явном виде: \(x_i=\cos\frac{(2i-1)\pi}{2n}\), \(w_i=\pi/n\). Поглощает корневую особенность на концах.</li>
+<li><strong>Гаусс–Лагерр</strong> — вес \(\omega(x)=e^{-x}\) на \([0,\infty)\). Для интегралов \(\int_0^\infty e^{-x} f(x)\,dx\): бесконечный предел «зашит» в вес, узлы — корни полиномов Лагерра.</li>
+<li><strong>Гаусс–Эрмит</strong> — вес \(\omega(x)=e^{-x^2}\) на \((-\infty,\infty)\). Для \(\int_{-\infty}^{\infty} e^{-x^2} f(x)\,dx\) (важно в статистике и квантовой механике); узлы — корни полиномов Эрмита.</li>
+</ul>
+
+<p>Идея общая: если у интеграла есть «трудный множитель» — особенность \(1/\sqrt{1-x^2}\) или хвост \(e^{-x}\) на бесконечности, — его не игнорируют, а <em>встраивают в весовую функцию</em>. Тогда квадратура подбирает узлы под этот вес, а остаточная \(f\) интегрируется как гладкая.</p>
+
+<div class="remark">
+<strong>Бесконечные пределы заменой.</strong> Если подходящего весового семейства нет, бесконечный предел убирают заменой переменной, переводящей \([0,\infty)\) или \((-\infty,\infty)\) в конечный отрезок. Например, \(x=\frac{t}{1-t}\) переводит \([0,1)\) в \([0,\infty)\) с \(dx=\frac{dt}{(1-t)^2}\); после этого работает обычный Гаусс–Лежандр или адаптивная <code>quad</code>. Так же поступают с интегрируемыми особенностями: замена \(x=t^2\) убрала корень в практикуме 3.
+</div>
+
+<h2 id="summary">Итоги занятия</h2>
+
+<div class="algo">
+<strong>Что нужно унести с занятия 8:</strong>
+<ol>
+<li><strong>Идея Гаусса:</strong> освободить и узлы, и веса — \(2n\) параметров при \(n\) узлах дают алгебраическую точность \(2n-1\), вдвое выше Ньютона–Котеса при том же числе вычислений \(f\).</li>
+<li><strong>Гаусс–Лежандр на \([-1,1]\):</strong> узлы \(x_i\) — корни полинома Лежандра \(P_n\), веса \(w_i=2/\bigl((1-x_i^2)[P_n'(x_i)]^2\bigr)\); все веса положительны (устойчивость).</li>
+<li><strong>Ключ к точности — ортогональность:</strong> \(P_n\) ортогонален всем полиномам меньшей степени, поэтому остаток при делении на \(P_n\) интегрируется точно. Узлы любой гауссовой квадратуры — корни ортогонального полинома, отвечающего весу.</li>
+<li><strong>Перенос на \([a,b]\):</strong> \(x=\frac{a+b}{2}+\frac{b-a}{2}t\), интеграл умножается на якобиан \(\frac{b-a}{2}\); точность \(2n-1\) сохраняется.</li>
+<li><strong>Сходимость:</strong> для аналитических \(f\) Гаусс сходится <em>экспоненциально</em>, Симпсон — степенно \(O(h^4)\). Для негладких \(f\) выигрыш теряется: нужны адаптивные квадратуры (рекурсивное деление с оценкой локальной ошибки) или устранение особенности заменой/взвешенным Гауссом (Чебышёв, Лагерр, Эрмит).</li>
+<li><strong>Инструменты:</strong> <code>numpy.polynomial.legendre.leggauss(n)</code> для узлов и весов; <code>scipy.integrate.quad</code> — адаптивная квадратура с оценкой ошибки и поддержкой бесконечных пределов.</li>
+</ol>
+</div>
+
+<div class="remark">
+<strong>Домашнее задание.</strong> Доделать задачи 8.1–8.3. Дополнительно: реализуйте адаптивный Симпсон по псевдокоду из лекции B и сравните число вычислений \(f\) с прямым составным Симпсоном на \(\int_0^1 \frac{dx}{\sqrt{x+0{,}01}}\) при одинаковой точности \(10^{-8}\). Сколько вычислений экономит адаптивность за счёт сгущения узлов у левого конца?
+</div>
+
+<div class="lecture-nav">
+  <a class="nav-prev" href="w07.html">← Занятие 7. Ньютон–Котес</a>
+  <a class="nav-next" href="w09.html">Занятие 9. Метод Гаусса и LU-разложение →</a>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

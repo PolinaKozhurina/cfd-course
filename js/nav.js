@@ -112,6 +112,43 @@
         ]
       },
       {
+        id: "nm",
+        label: "Численные методы",
+        semester: "Семестр · 16 занятий",
+        sections: [
+          { title: "Основы и аппроксимация", items: [
+              { href: "nm/w01.html", label: "Зан. 1 Машинная арифметика" },
+              { href: "nm/w02.html", label: "Зан. 2 Ряд Тейлора" }
+          ]},
+          { title: "Интерполяция", items: [
+              { href: "nm/w03.html", label: "Зан. 3 Полиномы (Лагранж/Ньютон)" },
+              { href: "nm/w04.html", label: "Зан. 4 Чебышёв и сплайны" },
+              { href: "nm/w05.html", label: "Зан. 5 МНК и ортог. базисы" }
+          ]},
+          { title: "Дифф. и интегрирование", items: [
+              { href: "nm/w06.html", label: "Зан. 6 Численное дифф." },
+              { href: "nm/w07.html", label: "Зан. 7 Ньютон–Котес" },
+              { href: "nm/w08.html", label: "Зан. 8 Квадратуры Гаусса" }
+          ]},
+          { title: "СЛАУ и обусловленность", items: [
+              { href: "nm/w09.html", label: "Зан. 9 Гаусс и LU" },
+              { href: "nm/w10.html", label: "Зан. 10 Холецкий, прогонка" },
+              { href: "nm/w11.html", label: "Зан. 11 Нормы, κ(A)" },
+              { href: "nm/w12.html", label: "Зан. 12 Итерационные методы" }
+          ]},
+          { title: "Собств. числа и оптимизация", items: [
+              { href: "nm/w13.html", label: "Зан. 13 Собств. числа, SVD" },
+              { href: "nm/w14.html", label: "Зан. 14 Нелин. уравнения" },
+              { href: "nm/w15.html", label: "Зан. 15 Оптимизация, ЛП" }
+          ]}
+        ],
+        extras: [
+          { href: "nm/index.html", label: "Обзор курса" },
+          { href: "nm/w16.html", label: "Зачётное занятие" },
+          { href: "nm/python-reference.html", label: "📘 Памятка Python" }
+        ]
+      },
+      {
         id: "mke",
         label: "Метод конечных элементов",
         semester: "Курс · МКЭ",
@@ -145,11 +182,11 @@
   // Auto-detect subfolder
   var loc = location.pathname;
   var prefix = '';
-  if (loc.indexOf('/sem1/') >= 0 || loc.indexOf('/sem2/') >= 0 || loc.indexOf('/sph/') >= 0 || loc.indexOf('/mke/') >= 0) prefix = '../';
+  if (loc.indexOf('/sem1/') >= 0 || loc.indexOf('/sem2/') >= 0 || loc.indexOf('/sph/') >= 0 || loc.indexOf('/mke/') >= 0 || loc.indexOf('/nm/') >= 0) prefix = '../';
   var parts = loc.split('/');
   var fileName = parts.pop() || 'index.html';
   var folder = parts.pop() || '';
-  var currentPageFull = (folder === 'sem1' || folder === 'sem2' || folder === 'sph' || folder === 'mke') ? folder + '/' + fileName : fileName;
+  var currentPageFull = (folder === 'sem1' || folder === 'sem2' || folder === 'sph' || folder === 'mke' || folder === 'nm') ? folder + '/' + fileName : fileName;
 
   function p(href) { return prefix + href; }
 

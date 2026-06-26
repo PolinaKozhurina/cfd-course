@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Занятие 1 курса «Численные методы»: числа с плавающей точкой IEEE 754, машинное эпсилон, потеря значимости. Обусловленность задачи и устойчивость алгоритма, прямая и обратная ошибка. Практикум на Python.">
+<title>ЧМ · Занятие 1. Машинная арифметика и анализ ошибок</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.tag-nummet{background:#ece9fb;color:#5b54b8}
+html.dark .tag-nummet{background:#241f3a;color:#a39bea}
+.lecture-num{color:#5b54b8}
+.phase{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#fff;background:#5b54b8;padding:.3rem .7rem;border-radius:4px;display:inline-block;margin:1.8rem 0 .4rem}
+.phase.prac{background:#1a6b5a}
+.phase.lecb{background:#3a5ba0}
+.pyblock{margin:1rem 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.pyhead{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;display:flex;justify-content:space-between}
+.pyhead .run{color:#9ec97f}
+pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9rem 1.1rem;font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.6;overflow-x:auto;white-space:pre}
+.outbox{background:#f0f7f4;border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;padding:.6rem 1rem;margin:.6rem 0 1rem;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);white-space:pre-wrap}
+html.dark .outbox{background:#16241f}
+.exercise summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--accent2);margin-top:.6rem;font-weight:500}
+.exercise details{margin-top:.4rem}
+.exercise .extag{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:#5b54b8;background:#ece9fb;padding:1px 7px;border-radius:3px;margin-right:.4rem}
+html.dark .exercise .extag{background:#241f3a;color:#a39bea}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0}
+.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
+.intbox select,.intbox input[type=range]{font-family:'JetBrains Mono',monospace}
+.intbox select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+html.dark .intbox select{background:#1b1712;color:var(--text)}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:1px 5px;border-radius:3px}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>ЧМ · Занятие 1</h2>
+  <div class="g">Лекция A</div>
+  <a href="#why">Зачем численные методы</a>
+  <a href="#sources">Источники ошибок</a>
+  <a href="#float">Числа с плавающей точкой</a>
+  <a href="#eps">Машинное ε</a>
+  <a href="#cancel">Потеря значимости</a>
+  <div class="g">Практикум</div>
+  <a href="#prac-eps">П1. Эпсилон и округление</a>
+  <a href="#prac-cancel">П2. Катастрофическое вычитание</a>
+  <a href="#int-cancel">Интерактив: вычитание</a>
+  <div class="g">Лекция B</div>
+  <a href="#cond">Обусловленность задачи</a>
+  <a href="#stab">Устойчивость алгоритма</a>
+  <a href="#fwbw">Прямая и обратная ошибка</a>
+  <a href="#int-cond">Интерактив: κ(x)</a>
+  <a href="#summary">Итоги занятия</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+  <a href="w02.html">→ Занятие 2</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-nummet">Численные методы</span>
+<div class="lecture-num">Занятие 1 · Блок I. Основы вычислений</div>
+<h1>Машинная арифметика и анализ ошибок</h1>
+
+<p class="phase">Лекция A · ≤ 30 мин</p>
+
+<h2 id="why">Зачем нужны численные методы</h2>
+
+<p><strong>Численные методы</strong> — это алгоритмы, которые дают <em>приближённое</em> решение математических задач за конечное число арифметических операций. Большинство задач анализа — вычисление интеграла, корня уравнения, решение системы — не имеют замкнутого ответа в элементарных функциях либо требуют бесконечного процесса (предела, ряда, итерации). Численный метод заменяет такой процесс конечной вычислительной схемой.</p>
+
+<p>Платой за это служит <strong>погрешность</strong>. Грамотный вычислитель не стремится её обнулить — это невозможно, — а умеет <em>оценить</em> и <em>контролировать</em> её. Поэтому курс открывается не рецептами, а языком, на котором об ошибках говорят: абсолютная и относительная погрешность, обусловленность задачи и устойчивость алгоритма.</p>
+
+<div class="definition">
+<strong>Определение.</strong> Пусть \(\tilde a\) — приближение точного значения \(a\). <em>Абсолютная погрешность</em> — это \(\Delta = |\tilde a - a|\), <em>относительная погрешность</em> — \(\delta = |\tilde a - a| / |a|\) (при \(a \neq 0\)). Относительная погрешность безразмерна и измеряется в «верных значащих цифрах»: \(\delta \approx 10^{-k}\) означает примерно \(k\) верных цифр.
+</div>
+
+<h2 id="sources">Источники ошибок</h2>
+
+<p>В вычислительной цепочке погрешность накапливается из трёх независимых источников:</p>
+
+<ul>
+<li><strong>Ошибки в данных</strong> — неточность входных величин (измерения, ранее вычисленные значения). От алгоритма не зависят, но им <em>усиливаются</em>.</li>
+<li><strong>Ошибка усечения (метода)</strong> — следствие замены бесконечного процесса конечным: обрыв ряда Тейлора, замена производной разностью, конечное число итераций. Существует даже при идеальной арифметике.</li>
+<li><strong>Ошибка округления</strong> — следствие того, что компьютер хранит вещественные числа конечным набором битов. Возникает в каждой арифметической операции.</li>
+</ul>
+
+<p>Первые два источника мы разберём в последующих занятиях (ряды, квадратуры, итерации). Сегодня — фундамент: как именно машина представляет числа и к каким сюрпризам это приводит.</p>
+
+<h2 id="float">Числа с плавающей точкой (IEEE 754)</h2>
+
+<p>Вещественное число хранится в нормализованном виде, аналогичном экспоненциальной записи, но в двоичной системе:</p>
+
+<div class="eq">\[
+x = \pm\, (1.b_1 b_2 \dots b_{p-1})_2 \times 2^{e},
+\tag{1.1}
+\]</div>
+
+<p>где <strong>мантисса</strong> (значащая часть) содержит \(p\) двоичных разрядов, а <strong>порядок</strong> \(e\) лежит в ограниченном диапазоне. Стандарт <strong>IEEE 754</strong> определяет два основных формата:</p>
+
+<div class="figure">
+<svg viewBox="0 0 600 150" xmlns="http://www.w3.org/2000/svg" style="max-width:560px" role="img" aria-label="Разрядная структура числа двойной точности IEEE 754: 1 бит знака, 11 битов порядка, 52 бита мантиссы.">
+  <text x="300" y="20" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419" text-anchor="middle" font-weight="600">double (64 бита, двойная точность)</text>
+  <rect x="30" y="35" width="40" height="40" fill="#b44a2d" fill-opacity="0.15" stroke="#b44a2d" stroke-width="1.4"/>
+  <rect x="70" y="35" width="150" height="40" fill="#3a5ba0" fill-opacity="0.13" stroke="#3a5ba0" stroke-width="1.4"/>
+  <rect x="220" y="35" width="350" height="40" fill="#1a6b5a" fill-opacity="0.12" stroke="#1a6b5a" stroke-width="1.4"/>
+  <text x="50"  y="60" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle" font-weight="600">s</text>
+  <text x="145" y="60" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0" text-anchor="middle" font-weight="600">порядок e</text>
+  <text x="395" y="60" font-family="JetBrains Mono,monospace" font-size="11" fill="#1a6b5a" text-anchor="middle" font-weight="600">мантисса (дробная часть)</text>
+  <text x="50"  y="92" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">1 бит</text>
+  <text x="145" y="92" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">11 битов</text>
+  <text x="395" y="92" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">52 бита</text>
+  <text x="300" y="125" font-family="Source Serif 4,serif" font-size="11.5" fill="#6b5d4f" text-anchor="middle" font-style="italic">p = 53 значащих двоичных разрядов (52 хранимых + 1 неявная единица) ⟹ ≈ 15–16 десятичных цифр</text>
+</svg>
+<div class="caption">Рис. 1. Разрядная структура числа двойной точности. Знак, смещённый порядок и мантисса. Старший бит мантиссы в нормализованном виде всегда равен 1 и не хранится («неявная единица»).</div>
+</div>
+
+<p>Множество представимых чисел <em>конечно</em> и распределено по оси <strong>неравномерно</strong>: внутри каждого двоичного интервала \([2^e, 2^{e+1})\) находится \(2^{p-1}\) равноотстоящих чисел, а при переходе к следующему интервалу шаг удваивается. Иначе говоря, <em>плотность представимых чисел постоянна в относительном, а не в абсолютном смысле</em>.</p>
+
+<div class="figure">
+<svg viewBox="0 0 600 130" xmlns="http://www.w3.org/2000/svg" style="max-width:560px" role="img" aria-label="Числовая ось: представимые числа с плавающей точкой сгущаются у нуля и разрежаются при удалении от него, шаг удваивается на каждой степени двойки.">
+  <line x1="30" y1="75" x2="575" y2="75" stroke="#2c2419" stroke-width="1"/>
+  <g stroke="#5b54b8" stroke-width="1.4">
+    <!-- interval [1/4,1/2): dense -->
+    <line x1="60" y1="68" x2="60" y2="82"/><line x1="71" y1="68" x2="71" y2="82"/><line x1="82" y1="68" x2="82" y2="82"/><line x1="93" y1="68" x2="93" y2="82"/><line x1="104" y1="68" x2="104" y2="82"/><line x1="115" y1="68" x2="115" y2="82"/>
+    <!-- [1/2,1) -->
+    <line x1="130" y1="66" x2="130" y2="84"/><line x1="152" y1="66" x2="152" y2="84"/><line x1="174" y1="66" x2="174" y2="84"/><line x1="196" y1="66" x2="196" y2="84"/><line x1="218" y1="66" x2="218" y2="84"/>
+    <!-- [1,2) -->
+    <line x1="240" y1="64" x2="240" y2="86"/><line x1="284" y1="64" x2="284" y2="86"/><line x1="328" y1="64" x2="328" y2="86"/><line x1="372" y1="64" x2="372" y2="86"/>
+    <!-- [2,4) -->
+    <line x1="416" y1="62" x2="416" y2="88"/><line x1="504" y1="62" x2="504" y2="88"/>
+  </g>
+  <g font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">
+    <text x="60" y="104">¼</text><text x="130" y="104">½</text><text x="240" y="104">1</text><text x="416" y="104">2</text><text x="504" y="104">3</text>
+  </g>
+  <text x="300" y="125" font-family="Source Serif 4,serif" font-size="11" fill="#6b5d4f" text-anchor="middle" font-style="italic">шаг между соседними числами удваивается при каждом переходе через степень двойки</text>
+</svg>
+<div class="caption">Рис. 2. Представимые числа разрежаются по мере удаления от нуля. Относительный зазор между соседними числами постоянен — это и есть машинное ε.</div>
+</div>
+
+<div class="theorem">
+<strong>Модель округления.</strong> Если \(x\) лежит в нормализованном диапазоне, то результат его записи в формат с плавающей точкой удовлетворяет
+\[
+\mathrm{fl}(x) = x\,(1 + \varepsilon),\qquad |\varepsilon| \le u,
+\]
+а для каждой арифметической операции \(\circ \in \{+,-,\times,/\}\) выполняется \(\mathrm{fl}(a \circ b) = (a \circ b)(1 + \varepsilon)\), \(|\varepsilon|\le u\). Величина \(u = 2^{-p}\) называется <em>единицей округления</em>. Для double \(u = 2^{-53} \approx 1.11\times 10^{-16}\).
+</div>
+
+<h2 id="eps">Машинное эпсилон</h2>
+
+<p><strong>Машинное эпсилон</strong> \(\varepsilon_{\text{маш}}\) — это расстояние от \(1\) до следующего представимого числа: \(\varepsilon_{\text{маш}} = 2^{-(p-1)} = 2^{-52} \approx 2.22\times 10^{-16}\) для double. Это наибольшее число, которое «теряется» при сложении с единицей: при \(\delta < \varepsilon_{\text{маш}}/2\) результат \(\mathrm{fl}(1+\delta)\) снова равен \(1\). Эпсилон задаёт <em>относительную</em> точность арифметики и фигурирует во всех оценках ошибок округления.</p>
+
+<div class="remark">
+<strong>Не путать.</strong> Единица округления \(u = 2^{-53}\) (граница относительной ошибки одной операции) и машинное эпсилон \(\varepsilon_{\text{маш}} = 2^{-52}\) (зазор у единицы) отличаются ровно вдвое. В литературе обоим иногда говорят «machine epsilon»; важно понимать, какая именно величина имеется в виду.
+</div>
+
+<h2 id="cancel">Потеря значимости (катастрофическое вычитание)</h2>
+
+<p>Самый опасный эффект конечной арифметики — <strong>катастрофическая потеря значимости</strong> при вычитании двух близких чисел. Пусть \(a\) и \(b\) известны с относительной точностью \(\sim u\), но \(a \approx b\). Их разность мала, а абсолютная ошибка остаётся прежней — значит, <em>относительная</em> ошибка разности резко возрастает: верные старшие цифры сокращаются, и обнажаются «мусорные» младшие.</p>
+
+<div class="eq">\[
+\text{если } a = 1.23456789,\ b = 1.23456700,\quad a-b = 0.00000089
+\]</div>
+
+<p>— из девяти значащих цифр осталось две. Числа округления при этом не появилось <em>новой</em> ошибки: вычитание точно. Беда в том, что относительная ошибка уже присутствовавшая в \(a,b\) после сокращения старших разрядов стала огромной. Лекарство — <em>переписать формулу</em> так, чтобы избежать вычитания близких величин. Это мы проверим на практике прямо сейчас.</p>
+
+<!-- ===================== ПРАКТИКУМ ===================== -->
+<p class="phase prac">Практикум · Python (NumPy) · ≈ 60 мин</p>
+
+<p>Запускайте код в Jupyter, IPython или любом редакторе. Достаточно стандартной библиотеки и NumPy. Цель практикума — <em>увидеть</em> конечность машинной арифметики собственными руками и научиться диагностировать потерю значимости. Справочник по инструментам — в <a href="python-reference.html">памятке Python/NumPy/SciPy</a>.</p>
+
+<h3 id="prac-eps">Практикум 1. Эпсилон, округление и порядок суммирования</h3>
+
+<div class="pyblock"><div class="pyhead"><span>machine_eps.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+# 1. Машинное эпсилон «вручную»: наименьшее eps, при котором 1 + eps != 1
+eps = 1.0
+while 1.0 + eps / 2.0 != 1.0:
+    eps /= 2.0
+print("eps вручную      :", eps)
+print("numpy float64 eps:", np.finfo(np.float64).eps)
+print("единица округл. u:", np.finfo(np.float64).eps / 2)
+
+# 2. Классика: 0.1 + 0.2 не равно 0.3
+print(0.1 + 0.2)                 # 0.30000000000000004
+print(0.1 + 0.2 == 0.3)          # False
+print(abs((0.1 + 0.2) - 0.3))    # ~5.5e-17 — порядка u
+
+# 3. Сложение единицы и малого числа
+print(1.0 + 1e-16 == 1.0)        # True  — 1e-16 потерялось
+print(1.0 + 1e-15 == 1.0)        # False</pre></div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 1.1</span>Порядок суммирования.</strong> Просуммируйте \(N = 10^7\) одинаковых слагаемых \(0.1\) двумя способами: (а) наивным циклом слева направо в обычном <code>float</code>; (б) функцией <code>math.fsum</code> (точное суммирование) либо суммированием по Кэхэну. Сравните с точным значением \(10^6\). Объясните, откуда берётся расхождение в наивной сумме.
+<details><summary>Подсказка и эталон</summary>
+<div class="pyblock"><div class="pyhead"><span>kahan.py</span></div>
+<pre class="pycode">import math
+
+N = 10**7
+naive = 0.0
+for _ in range(N):
+    naive += 0.1
+exact = N * 0.1                      # = 1_000_000.0
+
+print("наивная сумма :", naive)
+print("math.fsum     :", math.fsum([0.1] * N))
+print("ошибка наивной:", abs(naive - exact))   # порядка 1e-3</pre></div>
+Каждое сложение вносит относительную ошибку \(\le u\); при \(N\) операциях ошибки накапливаются и в худшем случае растут как \(N u\). Точное суммирование (<code>fsum</code>, Кэхэн) удерживает «потерянные» младшие разряды и даёт почти точный результат.</details>
+</div>
+
+<h3 id="prac-cancel">Практикум 2. Катастрофическое вычитание и его лечение</h3>
+
+<p>Рассмотрим функцию \(f(x) = \dfrac{1 - \cos x}{x^2}\). Её точный предел при \(x \to 0\) равен \(\tfrac12\). Но прямое вычисление при малых \(x\) катастрофически теряет точность: \(\cos x \approx 1\), и в числителе вычитаются близкие числа.</p>
+
+<div class="pyblock"><div class="pyhead"><span>cancellation.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+def f_naive(x):
+    return (1.0 - np.cos(x)) / x**2          # теряет значимость при малых x
+
+def f_stable(x):
+    # 1 - cos x = 2 sin^2(x/2)  ⟹  деления близких чисел нет
+    return 0.5 * (np.sin(x / 2) / (x / 2))**2
+
+for k in range(1, 9):
+    x = 10.0**(-k)
+    print(f"x=1e-{k}:  наивно={f_naive(x):.16f}   устойчиво={f_stable(x):.16f}")</pre></div>
+
+<div class="outbox">x=1e-1:  наивно=0.4995834721974...   устойчиво=0.4995834721974...
+x=1e-4:  наивно=0.4999999969612...   устойчиво=0.4999999995833...
+x=1e-7:  наивно=0.0000000000000...   устойчиво=0.4999999999999...
+x=1e-8:  наивно=0.0000000000000...   устойчиво=0.5000000000000...</div>
+
+<p>При \(x = 10^{-8}\) имеем \(1 - \cos x \approx 5\times10^{-17}\) — это <em>меньше</em> зазора \(\varepsilon_{\text{маш}}\) у единицы, поэтому <code>fl(1 - cos x) = 0</code> и наивная формула даёт ноль вместо \(\tfrac12\). Устойчивый вариант через \(\sin\) считает то же выражение без вычитания близких чисел и сохраняет все цифры.</p>
+
+<div class="exercise">
+<strong><span class="extag">Задача 1.2</span>Квадратное уравнение.</strong> Корни \(x^2 + bx + c = 0\) по школьной формуле \(x = \dfrac{-b \pm \sqrt{b^2 - 4c}}{2}\) при \(b = 10^{8},\ c = 1\) дают для «малого» корня катастрофическую ошибку. Вычислите оба корня наивно и через устойчивую формулу Виета \(x_1 x_2 = c\). Сравните с точным \(x_2 \approx -10^{-8}\).
+<details><summary>Подсказка</summary>
+Большой по модулю корень \(x_1 = \dfrac{-b - \operatorname{sign}(b)\sqrt{b^2-4c}}{2}\) считается без вычитания близких чисел; малый получаем из \(x_2 = c / x_1\). Наивная формула <code>(-b + sqrt(b**2 - 4*c)) / 2</code> вычитает \(b\) из почти равного ему корня и теряет почти все цифры.</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 1.3</span>Диагностика.</strong> Для функции \(g(x) = \dfrac{e^x - 1}{x}\) (предел \(1\) при \(x\to0\)) постройте график относительной ошибки наивной формулы при \(x = 10^{-1},\dots,10^{-15}\). Предложите устойчивый вариант (подсказка: в NumPy есть <code>np.expm1</code>). На каком \(x\) ошибка наивной формулы превышает \(1\%\)?
+</div>
+
+<h3 id="int-cancel">Интерактив: рост относительной ошибки при вычитании</h3>
+
+<p>Графики ниже строятся прямо в браузере в арифметике double — той же, что в Python. Слева — относительная ошибка наивной \(f(x)=(1-\cos x)/x^2\) и устойчивой формул в зависимости от \(x\) (обе оси логарифмические). Справа — число <em>верных значащих цифр</em>, \(-\log_{10}\delta\). Видно, как наивная кривая теряет точность, проваливаясь к нулю верных цифр у \(x\sim10^{-8}\), тогда как устойчивая держит ~15 цифр на всём диапазоне.</p>
+
+<div class="intbox">
+<div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:center;margin-bottom:.7rem">
+  <div><label>Функция</label><br>
+    <select id="c1_fn">
+      <option value="cos">f(x) = (1 − cos x) / x²</option>
+      <option value="exp">g(x) = (eˣ − 1) / x</option>
+    </select>
+  </div>
+  <label style="display:flex;align-items:center;gap:.4rem"><input type="checkbox" id="c1_stable" checked> показывать устойчивую формулу</label>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">относительная ошибка δ(x)</div><canvas id="c1_err" width="440" height="300" style="width:100%;height:auto" aria-label="График относительной ошибки наивной и устойчивой формул в зависимости от x в двойных логарифмических координатах."></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">верных цифр −log₁₀δ</div><canvas id="c1_dig" width="440" height="300" style="width:100%;height:auto" aria-label="График числа верных значащих цифр для наивной и устойчивой формул в зависимости от x."></canvas></div>
+</div>
+<div id="c1_status" style="font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);margin-top:.5rem"></div>
+</div>
+
+<script>
+(function(){
+  function naiveCos(x){ return (1-Math.cos(x))/(x*x); }
+  function stableCos(x){ var s=Math.sin(x/2)/(x/2); return 0.5*s*s; }
+  function trueCos(x){ return stableCos(x); }            // эталон — устойчивая формула
+  function naiveExp(x){ return (Math.exp(x)-1)/x; }
+  function stableExp(x){ return Math.expm1(x)/x; }
+  function trueExp(x){ return Math.expm1(x)/x; }
+  var FN={ cos:{n:naiveCos,s:stableCos,t:trueCos}, exp:{n:naiveExp,s:stableExp,t:trueExp} };
+
+  function relerr(approx,exact){ var e=Math.abs((approx-exact)/exact); return e>0?e:1e-17; }
+
+  function axes(ctx,P,pw,ph,xlab,ylab){
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();
+    ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+  }
+
+  function draw(){
+    var key=document.getElementById('c1_fn').value;
+    var showStable=document.getElementById('c1_stable').checked;
+    var fn=FN[key];
+    var xmin=-15, xmax=-1;     // log10(x)
+    var N=160, pts=[];
+    for(var i=0;i<=N;i++){
+      var lx=xmin+(xmax-xmin)*i/N, x=Math.pow(10,lx);
+      var exact=fn.t(x);
+      pts.push({lx:lx, en:relerr(fn.n(x),exact), es:relerr(fn.s(x),exact)});
+    }
+    // --- left: relative error, log-log ---
+    drawErr('c1_err',pts,showStable);
+    // --- right: correct digits ---
+    drawDig('c1_dig',pts,showStable);
+    var worst=pts.reduce(function(a,p){return p.en>a.en?p:a;},pts[0]);
+    document.getElementById('c1_status').innerHTML =
+      'наихудшая точка наивной формулы: x≈10^'+worst.lx.toFixed(1)+
+      ' · относит. ошибка δ≈'+worst.en.toExponential(1)+
+      ' (верных цифр ≈ '+Math.max(0,-Math.log10(worst.en)).toFixed(1)+')';
+  }
+
+  function drawErr(cid,pts,showStable){
+    var c=document.getElementById(cid),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:52,r:12,t:14,b:30},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var ymin=-17,ymax=0;               // log10(delta)
+    var xmin=-15,xmax=-1;
+    function xp(lx){return P.l+pw*(lx-xmin)/(xmax-xmin);}
+    function yp(ly){return P.t+ph*(1-(ly-ymin)/(ymax-ymin));}
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var g=0;g<=8;g++){var gy=P.t+ph*g/8;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    // eps reference
+    ctx.strokeStyle='#c9a23a';ctx.lineWidth=1;ctx.setLineDash([4,3]);ctx.beginPath();
+    ctx.moveTo(P.l,yp(-16));ctx.lineTo(P.l+pw,yp(-16));ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#9a7d28';ctx.font='9px JetBrains Mono';ctx.textAlign='left';ctx.fillText('u≈1e-16',P.l+4,yp(-16)-3);
+    // naive curve
+    ctx.strokeStyle='#b44a2d';ctx.lineWidth=2;ctx.beginPath();
+    pts.forEach(function(p,i){var X=xp(p.lx),Y=yp(Math.log10(p.en));i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});
+    ctx.stroke();
+    if(showStable){
+      ctx.strokeStyle='#3a5ba0';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.beginPath();
+      pts.forEach(function(p,i){var X=xp(p.lx),Y=yp(Math.log10(p.es));i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});
+      ctx.stroke();ctx.setLineDash([]);
+    }
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    for(var t=-15;t<=-1;t+=2) ctx.fillText('1e'+t,xp(t),P.t+ph+14);
+    ctx.fillText('x',P.l+pw,P.t+ph+14);
+    ctx.textAlign='right';
+    for(var g=0;g<=4;g++){var v=ymin+(ymax-ymin)*(1-g/4);ctx.fillText('1e'+v.toFixed(0),P.l-4,P.t+ph*g/4+3);}
+    ctx.textAlign='left';ctx.font='9px JetBrains Mono';
+    ctx.fillStyle='#b44a2d';ctx.fillText('— наивная',P.l+6,P.t+11);
+    if(showStable){ctx.fillStyle='#3a5ba0';ctx.fillText('- - устойчивая',P.l+6,P.t+23);}
+  }
+
+  function drawDig(cid,pts,showStable){
+    var c=document.getElementById(cid),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:40,r:12,t:14,b:30},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var xmin=-15,xmax=-1,dmax=16;
+    function xp(lx){return P.l+pw*(lx-xmin)/(xmax-xmin);}
+    function yp(d){return P.t+ph*(1-d/dmax);}
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var g=0;g<=8;g++){var gy=P.t+ph*g/8;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    ctx.strokeStyle='#b44a2d';ctx.lineWidth=2;ctx.beginPath();
+    pts.forEach(function(p,i){var d=Math.max(0,Math.min(dmax,-Math.log10(p.en)));var X=xp(p.lx),Y=yp(d);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});
+    ctx.stroke();
+    if(showStable){
+      ctx.strokeStyle='#3a5ba0';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.beginPath();
+      pts.forEach(function(p,i){var d=Math.max(0,Math.min(dmax,-Math.log10(p.es)));var X=xp(p.lx),Y=yp(d);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});
+      ctx.stroke();ctx.setLineDash([]);
+    }
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    for(var t=-15;t<=-1;t+=2) ctx.fillText('1e'+t,xp(t),P.t+ph+14);
+    ctx.fillText('x',P.l+pw,P.t+ph+14);
+    ctx.textAlign='right';
+    for(var d=0;d<=16;d+=4) ctx.fillText(d,P.l-4,yp(d)+3);
+  }
+
+  document.getElementById('c1_fn').addEventListener('change',draw);
+  document.getElementById('c1_stable').addEventListener('change',draw);
+  window.addEventListener('load',function(){ setTimeout(draw,200); });
+})();
+</script>
+
+<!-- ===================== ЛЕКЦИЯ B ===================== -->
+<p class="phase lecb">Лекция B · 30 мин</p>
+
+<h2 id="cond">Обусловленность задачи</h2>
+
+<p>Практикум показал: одни вычисления устойчивы, другие — нет. Чтобы разделить вину между <em>задачей</em> и <em>алгоритмом</em>, вводят два независимых понятия. Первое относится к самой задаче, безотносительно способа её решения.</p>
+
+<div class="definition">
+<strong>Определение.</strong> <em>Число обусловленности</em> задачи \(y = f(x)\) — это коэффициент усиления относительной погрешности входа в относительную погрешность выхода:
+\[
+\kappa = \lim_{\delta \to 0}\,\sup_{|\Delta x| \le \delta|x|}\frac{|f(x+\Delta x)-f(x)|/|f(x)|}{|\Delta x|/|x|}.
+\]
+Для гладкой скалярной функции это даёт \(\displaystyle \kappa(x) = \left|\frac{x\,f'(x)}{f(x)}\right|\). Задача <strong>хорошо обусловлена</strong>, если \(\kappa\) умеренно (порядка единиц), и <strong>плохо обусловлена</strong>, если \(\kappa \gg 1\).
+</div>
+
+<p>Число обусловленности — свойство <em>задачи и точки</em>, а не программы. Никакой алгоритм не вычислит плохо обусловленную задачу точнее, чем позволяет \(\kappa\): если вход известен с относительной ошибкой \(u\), то выход в принципе нельзя получить точнее, чем \(\kappa\cdot u\). Примеры:</p>
+
+<ul>
+<li>\(f(x) = \sqrt{x}\): \(\kappa = \tfrac12\) — всюду прекрасно обусловлена.</li>
+<li>\(f(x) = e^x\): \(\kappa = |x|\) — теряет точность при больших \(|x|\).</li>
+<li>\(f(x) = \ln x\): \(\kappa = 1/|\ln x|\) — взрывается у \(x = 1\) (там \(\ln x \to 0\)).</li>
+<li>Вычитание \(f(a,b) = a - b\) при \(a \approx b\): \(\kappa\) велико — это и есть теоретическая причина катастрофического вычитания из практикума.</li>
+</ul>
+
+<h2 id="stab">Устойчивость алгоритма</h2>
+
+<p>Второе понятие относится к конкретному способу вычисления. Один и тот же \(f\) можно считать по наивной формуле или по устойчивой — задача одна, алгоритмы разные.</p>
+
+<div class="definition">
+<strong>Определение.</strong> Алгоритм \(\tilde f\), вычисляющий \(f\), называется <em>обратно устойчивым</em> (backward stable), если его результат есть <em>точное</em> решение задачи для <em>слегка возмущённого</em> входа:
+\[
+\tilde f(x) = f(\tilde x)\quad\text{для некоторого } \tilde x \text{ с } \frac{|\tilde x - x|}{|x|} = O(u).
+\]
+То есть «мы решили почти ту задачу, что хотели». Обратная устойчивость — золотой стандарт численных алгоритмов (метод Гаусса с выбором главного элемента, QR-разложение и др. обратно устойчивы).
+</div>
+
+<h2 id="fwbw">Прямая и обратная ошибка. Главное правило</h2>
+
+<p>Различают две ошибки результата \(\tilde y = \tilde f(x)\):</p>
+
+<ul>
+<li><strong>Прямая ошибка</strong> — \(|\tilde y - y|/|y|\): насколько ответ отличается от истинного. Это то, что нас в конечном счёте интересует.</li>
+<li><strong>Обратная ошибка</strong> — наименьшее возмущение входа \(|\tilde x - x|/|x|\), при котором \(\tilde y = f(\tilde x)\): «для какой задачи наш ответ точен».</li>
+</ul>
+
+<div class="figure">
+<svg viewBox="0 0 560 230" xmlns="http://www.w3.org/2000/svg" style="max-width:520px" role="img" aria-label="Диаграмма прямой и обратной ошибки: вход x отображается точной задачей f в точное y, а алгоритмом — в приближённое y-тильда; обратная ошибка — это возмущение входа, дающее то же приближённое значение точно.">
+  <defs>
+    <marker id="aw" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2c2419"/></marker>
+  </defs>
+  <circle cx="90" cy="70" r="5" fill="#2c2419"/>
+  <text x="78" y="64" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419">x</text>
+  <circle cx="90" cy="170" r="5" fill="#b44a2d"/>
+  <text x="60" y="175" font-family="JetBrains Mono,monospace" font-size="12" fill="#b44a2d">x̃</text>
+  <circle cx="470" cy="70" r="5" fill="#2c2419"/>
+  <text x="480" y="64" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419">y = f(x)</text>
+  <circle cx="470" cy="170" r="5" fill="#3a5ba0"/>
+  <text x="480" y="175" font-family="JetBrains Mono,monospace" font-size="12" fill="#3a5ba0">ỹ = f̃(x)</text>
+  <!-- exact map -->
+  <line x1="98" y1="70" x2="462" y2="70" stroke="#2c2419" stroke-width="1.4" marker-end="url(#aw)"/>
+  <text x="280" y="60" font-family="Source Serif 4,serif" font-size="11" fill="#6b5d4f" text-anchor="middle" font-style="italic">точная задача f</text>
+  <!-- algorithm map -->
+  <line x1="98" y1="78" x2="462" y2="162" stroke="#3a5ba0" stroke-width="1.4" stroke-dasharray="5,3" marker-end="url(#aw)"/>
+  <text x="300" y="135" font-family="Source Serif 4,serif" font-size="11" fill="#3a5ba0" text-anchor="middle" font-style="italic">алгоритм f̃</text>
+  <!-- exact map of perturbed input -->
+  <line x1="98" y1="168" x2="462" y2="172" stroke="#b44a2d" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#aw)"/>
+  <text x="280" y="190" font-family="Source Serif 4,serif" font-size="10.5" fill="#b44a2d" text-anchor="middle" font-style="italic">точная задача f от возмущённого входа</text>
+  <!-- backward error bracket -->
+  <line x1="90" y1="80" x2="90" y2="160" stroke="#b44a2d" stroke-width="1"/>
+  <text x="22" y="125" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#b44a2d">обратная</text>
+  <text x="22" y="137" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#b44a2d">ошибка</text>
+  <!-- forward error bracket -->
+  <line x1="470" y1="80" x2="470" y2="160" stroke="#3a5ba0" stroke-width="1"/>
+  <text x="498" y="125" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#3a5ba0">прямая</text>
+  <text x="498" y="137" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#3a5ba0">ошибка</text>
+  <text x="280" y="218" font-family="Source Serif 4,serif" font-size="12" fill="#2c2419" text-anchor="middle">прямая ошибка ≲ κ × обратная ошибка</text>
+</svg>
+<div class="caption">Рис. 3. Прямая и обратная ошибка. Обратно устойчивый алгоритм даёт малую обратную ошибку \(O(u)\); прямая ошибка тогда ограничена числом обусловленности задачи.</div>
+</div>
+
+<div class="theorem">
+<strong>Главное правило вычислительной математики.</strong>
+\[
+\boxed{\ \text{прямая ошибка} \;\lesssim\; \kappa \cdot \text{обратная ошибка}\ }
+\]
+Если алгоритм обратно устойчив (обратная ошибка \(O(u)\)), то прямая ошибка ограничена \(\kappa\cdot u\). Плохой результат означает либо плохую обусловленность задачи (\(\kappa\) велико — ничего не поделать, нужна другая постановка), либо неустойчивый алгоритм (большая обратная ошибка — нужно переписать вычисление).
+</div>
+
+<h3 id="int-cond">Интерактив: число обусловленности функции</h3>
+
+<p>Слева — график \(\kappa(x) = |x f'(x)/f(x)|\) для выбранной функции; красная зона \(\kappa > 10\) отмечает плохую обусловленность. Сдвигая точку \(x\), наблюдайте справа, как фиксированное относительное возмущение входа \(\delta_{\text{вх}} = 10^{-6}\) усиливается в относительную ошибку выхода \(\delta_{\text{вых}} \approx \kappa\,\delta_{\text{вх}}\).</p>
+
+<div class="intbox">
+<div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:end;margin-bottom:.7rem">
+  <div><label>Функция f(x)</label><br>
+    <select id="c2_fn">
+      <option value="sqrt">√x &nbsp;(κ = ½)</option>
+      <option value="exp">eˣ &nbsp;(κ = |x|)</option>
+      <option value="log">ln x &nbsp;(κ = 1/|ln x|)</option>
+      <option value="rec">1/(1−x) &nbsp;(κ = |x/(1−x)|)</option>
+    </select>
+  </div>
+  <div><label>точка x = <span id="c2_xv">1.50</span></label><br>
+    <input type="range" id="c2_x" min="0.05" max="2.95" step="0.01" value="1.5" style="width:220px">
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1.2fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">число обусловленности κ(x)</div><canvas id="c2_k" width="430" height="280" style="width:100%;height:auto" aria-label="График числа обусловленности выбранной функции в зависимости от точки x."></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">усиление возмущения</div><canvas id="c2_amp" width="360" height="280" style="width:100%;height:auto" aria-label="Столбчатая диаграмма: относительное возмущение входа и усиленное им относительное возмущение выхода."></canvas></div>
+</div>
+<div id="c2_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.5rem"></div>
+</div>
+
+<script>
+(function(){
+  var FN={
+    sqrt:{f:function(x){return Math.sqrt(x);}, k:function(x){return 0.5;}, dom:[0.05,2.95]},
+    exp :{f:function(x){return Math.exp(x);}, k:function(x){return Math.abs(x);}, dom:[0.05,2.95]},
+    log :{f:function(x){return Math.log(x);}, k:function(x){return Math.abs(1/Math.log(x));}, dom:[0.05,2.95]},
+    rec :{f:function(x){return 1/(1-x);},     k:function(x){return Math.abs(x/(1-x));}, dom:[0.05,2.95]}
+  };
+  function kclip(v){ return Math.min(v,100); }
+
+  function drawK(x){
+    var key=document.getElementById('c2_fn').value, o=FN[key];
+    var c=document.getElementById('c2_k'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:46,r:12,t:14,b:28},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var xmin=o.dom[0],xmax=o.dom[1],kmax=20;
+    function xp(v){return P.l+pw*(v-xmin)/(xmax-xmin);}
+    function yp(v){return P.t+ph*(1-Math.min(v,kmax)/kmax);}
+    // red zone kappa>10
+    ctx.fillStyle='rgba(180,74,45,0.07)';ctx.fillRect(P.l,P.t,pw,yp(10)-P.t);
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var g=0;g<=5;g++){var gy=P.t+ph*g/5;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    ctx.strokeStyle='#b44a2d';ctx.lineWidth=1;ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(P.l,yp(10));ctx.lineTo(P.l+pw,yp(10));ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#b44a2d';ctx.font='9px JetBrains Mono';ctx.textAlign='left';ctx.fillText('κ=10',P.l+4,yp(10)-3);
+    // curve
+    ctx.strokeStyle='#5b54b8';ctx.lineWidth=2.2;ctx.beginPath();
+    var N=200,first=true;
+    for(var i=0;i<=N;i++){var v=xmin+(xmax-xmin)*i/N;var k=kclip(o.k(v));var X=xp(v),Y=yp(k);first?(ctx.moveTo(X,Y),first=false):ctx.lineTo(X,Y);}
+    ctx.stroke();
+    // current x marker
+    var kx=o.k(x);
+    ctx.strokeStyle='#1a6b5a';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(xp(x),P.t);ctx.lineTo(xp(x),P.t+ph);ctx.stroke();
+    ctx.fillStyle='#1a6b5a';ctx.beginPath();ctx.arc(xp(x),yp(Math.min(kx,kmax)),4,0,7);ctx.fill();
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    for(var t=0;t<=3;t++){ if(t>=xmin&&t<=xmax) ctx.fillText(t,xp(t),P.t+ph+14);}
+    ctx.fillText('x',P.l+pw,P.t+ph+14);
+    ctx.textAlign='right';
+    for(var g=0;g<=4;g++) ctx.fillText((kmax*(1-g/4)).toFixed(0),P.l-4,P.t+ph*g/4+3);
+  }
+
+  function drawAmp(x){
+    var key=document.getElementById('c2_fn').value, o=FN[key];
+    var c=document.getElementById('c2_amp'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var din=1e-6, k=o.k(x), dout=k*din;
+    // log scale bars from 1e-9 to 1e0
+    var P={l:50,r:14,t:20,b:40},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    function barH(d){var lg=Math.log10(d);return ph*(lg-(-9))/(0-(-9));}
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;ctx.fillStyle='#6b5d4f';ctx.font='9px JetBrains Mono';ctx.textAlign='right';
+    for(var e=-9;e<=0;e+=3){var y=P.t+ph*(1-(e+9)/9);ctx.beginPath();ctx.moveTo(P.l,y);ctx.lineTo(P.l+pw,y);ctx.stroke();ctx.fillText('1e'+e,P.l-4,y+3);}
+    var bw=70;
+    // input bar
+    var hIn=Math.max(2,barH(din));
+    ctx.fillStyle='#1a6b5a';ctx.fillRect(P.l+30,P.t+ph-hIn,bw,hIn);
+    // output bar
+    var dC=Math.min(dout,1); var hOut=Math.max(2,barH(dC));
+    ctx.fillStyle=k>10?'#b44a2d':'#3a5ba0';ctx.fillRect(P.l+150,P.t+ph-hOut,bw,hOut);
+    ctx.fillStyle='#2c2419';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('δ вход',P.l+30+bw/2,P.t+ph+14);
+    ctx.fillText('10⁻⁶',P.l+30+bw/2,P.t+ph+26);
+    ctx.fillText('δ выход',P.l+150+bw/2,P.t+ph+14);
+    ctx.fillText(dout.toExponential(1),P.l+150+bw/2,P.t+ph+26);
+    ctx.fillStyle='#5b54b8';ctx.textAlign='center';ctx.font='11px JetBrains Mono';
+    ctx.fillText('× κ = '+ (k<100?k.toFixed(2):'>100'),W/2,P.t-6);
+  }
+
+  function update(){
+    var x=+document.getElementById('c2_x').value;
+    document.getElementById('c2_xv').textContent=x.toFixed(2);
+    var key=document.getElementById('c2_fn').value, o=FN[key];
+    var k=o.k(x);
+    drawK(x);drawAmp(x);
+    var verdict = (!isFinite(k)||k>10) ? 'плохо обусловлена' : (k>3?'умеренно':'хорошо обусловлена');
+    var kStr = (isFinite(k)&&k<100) ? k.toFixed(3) : '≫1';
+    var doutStr = isFinite(k) ? (k*1e-6).toExponential(1) : '— (особая точка)';
+    document.getElementById('c2_status').innerHTML=
+      'x='+x.toFixed(2)+' · f(x)='+o.f(x).toFixed(5)+' · κ(x)='+kStr+
+      ' → '+verdict+'. При δ_вх=1e-6 ожидаемая δ_вых≈'+doutStr;
+  }
+  document.getElementById('c2_fn').addEventListener('change',update);
+  document.getElementById('c2_x').addEventListener('input',update);
+  window.addEventListener('load',function(){ setTimeout(update,200); });
+})();
+</script>
+
+<h2 id="summary">Итоги занятия</h2>
+
+<div class="algo">
+<strong>Что нужно унести с занятия 1:</strong>
+<ol>
+<li>Числа в компьютере представлены конечным набором битов (IEEE 754); множество представимых чисел конечно и разрежается вдали от нуля. Относительная точность задаётся машинным \(\varepsilon\approx2.2\times10^{-16}\) (double).</li>
+<li>Каждая операция вносит относительную ошибку \(\le u\). Опасность — не отдельная операция, а <em>накопление</em> и особенно <em>вычитание близких чисел</em> (потеря значимости).</li>
+<li><strong>Обусловленность</strong> \(\kappa\) — свойство задачи: во сколько раз усиливается ошибка входа. \(\kappa=|xf'/f|\) для скалярной функции.</li>
+<li><strong>Устойчивость</strong> — свойство алгоритма: обратно устойчивый даёт точный ответ для слегка возмущённого входа.</li>
+<li>Главное правило: <em>прямая ошибка ≲ κ × обратная ошибка</em>. Диагностируйте: велик \(\kappa\) (меняйте постановку) или велика обратная ошибка (переписывайте формулу).</li>
+</ol>
+</div>
+
+<div class="remark">
+<strong>Домашнее задание.</strong> Доделать задачи 1.1–1.3. Дополнительно: для \(f(x)=\ln x\) численно подтвердить, что вблизи \(x=1\) задача плохо обусловлена, измерив усиление возмущения \(x\to x(1+10^{-8})\). Связать результат с формулой \(\kappa=1/|\ln x|\).
+</div>
+
+<div class="lecture-nav">
+  <a class="nav-prev" href="index.html">← Обзор курса</a>
+  <a class="nav-next" href="w02.html">Занятие 2. Ряд Тейлора и аппроксимация →</a>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

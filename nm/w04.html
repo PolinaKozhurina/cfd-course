@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Занятие 4 курса «Численные методы»: узлы Чебышёва и минимаксное свойство полиномов Чебышёва, подавление феномена Рунге. Кубические интерполяционные сплайны класса C², естественные и зажатые, трёхдиагональная система на моменты. Практикум на Python (NumPy/SciPy).">
+<title>ЧМ · Занятие 4. Узлы Чебышёва и сплайны</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/lecture.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+.tag-nummet{background:#ece9fb;color:#5b54b8}
+html.dark .tag-nummet{background:#241f3a;color:#a39bea}
+.lecture-num{color:#5b54b8}
+.phase{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#fff;background:#5b54b8;padding:.3rem .7rem;border-radius:4px;display:inline-block;margin:1.8rem 0 .4rem}
+.phase.prac{background:#1a6b5a}
+.phase.lecb{background:#3a5ba0}
+.pyblock{margin:1rem 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.pyhead{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;display:flex;justify-content:space-between}
+.pyhead .run{color:#9ec97f}
+pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9rem 1.1rem;font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.6;overflow-x:auto;white-space:pre}
+.outbox{background:#f0f7f4;border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;padding:.6rem 1rem;margin:.6rem 0 1rem;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);white-space:pre-wrap}
+html.dark .outbox{background:#16241f}
+.exercise summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--accent2);margin-top:.6rem;font-weight:500}
+.exercise details{margin-top:.4rem}
+.exercise .extag{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:#5b54b8;background:#ece9fb;padding:1px 7px;border-radius:3px;margin-right:.4rem}
+html.dark .exercise .extag{background:#241f3a;color:#a39bea}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0}
+.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
+.intbox select,.intbox input[type=range]{font-family:'JetBrains Mono',monospace}
+.intbox select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+html.dark .intbox select{background:#1b1712;color:var(--text)}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:1px 5px;border-radius:3px}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>ЧМ · Занятие 4</h2>
+  <div class="g">Лекция A</div>
+  <a href="#runge">Проблема узлов</a>
+  <a href="#cheb">Полиномы Чебышёва</a>
+  <a href="#minimax">Минимаксное свойство</a>
+  <a href="#nodes">Чебышёвские узлы</a>
+  <a href="#shift">Перенос на [a,b]</a>
+  <div class="g">Практикум</div>
+  <a href="#prac-cheb">П1. Чебышёв против равномерных</a>
+  <a href="#prac-spline">П2. Кубический сплайн</a>
+  <a href="#int-runge">Интерактив: узлы и Рунге</a>
+  <div class="g">Лекция B</div>
+  <a href="#spline">Кусочная интерполяция</a>
+  <a href="#cubic">Кубический сплайн</a>
+  <a href="#moments">Система на моменты</a>
+  <a href="#conv">Сходимость сплайна</a>
+  <a href="#summary">Итоги занятия</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="index.html">← Обзор курса</a>
+  <a href="w05.html">→ Занятие 5</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+<span class="lecture-tag tag-nummet">Численные методы</span>
+<div class="lecture-num">Занятие 4 · Блок II. Интерполяция</div>
+<h1>Узлы Чебышёва и кубические сплайны</h1>
+
+<p class="phase">Лекция A · ≤ 30 мин</p>
+
+<h2 id="runge">Проблема выбора узлов</h2>
+
+<p>На занятии 3 мы построили интерполяционный полином \(p_n\) степени \(n\) по \(n+1\) узлам и вывели формулу его погрешности: для гладкой \(f\) на отрезке, содержащем узлы \(x_0,\dots,x_n\),</p>
+
+<div class="eq">\[
+f(x) - p_n(x) = \frac{f^{(n+1)}(\xi)}{(n+1)!}\,\omega(x),
+\qquad \omega(x) = \prod_{i=0}^{n}(x - x_i).
+\tag{4.1}
+\]</div>
+
+<p>В этой формуле множитель \(f^{(n+1)}(\xi)/(n+1)!\) задаётся самой функцией — мы на него не влияем. А вот <strong>узловой многочлен</strong> \(\omega(x)\) зависит только от <em>расположения узлов</em>. Именно его поведение объясняет <strong>феномен Рунге</strong>: при равномерных узлах \(\omega(x)\) даёт огромные всплески у концов отрезка, и интерполянт функции \(1/(1+25x^2)\) с ростом \(n\) <em>расходится</em> вблизи краёв.</p>
+
+<p>Возникает чёткая оптимизационная задача: разместить узлы так, чтобы <em>максимум</em> \(|\omega(x)|\) был как можно меньше. Без потери общности работаем на стандартном отрезке \([-1,1]\): нужно минимизировать \(\|\omega\|_\infty = \max_{x\in[-1,1]}|\omega(x)|\) по всем наборам из \(n+1\) узлов. Ответ даёт замечательное семейство полиномов.</p>
+
+<h2 id="cheb">Полиномы Чебышёва</h2>
+
+<div class="definition">
+<strong>Определение.</strong> <em>Полином Чебышёва</em> (первого рода) степени \(n\) — это
+\[
+T_n(x) = \cos\!\big(n\arccos x\big), \qquad x \in [-1,1].
+\]
+Несмотря на тригонометрическую запись, \(T_n\) — настоящий алгебраический многочлен степени \(n\) с целыми коэффициентами.
+</div>
+
+<p>Что это многочлен, видно из <strong>рекуррентного соотношения</strong>, которое следует из формулы \(\cos((n{+}1)\theta) + \cos((n{-}1)\theta) = 2\cos\theta\cos(n\theta)\) при \(\theta = \arccos x\):</p>
+
+<div class="eq">\[
+T_0(x) = 1,\quad T_1(x) = x,\qquad
+T_{n+1}(x) = 2x\,T_n(x) - T_{n-1}(x).
+\tag{4.2}
+\]</div>
+
+<p>Отсюда \(T_2 = 2x^2-1\), \(T_3 = 4x^3-3x\), \(T_4 = 8x^4-8x^2+1\), и так далее. Из рекуррентности немедленно следует, что <strong>старший коэффициент</strong> \(T_n\) равен \(2^{\,n-1}\) при \(n\ge 1\).</p>
+
+<div class="theorem">
+<strong>Свойство равноколебательности.</strong> На отрезке \([-1,1]\) выполнено \(|T_n(x)| \le 1\), то есть \(\|T_n\|_\infty = 1\). При этом \(T_n\) ровно \(n+1\) раз достигает экстремальных значений \(\pm 1\) — в точках \(x_k^{*} = \cos(k\pi/n)\), \(k = 0,\dots,n\), последовательно меняя знак. График \(T_n\) «равномерно колеблется» между \(+1\) и \(-1\).
+</div>
+
+<p>Равноколебательность — ключ ко всему. Подстановка \(x=\cos\theta\) превращает \(T_n\) в чистый косинус \(\cos n\theta\), который на \([0,\pi]\) проходит весь диапазон \([-1,1]\) ровно \(n\) раз. Именно это «оптимальное распределение колебаний» делает \(T_n\) минимаксным среди многочленов фиксированной степени.</p>
+
+<div class="figure">
+<svg viewBox="0 0 600 230" xmlns="http://www.w3.org/2000/svg" style="max-width:560px" role="img" aria-label="Графики полиномов Чебышёва T2, T3 и T5 на отрезке от минус единицы до единицы: все колеблются строго между минус единицей и плюс единицей, касаясь горизонтальных границ.">
+  <line x1="40" y1="115" x2="575" y2="115" stroke="#2c2419" stroke-width="1"/>
+  <line x1="307" y1="20" x2="307" y2="210" stroke="#6b5d4f" stroke-width="0.6"/>
+  <line x1="40" y1="35" x2="575" y2="35" stroke="#b44a2d" stroke-width="0.7" stroke-dasharray="4,3"/>
+  <line x1="40" y1="195" x2="575" y2="195" stroke="#b44a2d" stroke-width="0.7" stroke-dasharray="4,3"/>
+  <text x="30" y="39" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d" text-anchor="end">+1</text>
+  <text x="30" y="199" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d" text-anchor="end">−1</text>
+  <!-- T2 = 2x^2-1 -->
+  <path d="M40,35 Q173.5,275 307,195 Q440.5,275 575,35" fill="none" stroke="#1a6b5a" stroke-width="1.8"/>
+  <!-- T3 = 4x^3-3x (sampled) -->
+  <polyline fill="none" stroke="#3a5ba0" stroke-width="1.8" points="40,195 80,55 120,35 160,52 200,90 240,124 267,140 307,115 347,90 360,76 400,140 440,178 480,195 520,178 575,35"/>
+  <!-- T5 (sampled, equi-oscillating 6 extrema) -->
+  <polyline fill="none" stroke="#5b54b8" stroke-width="1.8" points="40,35 70,195 100,35 145,195 200,35 250,150 307,115 364,80 414,195 470,35 515,195 545,35 575,195"/>
+  <g font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">
+    <text x="40" y="225">−1</text><text x="307" y="225">0</text><text x="575" y="225">1</text>
+  </g>
+  <g font-family="JetBrains Mono,monospace" font-size="10">
+    <text x="450" y="60" fill="#1a6b5a">T₂</text>
+    <text x="150" y="25" fill="#3a5ba0">T₃</text>
+    <text x="250" y="25" fill="#5b54b8">T₅</text>
+  </g>
+</svg>
+<div class="caption">Рис. 1. Полиномы Чебышёва равномерно колеблются между \(-1\) и \(+1\); \(T_n\) касается границ \(n+1\) раз. (Кривые \(T_3,T_5\) даны схематично по выборочным точкам.)</div>
+</div>
+
+<h2 id="minimax">Минимаксное свойство</h2>
+
+<p>Назовём многочлен <strong>приведённым</strong> (моническим), если его старший коэффициент равен \(1\). Узловой многочлен \(\omega(x) = \prod (x-x_i)\) из (4.1) всегда приведён. Поделив \(T_{n}\) на его старший коэффициент \(2^{\,n-1}\), получаем приведённый многочлен \(\widetilde T_n = 2^{1-n}T_n\) с нормой \(\|\widetilde T_n\|_\infty = 2^{1-n}\).</p>
+
+<div class="theorem">
+<strong>Теорема о минимаксе (Чебышёв).</strong> Среди всех приведённых многочленов степени \(n\ge 1\) наименьшую равномерную норму на \([-1,1]\) даёт \(\widetilde T_n = 2^{1-n}T_n\):
+\[
+\min_{\substack{q\ \text{приведён}\\ \deg q = n}}\ \max_{x\in[-1,1]} |q(x)| \;=\; \frac{1}{2^{\,n-1}},
+\]
+и минимум достигается единственным образом — на \(\widetilde T_n\).
+</div>
+
+<div class="proof">
+Пусть приведённый \(q\) степени \(n\) имеет \(\|q\|_\infty < 2^{1-n} = \|\widetilde T_n\|_\infty\). Рассмотрим разность \(r = \widetilde T_n - q\). В \(n+1\) точках экстремума \(x_k^{*}\) многочлен \(\widetilde T_n\) принимает значения \(\pm 2^{1-n}\) с чередованием знака. Поскольку \(|q| < 2^{1-n}\), знак \(r(x_k^{*})\) совпадает со знаком \(\widetilde T_n(x_k^{*})\) и тоже чередуется — значит, \(r\) меняет знак не менее \(n\) раз и имеет \(\ge n\) корней. Но \(\widetilde T_n\) и \(q\) оба приведены степени \(n\), поэтому их разность \(r\) имеет степень \(\le n-1\). Ненулевой многочлен степени \(\le n-1\) не может иметь \(n\) корней — противоречие. Значит, \(r\equiv 0\).
+</div>
+
+<p>Сравнивая с (4.1): чтобы минимизировать \(\|\omega\|_\infty\), надо взять \(\omega = \widetilde T_{n+1}\). Тогда узлы — это корни \(T_{n+1}\), а гарантированная оценка узлового множителя падает до \(2^{-n}\) вместо неконтролируемого роста при равномерной сетке.</p>
+
+<h2 id="nodes">Чебышёвские узлы интерполяции</h2>
+
+<p>Корни \(T_{n+1}(x) = \cos((n{+}1)\arccos x) = 0\) находятся явно из условия \((n{+}1)\arccos x = \tfrac{\pi}{2} + k\pi\):</p>
+
+<div class="definition">
+<strong>Узлы Чебышёва (корни \(T_{n+1}\)).</strong> Для интерполяции полиномом степени \(n\) на \([-1,1]\) оптимальны
+\[
+x_k = \cos\!\Big(\frac{2k+1}{2(n+1)}\,\pi\Big),\qquad k = 0,1,\dots,n.
+\]
+Они лежат строго внутри \((-1,1)\) и <em>сгущаются к концам</em> отрезка — именно там, где равномерная сетка порождала всплески Рунге.
+</div>
+
+<div class="remark">
+<strong>Геометрия узлов.</strong> Чебышёвские узлы — это проекции на ось \(x\) равноотстоящих точек верхней полуокружности. Часто на практике берут близкое семейство — <em>узлы Чебышёва–Гаусса–Лобатто</em> (экстремумы \(T_n\)) \(x_k = \cos(k\pi/n)\), \(k=0,\dots,n\); они включают сами концы \(\pm 1\) и удобны для спектральных методов. Оба семейства имеют одинаковое сгущение \(\sim 1/n^2\) у краёв.
+</div>
+
+<h2 id="shift">Перенос на произвольный отрезок \([a,b]\)</h2>
+
+<p>Узлы определены на \([-1,1]\); чтобы интерполировать на \([a,b]\), применяют линейную замену \(t\mapsto x\):</p>
+
+<div class="eq">\[
+x = \frac{a+b}{2} + \frac{b-a}{2}\,t,\qquad t\in[-1,1].
+\tag{4.3}
+\]</div>
+
+<p>Подставляя сюда чебышёвские \(t_k = \cos\big(\tfrac{2k+1}{2(n+1)}\pi\big)\), получаем узлы на \([a,b]\). Замена линейна, поэтому минимаксность сохраняется (с поправкой масштаба \(((b-a)/2)^{\,n+1}\) в оценке погрешности).</p>
+
+<div class="theorem">
+<strong>Итог лекции A.</strong> Для гладкой \(f\) интерполяция в чебышёвских узлах <em>подавляет феномен Рунге</em>: норма узлового множителя минимальна, а ошибка \(\|f-p_n\|_\infty\) убывает с ростом \(n\) (геометрически — для аналитических \(f\)). Равномерная сетка для той же функции, напротив, может расходиться. Выбор узлов — не деталь, а решающий фактор качества интерполяции.
+</div>
+
+<!-- ===================== ПРАКТИКУМ ===================== -->
+<p class="phase prac">Практикум · Python (NumPy/SciPy) · ≈ 60 мин</p>
+
+<p>Цель практикума — <em>увидеть</em>, как смена узлов превращает расходящуюся интерполяцию в сходящуюся, и сравнить полиномиальный подход со сплайнами. Понадобятся NumPy, SciPy и Matplotlib. Справочник — в <a href="python-reference.html">памятке Python/NumPy/SciPy</a>.</p>
+
+<h3 id="prac-cheb">Практикум 1. Чебышёв против равномерной сетки на функции Рунге</h3>
+
+<p>Классический тест — функция Рунге \(f(x) = 1/(1+25x^2)\) на \([-1,1]\). Построим интерполянт по равномерным и по чебышёвским узлам и сравним максимальную ошибку как функцию степени \(n\).</p>
+
+<div class="pyblock"><div class="pyhead"><span>runge_nodes.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+
+f = lambda x: 1.0 / (1.0 + 25.0 * x**2)
+xx = np.linspace(-1, 1, 2001)          # плотная сетка для замера ошибки
+
+def uniform_nodes(n):                  # n+1 равномерных узлов
+    return np.linspace(-1, 1, n + 1)
+
+def cheb_nodes(n):                     # корни T_{n+1}
+    k = np.arange(n + 1)
+    return np.cos((2*k + 1) * np.pi / (2*(n + 1)))
+
+def max_error(nodes):
+    # интерполяция полиномом Лагранжа через numpy.polyfit на узлах
+    p = np.polyfit(nodes, f(nodes), len(nodes) - 1)
+    return np.max(np.abs(np.polyval(p, xx) - f(xx)))
+
+print(" n |  равномерные |  Чебышёв")
+for n in [4, 8, 12, 16, 20, 24]:
+    eu = max_error(uniform_nodes(n))
+    ec = max_error(cheb_nodes(n))
+    print(f"{n:2d} | {eu:12.4e} | {ec:10.4e}")</pre></div>
+
+<div class="outbox"> n |  равномерные |  Чебышёв
+ 4 |   4.3849e-01 | 4.0322e-01
+ 8 |   1.0452e+00 | 1.6386e-01
+12 |   2.0688e+00 | 6.6839e-02
+16 |   5.0285e+00 | 2.7913e-02
+20 |   5.9322e+01 | 1.1672e-02
+24 |   7.0220e+00 | 4.8840e-03</div>
+
+<p>Колонка «равномерные» <em>растёт</em> с \(n\) (расходимость Рунге), колонка «Чебышёв» — монотонно <em>убывает</em>. При \(n=20\) разница уже четыре порядка. Это и есть минимаксное свойство в действии.</p>
+
+<div class="remark">
+<strong>Численная тонкость.</strong> При больших \(n\) <code>polyfit</code> на равномерных узлах сам по себе плохо обусловлен (матрица Вандермонда). Для чистого эксперимента используйте барицентрическую формулу (<code>scipy.interpolate.BarycentricInterpolator</code>) или базис Чебышёва (<code>numpy.polynomial.chebyshev.Chebyshev.interpolate</code>) — они устойчивы и отделяют феномен Рунге от ошибок округления.
+</div>
+
+<h3 id="prac-spline">Практикум 2. Кубический сплайн SciPy</h3>
+
+<p>Теперь третий подход — <code>scipy.interpolate.CubicSpline</code>. Сравним на той же функции Рунге три интерполянта при одинаковых равномерных узлах: глобальный полином, чебышёвский полином и кубический сплайн.</p>
+
+<div class="pyblock"><div class="pyhead"><span>three_ways.py</span><span class="run">▶ python</span></div>
+<pre class="pycode">import numpy as np
+from scipy.interpolate import CubicSpline, BarycentricInterpolator
+
+f = lambda x: 1.0 / (1.0 + 25.0 * x**2)
+xx = np.linspace(-1, 1, 2001)
+n = 16
+
+xu = np.linspace(-1, 1, n + 1)                       # равномерные узлы
+k  = np.arange(n + 1)
+xc = np.sort(np.cos((2*k + 1) * np.pi / (2*(n+1))))  # чебышёвские узлы
+
+poly_unif = BarycentricInterpolator(xu, f(xu))       # полином, равномерн.
+poly_cheb = BarycentricInterpolator(xc, f(xc))       # полином, Чебышёв
+spline    = CubicSpline(xu, f(xu), bc_type='natural')# естественный сплайн
+
+for name, g in [("полином равном.", poly_unif),
+                ("полином Чебышёв", poly_cheb),
+                ("кубич. сплайн  ", spline)]:
+    err = np.max(np.abs(g(xx) - f(xx)))
+    print(f"{name}: max|f-p| = {err:.4e}")</pre></div>
+
+<div class="outbox">полином равном.: max|f-p| = 5.0285e+00
+полином Чебышёв: max|f-p| = 2.7913e-02
+кубич. сплайн  : max|f-p| = 2.1936e-02</div>
+
+<p>Сплайн на <em>равномерных</em> узлах не страдает феноменом Рунге: его ошибка сопоставима с чебышёвским полиномом, хотя степень каждого куска всего три. Это второй способ победить Рунге — низкая степень кусочно вместо высокой степени глобально.</p>
+
+<h3 id="int-runge">Интерактив: узлы, интерполянт и ошибка</h3>
+
+<p>Слева — функция Рунге \(f(x)=1/(1+25x^2)\) (серая) и интерполянт (цветной) по выбранным узлам; справа — модуль ошибки \(|f(x)-p(x)|\) в логарифмическом масштабе. Переключайте тип узлов и двигайте число узлов \(N\). На <strong>равномерных</strong> узлах с ростом \(N\) у краёв вырастают гигантские всплески (ось интерполянта обрезана) — это феномен Рунге. На <strong>чебышёвских</strong> узлах и у <strong>кубического сплайна</strong> интерполянт остаётся прижатым к функции.</p>
+
+<div class="intbox">
+<div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:end;margin-bottom:.7rem">
+  <div><label>Тип узлов</label><br>
+    <select id="r_mode">
+      <option value="unif">равномерные (Рунге)</option>
+      <option value="cheb" selected>Чебышёва</option>
+      <option value="spline">кубический сплайн (равном. узлы)</option>
+    </select>
+  </div>
+  <div><label>число узлов N = <span id="r_nv">13</span></label><br>
+    <input type="range" id="r_n" min="5" max="25" step="1" value="13" style="width:220px">
+  </div>
+  <label style="display:flex;align-items:center;gap:.4rem"><input type="checkbox" id="r_dots" checked> показывать узлы</label>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">функция и интерполянт</div><canvas id="r_fit" width="440" height="320" style="width:100%;height:auto" aria-label="График функции Рунге и её интерполянта по выбранным узлам на отрезке от минус единицы до единицы."></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">ошибка |f − p| (лог. ось)</div><canvas id="r_err" width="440" height="320" style="width:100%;height:auto" aria-label="График модуля ошибки интерполяции в логарифмическом масштабе по оси значений."></canvas></div>
+</div>
+<div id="r_status" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-top:.5rem"></div>
+</div>
+
+<script>
+(function(){
+  var f = function(x){ return 1/(1+25*x*x); };
+
+  // --- наборы узлов (N = число узлов) ---
+  function uniformNodes(N){
+    var xs=[]; for(var i=0;i<N;i++) xs.push(-1 + 2*i/(N-1)); return xs;
+  }
+  function chebNodes(N){
+    var xs=[]; // корни T_N: cos((2k+1)pi/(2N)), k=0..N-1
+    for(var k=0;k<N;k++) xs.push(Math.cos((2*k+1)*Math.PI/(2*N)));
+    xs.sort(function(a,b){return a-b;}); return xs;
+  }
+
+  // --- интерполяция Лагранжа (барицентрическая, устойчиво) ---
+  function makeLagrange(xs, ys){
+    var n=xs.length, w=new Array(n);
+    for(var j=0;j<n;j++){ var p=1; for(var k=0;k<n;k++) if(k!=j) p*=(xs[j]-xs[k]); w[j]=1/p; }
+    return function(x){
+      var num=0, den=0;
+      for(var j=0;j<n;j++){
+        var d=x-xs[j];
+        if(Math.abs(d)<1e-14) return ys[j];
+        var t=w[j]/d; num+=t*ys[j]; den+=t;
+      }
+      return num/den;
+    };
+  }
+
+  // --- естественный кубический сплайн (прогонка) ---
+  function makeSpline(xs, ys){
+    var n=xs.length, h=new Array(n-1);
+    for(var i=0;i<n-1;i++) h[i]=xs[i+1]-xs[i];
+    var a=new Array(n), b=new Array(n), c=new Array(n), d=new Array(n);
+    b[0]=1; c[0]=0; d[0]=0;
+    for(var i=1;i<n-1;i++){
+      a[i]=h[i-1]; b[i]=2*(h[i-1]+h[i]); c[i]=h[i];
+      d[i]=6*((ys[i+1]-ys[i])/h[i] - (ys[i]-ys[i-1])/h[i-1]);
+    }
+    a[n-1]=0; b[n-1]=1; d[n-1]=0;
+    for(var i=1;i<n;i++){ var m=a[i]/b[i-1]; b[i]-=m*c[i-1]; d[i]-=m*d[i-1]; }
+    var M=new Array(n); M[n-1]=d[n-1]/b[n-1];
+    for(var i=n-2;i>=0;i--) M[i]=(d[i]-c[i]*M[i+1])/b[i];
+    return function(x){
+      var i=0;
+      if(x<=xs[0]) i=0; else if(x>=xs[n-1]) i=n-2;
+      else { while(i<n-2 && x>xs[i+1]) i++; }
+      var xl=xs[i], xr=xs[i+1], hi=h[i];
+      var A=(xr-x)/hi, B=(x-xl)/hi;
+      return A*ys[i]+B*ys[i+1]+((A*A*A-A)*M[i]+(B*B*B-B)*M[i+1])*hi*hi/6;
+    };
+  }
+
+  function build(){
+    var mode=document.getElementById('r_mode').value;
+    var N=+document.getElementById('r_n').value;
+    var xs = (mode==='cheb') ? chebNodes(N) : uniformNodes(N);
+    var ys = xs.map(f);
+    var g = (mode==='spline') ? makeSpline(xs,ys) : makeLagrange(xs,ys);
+    return {xs:xs, ys:ys, g:g, mode:mode, N:N};
+  }
+
+  function drawFit(S){
+    var c=document.getElementById('r_fit'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:38,r:12,t:14,b:28},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var ymin=-1.0, ymax=2.0;
+    function xp(x){return P.l+pw*(x+1)/2;}
+    function yp(y){return P.t+ph*(1-(y-ymin)/(ymax-ymin));}
+    // сетка
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
+    for(var gi=0;gi<=6;gi++){var gy=P.t+ph*gi/6;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
+    for(var gi=0;gi<=4;gi++){var gx=P.l+pw*gi/4;ctx.beginPath();ctx.moveTo(gx,P.t);ctx.lineTo(gx,P.t+ph);ctx.stroke();}
+    // ось y=0
+    ctx.strokeStyle='#cdbfa8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,yp(0));ctx.lineTo(P.l+pw,yp(0));ctx.stroke();
+    // область отсечения
+    ctx.save();ctx.beginPath();ctx.rect(P.l,P.t,pw,ph);ctx.clip();
+    // истинная функция
+    ctx.strokeStyle='#9a8d7e';ctx.lineWidth=2.4;ctx.beginPath();
+    for(var i=0;i<=400;i++){var x=-1+2*i/400,X=xp(x),Y=yp(f(x));i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}
+    ctx.stroke();
+    // интерполянт
+    var col = (S.mode==='unif')?'#b44a2d':(S.mode==='cheb')?'#5b54b8':'#1a6b5a';
+    ctx.strokeStyle=col;ctx.lineWidth=1.8;ctx.beginPath();
+    for(var i=0;i<=600;i++){var x=-1+2*i/600,X=xp(x),Y=yp(S.g(x));i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}
+    ctx.stroke();
+    // узлы
+    if(document.getElementById('r_dots').checked){
+      ctx.fillStyle=col;
+      for(var j=0;j<S.xs.length;j++){ctx.beginPath();ctx.arc(xp(S.xs[j]),yp(S.ys[j]),3,0,7);ctx.fill();}
+    }
+    ctx.restore();
+    // оси
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('−1',xp(-1),P.t+ph+14);ctx.fillText('0',xp(0),P.t+ph+14);ctx.fillText('1',xp(1),P.t+ph+14);ctx.fillText('x',P.l+pw,P.t+ph+14);
+    ctx.textAlign='right';
+    for(var v=-1;v<=2;v++) ctx.fillText(v.toFixed(0),P.l-4,yp(v)+3);
+  }
+
+  function drawErr(S){
+    var c=document.getElementById('r_err'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
+    var P={l:46,r:12,t:14,b:28},pw=W-P.l-P.r,ph=H-P.t-P.b;
+    var lo=-5, hi=2;                   // log10 ошибки: 1e-5 .. 1e2
+    function xp(x){return P.l+pw*(x+1)/2;}
+    function yp(le){return P.t+ph*(1-(le-lo)/(hi-lo));}
+    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;ctx.fillStyle='#6b5d4f';ctx.font='9px JetBrains Mono';ctx.textAlign='right';
+    for(var e=hi;e>=lo;e--){var y=yp(e);ctx.beginPath();ctx.moveTo(P.l,y);ctx.lineTo(P.l+pw,y);ctx.stroke();ctx.fillText('1e'+e,P.l-4,y+3);}
+    var maxe=0, maxx=0;
+    ctx.save();ctx.beginPath();ctx.rect(P.l,P.t,pw,ph);ctx.clip();
+    var col = (S.mode==='unif')?'#b44a2d':(S.mode==='cheb')?'#5b54b8':'#1a6b5a';
+    ctx.strokeStyle=col;ctx.lineWidth=1.8;ctx.beginPath();
+    var started=false;
+    for(var i=0;i<=600;i++){
+      var x=-1+2*i/600, e=Math.abs(S.g(x)-f(x));
+      if(e>maxe){maxe=e;maxx=x;}
+      var le=Math.log10(Math.max(e,1e-16));
+      var X=xp(x),Y=yp(le);
+      started?ctx.lineTo(X,Y):(ctx.moveTo(X,Y),started=true);
+    }
+    ctx.stroke();ctx.restore();
+    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
+    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('−1',xp(-1),P.t+ph+14);ctx.fillText('0',xp(0),P.t+ph+14);ctx.fillText('1',xp(1),P.t+ph+14);ctx.fillText('x',P.l+pw,P.t+ph+14);
+    return {maxe:maxe, maxx:maxx};
+  }
+
+  function update(){
+    var S=build();
+    document.getElementById('r_nv').textContent=S.N;
+    drawFit(S);
+    var info=drawErr(S);
+    var label={unif:'равномерные узлы',cheb:'узлы Чебышёва',spline:'кубический сплайн'}[S.mode];
+    var trend = S.mode==='unif'
+      ? 'ошибка растёт у краёв (Рунге) — увеличивайте N и смотрите на всплеск'
+      : 'ошибка прижата к функции и убывает с ростом N';
+    document.getElementById('r_status').innerHTML=
+      label+' · N='+S.N+' узлов · max|f−p| ≈ '+info.maxe.toExponential(2)+
+      ' при x≈'+info.maxx.toFixed(3)+'. '+trend+'.';
+  }
+  document.getElementById('r_mode').addEventListener('change',update);
+  document.getElementById('r_n').addEventListener('input',update);
+  document.getElementById('r_dots').addEventListener('change',update);
+  window.addEventListener('load',function(){ setTimeout(update,200); });
+})();
+</script>
+
+<div class="exercise">
+<strong><span class="extag">Задача 4.1</span>Чебышёвские узлы своими руками.</strong> Реализуйте функцию <code>cheb_nodes(n)</code> (корни \(T_{n+1}\)) и проинтерполируйте \(f(x)=1/(1+25x^2)\) полиномом степени \(n=20\). Постройте на одном графике \(f\), интерполянт на равномерных узлах и интерполянт на чебышёвских. Замерьте \(\max|f-p|\) для обоих и подтвердите расхождение/сходимость.
+<details><summary>Подсказка</summary>
+Используйте <code>BarycentricInterpolator</code>, чтобы избежать плохой обусловленности при \(n=20\). Чебышёвские узлы сгущаются к \(\pm 1\), поэтому всплеск Рунге у краёв исчезает; ожидаемая ошибка \(\sim 10^{-2}\) против \(\sim 60\) на равномерной сетке.</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 4.2</span>Естественный против зажатого сплайна.</strong> Для \(f(x)=e^{x}\) на \([-1,1]\) по 9 равномерным узлам постройте <code>CubicSpline</code> с <code>bc_type='natural'</code> и с <code>bc_type='clamped'</code>, передав точные производные \(f'(\pm1)=e^{\pm1}\). Сравните ошибку у концов отрезка. Почему зажатый сплайн точнее у границ?
+<details><summary>Подсказка</summary>
+Естественный сплайн навязывает \(S''=0\) на концах, тогда как у \(f(x)=e^{x}\) вторая производная \(f''(\pm1)=e^{\pm1}\neq0\). Это ложное граничное условие вносит заметную ошибку в крайних сегментах. Зажатый сплайн задаёт <em>верные</em> наклоны \(S'(\pm1)=f'(\pm1)\) и убирает приграничную погрешность; сравните <code>max|f-S|</code> на отрезках \([x_0,x_1]\) и \([x_{n-1},x_n]\) для обоих вариантов.</details>
+</div>
+
+<div class="exercise">
+<strong><span class="extag">Задача 4.3</span>Порядок сходимости сплайна.</strong> Для гладкой \(f(x)=e^{x}\) на \([0,1]\) постройте кубический сплайн по \(N\) равномерным узлам при \(N=5,10,20,40,80\). Для каждого замерьте \(\max|f-S|\) на плотной сетке и постройте график ошибки от \(h=1/(N-1)\) в координатах log–log. Оцените наклон прямой и сравните с теоретическим порядком \(O(h^4)\).
+<details><summary>Подсказка</summary>
+Наклон \(\log(\text{ошибка})\) по \(\log h\) должен быть \(\approx 4\): при удвоении \(N\) (уменьшении \(h\) вдвое) ошибка падает примерно в \(2^4=16\) раз. Используйте <code>numpy.polyfit(np.log(h), np.log(err), 1)[0]</code> для оценки наклона.</details>
+</div>
+
+<!-- ===================== ЛЕКЦИЯ B ===================== -->
+<p class="phase lecb">Лекция B · 30 мин</p>
+
+<h2 id="spline">Кусочная интерполяция: другая идея</h2>
+
+<p>Чебышёвские узлы спасают <em>глобальный</em> полином высокой степени. Но есть принципиально иной путь: не повышать степень, а дробить отрезок. <strong>Кусочно-полиномиальная интерполяция</strong> строит на каждом подотрезке свой многочлен низкой степени. Простейший вариант — кусочно-линейная (ломаная) — непрерывна, но имеет изломы и лишь первый порядок точности. Чтобы получить гладкую кривую высокого порядка, поднимают степень кусков до трёх и сшивают их по производным.</p>
+
+<div class="definition">
+<strong>Определение.</strong> Пусть заданы узлы \(a = x_0 &lt; x_1 &lt; \dots &lt; x_n = b\) и значения \(y_i = f(x_i)\). <em>Кубический интерполяционный сплайн</em> — это функция \(S(x)\), которая
+<ol style="margin-top:.3rem">
+<li>на каждом отрезке \([x_i, x_{i+1}]\) совпадает с кубическим многочленом \(S_i(x)\);</li>
+<li>интерполирует данные: \(S(x_i) = y_i\);</li>
+<li>принадлежит классу \(C^2[a,b]\) — то есть \(S,\,S',\,S''\) непрерывны во внутренних узлах.</li>
+</ol>
+</div>
+
+<h2 id="cubic">Подсчёт степеней свободы</h2>
+
+<p>На \(n\) отрезках имеем \(n\) кубических кусков, каждый с \(4\) коэффициентами — итого \(4n\) неизвестных. Сколько уравнений?</p>
+
+<ul>
+<li><strong>Интерполяция в узлах.</strong> Каждый кусок проходит через свои два конца: \(2n\) условий.</li>
+<li><strong>Непрерывность \(S'\)</strong> во внутренних узлах \(x_1,\dots,x_{n-1}\): \(n-1\) условий.</li>
+<li><strong>Непрерывность \(S''\)</strong> во внутренних узлах: ещё \(n-1\) условий.</li>
+</ul>
+
+<p>Сумма: \(2n + (n-1) + (n-1) = 4n - 2\). Не хватает <strong>двух</strong> уравнений — их доставляют <em>граничные условия</em> на концах:</p>
+
+<div class="theorem">
+<strong>Стандартные граничные условия.</strong>
+<ul style="margin-top:.3rem">
+<li><em>Естественный сплайн:</em> \(S''(x_0) = S''(x_n) = 0\). Кривая «распрямляется» к прямой у концов; не требует доп. данных.</li>
+<li><em>Зажатый (clamped) сплайн:</em> заданы наклоны \(S'(x_0) = f'(a)\), \(S'(x_n) = f'(b)\). Точнее у краёв, если производные известны.</li>
+<li><em>Периодический</em> или условие «not-a-knot» (по умолчанию в SciPy) — иные пары замыкающих уравнений.</li>
+</ul>
+</div>
+
+<h2 id="moments">Система на моменты \(M_i = S''(x_i)\)</h2>
+
+<p>Прямое решение для \(4n\) коэффициентов избыточно. Удобнее ввести <strong>моменты</strong> \(M_i = S''(x_i)\). Так как \(S\) кубичен, \(S''\) на каждом куске линеен, и \(S''_i(x)\) однозначно выражается через \(M_i, M_{i+1}\). Дважды интегрируя и подставляя условия интерполяции и непрерывности \(S'\), получаем при шаге \(h_i = x_{i+1}-x_i\) <strong>трёхдиагональную</strong> систему для внутренних \(i = 1,\dots,n-1\):</p>
+
+<div class="eq">\[
+h_{i-1}M_{i-1} + 2(h_{i-1}+h_i)\,M_i + h_i M_{i+1}
+= 6\!\left(\frac{y_{i+1}-y_i}{h_i} - \frac{y_i-y_{i-1}}{h_{i-1}}\right).
+\tag{4.4}
+\]</div>
+
+<p>Вместе с двумя граничными условиями (например, \(M_0 = M_n = 0\) для естественного сплайна) это даёт замкнутую систему вида:</p>
+
+<div class="eq">\[
+\begin{pmatrix}
+1 & & & & \\
+h_0 & 2(h_0{+}h_1) & h_1 & & \\
+ & \ddots & \ddots & \ddots & \\
+ & & h_{n-2} & 2(h_{n-2}{+}h_{n-1}) & h_{n-1}\\
+ & & & & 1
+\end{pmatrix}
+\!\begin{pmatrix} M_0\\ M_1\\ \vdots\\ M_{n-1}\\ M_n\end{pmatrix}
+=
+\begin{pmatrix} 0\\ d_1\\ \vdots\\ d_{n-1}\\ 0\end{pmatrix}.
+\tag{4.5}
+\]</div>
+
+<p>Матрица трёхдиагональна и <em>диагонально доминирующая</em>, поэтому система всегда однозначно разрешима и устойчива. Решается она специальным методом — <strong>прогонкой</strong> (алгоритм Томаса) за \(O(n)\) операций; подробный разбор прогонки ждёт нас на занятии 10. Найдя моменты \(M_i\), на каждом куске восстанавливаем сплайн явной формулой</p>
+
+<div class="eq">\[
+S_i(x) = M_i\frac{(x_{i+1}-x)^3}{6h_i} + M_{i+1}\frac{(x-x_i)^3}{6h_i}
++ \Big(\tfrac{y_i}{h_i}-\tfrac{M_i h_i}{6}\Big)(x_{i+1}-x)
++ \Big(\tfrac{y_{i+1}}{h_i}-\tfrac{M_{i+1} h_i}{6}\Big)(x-x_i).
+\tag{4.6}
+\]</div>
+
+<div class="remark">
+<strong>Связь с интерактивом.</strong> Сплайновый режим в практикуме реализован ровно по формулам (4.4)–(4.6): вектор моментов \(M\) находится прогонкой трёхдиагональной системы прямо в браузере, затем кусок вычисляется по (4.6). Никакой высокой степени — каждый сегмент всего лишь кубический.
+</div>
+
+<h2 id="conv">Сходимость и отсутствие феномена Рунге</h2>
+
+<div class="theorem">
+<strong>Оценка сходимости.</strong> Если \(f \in C^4[a,b]\) и \(h = \max_i h_i\), то для зажатого (и not-a-knot) кубического сплайна
+\[
+\|f - S\|_\infty \le C\,\|f^{(4)}\|_\infty\, h^4,
+\qquad \|f' - S'\|_\infty = O(h^3),\quad \|f'' - S''\|_\infty = O(h^2).
+\]
+Сходимость <em>четвёртого порядка</em> по значению — при измельчении сетки вдвое ошибка падает в \(\approx 16\) раз.
+</div>
+
+<p>Ключевое отличие от глобального полинома: оценка содержит \(h^4\), а <em>не</em> \(\|f^{(n+1)}\|/(n+1)!\). Высокие производные \(f\) уже не входят в показатель степени узлов, поэтому никакого роста амплитуды у краёв нет — <strong>феномен Рунге для сплайнов отсутствует</strong>. Платой служит лишь \(C^2\)-гладкость (а не \(C^\infty\)) и необходимость решать линейную систему вместо явной формулы. На практике для табличных и измеренных данных кубический сплайн — выбор по умолчанию.</p>
+
+<div class="remark">
+<strong>Когда что выбирать.</strong> Гладкая \(f\), нужна высокая точность и есть свобода в узлах ⟹ <em>чебышёвский полином</em>. Данные заданы на фиксированной (часто равномерной) сетке, важна гладкая и устойчивая кривая без осцилляций ⟹ <em>кубический сплайн</em>. Равномерный глобальный полином высокой степени — почти всегда плохой выбор.
+</div>
+
+<h2 id="summary">Итоги занятия</h2>
+
+<div class="algo">
+<strong>Что нужно унести с занятия 4:</strong>
+<ol>
+<li>Погрешность интерполяции (4.1) содержит узловой множитель \(\omega(x)=\prod(x-x_i)\); качество интерполяции определяется выбором узлов.</li>
+<li>Полиномы Чебышёва \(T_n(x)=\cos(n\arccos x)\) равноколеблются между \(\pm1\); приведённый \(2^{1-n}T_n\) минимизирует \(\infty\)-норму среди приведённых многочленов степени \(n\).</li>
+<li><strong>Узлы Чебышёва</strong> \(x_k=\cos\frac{(2k+1)\pi}{2(n+1)}\) (корни \(T_{n+1}\)) сгущаются к концам и подавляют феномен Рунге; на \([a,b]\) переносятся линейной заменой (4.3).</li>
+<li><strong>Кубический сплайн</strong> — кусочно-кубическая \(C^2\)-функция; \(4n-2\) условия плюс 2 граничных (естественный \(S''=0\) или зажатый с заданным \(S'\)).</li>
+<li>Моменты \(M_i=S''(x_i)\) удовлетворяют трёхдиагональной системе (4.4)–(4.5), решаемой прогонкой за \(O(n)\).</li>
+<li>Сплайн сходится как \(O(h^4)\) для гладких \(f\) и не страдает феноменом Рунге — рабочая лошадка интерполяции на сетке.</li>
+</ol>
+</div>
+
+<div class="remark">
+<strong>Домашнее задание.</strong> Доделать задачи 4.1–4.3. Дополнительно: вывести формулу (4.4), дважды проинтегрировав линейный \(S''_i\) на куске и потребовав непрерывности \(S'\) в узле \(x_i\). Проверить численно, что для \(f\in C^4\) измельчение сетки вдвое уменьшает ошибку сплайна примерно в 16 раз.
+</div>
+
+<div class="lecture-nav">
+  <a class="nav-prev" href="w03.html">← Занятие 3. Полиномиальная интерполяция</a>
+  <a class="nav-next" href="w05.html">Занятие 5. МНК и ортогональные базисы →</a>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

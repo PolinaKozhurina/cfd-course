@@ -24,4 +24,4 @@ const ADMIN_EMAILS = ["polinakozhurina2020@gmail.com"];
 // Пока пусто — загрузка файлов отключена (см. profile.html), студент
 // может сдавать только ссылками.
 // ============================================================
-const WORKER_URL = "";
+const WORKER_URL = "https://cfd-course.polinakozhurina2020.workers.dev";

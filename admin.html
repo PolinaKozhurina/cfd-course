@@ -127,6 +127,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
   <button class="tab active" onclick="showTab('students')">Студенты</button>
   <button class="tab" onclick="showTab('enrollments')">Заявки на курсы <span id="enrollTabBadge" style="display:none;min-width:16px;height:16px;border-radius:8px;background:#c44;color:#fff;font-size:.6rem;font-weight:700;font-family:JetBrains Mono,monospace;align-items:center;justify-content:center;padding:0 4px;margin-left:2px;vertical-align:middle"></span></button>
   <button class="tab" onclick="showTab('workgroups')">Рабочие группы</button>
+  <button class="tab" onclick="showTab('homework')">Домашки</button>
   <button class="tab" onclick="showTab('groups')">Результаты тестов</button>
   <button class="tab" onclick="showTab('checklist')">Чек-лист (самооценка)</button>
   <button class="tab" onclick="showTab('tasks')">Задания</button>
@@ -235,6 +236,81 @@ if (location.search.indexOf('embedded=1') !== -1) {
       </select>
     </div>
     <div id="workgroupsList" style="display:flex;flex-direction:column;gap:.7rem"></div>
+  </div>
+</div>
+
+<!-- TAB: Домашки -->
+<div id="tab-homework" class="panel">
+  <div class="card">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:.6rem;flex-wrap:wrap">
+      <h3 style="margin:0">Домашние задания</h3>
+      <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
+        <select id="hwCourseFilter" onchange="renderHomeworkTab()">
+          <option value="">— выберите курс —</option>
+        </select>
+        <button class="btn btn-primary" onclick="hwOpenCreateForm()">+ Новая домашка</button>
+      </div>
+    </div>
+    <p style="font-size:.85rem;color:var(--text2);margin:.5rem 0 .8rem">
+      Домашка — по одному курсу. Common — всем один и тот же файл/текст.
+      Personal — вы задаёте список вариантов, потом привязываете студента к варианту вручную (или автораздача по кругу).
+      Дедлайн с датой и временем; поставите «строгий» — Firestore не примет сдачу после дедлайна.
+    </p>
+    <div id="hwList"></div>
+  </div>
+
+  <!-- Модалка «сдачи и оценки» -->
+  <div id="hwSubsWrap" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.45);align-items:flex-start;justify-content:center;overflow:auto;padding:2rem 1rem">
+    <div style="background:#fff;border-radius:10px;width:1100px;max-width:98%;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.5rem">
+        <h3 id="hwSubsTitle" style="margin:0">Сдачи</h3>
+        <button onclick="hwCloseSubs()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text3)">×</button>
+      </div>
+      <div id="hwSubsMeta" style="font-size:.85rem;color:var(--text2);margin-bottom:.6rem"></div>
+      <div id="hwSubsToolbar" style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem"></div>
+      <div id="hwSubsTable"></div>
+    </div>
+  </div>
+
+  <!-- Форма создания/редактирования -->
+  <div id="hwFormWrap" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:10px;width:640px;max-width:92%;max-height:88vh;overflow:auto;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.6rem">
+        <h3 style="margin:0" id="hwFormTitle">Новая домашка</h3>
+        <button onclick="hwCloseForm()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text3)">×</button>
+      </div>
+      <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2);display:block;margin-top:.5rem">Курс</label>
+      <select id="hwFormCourse" style="width:100%"></select>
+      <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2);display:block;margin-top:.5rem">Название</label>
+      <input type="text" id="hwFormTitleInput" placeholder="ДЗ №1. Задача Римана" style="width:100%">
+      <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2);display:block;margin-top:.5rem">Описание (условие текстом)</label>
+      <textarea id="hwFormDesc" rows="5" placeholder="Постановка задачи, требования к решению, критерии…" style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:6px 10px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text)"></textarea>
+      <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2);display:block;margin-top:.5rem">Дедлайн (МСК)</label>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <input type="datetime-local" id="hwFormDeadline" style="font-family:'JetBrains Mono',monospace;font-size:.85rem;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text)">
+        <label style="display:inline-flex;align-items:center;gap:.3rem;font-size:.78rem;color:var(--text2);cursor:pointer">
+          <input type="checkbox" id="hwFormStrict"> строгий (не принимать после)
+        </label>
+      </div>
+      <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2);display:block;margin-top:.6rem">Режим</label>
+      <div style="display:flex;gap:.8rem;font-size:.85rem;margin-bottom:.5rem">
+        <label style="display:inline-flex;align-items:center;gap:.3rem;cursor:pointer"><input type="radio" name="hwMode" value="common" checked onchange="hwToggleMode()"> Common (всем одно)</label>
+        <label style="display:inline-flex;align-items:center;gap:.3rem;cursor:pointer"><input type="radio" name="hwMode" value="personal" onchange="hwToggleMode()"> Personal (варианты)</label>
+      </div>
+      <div id="hwCommonBlock">
+        <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2);display:block;margin-top:.3rem">Файлы условия (общие, до 25 MB каждый)</label>
+        <input type="file" id="hwFormCommonFiles" multiple>
+      </div>
+      <div id="hwPersonalBlock" style="display:none">
+        <div id="hwVariantsList" style="display:flex;flex-direction:column;gap:.4rem;margin-top:.4rem"></div>
+        <button class="btn btn-sm" onclick="hwAddVariant()" style="margin-top:.4rem">+ Добавить вариант</button>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem">
+        <button class="btn" onclick="hwCloseForm()">Отмена</button>
+        <button class="btn btn-primary" onclick="hwSubmitForm()" id="hwSubmitBtn">Создать</button>
+      </div>
+      <div id="hwFormStatus" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text3);margin-top:.5rem"></div>
+    </div>
   </div>
 </div>
 
@@ -347,10 +423,12 @@ if (location.search.indexOf('embedded=1') !== -1) {
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="js/firebase-config.js"></script>
 <script src="js/courses.js"></script>
 <script src="js/enrollments.js"></script>
+<script src="js/homework.js"></script>
 <script>
 // ============================================================
 // ADMIN PANEL LOGIC
@@ -1083,6 +1161,409 @@ async function assignGroup(uid, group) {
   renderStudents();
   // Rebuild groups
   await loadAllData();
+}
+
+// ===== Домашки =====
+window._hwAssignments = []; // текущий список для активного курса
+window._hwEditingAid = null;
+window._hwVariantFilesCache = {}; // idx -> FileList/Array<File>
+
+function renderHomeworkTab() {
+  const wrap = document.getElementById('hwList');
+  const fCourse = document.getElementById('hwCourseFilter');
+  if (fCourse && fCourse.options.length <= 1 && window.CFD_COURSES) {
+    (window.CFD_COURSES || []).forEach(c => {
+      if (_currentAdminCourses !== null && _currentAdminCourses.indexOf(c.id) === -1) return;
+      const o = document.createElement('option'); o.value = c.id; o.textContent = c.name;
+      fCourse.appendChild(o);
+    });
+  }
+  const cid = fCourse ? fCourse.value : '';
+  if (!cid) { wrap.innerHTML = '<div style="color:var(--text3);font-style:italic;padding:1rem;text-align:center">Выберите курс сверху.</div>'; return; }
+  wrap.innerHTML = '<div style="color:var(--text3);padding:.6rem">загрузка…</div>';
+  CFDHomework.listAssignmentsForCourse(cid).then(list => {
+    window._hwAssignments = list;
+    if (!list.length) {
+      wrap.innerHTML = '<div style="color:var(--text3);font-style:italic;padding:1rem;text-align:center">Домашек по курсу пока нет.</div>';
+      return;
+    }
+    wrap.innerHTML = list.map(a => hwRenderCard(a)).join('');
+  });
+}
+
+function hwRenderCard(a) {
+  const deadline = a.deadlineAt
+    ? new Date(a.deadlineAt.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) + ' МСК'
+    : 'без дедлайна';
+  const strictBadge = a.strictDeadline ? '<span class="badge b-fail" title="Не принимается после дедлайна">строгий</span>' : '';
+  const modeBadge = a.mode === 'personal' ? '<span class="badge" style="background:#e6f1fb;color:#3a5ba0">personal</span>' : '<span class="badge b-group">common</span>';
+  return '<div class="card" style="padding:.7rem 1rem;margin-bottom:.5rem;background:#fff">'
+    + '<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:.5rem;margin-bottom:.3rem">'
+    + '<strong style="font-family:\'Playfair Display\',serif;font-size:1rem">' + hwEscape(a.title) + '</strong>'
+    + modeBadge + strictBadge
+    + '<span style="flex:1"></span>'
+    + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text3)">дедлайн: ' + deadline + '</span>'
+    + '</div>'
+    + (a.description ? '<div style="font-size:.85rem;color:var(--text2);white-space:pre-wrap;margin-bottom:.4rem">' + hwEscape(a.description).slice(0, 300) + (a.description.length > 300 ? '…' : '') + '</div>' : '')
+    + (a.filesCommon && a.filesCommon.length ? '<div style="font-size:.78rem;margin-bottom:.3rem">Файлы: ' + a.filesCommon.map(f => '<a href="'+f.url+'" target="_blank" style="color:var(--accent3);margin-right:.5rem">'+hwEscape(f.name)+'</a>').join('') + '</div>' : '')
+    + (a.mode === 'personal' ? '<div style="font-size:.78rem;color:var(--text3);margin-bottom:.3rem">Вариантов: ' + (a.variants || []).length + '</div>' : '')
+    + '<div style="display:flex;gap:.4rem;flex-wrap:wrap">'
+    + '<button class="btn btn-sm btn-primary" onclick="hwOpenSubmissions(\''+a.id+'\')">Сдачи и оценки →</button>'
+    + '<button class="btn btn-sm" onclick="hwDelete(\''+a.id+'\')">🗑 Удалить</button>'
+    + '</div>'
+    + '</div>';
+}
+
+function hwEscape(s) {
+  return String(s || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function hwOpenCreateForm() {
+  window._hwEditingAid = null;
+  window._hwVariantFilesCache = {};
+  document.getElementById('hwFormTitle').textContent = 'Новая домашка';
+  document.getElementById('hwSubmitBtn').textContent = 'Создать';
+  // Наполнить курсы
+  const sel = document.getElementById('hwFormCourse');
+  sel.innerHTML = '';
+  (window.CFD_COURSES || []).forEach(c => {
+    if (_currentAdminCourses !== null && _currentAdminCourses.indexOf(c.id) === -1) return;
+    const o = document.createElement('option'); o.value = c.id; o.textContent = c.name;
+    sel.appendChild(o);
+  });
+  const cur = document.getElementById('hwCourseFilter').value;
+  if (cur) sel.value = cur;
+  document.getElementById('hwFormTitleInput').value = '';
+  document.getElementById('hwFormDesc').value = '';
+  document.getElementById('hwFormDeadline').value = '';
+  document.getElementById('hwFormStrict').checked = false;
+  document.querySelectorAll('input[name="hwMode"]').forEach(r => r.checked = (r.value === 'common'));
+  document.getElementById('hwFormCommonFiles').value = '';
+  document.getElementById('hwVariantsList').innerHTML = '';
+  document.getElementById('hwFormStatus').textContent = '';
+  hwToggleMode();
+  document.getElementById('hwFormWrap').style.display = 'flex';
+}
+function hwCloseForm() { document.getElementById('hwFormWrap').style.display = 'none'; }
+function hwToggleMode() {
+  const mode = document.querySelector('input[name="hwMode"]:checked').value;
+  document.getElementById('hwCommonBlock').style.display   = (mode === 'common')   ? '' : 'none';
+  document.getElementById('hwPersonalBlock').style.display = (mode === 'personal') ? '' : 'none';
+  if (mode === 'personal' && document.getElementById('hwVariantsList').children.length === 0) {
+    hwAddVariant(); hwAddVariant();
+  }
+}
+function hwAddVariant() {
+  const list = document.getElementById('hwVariantsList');
+  const idx = list.children.length;
+  const row = document.createElement('div');
+  row.style.cssText = 'padding:.5rem;background:var(--bg2);border-radius:4px';
+  row.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem">'
+    + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--accent)">Вариант ' + (idx+1) + '</span>'
+    + '<button class="btn btn-sm" onclick="this.parentElement.parentElement.remove();hwRenumberVariants()">убрать</button>'
+    + '</div>'
+    + '<textarea data-vtext rows="2" placeholder="Формулировка варианта…" style="width:100%;font-family:\'Source Serif 4\',serif;font-size:.85rem;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text)"></textarea>'
+    + '<input type="file" data-vfiles multiple style="margin-top:.3rem;font-size:.78rem">';
+  list.appendChild(row);
+}
+function hwRenumberVariants() {
+  document.querySelectorAll('#hwVariantsList > div').forEach((row, i) => {
+    row.querySelector('span').textContent = 'Вариант ' + (i + 1);
+  });
+}
+
+async function hwSubmitForm() {
+  const btn = document.getElementById('hwSubmitBtn');
+  const st = document.getElementById('hwFormStatus');
+  const cid = document.getElementById('hwFormCourse').value;
+  const title = document.getElementById('hwFormTitleInput').value.trim();
+  const desc = document.getElementById('hwFormDesc').value;
+  const dl = document.getElementById('hwFormDeadline').value; // 'YYYY-MM-DDTHH:mm' в локальном часовом поясе браузера
+  const strict = document.getElementById('hwFormStrict').checked;
+  const mode = document.querySelector('input[name="hwMode"]:checked').value;
+  if (!cid) { st.textContent = 'Выберите курс'; return; }
+  if (!title) { st.textContent = 'Введите название'; return; }
+  // Дедлайн: считаем что пользователь вводит MSK-время.
+  let deadlineAt = null;
+  if (dl) {
+    // Конвертируем 'YYYY-MM-DDTHH:mm' → Date, считая что это МСК (UTC+3, без DST).
+    const [d, t] = dl.split('T');
+    const [Y, M, D] = d.split('-').map(Number);
+    const [h, m] = t.split(':').map(Number);
+    // Date.UTC(Y,M-1,D,h-3,m) — превращает МСК в UTC мс.
+    const ms = Date.UTC(Y, M - 1, D, h - 3, m);
+    deadlineAt = firebase.firestore.Timestamp.fromDate(new Date(ms));
+  }
+  const filesCommon = (mode === 'common') ? Array.from(document.getElementById('hwFormCommonFiles').files || []) : [];
+  const variants = [], variantsFiles = [];
+  if (mode === 'personal') {
+    document.querySelectorAll('#hwVariantsList > div').forEach((row) => {
+      const text = row.querySelector('textarea[data-vtext]').value;
+      const files = Array.from(row.querySelector('input[data-vfiles]').files || []);
+      variants.push({ text: text });
+      variantsFiles.push(files);
+    });
+    if (variants.length === 0) { st.textContent = 'Добавьте хотя бы один вариант'; return; }
+  }
+  btn.disabled = true; st.textContent = 'создаю…';
+  const res = await CFDHomework.createAssignment(
+    cid,
+    { title, description: desc, mode, deadlineAt, deadlineTz: 'Europe/Moscow', strictDeadline: strict, variants: variants },
+    filesCommon, variantsFiles,
+    p => { st.textContent = 'загрузка файлов: ' + Math.round(p * 100) + '%'; }
+  );
+  btn.disabled = false;
+  if (!res.ok) { st.textContent = '✗ ' + res.error; return; }
+  st.textContent = '✓ создано';
+  hwCloseForm();
+  document.getElementById('hwCourseFilter').value = cid;
+  renderHomeworkTab();
+}
+
+async function hwDelete(aid) {
+  if (!confirm('Удалить домашку и все сдачи по ней? Файлы будут стёрты из Storage.')) return;
+  const res = await CFDHomework.deleteAssignment(aid);
+  if (!res.ok) { alert('Ошибка: ' + res.error); return; }
+  renderHomeworkTab();
+}
+
+async function hwOpenSubmissions(aid) {
+  const a = (window._hwAssignments || []).find(x => x.id === aid);
+  if (!a) { alert('Домашка не найдена'); return; }
+  window._hwCurrentAssignment = a;
+  document.getElementById('hwSubsWrap').style.display = 'flex';
+  document.getElementById('hwSubsTitle').textContent = a.title;
+  const dl = a.deadlineAt ? new Date(a.deadlineAt.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' }) + ' МСК' : 'без дедлайна';
+  document.getElementById('hwSubsMeta').innerHTML = 'Курс: <strong>' + hwEscape(((window.CFD_COURSE_BY_ID||{})[a.courseId]||{}).name || a.courseId) + '</strong> · Режим: ' + a.mode + ' · Дедлайн: ' + dl + (a.strictDeadline ? ' (строгий)' : '');
+  const bar = document.getElementById('hwSubsToolbar');
+  bar.innerHTML = '';
+  if (a.mode === 'personal') {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-sm';
+    btn.textContent = '🎲 Автораздача вариантов по кругу';
+    btn.onclick = () => hwAutoAssignVariants(aid);
+    bar.appendChild(btn);
+  }
+  // Панель синхронизации в приватный GitHub-репо
+  const syncWrap = document.createElement('div');
+  syncWrap.style.cssText = 'display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;padding:.4rem .6rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px;margin-left:auto';
+  const repo = localStorage.getItem('gh_submissions_repo') || 'PolinaKozhurina/cfd-submissions';
+  syncWrap.innerHTML =
+    '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text2)">📂 Приватный репо:</span>'
+    + '<input type="text" id="hwSyncRepo" value="'+hwEscape(repo)+'" placeholder="owner/repo" oninput="localStorage.setItem(\'gh_submissions_repo\',this.value)" style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;padding:2px 6px;border:1px solid var(--border);border-radius:3px;width:220px">'
+    + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text2);margin-left:.3rem">🔑 PAT:</span>'
+    + '<input type="password" id="hwSyncToken" value="'+hwEscape(localStorage.getItem('gh_submissions_token')||'')+'" placeholder="github_pat_…" oninput="localStorage.setItem(\'gh_submissions_token\',this.value)" style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;padding:2px 6px;border:1px solid var(--border);border-radius:3px;width:180px">'
+    + '<button class="btn btn-sm btn-primary" onclick="hwSyncToGitHub(\''+aid+'\')">☁ Синхронизировать</button>'
+    + '<span id="hwSyncStatus" style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3);margin-left:.3rem"></span>';
+  bar.appendChild(syncWrap);
+  document.getElementById('hwSubsTable').innerHTML = '<div style="color:var(--text3);padding:1rem;text-align:center">загрузка…</div>';
+  await renderHwSubmissionsTable(aid);
+}
+
+function hwCloseSubs() { document.getElementById('hwSubsWrap').style.display = 'none'; }
+
+async function renderHwSubmissionsTable(aid) {
+  const a = window._hwCurrentAssignment;
+  if (!a) return;
+  const [subs, grades] = await Promise.all([ CFDHomework.listSubmissions(aid), CFDHomework.listGrades(aid) ]);
+  window._hwSubsCache = subs;
+  window._hwGradesCache = grades;
+  // Список кому показывать: студенты с approved-enrollment на этот курс.
+  const enrByUid = window._enrollmentsByUid || {};
+  const enrolled = allUsers.filter(u => !isAdmin(u.email) && enrByUid[u.uid] && enrByUid[u.uid][a.courseId] === 'approved');
+  enrolled.sort((x, y) => (x.fio || x.email || '').localeCompare(y.fio || y.email || ''));
+
+  let submittedCnt = 0, gradedCnt = 0;
+  enrolled.forEach(u => { if (subs[u.uid]) submittedCnt++; if (grades[u.uid]) gradedCnt++; });
+  document.getElementById('hwSubsMeta').innerHTML +=
+    ' · Сдало <strong>' + submittedCnt + '/' + enrolled.length + '</strong>'
+    + ' · Оценено <strong>' + gradedCnt + '</strong>';
+
+  const variantsOpts = (a.variants || []).map((v, i) => '<option value="' + i + '">В' + (i+1) + '</option>').join('');
+  const rows = enrolled.map(u => {
+    const s = subs[u.uid];
+    const g = grades[u.uid] || {};
+    const filesHtml = s && s.files && s.files.length
+      ? s.files.map(f => '<a href="'+f.url+'" target="_blank" style="color:var(--accent3);margin-right:.4rem;font-size:.78rem">📎 '+hwEscape(f.name)+'</a>').join('')
+      : '<span style="color:var(--text3);font-style:italic;font-size:.78rem">—</span>';
+    const submittedAt = s && s.updatedAt ? new Date(s.updatedAt.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) : '';
+    let lateBadge = '';
+    if (s && s.updatedAt && a.deadlineAt && s.updatedAt.toMillis() > a.deadlineAt.toMillis()) {
+      const diffMin = Math.round((s.updatedAt.toMillis() - a.deadlineAt.toMillis()) / 60000);
+      lateBadge = ' <span class="badge b-fail" title="просрочено на ' + diffMin + ' мин">late</span>';
+    }
+    let variantCell = '<span style="color:var(--text3);font-size:.72rem">—</span>';
+    if (a.mode === 'personal') {
+      const cur = (a.assignedVariants || {})[u.uid];
+      variantCell = '<select onchange="hwSetVariant(\''+aid+'\',\''+u.uid+'\',this.value)" style="font-size:.78rem;padding:1px 4px">'
+        + '<option value="">—</option>'
+        + variantsOpts.replace('value="'+cur+'"', 'value="'+cur+'" selected')
+        + '</select>';
+    }
+    const zVal = (g.grade !== undefined && g.grade !== null) ? g.grade : '';
+    const cVal = g.comment || '';
+    return '<tr>'
+      + '<td style="font-weight:600">' + hwEscape(u.fio || u.email) + '</td>'
+      + '<td style="font-size:.78rem">' + hwEscape(u.email || '') + '</td>'
+      + '<td style="font-size:.78rem">' + hwEscape(u.studyGroup || '—') + '</td>'
+      + '<td>' + variantCell + '</td>'
+      + '<td>' + filesHtml + '</td>'
+      + '<td style="white-space:nowrap;font-size:.72rem;color:var(--text2)">' + submittedAt + lateBadge + '</td>'
+      + '<td><input type="number" min="0" max="100" value="'+zVal+'" class="grade-input" id="hwG-'+aid+'-'+u.uid+'" oninput="hwDebounceGrade(\''+aid+'\',\''+u.uid+'\',\''+a.courseId+'\')"></td>'
+      + '<td><input type="text" value="'+hwEscape(cVal).replace(/"/g,'&quot;')+'" class="comment-input" id="hwC-'+aid+'-'+u.uid+'" placeholder="Комментарий" oninput="hwDebounceGrade(\''+aid+'\',\''+u.uid+'\',\''+a.courseId+'\')"></td>'
+      + '</tr>';
+  }).join('');
+  document.getElementById('hwSubsTable').innerHTML =
+    '<table style="width:100%">'
+    + '<thead><tr><th>ФИО</th><th>Email</th><th>Уч. группа</th><th>Вар.</th><th>Файлы</th><th>Сдано</th><th>Оценка</th><th>Комментарий</th></tr></thead>'
+    + '<tbody>' + (rows || '<tr><td colspan="8" style="text-align:center;color:var(--text3)">Никто не записан на курс</td></tr>') + '</tbody>'
+    + '</table>';
+}
+
+async function hwSetVariant(aid, uid, idx) {
+  const val = idx === '' ? null : parseInt(idx, 10);
+  const r = await CFDHomework.assignVariant(aid, uid, val);
+  if (!r.ok) { alert(r.error); return; }
+  const a = window._hwCurrentAssignment;
+  if (a) {
+    a.assignedVariants = a.assignedVariants || {};
+    if (val === null) delete a.assignedVariants[uid]; else a.assignedVariants[uid] = val;
+  }
+}
+
+async function hwAutoAssignVariants(aid) {
+  const a = window._hwCurrentAssignment;
+  if (!a || !a.variants || !a.variants.length) return;
+  const enrByUid = window._enrollmentsByUid || {};
+  const enrolled = allUsers.filter(u => !isAdmin(u.email) && enrByUid[u.uid] && enrByUid[u.uid][a.courseId] === 'approved');
+  enrolled.sort((x, y) => (x.fio || x.email || '').localeCompare(y.fio || y.email || ''));
+  if (!confirm('Раздать ' + a.variants.length + ' вариантов по кругу для ' + enrolled.length + ' студентов? Существующие назначения будут перезаписаны.')) return;
+  const assigned = {};
+  enrolled.forEach((u, i) => { assigned[u.uid] = i % a.variants.length; });
+  const r = await CFDHomework.updateAssignment(aid, { assignedVariants: assigned });
+  if (!r.ok) { alert(r.error); return; }
+  a.assignedVariants = assigned;
+  renderHwSubmissionsTable(aid);
+}
+
+// ===== Синхронизация сдач в приватный GitHub-репо =====
+function _hwSlug(s) {
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^\w.\-]+/g, '_').slice(0, 80);
+}
+async function _fileToBase64(url) {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error('download ' + resp.status);
+  const blob = await resp.blob();
+  return await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onloadend = () => resolve(String(r.result).split(',')[1]);
+    r.onerror = () => reject(new Error('base64'));
+    r.readAsDataURL(blob);
+  });
+}
+async function _ghGetSha(repo, path, token) {
+  const r = await fetch('https://api.github.com/repos/' + repo + '/contents/' + encodeURI(path), {
+    headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }
+  });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error('GET contents ' + r.status);
+  const data = await r.json();
+  return data.sha;
+}
+async function _ghPut(repo, path, base64, message, sha, token) {
+  const body = { message: message, content: base64 };
+  if (sha) body.sha = sha;
+  const r = await fetch('https://api.github.com/repos/' + repo + '/contents/' + encodeURI(path), {
+    method: 'PUT',
+    headers: {
+      Authorization: 'Bearer ' + token,
+      Accept: 'application/vnd.github+json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error('PUT ' + r.status + ': ' + t.slice(0, 200));
+  }
+  return await r.json();
+}
+
+async function hwSyncToGitHub(aid) {
+  const a = window._hwCurrentAssignment;
+  const st = document.getElementById('hwSyncStatus');
+  if (!a) return;
+  const repo = (document.getElementById('hwSyncRepo').value || '').trim();
+  const token = (document.getElementById('hwSyncToken').value || '').trim();
+  if (!repo.match(/^[^\/]+\/[^\/]+$/)) { st.textContent = '✗ формат owner/repo'; return; }
+  if (!token) { st.textContent = '✗ введите PAT'; return; }
+  const subs = window._hwSubsCache || await CFDHomework.listSubmissions(aid);
+  const cid = a.courseId;
+  const aidSlug = _hwSlug(a.title || aid);
+  const uids = Object.keys(subs);
+  if (!uids.length) { st.textContent = 'нет сдач'; return; }
+
+  let pushed = 0, skipped = 0, errors = 0;
+  for (const uid of uids) {
+    const s = subs[uid];
+    const u = allUsers.find(x => x.uid === uid) || { fio: uid, email: uid };
+    // Пропустить, если ничего нового.
+    const upd = s.updatedAt ? s.updatedAt.toMillis() : 0;
+    const syn = s.syncedAt ? s.syncedAt.toMillis() : 0;
+    if (upd && syn && syn >= upd) { skipped++; continue; }
+    const studentSlug = _hwSlug((u.fio || '') + '_' + (u.email || uid));
+    for (let i = 0; i < (s.files || []).length; i++) {
+      const f = s.files[i];
+      const path = cid + '/' + aid + '_' + aidSlug + '/' + studentSlug + '/' + _hwSlug(f.name);
+      st.textContent = 'push ' + (pushed + 1) + '/' + uids.length + ': ' + path.slice(-60);
+      try {
+        const b64 = await _fileToBase64(f.url);
+        let sha = null;
+        try { sha = await _ghGetSha(repo, path, token); } catch(_) {}
+        await _ghPut(repo, path,
+          b64,
+          'sync submission: ' + (a.title || aid) + ' / ' + (u.fio || u.email),
+          sha, token);
+      } catch (e) {
+        errors++;
+        console.warn('sync err for', uid, path, e);
+      }
+    }
+    try {
+      await db.collection('submissions').doc(aid + '_' + uid)
+        .update({ syncedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    } catch (_) {}
+    pushed++;
+  }
+  st.textContent = '✓ синхр: ' + pushed + '; пропущено (без изменений): ' + skipped + (errors ? '; ошибок: ' + errors : '');
+}
+
+const _hwGradeTimers = {};
+function hwDebounceGrade(aid, uid, cid) {
+  const key = aid + '_' + uid;
+  if (_hwGradeTimers[key]) clearTimeout(_hwGradeTimers[key]);
+  _hwGradeTimers[key] = setTimeout(() => hwSaveGrade(aid, uid, cid), 700);
+}
+async function hwSaveGrade(aid, uid, cid) {
+  const key = aid + '_' + uid;
+  delete _hwGradeTimers[key];
+  const zEl = document.getElementById('hwG-' + aid + '-' + uid);
+  const cEl = document.getElementById('hwC-' + aid + '-' + uid);
+  if (!zEl || !cEl) return;
+  const grade = zEl.value === '' ? null : Math.max(0, Math.min(100, parseInt(zEl.value, 10)));
+  const comment = cEl.value;
+  const row = zEl.closest('tr');
+  const r = await CFDHomework.setGrade(aid, uid, cid, grade, comment);
+  if (r.ok) {
+    row.style.transition = 'background .3s';
+    row.style.background = 'rgba(26,107,90,0.12)';
+    setTimeout(() => { row.style.background = ''; }, 800);
+  } else {
+    row.style.background = 'rgba(196,68,68,0.15)';
+    setTimeout(() => { row.style.background = ''; }, 1500);
+  }
 }
 
 // ===== Рабочие группы =====

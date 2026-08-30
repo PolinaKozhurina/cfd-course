@@ -273,3 +273,19 @@ grades/                             ← оценки (ставит админ)
 > **Не оставляйте** «упрощённые» правила `allow read, write: if request.auth != null` —
 > они позволяют студенту записать себе `isAdmin: true` через собственный
 > user-документ. Используйте `firestore.rules`.
+
+## Storage Rules (для файлов домашек)
+
+Актуальные правила — см. файл [`storage.rules`](storage.rules).
+
+Деплой:
+
+1. Firebase Console → **Storage** → **Rules** (третья вкладка сверху).
+2. Скопировать содержимое `storage.rules`, вставить, **Publish**.
+
+Пути:
+- `homework/{cid}/{aid}/common/…`   — условия ДЗ (общие);
+- `homework/{cid}/{aid}/variants/{idx}/…` — файлы вариантов (personal);
+- `homework/{cid}/{aid}/{uid}/…`    — присланная сдача студента.
+
+Лимит одного файла: **25 MB**.

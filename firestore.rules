@@ -371,6 +371,79 @@ service cloud.firestore {
                     || (isOwnEnroll() && resource.data.status == 'pending');
     }
 
+    // ---------- assignments (домашние задания) ----------
+    // { courseId, title, description, mode:'common'|'personal',
+    //   deadlineAt(Timestamp)?, deadlineTz:'Europe/Moscow', strictDeadline:bool,
+    //   filesCommon:[{path,url,name,size}]?,
+    //   variants:[{text, files:[{path,url,name,size}]}]?,
+    //   assignedVariants:{ uid: variantIndex }?,
+    //   createdBy, createdAt }
+    match /assignments/{aid} {
+      allow read:  if isAuth();
+      allow create: if isAdmin()
+                    && adminCanManageCourse(request.resource.data.get('courseId', ''));
+      allow update, delete: if isAdmin()
+                    && adminCanManageCourse(resource.data.get('courseId', ''));
+    }
+
+    // ---------- submissions (сдача студента) ----------
+    // ключ: '{aid}_{uid}'; поля: { assignmentId, uid, courseId,
+    //   files:[{path,url,name,size,uploadedAt}], submittedAt, updatedAt,
+    //   note?, syncedAt? }.
+    match /submissions/{docId} {
+      function subUid()      { return docId.split('_')[1]; }
+      function subAid()      { return docId.split('_')[0]; }
+      function isOwnSub()    { return isAuth() && request.auth.uid == subUid(); }
+      function subCourseId() {
+        return request.resource.data.get('courseId', resource.data.get('courseId', ''));
+      }
+      // Строгий дедлайн: если у assignment strictDeadline==true — не пускаем
+      // после `deadlineAt`.
+      function deadlineOk() {
+        let a = get(/databases/$(database)/documents/assignments/$(subAid())).data;
+        return a.get('strictDeadline', false) == false
+            || a.get('deadlineAt', null) == null
+            || request.time <= a.deadlineAt;
+      }
+
+      allow read: if isAuth() && (isOwnSub() || adminCanManageCourse(resource.data.get('courseId', '')));
+
+      allow create: if isVerified()
+                    && isOwnSub()
+                    && docId.split('_').size() == 2
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.assignmentId == subAid()
+                    && subCourseId() != ''
+                    && deadlineOk();
+
+      allow update: if
+        // студент дозаливает свою сдачу
+        (isVerified() && isOwnSub()
+         && request.resource.data.uid == request.auth.uid
+         && request.resource.data.assignmentId == resource.data.assignmentId
+         && request.resource.data.courseId    == resource.data.courseId
+         && deadlineOk())
+        // admin помечает syncedAt / manualStatus
+        || adminCanManageCourse(resource.data.get('courseId', ''));
+
+      allow delete: if adminCanManageCourse(resource.data.get('courseId', ''));
+    }
+
+    // ---------- assignment_grades (оценка за одну домашку) ----------
+    // ключ '{aid}_{uid}'; поля: { assignmentId, uid, courseId,
+    //   grade:0..100, comment, gradedAt, gradedBy }.
+    match /assignment_grades/{docId} {
+      function agUid() { return docId.split('_')[1]; }
+      allow read: if isAuth()
+                     && (agUid() == request.auth.uid
+                         || (resource != null
+                             && adminCanManageCourse(resource.data.get('courseId', ''))));
+      allow create: if adminCanManageCourse(request.resource.data.get('courseId', ''));
+      allow update: if adminCanManageCourse(resource.data.get('courseId', ''))
+                    && request.resource.data.get('courseId','') == resource.data.get('courseId','');
+      allow delete: if adminCanManageCourse(resource.data.get('courseId', ''));
+    }
+
     // ---------- fallback: всё остальное закрыто ----------
     match /{document=**} {
       allow read, write: if false;

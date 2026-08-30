@@ -1,0 +1,76 @@
+rules_version = '2';
+
+// ============================================================
+// CFD Course — Firebase Storage Rules
+// ------------------------------------------------------------
+// Источник правды: этот файл в репозитории.
+// Деплой: Firebase Console → Storage → Rules → вставить → Publish.
+//
+// Пути:
+//   homework/{cid}/{aid}/common/{filename}         — условия ДЗ (admin write)
+//   homework/{cid}/{aid}/variants/{idx}/{filename} — файлы вариантов (admin write)
+//   homework/{cid}/{aid}/{uid}/{filename}          — сдача студента (student write)
+//
+// Лимит одного файла: 25 MB.
+// ============================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuth() { return request.auth != null; }
+
+    function isSuperAdmin() {
+      return isAuth() && request.auth.token.email in [
+        'polinakozhurina2020@gmail.com'
+      ];
+    }
+
+    function callerDoc() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSuperAdmin() ||
+        (isAuth()
+         && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+         && callerDoc().isAdmin == true);
+    }
+
+    function adminCanManageCourse(cid) {
+      return isSuperAdmin()
+          || (isAdmin() && cid in callerDoc().get('managedCourses', []));
+    }
+
+    function underLimit() {
+      // 25 MB на файл
+      return request.resource == null || request.resource.size < 25 * 1024 * 1024;
+    }
+
+    // Условия ДЗ (общее и per-variant) — читают все auth, пишет admin курса.
+    match /homework/{cid}/{aid}/common/{fileName=**} {
+      allow read: if isAuth();
+      allow write: if adminCanManageCourse(cid) && underLimit();
+    }
+    match /homework/{cid}/{aid}/variants/{idx}/{fileName=**} {
+      allow read: if isAuth();
+      allow write: if adminCanManageCourse(cid) && underLimit();
+    }
+
+    // Сдача студента — читают сам студент и admin курса, пишет сам студент.
+    // (Строгий дедлайн проверяется в Firestore-правилах submissions.)
+    match /homework/{cid}/{aid}/{uid}/{fileName=**} {
+      allow read: if isAuth()
+                     && (request.auth.uid == uid || adminCanManageCourse(cid));
+      allow write: if isAuth()
+                     && request.auth.uid == uid
+                     && request.auth.token.email_verified == true
+                     && underLimit();
+      allow delete: if request.auth.uid == uid || adminCanManageCourse(cid);
+    }
+
+    // Всё остальное закрыто.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

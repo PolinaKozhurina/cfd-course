@@ -101,6 +101,19 @@ td{padding:5px 10px;border:1px solid var(--border)}
     <div id="repoStatus" style="font-size:.78rem;margin-top:.3rem;color:var(--accent2)"></div>
   </div>
 
+  <div class="card" id="myCoursesCard">
+    <h3 style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--accent);margin-bottom:.6rem">Мои курсы</h3>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:.6rem">Отметьте курсы, которые слушаете. Преподаватель курса подтверждает запись — после этого появляется доступ к сдаче и оценкам.</p>
+    <div id="myCoursesList" style="display:flex;flex-direction:column;gap:.4rem"></div>
+  </div>
+
+  <div class="card" id="myWorkGroupsCard">
+    <h3 style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--accent);margin-bottom:.6rem">Мои рабочие группы</h3>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:.6rem">Для каждого одобренного курса — выберите свою рабочую группу (2–3 человека сдают вместе). По одному курсу может быть только одна группа.</p>
+    <div id="myWorkGroupsList" style="display:flex;flex-direction:column;gap:.4rem"></div>
+    <div id="legacyGroupNotice" style="display:none;margin-top:.6rem;padding:.5rem .7rem;background:#faeeda;color:#854f0b;border-radius:6px;font-size:.82rem"></div>
+  </div>
+
   <div class="stats">
     <div class="stat"><div class="num" id="statPassed">0</div><div class="label">Принято</div></div>
     <div class="stat"><div class="num" id="statFailed">0</div><div class="label">С ошибками</div></div>
@@ -110,23 +123,10 @@ td{padding:5px 10px;border:1px solid var(--border)}
     <div class="stat"><div class="num" id="statExam">—</div><div class="label">Экзамен (50)</div></div>
   </div>
 
-  <div id="gradeSection" style="display:none">
+  <div id="gradesByCourse" style="display:none">
     <h2>Оценки</h2>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.8rem;margin-bottom:.8rem">
-      <div class="grade-box">
-        <div class="grade-num" id="gradeZachet">—</div>
-        <div class="grade-label">из 50 · Зачёт</div>
-      </div>
-      <div class="grade-box">
-        <div class="grade-num" id="gradeExam">—</div>
-        <div class="grade-label">из 50 · Экзамен</div>
-      </div>
-      <div class="grade-box" style="border-color:var(--accent2)">
-        <div class="grade-num" id="gradeTotal" style="color:var(--accent2)">—</div>
-        <div class="grade-label">из 100 · Итого</div>
-      </div>
-    </div>
-    <div class="grade-comment" id="gradeComment" style="font-size:.9rem;color:var(--text);font-style:italic;text-align:center"></div>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:.6rem">Оценка выставляется отдельно по каждому курсу: Зачёт (до 50) + Экзамен (до 50). Пока преподаватель курса ещё не выставил, стоят прочерки.</p>
+    <div id="gradesByCourseList" style="display:flex;flex-direction:column;gap:.8rem"></div>
   </div>
 
   <h2>Результаты по тестам</h2>
@@ -188,7 +188,227 @@ td{padding:5px 10px;border:1px solid var(--border)}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="js/firebase-config.js"></script>
+<script src="js/courses.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/enrollments.js"></script>
+<script src="js/workgroups.js"></script>
+<style>
+.mycourse-row{display:flex;align-items:center;gap:.6rem;padding:.5rem .7rem;border:1px solid var(--border);border-radius:6px;background:var(--bg2)}
+.mycourse-row .name{flex:1;font-family:'Playfair Display',serif;font-weight:700;font-size:.95rem;color:var(--text)}
+.mycourse-row .sem{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--text3)}
+.mycourse-row .status{font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:.15rem .5rem;border-radius:3px}
+.mycourse-row .status.pending{background:var(--bg3);color:var(--text2)}
+.mycourse-row .status.approved{background:#e8f4f0;color:var(--accent2)}
+.mycourse-row .status.rejected{background:#fde8e8;color:#c44}
+.mycourse-row .mc-btn{font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:.25rem .6rem;border-radius:4px;background:var(--accent);color:#fff;border:none;cursor:pointer}
+.mycourse-row .mc-btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.mycourse-row .mc-btn:disabled{opacity:.5;cursor:default}
+</style>
+<script>
+// Мои курсы — рендер и действия
+(function(){
+  async function renderMyCourses(){
+    var wrap = document.getElementById('myCoursesList');
+    if (!wrap || !window.CFD_COURSES) return;
+    var user = firebase.auth().currentUser;
+    if (!user) { wrap.innerHTML = '<div style="color:var(--text3);font-size:.85rem">Войдите, чтобы записаться на курс.</div>'; return; }
+    var mine = await CFDEnroll.listMine();
+    wrap.innerHTML = '';
+    window.CFD_COURSES.forEach(function(c){
+      var e = mine[c.id];
+      var row = document.createElement('div');
+      row.className = 'mycourse-row';
+      var statusHtml = '';
+      var btnHtml = '';
+      if (!e){
+        btnHtml = user.emailVerified
+          ? '<button class="mc-btn" data-a="req" data-c="'+c.id+'">Записаться</button>'
+          : '<span style="font-size:.7rem;color:var(--text3);font-style:italic">подтвердите email</span>';
+      } else if (e.status === 'pending'){
+        statusHtml = '<span class="status pending">на рассмотрении</span>';
+        btnHtml = '<button class="mc-btn ghost" data-a="cancel" data-c="'+c.id+'">отменить</button>';
+      } else if (e.status === 'approved'){
+        statusHtml = '<span class="status approved">✓ записан</span>';
+      } else if (e.status === 'rejected'){
+        statusHtml = '<span class="status rejected">✗ отклонено</span>';
+        btnHtml = '<button class="mc-btn ghost" data-a="reapply" data-c="'+c.id+'">подать снова</button>';
+      }
+      row.innerHTML =
+        '<div class="name">' + c.name + '</div>'
+        + '<div class="sem">' + c.semester + '</div>'
+        + statusHtml + btnHtml;
+      wrap.appendChild(row);
+    });
+    wrap.querySelectorAll('button[data-a]').forEach(function(btn){
+      btn.onclick = async function(){
+        btn.disabled = true;
+        var a = btn.getAttribute('data-a');
+        var cid = btn.getAttribute('data-c');
+        var res;
+        if (a === 'req')     res = await CFDEnroll.request(cid);
+        if (a === 'cancel')  res = await CFDEnroll.cancel(cid);
+        if (a === 'reapply') res = await CFDEnroll.reapply(cid);
+        if (!res.ok) { alert(res.error); btn.disabled = false; return; }
+        await renderMyCourses();
+      };
+    });
+  }
+  window._renderMyCourses = renderMyCourses;
+
+  // === Рабочие группы по курсам ===
+  async function renderMyWorkGroups(){
+    var wrap = document.getElementById('myWorkGroupsList');
+    var legacyBox = document.getElementById('legacyGroupNotice');
+    if (!wrap) return;
+    var user = firebase.auth().currentUser;
+    if (!user) { wrap.innerHTML = '<div style="color:var(--text3);font-size:.85rem">Войдите, чтобы назначить рабочие группы.</div>'; if(legacyBox) legacyBox.style.display='none'; return; }
+    var mine = await CFDEnroll.listMine();
+    var approvedCourses = (window.CFD_COURSES || []).filter(function(c){
+      return mine[c.id] && mine[c.id].status === 'approved';
+    });
+    if (approvedCourses.length === 0) {
+      wrap.innerHTML = '<div style="color:var(--text3);font-size:.85rem;font-style:italic">Нет одобренных курсов. Запишитесь и дождитесь подтверждения — тогда сможете выбрать рабочую группу.</div>';
+    } else {
+      wrap.innerHTML = '';
+      for (var idx = 0; idx < approvedCourses.length; idx++) {
+        var c = approvedCourses[idx];
+        var block = document.createElement('div');
+        block.className = 'card';
+        block.style.padding = '.7rem .9rem';
+        block.dataset.cid = c.id;
+        block.innerHTML =
+          '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;flex-wrap:wrap">'
+          + '<h4 style="font-family:\'Playfair Display\',serif;font-size:.98rem;font-weight:700;color:var(--accent);margin:0">' + c.name + '</h4>'
+          + '<span class="sem" style="font-family:\'JetBrains Mono\',monospace;font-size:.68rem;color:var(--text3)">' + c.semester + '</span>'
+          + '</div>'
+          + '<div class="wg-body" style="margin-top:.5rem;font-size:.85rem;color:var(--text2)">загрузка…</div>';
+        wrap.appendChild(block);
+        renderWgBlock(c.id, block.querySelector('.wg-body'));
+      }
+    }
+    // Legacy: подсказка про общую group_NN + кнопка миграции.
+    if (legacyBox) {
+      var doc2 = await db2.collection('users').doc(user.uid).get();
+      var legacy = doc2.exists && doc2.data().group;
+      if (legacy) {
+        legacyBox.style.display = '';
+        var opts = approvedCourses.map(function(c){
+          return '<option value="'+c.id+'">'+c.name+'</option>';
+        }).join('');
+        legacyBox.innerHTML =
+          '⚠ У вас указана «общая» рабочая группа <strong>' + legacy.replace('group_','№') + '</strong> (старая схема). '
+          + 'Она сработает только на страницах без привязки к курсу. Рекомендуется перенести её в конкретный курс.'
+          + (approvedCourses.length
+            ? '<div style="margin-top:.4rem;display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">'
+              + '<span style="font-size:.78rem">Перенести в:</span>'
+              + '<select id="legacyMigrateSel" style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text)">'+opts+'</select>'
+              + '<button id="legacyMigrateBtn" style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;padding:3px 10px;border-radius:4px;background:#854f0b;color:#fff;border:none;cursor:pointer">Перенести</button>'
+              + '<span id="legacyMigrateStatus" style="font-size:.72rem;color:var(--text3)"></span>'
+              + '</div>'
+            : '<div style="margin-top:.4rem;font-size:.78rem;font-style:italic">Сначала запишитесь на один из курсов и получите подтверждение — тогда сюда прилетит кнопка «Перенести».</div>');
+        var btn = document.getElementById('legacyMigrateBtn');
+        if (btn) btn.onclick = async function(){
+          var sel = document.getElementById('legacyMigrateSel');
+          var st = document.getElementById('legacyMigrateStatus');
+          var cid = sel.value;
+          if (!cid) return;
+          btn.disabled = true; st.textContent = 'переношу…';
+          var res = await CFDAuth.assignSelfToGroup(cid, legacy);
+          if (!res.ok) { st.textContent = '✗ ' + res.error; btn.disabled = false; return; }
+          // Занулить legacy поле, чтобы не сбивать с толку.
+          try {
+            await db2.collection('users').doc(user.uid).update({ group: firebase.firestore.FieldValue.delete() });
+          } catch(e) {
+            // старая rules-версия не разрешит delete? — попробуем set null
+            try { await db2.collection('users').doc(user.uid).set({ group: null }, { merge:true }); } catch(_) {}
+          }
+          st.textContent = '✓ перенесено';
+          setTimeout(function(){ renderMyWorkGroups(); }, 400);
+        };
+      } else {
+        legacyBox.style.display = 'none';
+      }
+    }
+  }
+  // Рендер одного блока «Моя группа по курсу» — читает Firestore и рисует
+  // либо «Создать/Присоединиться», либо детали текущей группы.
+  async function renderWgBlock(cid, root){
+    if (!root) return;
+    root.innerHTML = 'загрузка…';
+    var d = await CFDGroups.getGroupDetails(cid);
+    if (!d) {
+      // Нет группы — панель «создать / присоединиться».
+      root.innerHTML =
+        '<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">'
+        + '<button data-a="create" style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;padding:5px 12px;border-radius:5px;background:var(--accent);color:#fff;border:none;cursor:pointer">Создать новую группу</button>'
+        + '<span style="color:var(--text3)">или</span>'
+        + '<input type="text" data-a="code-input" placeholder="КОД ГРУППЫ" maxlength="8" style="font-family:\'JetBrains Mono\',monospace;font-size:.9rem;letter-spacing:.15em;text-transform:uppercase;padding:5px 10px;width:130px;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text)">'
+        + '<button data-a="join" style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;padding:5px 12px;border-radius:5px;background:var(--accent3);color:#fff;border:none;cursor:pointer">Присоединиться</button>'
+        + '<span class="wg-status" style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3)"></span>'
+        + '</div>'
+        + '<p style="font-size:.75rem;color:var(--text3);margin-top:.4rem;line-height:1.5">Староста создаёт группу и делится 6-символьным кодом с сокурсниками. Максимум участников — 3.</p>';
+      var stEl = root.querySelector('.wg-status');
+      root.querySelector('button[data-a="create"]').onclick = async function(){
+        this.disabled = true; stEl.textContent = 'создаю…';
+        var r = await CFDGroups.createGroup(cid);
+        if (!r.ok) { stEl.textContent = '✗ ' + r.error; this.disabled = false; return; }
+        renderWgBlock(cid, root);
+      };
+      root.querySelector('button[data-a="join"]').onclick = async function(){
+        var code = root.querySelector('input[data-a="code-input"]').value.trim().toUpperCase();
+        this.disabled = true; stEl.textContent = 'ищу…';
+        var r = await CFDGroups.joinByCode(code);
+        if (!r.ok) { stEl.textContent = '✗ ' + r.error; this.disabled = false; return; }
+        renderWgBlock(cid, root);
+      };
+      return;
+    }
+    // Есть группа — показать детали.
+    var membersHtml = d.members.map(function(m){
+      return '<li style="padding:2px 0">'
+           + (m.isStaroste ? '★ ' : '')
+           + '<strong>' + (m.fio || m.email) + '</strong>'
+           + (m.email ? ' <span style="color:var(--text3);font-size:.78rem">' + m.email + '</span>' : '')
+           + '</li>';
+    }).join('');
+    root.innerHTML =
+      '<div style="display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-bottom:.4rem">'
+      + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;background:var(--bg3);color:var(--text2);padding:2px 8px;border-radius:3px">Группа №' + d.groupIndex + '</span>'
+      + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3)">'+d.members.length+' / '+d.maxSize+'</span>'
+      + (d.approved ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;background:#e8f4f0;color:var(--accent2);padding:1px 6px;border-radius:3px">✓ подтверждена</span>' : '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;background:var(--bg3);color:var(--text2);padding:1px 6px;border-radius:3px">на рассмотрении</span>')
+      + '<span style="flex:1"></span>'
+      + '<button data-a="leave" style="font-family:\'JetBrains Mono\',monospace;font-size:.7rem;padding:3px 10px;border-radius:4px;background:transparent;color:#c44;border:1px solid #c44;cursor:pointer">Покинуть</button>'
+      + '</div>'
+      + '<div style="display:flex;align-items:center;gap:.5rem;margin:.3rem 0"><span style="font-size:.78rem;color:var(--text2)">Код приглашения:</span>'
+      + '<code style="font-family:\'JetBrains Mono\',monospace;font-size:1.05rem;letter-spacing:.15em;background:var(--code-bg,#2b2520);color:var(--code-text,#f0e6d8);padding:3px 10px;border-radius:5px">' + d.joinCode + '</code>'
+      + '<button data-a="copy" style="font-family:\'JetBrains Mono\',monospace;font-size:.7rem;padding:3px 8px;border-radius:4px;background:var(--bg2);border:1px solid var(--border);cursor:pointer">копировать</button>'
+      + '</div>'
+      + '<ul style="list-style:none;padding:0;margin:.4rem 0 0;font-size:.85rem">' + membersHtml + '</ul>';
+    root.querySelector('button[data-a="copy"]').onclick = function(){
+      navigator.clipboard.writeText(d.joinCode).then(function(){
+        var b = root.querySelector('button[data-a="copy"]');
+        var old = b.textContent; b.textContent = '✓ скопирован'; setTimeout(function(){ b.textContent = old; }, 1200);
+      });
+    };
+    root.querySelector('button[data-a="leave"]').onclick = async function(){
+      if (!confirm('Покинуть группу №' + d.groupIndex + '? Ваши сдачи по этому курсу будут отвязаны.')) return;
+      this.disabled = true;
+      var r = await CFDGroups.leaveGroup(cid);
+      if (!r.ok) { alert(r.error); this.disabled = false; return; }
+      renderWgBlock(cid, root);
+    };
+  }
+
+  window._renderMyWorkGroups = renderMyWorkGroups;
+
+  document.addEventListener('DOMContentLoaded', function(){
+    firebase.auth().onAuthStateChanged(function(){
+      renderMyCourses();
+      renderMyWorkGroups();
+    });
+  });
+})();
+</script>
 <script>
   // Save repo URL (must be after firebase-config.js which defines db2)
   window.saveRepoUrl = async function() {
@@ -454,22 +674,78 @@ firebase.auth().onAuthStateChanged(async user => {
     } catch(e) {}
   }
 
-  // Load individual grades
+  // Load individual grades — по каждому подтверждённому курсу отдельно.
   try {
-    const gradeDoc = await db2.collection('individual_grades').doc(user.uid).get();
-    if (gradeDoc.exists) {
-      const g = gradeDoc.data();
-      const z = g.zachet || 0;
-      const e = g.exam || 0;
-      document.getElementById('statZachet').textContent = z || '—';
-      document.getElementById('statExam').textContent = e || '—';
-      document.getElementById('gradeSection').style.display = '';
-      document.getElementById('gradeZachet').textContent = z;
-      document.getElementById('gradeExam').textContent = e;
-      document.getElementById('gradeTotal').textContent = z + e;
-      document.getElementById('gradeComment').textContent = g.comment || '';
+    const gradeSect = document.getElementById('gradesByCourse');
+    const gradeList = document.getElementById('gradesByCourseList');
+    if (gradeList && window.CFDEnroll) {
+      const mine = await CFDEnroll.listMine();
+      const approved = (window.CFD_COURSES || []).filter(c => mine[c.id] && mine[c.id].status === 'approved');
+      // Дочитать legacy общую оценку (users.uid без cid)
+      let legacy = null;
+      try {
+        const legDoc = await db2.collection('individual_grades').doc(user.uid).get();
+        if (legDoc.exists) legacy = legDoc.data();
+      } catch(_) {}
+
+      const parts = [];
+      // Общая шапка (сумма/средняя) — покажем позже, если наберётся.
+      let totalZachet = 0, totalExam = 0, gradedCourses = 0;
+
+      for (const c of approved) {
+        let g = {};
+        try {
+          const d = await db2.collection('individual_grades').doc(user.uid + '_' + c.id).get();
+          if (d.exists) g = d.data();
+        } catch(_) {}
+        const z = (g.zachet !== undefined && g.zachet !== null) ? g.zachet : null;
+        const e = (g.exam   !== undefined && g.exam   !== null) ? g.exam   : null;
+        if (z !== null) { totalZachet += z; gradedCourses++; }
+        if (e !== null) { totalExam   += e; }
+        const total = (z || 0) + (e || 0);
+        parts.push(
+          '<div class="card" style="padding:.8rem 1rem">'
+          + '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:.4rem">'
+          + '<h3 style="font-family:\'Playfair Display\',serif;font-size:.98rem;font-weight:700;color:var(--accent);margin:0">' + c.name + '</h3>'
+          + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3)">' + c.semester + '</span>'
+          + '</div>'
+          + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem">'
+          + '<div class="grade-box" style="padding:.6rem"><div class="grade-num" style="font-size:2rem">' + (z === null ? '—' : z) + '</div><div class="grade-label">из 50 · Зачёт</div></div>'
+          + '<div class="grade-box" style="padding:.6rem"><div class="grade-num" style="font-size:2rem">' + (e === null ? '—' : e) + '</div><div class="grade-label">из 50 · Экзамен</div></div>'
+          + '<div class="grade-box" style="padding:.6rem;border-color:var(--accent2)"><div class="grade-num" style="font-size:2rem;color:var(--accent2)">' + (z === null && e === null ? '—' : total) + '</div><div class="grade-label">из 100 · Итого</div></div>'
+          + '</div>'
+          + (g.comment ? '<div style="font-size:.88rem;color:var(--text);font-style:italic;margin-top:.5rem">«' + g.comment + '»</div>' : '')
+          + '</div>'
+        );
+      }
+      if (legacy) {
+        parts.push(
+          '<div class="card" style="padding:.8rem 1rem;border-color:#faeeda">'
+          + '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:.4rem">'
+          + '<h3 style="font-family:\'Playfair Display\',serif;font-size:.98rem;font-weight:700;color:#854f0b;margin:0">Legacy общая оценка</h3>'
+          + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.68rem;color:var(--text3)">до раздельных курсов</span>'
+          + '</div>'
+          + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem">'
+          + '<div class="grade-box" style="padding:.6rem"><div class="grade-num" style="font-size:2rem">' + (legacy.zachet || 0) + '</div><div class="grade-label">из 50 · Зачёт</div></div>'
+          + '<div class="grade-box" style="padding:.6rem"><div class="grade-num" style="font-size:2rem">' + (legacy.exam || 0) + '</div><div class="grade-label">из 50 · Экзамен</div></div>'
+          + '<div class="grade-box" style="padding:.6rem;border-color:var(--accent2)"><div class="grade-num" style="font-size:2rem;color:var(--accent2)">' + ((legacy.zachet||0)+(legacy.exam||0)) + '</div><div class="grade-label">из 100 · Итого</div></div>'
+          + '</div>'
+          + (legacy.comment ? '<div style="font-size:.88rem;color:var(--text);font-style:italic;margin-top:.5rem">«' + legacy.comment + '»</div>' : '')
+          + '</div>'
+        );
+      }
+      if (parts.length) {
+        gradeList.innerHTML = parts.join('');
+        gradeSect.style.display = '';
+      }
+
+      // Заполнить статистику наверху (агрегатом по курсам)
+      const stZ = document.getElementById('statZachet');
+      const stE = document.getElementById('statExam');
+      if (stZ) stZ.textContent = gradedCourses ? String(Math.round(totalZachet / gradedCourses)) + ' ср.' : '—';
+      if (stE) stE.textContent = gradedCourses ? String(Math.round(totalExam   / gradedCourses)) + ' ср.' : '—';
     }
-  } catch (e2) {}
+  } catch (e2) { console.warn('grades load', e2); }
 
   // Init messenger
   if (userGroup || true) { // always show messenger

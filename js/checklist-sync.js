@@ -19,10 +19,16 @@
   const db = firebase.firestore();
 
   let currentUser = null;
-  let userGroup = null;
+  let userGroup = null;    // «полный» ID группы для Firestore:
+                           //   legacy: 'group_02'
+                           //   per-course: 'sem2_group_02'
   let checkboxes = [];
   let isAdmin = false;
   var _isDirty = false;
+
+  // cid текущей страницы — берём из <html data-course="…">.
+  // Если задан и у студента есть courseGroups[cid], используем per-course путь.
+  var pageCid = (document.documentElement.getAttribute('data-course') || '');
 
   // ===== Assign IDs to all checkboxes =====
   function initCheckboxes() {
@@ -108,6 +114,15 @@
   // ===== Save/Load from Firestore =====
   async function saveCheckboxState(itemId, checked) {
     if (!currentUser || !userGroup) return;
+    if (!currentUser.emailVerified) {
+      // Не пытаемся писать — правила Firestore всё равно откажут.
+      // Показываем понятное сообщение один раз, потом молча.
+      if (!window._checklistVerifyWarned) {
+        window._checklistVerifyWarned = true;
+        alert("Email не подтверждён — галочки чек-листа не сохраняются.\n\nОткройте профиль (кнопка «Профиль» в шапке) и подтвердите почту.");
+      }
+      return;
+    }
     try {
       await db.collection('groups').doc(userGroup).collection('checklist').doc(itemId).set({
         checked: checked,
@@ -345,11 +360,20 @@
         isAdmin = Array.isArray(ADMIN_EMAILS) ? ADMIN_EMAILS.includes(user.email) : user.email === ADMIN_EMAILS;
       }
 
-      // Load user group
+      // Load user group. Порядок предпочтения:
+      //   1) per-course назначение (users.courseGroups[pageCid]) — если страница
+      //      объявила data-course и у студента есть группа на этот курс;
+      //   2) legacy общая группа users.group.
       try {
         const doc = await db.collection('users').doc(user.uid).get();
-        if (doc.exists && doc.data().group) {
-          userGroup = doc.data().group;
+        if (doc.exists) {
+          const d = doc.data();
+          const perCourse = (pageCid && d.courseGroups && d.courseGroups[pageCid]) || null;
+          if (perCourse) {
+            userGroup = pageCid + '_' + perCourse;
+          } else if (d.group) {
+            userGroup = d.group;
+          }
         }
       } catch (e) {}
 
@@ -363,7 +387,15 @@
       var membersText = '';
       if (userGroup) {
         try {
-          var membersSnap = await db.collection('users').where('group', '==', userGroup).get();
+          // per-course формат 'sem2_group_02' → искать по courseGroups.sem2 == 'group_02'
+          var membersSnap;
+          if (userGroup.indexOf('_group_') !== -1 && pageCid && userGroup.indexOf(pageCid + '_') === 0) {
+            var rawGid = userGroup.substring(pageCid.length + 1);
+            membersSnap = await db.collection('users')
+              .where('courseGroups.' + pageCid, '==', rawGid).get();
+          } else {
+            membersSnap = await db.collection('users').where('group', '==', userGroup).get();
+          }
           var names = [];
           membersSnap.forEach(function(d) { names.push(d.data().fio || d.data().email); });
           membersText = ' · Участники: ' + names.join(', ');
@@ -371,7 +403,9 @@
       }
       
       if (userEl) {
-        userEl.textContent = fio + (userGroup ? ' · ' + userGroup.replace('group_', 'Группа ') : '') + membersText;
+        // Красиво: 'sem2_group_02' → 'Группа 02', 'group_02' → 'Группа 02'
+        var prettyGid = userGroup ? userGroup.replace(/^.*group_/, 'Группа ') : '';
+        userEl.textContent = fio + (prettyGid ? ' · ' + prettyGid : '') + membersText;
         userEl.style.color = 'var(--green,#22c55e)';
       }
       if (saveBtn) saveBtn.style.display = '';

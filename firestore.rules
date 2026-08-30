@@ -1,0 +1,379 @@
+rules_version = '2';
+
+// ============================================================
+// CFD Course — Firestore Security Rules
+// ------------------------------------------------------------
+// Источник правды: этот файл в репозитории.
+// Деплой: Firebase Console → Firestore Database → Rules →
+//         вставить содержимое → Publish.
+//
+// Роли:
+//   superadmin — email в SUPERADMINS ниже (должен совпадать
+//                с ADMIN_EMAILS в js/firebase-config.js).
+//                Один: polinakozhurina2020@gmail.com.
+//                Только superadmin назначает и снимает других admin.
+//   admin      — users/{uid}.isAdmin == true; курсовой админ,
+//                скоуп задан полем users/{uid}.managedCourses:
+//                ['mke','sph', ...]. Курсовой admin управляет только
+//                своими курсами: одобряет enrollment, ставит оценки,
+//                назначает рабочие группы, правит чек-лист — только
+//                по своим курсам. НЕ может назначать других admin.
+//   student    — все остальные авторизованные.
+//
+// Привилегированные поля users/{uid} (менять может только:
+// свой super — да; свой admin — нет; чужой admin — нет; super — да):
+//   isAdmin, managedCourses, managedGroups, managedStudyGroups, approved.
+//
+// Legacy: managedGroups/managedStudyGroups поддерживаются для
+// обратной совместимости; новая модель — managedCourses.
+// ============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return isAuth() && request.auth.token.email in [
+        'polinakozhurina2020@gmail.com'
+      ];
+    }
+
+    function callerDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSuperAdmin() ||
+             (isAuth() &&
+              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+              callerDoc().isAdmin == true);
+    }
+
+    // Email подтверждён? Нужно для отправки results/checklist/сообщений,
+    // но НЕ для чтения — иначе непонятно, зачем заходить на сайт.
+    // Admin/superadmin — не проверяем.
+    function isVerified() {
+      return isAuth() && (
+        request.auth.token.email_verified == true
+        || isAdmin()
+      );
+    }
+
+    // Legacy: admin владеет рабочей группой напрямую (через managedGroups).
+    function adminCanManageLegacyGroup(gid) {
+      return isSuperAdmin() ||
+             (isAdmin() && gid in callerDoc().get('managedGroups', []));
+    }
+
+    function adminCanManageStudyGroup(sg) {
+      return isSuperAdmin() ||
+             (isAdmin() && sg in callerDoc().get('managedStudyGroups', []));
+    }
+
+    // Курсовой admin управляет курсом cid ('mke','sph','nm','sem1','sem2').
+    // Используется для правил results/checklist/grades по модели
+    // per-course (см. п.3–6). Superadmin — любой курс.
+    function adminCanManageCourse(cid) {
+      return isSuperAdmin() ||
+             (isAdmin() && cid in callerDoc().get('managedCourses', []));
+    }
+
+    // Универсальная проверка «этот admin управляет группой gid».
+    // Формат gid:
+    //   'group_NN'         — legacy: смотрим managedGroups
+    //   '{cid}_group_NN'   — новый: cid — префикс до первого '_group_'
+    function adminCanManageAnyGroup(gid) {
+      return isSuperAdmin()
+          || adminCanManageLegacyGroup(gid)
+          || (
+               gid.matches('.+_group_.+') &&
+               adminCanManageCourse(gid.split('_group_')[0])
+             );
+    }
+
+    // Студент числится в рабочей группе gid?
+    // Мультикурс: courseGroups.{courseId} == gid.
+    // Legacy: одно общее поле group.
+    function isMemberOfGroup(gid) {
+      return isAuth() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             (
+               callerDoc().get('group', '') == gid ||
+               gid in callerDoc().get('courseGroups', {}).values()
+             );
+    }
+
+    // Поля, которые может менять ТОЛЬКО superadmin.
+    // Обычный admin не может менять их даже у чужого документа
+    // (значит: не может назначить/снять admin, не может изменить чей-то
+    // список курсов/групп).
+    function noSuperOnlyFieldChanges() {
+      let before = resource.data;
+      let after  = request.resource.data;
+      return
+        after.get('isAdmin', false)            == before.get('isAdmin', false) &&
+        after.get('managedCourses', [])        == before.get('managedCourses', []) &&
+        after.get('managedGroups', [])         == before.get('managedGroups', []) &&
+        after.get('managedStudyGroups', [])    == before.get('managedStudyGroups', []);
+    }
+
+    // Поля, которые может менять admin (в т.ч. курсовой), но НЕ студент
+    // (студенту про approved нельзя, всё остальное — тоже нельзя).
+    function noAdminOnlyFieldChanges() {
+      let before = resource.data;
+      let after  = request.resource.data;
+      return
+        noSuperOnlyFieldChanges() &&
+        after.get('approved', false)           == before.get('approved', false);
+    }
+
+    // ---------- users ----------
+    match /users/{uid} {
+      // Читают все авторизованные (нужно для админки и DM).
+      allow read: if isAuth();
+
+      // Создание — только своей записи; без привилегированных полей.
+      allow create: if isAuth()
+                    && request.auth.uid == uid
+                    && !('isAdmin'            in request.resource.data)
+                    && !('approved'           in request.resource.data
+                         && request.resource.data.approved == true)
+                    && !('managedCourses'     in request.resource.data)
+                    && !('managedGroups'      in request.resource.data)
+                    && !('managedStudyGroups' in request.resource.data);
+
+      // Обновление — три уровня, любой из них разрешает запись:
+      //
+      //   1) STUDENT: свой doc, без admin-only и super-only полей.
+      //      Может менять fio, studyGroup, enrollments (заявку со status='pending'),
+      //      courseGroups (для самосбора групп из п.7).
+      //
+      //   2) ADMIN (курсовой): чужой doc, может менять approved и обычные поля,
+      //      НО не может менять isAdmin/managedCourses/managed*Groups.
+      //      Значит курсовой admin не может назначить другого admin.
+      //
+      //   3) SUPERADMIN (Полина): что угодно и у кого угодно.
+      allow update: if
+           (isAuth() && request.auth.uid == uid && noAdminOnlyFieldChanges())
+        || (isAdmin() && !isSuperAdmin() && noSuperOnlyFieldChanges())
+        || isSuperAdmin();
+
+      // Удаление — только superadmin.
+      allow delete: if isSuperAdmin();
+    }
+
+    // ---------- groups/{gid} ----------
+    // Метаданные группы: { courseId, groupIndex, joinCode, name?, repoUrl?,
+    //   maxSize, members:[uid], createdBy, createdAt, approved:bool }.
+    // read : все авторизованные (нужно, чтобы студент нашёл группу по коду).
+    // create: verified student — но только «своей» группы: он в members,
+    //         он единственный, createdBy == uid, courseId соответствует
+    //         префиксу gid.
+    // update: admin курса — что угодно (в т.ч. approved);
+    //         член группы — repoUrl;
+    //         сторонний verified — только «добавить себя в members»
+    //         (по одному uid за раз, соблюдая maxSize) и синхронно
+    //         не менять другие поля.
+    // delete: admin курса, либо createdBy пока в members только он.
+    match /groups/{gid} {
+      function grpCourseId() {
+        return gid.matches('.+_group_.+') ? gid.split('_group_')[0] : '';
+      }
+      function joiningSelfOnly() {
+        // Разрешаем прибавление ровно одного uid == request.auth.uid.
+        let before = resource.data.get('members', []);
+        let after  = request.resource.data.get('members', []);
+        return
+             after.hasAll(before)
+          && after.size() == before.size() + 1
+          && request.auth.uid in after
+          && !(request.auth.uid in before)
+          && after.size() <= request.resource.data.get('maxSize', 3);
+      }
+      function membersOnlyChanged() {
+        // Все поля кроме members должны совпасть с текущими.
+        let b = resource.data; let a = request.resource.data;
+        return a.get('courseId', '')  == b.get('courseId', '')
+            && a.get('joinCode', '')  == b.get('joinCode', '')
+            && a.get('maxSize', 3)    == b.get('maxSize', 3)
+            && a.get('createdBy', '') == b.get('createdBy', '')
+            && a.get('approved',false)== b.get('approved',false)
+            && a.get('name', '')      == b.get('name', '');
+      }
+      function repoUrlOnlyChanged() {
+        let b = resource.data; let a = request.resource.data;
+        return a.get('members', [])    == b.get('members', [])
+            && a.get('courseId', '')   == b.get('courseId', '')
+            && a.get('joinCode', '')   == b.get('joinCode', '')
+            && a.get('maxSize', 3)     == b.get('maxSize', 3)
+            && a.get('createdBy', '')  == b.get('createdBy', '')
+            && a.get('approved',false) == b.get('approved',false);
+      }
+      allow read: if isAuth();
+
+      allow create: if isVerified()
+                    && gid.matches('.+_group_.+')
+                    && request.resource.data.get('courseId', '')   == grpCourseId()
+                    && request.resource.data.get('createdBy', '')  == request.auth.uid
+                    && request.resource.data.get('members', [])    == [request.auth.uid]
+                    && request.resource.data.get('approved',false) == false;
+
+      allow update: if
+           adminCanManageAnyGroup(gid)
+        || (isVerified() && joiningSelfOnly() && membersOnlyChanged())
+        || (isVerified() && request.auth.uid in resource.data.get('members', [])
+            && repoUrlOnlyChanged());
+
+      allow delete: if adminCanManageAnyGroup(gid)
+                    || (isVerified()
+                        && resource.data.get('createdBy','') == request.auth.uid
+                        && resource.data.get('members', []) == [request.auth.uid]);
+
+      // results — контрольные числа теста
+      match /results/{testId} {
+        allow read:  if isAuth();
+        // Пишет только член группы (с подтверждённым email) или admin курса.
+        allow write: if (isMemberOfGroup(gid) && isVerified())
+                     || adminCanManageAnyGroup(gid);
+      }
+
+      // checklist — самооценка группы (галочки студентов)
+      match /checklist/{marker} {
+        allow read:  if isAuth();
+        allow write: if (isMemberOfGroup(gid) && isVerified())
+                     || adminCanManageAnyGroup(gid);
+      }
+
+      // admin_checklist — прогресс проверки преподавателем
+      match /admin_checklist/{marker} {
+        allow read:  if isAuth();
+        allow write: if adminCanManageAnyGroup(gid);
+      }
+    }
+
+    // ---------- grades (по группам, legacy) ----------
+    match /grades/{gid} {
+      allow read:  if isAuth();
+      allow write: if adminCanManageAnyGroup(gid);
+    }
+
+    // ---------- individual_grades (по студенту / студент-курс) ----------
+    // Ключ — либо {uid} (legacy, общая оценка), либо {uid}_{courseId}
+    // (мультикурс, задаётся из п.6).
+    // read : студент видит только своё; admin — любые (для админки).
+    // write: legacy без cid — только superadmin;
+    //        новый формат — курсовой admin по своему курсу или super.
+    match /individual_grades/{docId} {
+      allow read: if isAuth() &&
+                     (isAdmin() || docId.matches('^' + request.auth.uid + '(_.*)?$'));
+      allow write: if isSuperAdmin()
+                   || (isAdmin()
+                       && docId.split('_').size() >= 2
+                       && adminCanManageCourse(docId.split('_')[1]));
+    }
+
+    // ---------- task_claims ----------
+    // Кто какое индивидуальное задание взял.
+    // Читают все auth. Пишет: сам себе (uid == doc.uid) или admin.
+    match /task_claims/{docId} {
+      allow read: if isAuth();
+      allow create: if isVerified()
+                    && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAuth()
+                    && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+
+    // ---------- dm (личные сообщения) ----------
+    // dmId = sort([uid1, uid2]).join('_') — участники в id.
+    match /dm/{dmId} {
+      allow read, write: if isAuth() && dmIsParticipant(dmId);
+
+      match /messages/{msgId} {
+        allow read: if isAuth() && dmIsParticipant(dmId);
+        // Отправитель может создать (только со своим authorUid, с подтв. email).
+        allow create: if isVerified()
+                      && dmIsParticipant(dmId)
+                      && request.resource.data.authorUid == request.auth.uid;
+        // Обновление — только участник (пометить readAt может собеседник).
+        allow update: if isAuth() && dmIsParticipant(dmId);
+        allow delete: if isAuth() && resource.data.authorUid == request.auth.uid;
+      }
+    }
+    function dmIsParticipant(dmId) {
+      return isAuth() && request.auth.uid in dmId.split('_');
+    }
+
+    // ---------- групповые сообщения (chat/{gid}/messages) ----------
+    // Открытый чат группы — члены + admin.
+    match /chat/{gid}/messages/{msgId} {
+      allow read: if isMemberOfGroup(gid) || adminCanManageAnyGroup(gid);
+      allow create: if (isMemberOfGroup(gid) || adminCanManageAnyGroup(gid))
+                    && isVerified()
+                    && request.resource.data.authorUid == request.auth.uid;
+      allow update, delete: if isAuth()
+                    && (resource.data.authorUid == request.auth.uid || isAdmin());
+    }
+
+    // ---------- comments (под лекциями / заданиями) ----------
+    match /comments/{docId}/thread/{msgId} {
+      allow read: if isAuth();
+      allow create: if isVerified()
+                    && request.resource.data.authorUid == request.auth.uid;
+      allow update, delete: if isAuth()
+                    && (resource.data.authorUid == request.auth.uid || isAdmin());
+    }
+
+    // ---------- заявки на курсы (enrollments) ----------
+    // Ключ: '{uid}_{courseId}' — уникальность «студент × курс».
+    // Поля: { uid, courseId, status:'pending'|'approved'|'rejected',
+    //         requestedAt, decidedAt, decidedBy }.
+    //
+    // read : свой uid или любой admin (для админки, чтобы посчитать статистику).
+    // create: сам студент, только со status='pending' и uid=свой.
+    //         Учебная группа берётся из его users doc, курс — из ключа.
+    // update: курсовой admin по этому курсу или super;
+    //         сам студент может только переподать после rejected
+    //         (status обратно в 'pending', остальное не трогает).
+    // delete: сам студент, если pending (отмена заявки); admin курса — всегда.
+    match /enrollments/{docId} {
+      function enrollUid()      { return docId.split('_')[0]; }
+      function enrollCourseId() { return docId.split('_')[1]; }
+      function isOwnEnroll()    { return isAuth() && request.auth.uid == enrollUid(); }
+
+      allow read: if isAuth() && (
+                       isOwnEnroll()
+                    || adminCanManageCourse(enrollCourseId())
+                  );
+
+      allow create: if isVerified()
+                    && isOwnEnroll()
+                    && docId.split('_').size() == 2
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.courseId == enrollCourseId()
+                    && request.resource.data.status == 'pending';
+
+      allow update: if
+        // 1) admin курса меняет статус (approve/reject/переоткрытие)
+        adminCanManageCourse(enrollCourseId())
+        // 2) сам студент переподаёт после rejected: status pending, uid не меняется
+        || (isOwnEnroll()
+            && isVerified()
+            && resource.data.status == 'rejected'
+            && request.resource.data.status == 'pending'
+            && request.resource.data.uid == resource.data.uid
+            && request.resource.data.courseId == resource.data.courseId);
+
+      allow delete: if adminCanManageCourse(enrollCourseId())
+                    || (isOwnEnroll() && resource.data.status == 'pending');
+    }
+
+    // ---------- fallback: всё остальное закрыто ----------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

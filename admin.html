@@ -125,6 +125,8 @@ if (location.search.indexOf('embedded=1') !== -1) {
 
 <div class="tabs">
   <button class="tab active" onclick="showTab('students')">Студенты</button>
+  <button class="tab" onclick="showTab('enrollments')">Заявки на курсы <span id="enrollTabBadge" style="display:none;min-width:16px;height:16px;border-radius:8px;background:#c44;color:#fff;font-size:.6rem;font-weight:700;font-family:JetBrains Mono,monospace;align-items:center;justify-content:center;padding:0 4px;margin-left:2px;vertical-align:middle"></span></button>
+  <button class="tab" onclick="showTab('workgroups')">Рабочие группы</button>
   <button class="tab" onclick="showTab('groups')">Результаты тестов</button>
   <button class="tab" onclick="showTab('checklist')">Чек-лист (самооценка)</button>
   <button class="tab" onclick="showTab('tasks')">Задания</button>
@@ -136,15 +138,103 @@ if (location.search.indexOf('embedded=1') !== -1) {
 <!-- TAB 1: Students -->
 <div id="tab-students" class="panel active">
   <div class="export-bar">
-    <input type="text" class="search" id="searchStudents" placeholder="Поиск по ФИО, email, группе..." oninput="renderStudents()">
+    <input type="text" class="search" id="searchStudents" placeholder="Поиск по ФИО, email…" oninput="renderStudents()">
+    <select id="filterStudyGroup" onchange="renderStudents()" title="Учебная группа МИФИ" style="font-family:'JetBrains Mono',monospace;font-size:.78rem">
+      <option value="">Все учебные</option>
+    </select>
+    <select id="filterEnrollCourse" onchange="renderStudents()" title="Записан на курс" style="font-family:'JetBrains Mono',monospace;font-size:.78rem">
+      <option value="">Любой курс</option>
+    </select>
+    <select id="filterApproved" onchange="renderStudents()" title="Подтверждён" style="font-family:'JetBrains Mono',monospace;font-size:.78rem">
+      <option value="">Любой статус</option>
+      <option value="yes">Подтверждён</option>
+      <option value="no">Не подтверждён</option>
+    </select>
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);display:inline-flex;align-items:center;gap:.25rem;cursor:pointer">
+      <input type="checkbox" id="showLegacyAssign" onchange="renderStudents()" style="margin:0"> показ. legacy dropdown
+    </label>
     <button class="btn" onclick="exportCSV()">Экспорт CSV</button>
     <button class="btn btn-primary" onclick="exportFolderTree()" title="Скачать ZIP с папками по группам и файлами по студентам">📁 Экспорт папок (ZIP)</button>
   </div>
+  <div id="bulkPanelStudents" style="display:none;margin:.5rem 0;padding:.4rem .8rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px;flex-wrap:wrap;gap:.5rem;align-items:center">
+    <span id="bulkCountStudents" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);font-weight:700">Выбрано: 0</span>
+    <button class="btn" onclick="bulkStudentsApprove(true)">✓ Подтвердить</button>
+    <button class="btn" onclick="bulkStudentsApprove(false)">✗ Снять подтв.</button>
+    <button class="btn" onclick="bulkStudentsEnroll()">Записать на курс…</button>
+    <button class="btn" onclick="bulkStudentsSetStudyGroup()">Задать учебную группу…</button>
+    <button class="btn" onclick="bulkStudentsExportCSV()">Экспорт CSV выбранных</button>
+    <span style="flex:1"></span>
+    <button class="btn btn-sm" onclick="bulkSelectAllStudents(false)">Снять выбор</button>
+  </div>
   <div class="card">
     <table>
-      <thead><tr><th>ФИО</th><th>Email</th><th>Уч. группа</th><th>Раб. группа</th><th>Подтв.</th><th>Роль</th><th>Назначить</th></tr></thead>
+      <thead><tr>
+        <th style="width:24px"><input type="checkbox" id="bulkAllStudents" onchange="bulkSelectAllStudents(this.checked)" title="Выбрать всех на странице"></th>
+        <th>ФИО</th><th>Email</th><th>Уч. группа МИФИ</th><th>Раб. группы по курсам</th><th>Подтв.</th><th>Роль</th><th>Legacy</th>
+      </tr></thead>
       <tbody id="studentsBody"></tbody>
     </table>
+  </div>
+</div>
+
+<!-- TAB: Enrollments — заявки на курсы -->
+<div id="tab-enrollments" class="panel">
+  <div class="card">
+    <h3>Заявки на курсы</h3>
+    <p style="font-size:.85rem;color:var(--text2);margin-bottom:.8rem">
+      Студенты сами отмечают, какие курсы слушают, на странице
+      <a href="index.html" style="color:var(--accent)">главной</a> или в
+      <a href="profile.html" style="color:var(--accent)">профиле</a>.
+      Здесь — подтверждение или отклонение заявок по вашим курсам.
+      Курсовой admin видит только заявки по своему <code>managedCourses</code>.
+    </p>
+    <div class="export-bar">
+      <select id="enrollCourseFilter" onchange="renderEnrollments()">
+        <option value="all">Все курсы</option>
+      </select>
+      <select id="enrollStatusFilter" onchange="renderEnrollments()">
+        <option value="pending">На рассмотрении</option>
+        <option value="approved">Одобренные</option>
+        <option value="rejected">Отклонённые</option>
+        <option value="all">Все статусы</option>
+      </select>
+    </div>
+    <div id="bulkPanelEnroll" style="display:none;margin:.5rem 0;padding:.4rem .8rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px;flex-wrap:wrap;gap:.5rem;align-items:center">
+      <span id="bulkCountEnroll" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);font-weight:700">Выбрано: 0</span>
+      <button class="btn btn-primary" onclick="bulkEnrollApprove()">✓ Одобрить</button>
+      <button class="btn" onclick="bulkEnrollReject()">✗ Отклонить</button>
+      <span style="flex:1"></span>
+      <button class="btn btn-sm" onclick="bulkSelectAllEnroll(false)">Снять выбор</button>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:24px"><input type="checkbox" id="bulkAllEnroll" onchange="bulkSelectAllEnroll(this.checked)" title="Выбрать все на странице"></th>
+        <th>ФИО</th><th>Email</th><th>Уч. группа</th><th>Курс</th><th>Дата</th><th>Статус</th><th>Действия</th>
+      </tr></thead>
+      <tbody id="enrollmentsBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- TAB: Work groups (рабочие группы, коды приглашения) -->
+<div id="tab-workgroups" class="panel">
+  <div class="card">
+    <h3>Рабочие группы по курсам</h3>
+    <p style="font-size:.85rem;color:var(--text2);margin-bottom:.8rem">
+      Студенты сами собирают группы через профиль (кнопка «Создать новую» → делится 6-символьным кодом со сокурсниками).
+      Здесь — подтверждение состава, регенерация кода при утечке, удаление участников, удаление пустых групп.
+    </p>
+    <div class="export-bar">
+      <select id="wgCourseFilter" onchange="renderWorkgroupsTab()">
+        <option value="all">Все курсы (мои)</option>
+      </select>
+      <select id="wgStatusFilter" onchange="renderWorkgroupsTab()">
+        <option value="">Любой статус</option>
+        <option value="pending">Не подтверждённые</option>
+        <option value="approved">Подтверждённые</option>
+      </select>
+    </div>
+    <div id="workgroupsList" style="display:flex;flex-direction:column;gap:.7rem"></div>
   </div>
 </div>
 
@@ -190,7 +280,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
     <h3>Индивидуальные оценки</h3>
     <p style="font-size:.85rem;color:var(--text2);margin-bottom:.8rem"><strong>Зачёт</strong> (работа за семестр, групповая) — до 50 баллов. <strong>Экзамен</strong> (индивидуальное задание) — до 50 баллов. Итого 100.</p>
     <table>
-      <thead><tr><th>ФИО</th><th>Уч. группа</th><th>Раб. группа</th><th>Прогресс зачёта</th><th>Задание</th><th>Зачёт (50)</th><th>Экзамен (50)</th><th>Итого</th><th>Комментарий</th></tr></thead>
+      <thead><tr><th>ФИО</th><th>Уч. группа</th><th>Курс</th><th>Раб. группа</th><th>Прогресс</th><th>Зачёт (50)</th><th>Экзамен (50)</th><th>Итого</th><th>Комментарий</th></tr></thead>
       <tbody id="gradesBody"></tbody>
     </table>
   </div>
@@ -259,6 +349,8 @@ if (location.search.indexOf('embedded=1') !== -1) {
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="js/firebase-config.js"></script>
+<script src="js/courses.js"></script>
+<script src="js/enrollments.js"></script>
 <script>
 // ============================================================
 // ADMIN PANEL LOGIC
@@ -297,6 +389,8 @@ const TEST_IDS = [
 let _currentAdminUser = null;
 let _currentAdminGroups = null; // null = all (superadmin), or array of рабочие group IDs
 let _currentAdminStudyGroups = null; // null = all, or array of учебные МИФИ groups
+let _currentAdminCourses = null; // null = all (superadmin), or array of courseIds
+let _allEnrollments = []; // сырые записи из коллекции enrollments
 
 auth.onAuthStateChanged(async user => {
   document.getElementById('loading').style.display = 'none';
@@ -320,9 +414,11 @@ auth.onAuthStateChanged(async user => {
     if (isSuperadmin) {
       _currentAdminGroups = null; // all работ. groups
       _currentAdminStudyGroups = null; // all учебн. groups
+      _currentAdminCourses = null;     // все курсы
     } else {
       _currentAdminGroups = Array.isArray(meDoc.data().managedGroups) ? meDoc.data().managedGroups : [];
       _currentAdminStudyGroups = Array.isArray(meDoc.data().managedStudyGroups) ? meDoc.data().managedStudyGroups : [];
+      _currentAdminCourses = Array.isArray(meDoc.data().managedCourses) ? meDoc.data().managedCourses : [];
     }
   } catch (e) {
     console.warn('Admin check failed:', e);
@@ -435,6 +531,45 @@ async function loadAllData() {
     } catch(e) { allGroups[gid].adminChecked = 0; allGroups[gid].adminTotal = 71; }
   }
 
+  // Per-course рабочие группы: {cid}_group_01..05.
+  // Загружаем только если в scope этого admin (superadmin — все).
+  const courseIds = (window.CFD_COURSES || []).map(c => c.id);
+  for (const cid of courseIds) {
+    if (_currentAdminCourses !== null && _currentAdminCourses.indexOf(cid) === -1) continue;
+    for (let g = 1; g <= 5; g++) {
+      const rawGid = 'group_' + String(g).padStart(2, '0');
+      const fullGid = cid + '_' + rawGid;
+      const members = allUsers.filter(u => u.courseGroups && u.courseGroups[cid] === rawGid);
+      if (members.length === 0) continue;
+      allGroups[fullGid] = { members, courseId: cid };
+      try {
+        const gDoc = await db.collection('groups').doc(fullGid).get();
+        if (gDoc.exists) {
+          const gd = gDoc.data();
+          if (gd.repoUrl) allGroups[fullGid].repoUrl = gd.repoUrl;
+          allGroups[fullGid].joinCode = gd.joinCode || '';
+          allGroups[fullGid].approved = !!gd.approved;
+          allGroups[fullGid].createdBy = gd.createdBy || '';
+          allGroups[fullGid].maxSize = gd.maxSize || 3;
+          allGroups[fullGid].groupIndex = gd.groupIndex || rawGid.replace('group_','');
+          allGroups[fullGid].memberUids = gd.members || members.map(m => m.uid); // авторитетный список UIDs
+        }
+      } catch(e) {}
+      try {
+        const resultsSnap = await db.collection('groups').doc(fullGid).collection('results').get();
+        allResults[fullGid] = {};
+        resultsSnap.forEach(doc => { allResults[fullGid][doc.id] = doc.data(); });
+      } catch(e) { allResults[fullGid] = {}; }
+      try {
+        const aSnap = await db.collection('groups').doc(fullGid).collection('admin_checklist').get();
+        let checked = 0;
+        aSnap.forEach(doc => { if (doc.data().checked) checked++; });
+        allGroups[fullGid].adminChecked = checked;
+        allGroups[fullGid].adminTotal = 71;
+      } catch(e) { allGroups[fullGid].adminChecked = 0; allGroups[fullGid].adminTotal = 71; }
+    }
+  }
+
   // Load grades
   const gradesSnap = await db.collection('grades').get();
   gradesSnap.forEach(doc => {
@@ -473,14 +608,175 @@ async function loadAllData() {
     });
   } catch(e) { console.warn('Could not load individual grades:', e); }
 
+  // Load enrollments (заявки на курсы).
+  // Superadmin — все; курсовой admin — только по своим managedCourses.
+  _allEnrollments = [];
+  try {
+    let enrSnap;
+    if (_currentAdminCourses === null) {
+      enrSnap = await db.collection('enrollments').get();
+    } else if (_currentAdminCourses.length === 0) {
+      enrSnap = { forEach: function(){} }; // нет курсов — нет заявок
+    } else {
+      // Firestore 'in' поддерживает до 10 значений — у нас курсов 5.
+      enrSnap = await db.collection('enrollments')
+        .where('courseId', 'in', _currentAdminCourses).get();
+    }
+    enrSnap.forEach(doc => {
+      _allEnrollments.push({ id: doc.id, ...doc.data() });
+    });
+  } catch(e) { console.warn('Could not load enrollments:', e); }
+
+  // Индекс: uid → { courseId: status }
+  window._enrollmentsByUid = {};
+  _allEnrollments.forEach(function(e){
+    if (!window._enrollmentsByUid[e.uid]) window._enrollmentsByUid[e.uid] = {};
+    window._enrollmentsByUid[e.uid][e.courseId] = e.status;
+  });
+
   updateStats();
   renderStudents();
+  renderEnrollments();
+  renderWorkgroupsTab();
   renderGroupFilter();
   renderGroupResults();
   renderGrades();
   renderTasks();
   renderMsgGroupSelect();
   await loadChecklistProgress();
+}
+
+// ===== Enrollments (заявки на курсы) =====
+function renderEnrollments() {
+  const tbody = document.getElementById('enrollmentsBody');
+  if (!tbody) return;
+
+  // Наполнить фильтр курсов (один раз)
+  const fCourse = document.getElementById('enrollCourseFilter');
+  if (fCourse && fCourse.options.length <= 1 && window.CFD_COURSES) {
+    (window.CFD_COURSES || []).forEach(c => {
+      if (_currentAdminCourses !== null && _currentAdminCourses.indexOf(c.id) === -1) return;
+      const opt = document.createElement('option');
+      opt.value = c.id; opt.textContent = c.name;
+      fCourse.appendChild(opt);
+    });
+  }
+  const filterCourse = fCourse ? fCourse.value : 'all';
+  const filterStatus = document.getElementById('enrollStatusFilter').value;
+
+  const rows = _allEnrollments
+    .filter(e => filterCourse === 'all' || e.courseId === filterCourse)
+    .filter(e => filterStatus === 'all' || e.status === filterStatus)
+    .sort((a,b) => {
+      const ta = a.requestedAt ? a.requestedAt.toMillis() : 0;
+      const tb = b.requestedAt ? b.requestedAt.toMillis() : 0;
+      return tb - ta;
+    });
+
+  // Badge с количеством pending на вкладке
+  const pendingCount = _allEnrollments.filter(e => e.status === 'pending').length;
+  const badge = document.getElementById('enrollTabBadge');
+  if (badge) {
+    if (pendingCount > 0) {
+      badge.textContent = pendingCount;
+      badge.style.display = 'inline-flex';
+    } else badge.style.display = 'none';
+  }
+
+  tbody.innerHTML = '';
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:1rem;color:var(--text3);font-style:italic">Заявок не найдено</td></tr>';
+    bulkUpdateEnrollCount();
+    return;
+  }
+
+  rows.forEach(e => {
+    const u = allUsers.find(x => x.uid === e.uid) || { fio:'', email:'—', studyGroup:'' };
+    const course = (window.CFD_COURSE_BY_ID || {})[e.courseId];
+    const courseName = course ? course.name : e.courseId;
+    const dateStr = e.requestedAt ? new Date(e.requestedAt.toMillis()).toLocaleDateString('ru-RU') : '—';
+    const statusBadge = e.status === 'pending'  ? '<span class="badge b-pending">на рассм.</span>'
+                      : e.status === 'approved' ? '<span class="badge b-pass">✓ одобрено</span>'
+                      : '<span class="badge b-fail">✗ отклонено</span>';
+    let actions = '';
+    if (e.status !== 'approved') {
+      actions += '<button class="btn btn-sm btn-primary" onclick="enrollApprove(\''+e.uid+'\',\''+e.courseId+'\')">✓ Одобрить</button> ';
+    }
+    if (e.status !== 'rejected') {
+      actions += '<button class="btn btn-sm" onclick="enrollReject(\''+e.uid+'\',\''+e.courseId+'\')">✗ Отклонить</button>';
+    }
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td style="text-align:center"><input type="checkbox" class="bulk-cb-enroll" data-uid="'+e.uid+'" data-cid="'+e.courseId+'" onchange="bulkUpdateEnrollCount()"></td>'
+      + '<td>' + (u.fio || '—') + '</td>'
+      + '<td>' + (u.email || '—') + '</td>'
+      + '<td>' + (u.studyGroup || '—') + '</td>'
+      + '<td>' + courseName + '</td>'
+      + '<td style="white-space:nowrap">' + dateStr + '</td>'
+      + '<td>' + statusBadge + '</td>'
+      + '<td>' + actions + '</td>';
+    tbody.appendChild(tr);
+  });
+  bulkUpdateEnrollCount();
+}
+
+// ===== Bulk-действия над заявками =====
+function getSelectedEnrolls() {
+  return Array.from(document.querySelectorAll('.bulk-cb-enroll:checked'))
+              .map(x => ({ uid: x.getAttribute('data-uid'), cid: x.getAttribute('data-cid') }));
+}
+function bulkUpdateEnrollCount() {
+  const n = getSelectedEnrolls().length;
+  const p = document.getElementById('bulkPanelEnroll');
+  const c = document.getElementById('bulkCountEnroll');
+  if (p) p.style.display = n ? 'flex' : 'none';
+  if (c) c.textContent = 'Выбрано: ' + n;
+}
+function bulkSelectAllEnroll(checked) {
+  document.querySelectorAll('.bulk-cb-enroll').forEach(cb => cb.checked = !!checked);
+  const a = document.getElementById('bulkAllEnroll'); if (a) a.checked = !!checked;
+  bulkUpdateEnrollCount();
+}
+async function bulkEnrollApprove() {
+  const sel = getSelectedEnrolls(); if (!sel.length) return;
+  if (!confirm('Одобрить ' + sel.length + ' заявку(-и)?')) return;
+  for (const s of sel) {
+    const r = await CFDEnroll.approve(s.uid, s.cid);
+    const e = _allEnrollments.find(x => x.uid === s.uid && x.courseId === s.cid);
+    if (r.ok && e) e.status = 'approved';
+  }
+  bulkSelectAllEnroll(false);
+  renderEnrollments();
+}
+async function bulkEnrollReject() {
+  const sel = getSelectedEnrolls(); if (!sel.length) return;
+  const reason = prompt('Причина отклонения (для всех):', '');
+  if (reason === null) return;
+  for (const s of sel) {
+    const r = await CFDEnroll.reject(s.uid, s.cid, reason);
+    const e = _allEnrollments.find(x => x.uid === s.uid && x.courseId === s.cid);
+    if (r.ok && e) { e.status = 'rejected'; e.reason = reason; }
+  }
+  bulkSelectAllEnroll(false);
+  renderEnrollments();
+}
+
+async function enrollApprove(uid, cid) {
+  const res = await CFDEnroll.approve(uid, cid);
+  if (!res.ok) { alert('Ошибка: ' + res.error); return; }
+  const e = _allEnrollments.find(x => x.uid === uid && x.courseId === cid);
+  if (e) { e.status = 'approved'; }
+  renderEnrollments();
+}
+
+async function enrollReject(uid, cid) {
+  const reason = prompt('Причина отклонения (необязательно):', '');
+  if (reason === null) return; // отмена
+  const res = await CFDEnroll.reject(uid, cid, reason);
+  if (!res.ok) { alert('Ошибка: ' + res.error); return; }
+  const e = _allEnrollments.find(x => x.uid === uid && x.courseId === cid);
+  if (e) { e.status = 'rejected'; e.reason = reason; }
+  renderEnrollments();
 }
 
 // ===== Stats =====
@@ -501,15 +797,20 @@ function updateStats() {
       roleEl.style.background = '#3a5ba0'; roleEl.style.color = '#fff';
       const sgs = _currentAdminStudyGroups || [];
       const wgs = _currentAdminGroups || [];
+      const cs  = _currentAdminCourses || [];
       const parts = [];
+      if (cs.length)  parts.push('курсы: <strong>' + cs.map(cid => {
+        const c = (window.CFD_COURSE_BY_ID || {})[cid];
+        return c ? c.short : cid;
+      }).join(', ') + '</strong>');
       if (sgs.length) parts.push('учебные МИФИ: <strong>' + sgs.join(', ') + '</strong>');
-      if (wgs.length) parts.push('рабочие: <strong>' + wgs.map(g=>g.replace('group_','№')).join(', ') + '</strong>');
+      if (wgs.length) parts.push('legacy-рабочие: <strong>' + wgs.map(g=>g.replace('group_','№')).join(', ') + '</strong>');
       if (parts.length === 0) {
-        scopeEl.innerHTML = '<span style="color:#c44">группы не назначены</span>';
-        subEl.textContent = 'У вас пока нет назначенных групп. Обратитесь к главному администратору.';
+        scopeEl.innerHTML = '<span style="color:#c44">курсы не назначены — обратитесь к главному администратору</span>';
+        subEl.textContent = 'У вас пока нет ни одного курса в managedCourses. Пока это так, вы не видите заявок и не можете править данные.';
       } else {
         scopeEl.innerHTML = '<span>' + parts.join(' · ') + '</span>';
-        subEl.textContent = 'Управление вашими группами и их студентами';
+        subEl.textContent = 'Управление вашими курсами и их студентами';
       }
     }
   }
@@ -541,10 +842,42 @@ function showTab(name) {
 function renderStudents() {
   const search = (document.getElementById('searchStudents').value || '').toLowerCase();
   const viewerIsSuperAdmin = auth.currentUser && isSuperAdmin(auth.currentUser.email);
-  const filtered = search ? allUsers.filter(u => {
-    const s = (u.email||'') + ' ' + (u.fio||'') + ' ' + (u.studyGroup||'');
-    return s.toLowerCase().includes(search);
-  }) : allUsers;
+
+  // Наполнить фильтры-опции один раз
+  const fSG = document.getElementById('filterStudyGroup');
+  if (fSG && fSG.options.length <= 1 && Array.isArray(allStudyGroups)) {
+    allStudyGroups.forEach(sg => {
+      const o = document.createElement('option'); o.value = sg; o.textContent = sg;
+      fSG.appendChild(o);
+    });
+  }
+  const fCourse = document.getElementById('filterEnrollCourse');
+  if (fCourse && fCourse.options.length <= 1 && window.CFD_COURSES) {
+    (window.CFD_COURSES || []).forEach(c => {
+      if (_currentAdminCourses !== null && _currentAdminCourses.indexOf(c.id) === -1) return;
+      const o = document.createElement('option'); o.value = c.id; o.textContent = c.name;
+      fCourse.appendChild(o);
+    });
+  }
+  const flSG = fSG ? fSG.value : '';
+  const flCourse = fCourse ? fCourse.value : '';
+  const flApproved = document.getElementById('filterApproved').value;
+  const showLegacyAssign = document.getElementById('showLegacyAssign').checked;
+
+  const filtered = allUsers.filter(u => {
+    if (search) {
+      const s = (u.email||'') + ' ' + (u.fio||'') + ' ' + (u.studyGroup||'');
+      if (!s.toLowerCase().includes(search)) return false;
+    }
+    if (flSG && u.studyGroup !== flSG) return false;
+    if (flApproved === 'yes' && !u.approved) return false;
+    if (flApproved === 'no'  &&  u.approved) return false;
+    if (flCourse) {
+      const enr = (window._enrollmentsByUid && window._enrollmentsByUid[u.uid]) || {};
+      if (enr[flCourse] !== 'approved') return false;
+    }
+    return true;
+  });
   const tbody = document.getElementById('studentsBody');
   tbody.innerHTML = filtered.map(u => {
     const isAdm = isAdmin(u.email);
@@ -553,31 +886,58 @@ function renderStudents() {
       return `<option value="${gid}" ${u.group === gid ? 'selected' : ''}>№${i + 1}</option>`;
     }).join('');
     return `<tr>
+      <td style="text-align:center"><input type="checkbox" class="bulk-cb-student" data-uid="${u.uid}" onchange="bulkUpdateStudentsCount()"></td>
       <td><input type="text" value="${u.fio || ''}" placeholder="ФИО" id="fio-${u.uid}" onchange="saveUserField('${u.uid}','fio',this.value)" style="font-weight:600;font-size:.82rem;width:100%;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'Source Serif 4',serif;background:#fff;color:var(--text)"></td>
       <td style="font-size:.82rem">${u.email || '—'}</td>
       <td><input type="text" value="${u.studyGroup || ''}" placeholder="Б22-505" id="sg-${u.uid}" onchange="saveUserField('${u.uid}','studyGroup',this.value)" style="font-size:.82rem;width:80px;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'JetBrains Mono',monospace;background:#fff;color:var(--text)"></td>
-      <td>${u.group ? '<span class="badge b-group">' + u.group.replace('group_', '№') + '</span>' : '<span class="badge b-pending">—</span>'}</td>
+      <td>${(function(){
+        const enrolls = (window._enrollmentsByUid && window._enrollmentsByUid[u.uid]) || {};
+        const cg = (u.courseGroups && typeof u.courseGroups === 'object') ? u.courseGroups : {};
+        const approvedCids = Object.keys(enrolls).filter(cid => enrolls[cid] === 'approved');
+        if (approvedCids.length === 0) {
+          return u.group
+            ? '<span class="badge b-group" title="legacy общая группа">' + u.group.replace('group_','№') + ' (legacy)</span>'
+            : '<span class="badge b-pending">—</span>';
+        }
+        return '<div style="display:flex;flex-direction:column;gap:2px">' + approvedCids.map(function(cid){
+          const c = (window.CFD_COURSE_BY_ID || {})[cid];
+          const short = c ? c.short : cid;
+          const cur = cg[cid] || '';
+          const opts = ['<option value="">—</option>']
+            .concat([1,2,3,4,5].map(function(i){
+              const gid = 'group_' + (i<10?'0':'') + i;
+              return '<option value="' + gid + '"' + (cur === gid ? ' selected' : '') + '>№' + i + '</option>';
+            })).join('');
+          return '<div style="display:flex;align-items:center;gap:4px;font-size:.7rem">'
+               + '<span style="min-width:44px;color:var(--text2);font-family:JetBrains Mono,monospace">'+short+':</span>'
+               + '<select onchange="assignGroupForCourse(\''+u.uid+'\',\''+cid+'\',this.value)" style="font-size:.72rem;padding:1px 4px">'+opts+'</select>'
+               + '</div>';
+        }).join('') + '</div>';
+      })()}</td>
       <td style="text-align:center">${u.approved ? '<span class="badge b-pass" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', false)">✓</span>' : '<span class="badge b-fail" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', true)">✗</span>'}</td>
       <td style="text-align:center">${(() => {
         if (isSuperAdmin(u.email)) return '<span class="badge" style="background:#faeeda;color:#854f0b;font-weight:700">главный</span>';
         if (viewerIsSuperAdmin && isAdm) {
+          const cs = Array.isArray(u.managedCourses) && u.managedCourses.length ? u.managedCourses.join(',') : '';
           const sg = Array.isArray(u.managedStudyGroups) && u.managedStudyGroups.length ? u.managedStudyGroups.join(',') : '';
-          const wg = Array.isArray(u.managedGroups) && u.managedGroups.length ? u.managedGroups.map(g=>g.replace('group_','№')).join(',') : '';
-          const scope = [sg && ('МИФИ: '+sg), wg && ('раб: '+wg)].filter(Boolean).join(' · ') || '(нет групп)';
+          const scope = [cs && ('курсы: '+cs), sg && ('МИФИ: '+sg)].filter(Boolean).join(' · ') || '(нет курсов)';
           return '<span class="badge b-admin" style="cursor:pointer" title="Снять права" onclick="toggleAdmin(\'' + u.uid + '\',\'' + u.email + '\',false)">admin ✕</span>' +
-                 ' <span class="badge" style="background:#e6f1fb;color:#3a5ba0;cursor:pointer;font-size:.62rem" title="Изменить группы" onclick="editManagedGroups(\'' + u.uid + '\',\'' + u.email + '\')">'+ scope +' ⚙</span>';
+                 ' <span class="badge" style="background:#e6f1fb;color:#3a5ba0;cursor:pointer;font-size:.62rem" title="Изменить курсы/группы" onclick="editManagedGroups(\'' + u.uid + '\',\'' + u.email + '\')">'+ scope +' ⚙</span>';
         }
         if (viewerIsSuperAdmin && !isAdm) return '<span class="badge b-student" style="cursor:pointer" title="Назначить админом" onclick="toggleAdmin(\'' + u.uid + '\',\'' + u.email + '\',true)">student →</span>';
         if (isAdm) return '<span class="badge b-admin">admin</span>';
         return '<span class="badge b-student">student</span>';
       })()}</td>
-      <td><select onchange="assignGroup('${u.uid}', this.value)" style="font-size:.75rem">
-        <option value="">—</option>${groupOptions}
-      </select></td>
+      <td>${showLegacyAssign
+          ? '<select onchange="assignGroup(\''+u.uid+'\', this.value)" style="font-size:.72rem" title="legacy общая группа"><option value="">—</option>'+groupOptions+'</select>'
+          + (u.group ? ' <button class="btn btn-sm" title="Занулить legacy общую" onclick="clearLegacyGroup(\''+u.uid+'\')" style="font-size:.62rem;padding:1px 4px">×</button>' : '')
+          : (u.group
+              ? '<span class="badge b-pending" style="font-size:.62rem" title="legacy общая — назначьте курсовую или включите legacy dropdown">'+u.group.replace('group_','№')+'</span>'
+              : '<span style="color:var(--text3);font-size:.65rem">—</span>')}</td>
     </tr>`;
   }).join('');
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text2)">Нет зарегистрированных студентов.<br><span style="font-size:.82rem">Студенты появятся здесь после того, как войдут на сайт (кнопка «Войти» на любой странице).</span></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--text2)">Нет зарегистрированных студентов.<br><span style="font-size:.82rem">Студенты появятся здесь после того, как войдут на сайт (кнопка «Войти» на любой странице).</span></td></tr>';
   }
 }
 
@@ -596,56 +956,53 @@ async function toggleAdmin(uid, email, makeAdmin) {
   }
   const fioOrEmail = (allUsers.find(x=>x.uid===uid)||{}).fio || email;
   if (makeAdmin) {
-    if (!confirm('Дать права администратора: ' + fioOrEmail + '?\n\nДальше вы назначите ему учебные группы МИФИ и/или рабочие группы по курсу.\nАдмин увидит только студентов из назначенных групп.')) return;
+    if (!confirm('Дать права администратора: ' + fioOrEmail + '?\n\nДалее вы выберете, какими курсами он будет управлять.\nОн увидит только заявки/оценки/чек-лист по назначенным курсам.')) return;
 
-    // Step 1: ask for study groups (МИФИ)
+    // Step 1: ask for курсы (главное поле)
+    const courseOpts = (window.CFD_COURSES || []).map(c => c.id);
+    const courseLabels = (window.CFD_COURSES || []).map(c => c.id + ' — ' + c.name).join('\n  ');
+    const inputC = prompt(
+      'КУРСЫ, которыми управляет админ ' + fioOrEmail + '\n' +
+      'Через запятую из id:\n  ' + courseLabels + '\n\n' +
+      '«all» = все курсы.',
+      ''
+    );
+    if (inputC === null) return;
+    let managedCourses = [];
+    if (inputC.trim().toLowerCase() === 'all') managedCourses = courseOpts.slice();
+    else if (inputC.trim()) managedCourses = inputC.split(',').map(s => s.trim()).filter(s => courseOpts.indexOf(s) !== -1);
+
+    // Step 2 (опц.): учебные группы МИФИ — дополнительный фильтр по потоку
     const suggestion = (allStudyGroups && allStudyGroups.length) ? allStudyGroups.join(', ') : '(в базе пока нет учебных групп)';
     const inputSG = prompt(
-      'УЧЕБНЫЕ группы МИФИ (например: Б22-505, Б22-506)\n' +
-      'Через запятую. Пусто = никаких. «all» = все.\n\n' +
-      'В базе сейчас есть: ' + suggestion,
+      '(необязательно) УЧЕБНЫЕ группы МИФИ — фильтр по потоку.\n' +
+      'Через запятую. Пусто = никаких, все потоки видны.\n\n' +
+      'В базе сейчас: ' + suggestion,
       ''
     );
-    if (inputSG === null) return; // cancelled
+    if (inputSG === null) return;
     let managedStudyGroups = [];
-    if (inputSG.trim().toLowerCase() === 'all') {
-      managedStudyGroups = allStudyGroups.slice();
-    } else if (inputSG.trim()) {
-      managedStudyGroups = inputSG.split(',').map(s => s.trim()).filter(Boolean);
-    }
-
-    // Step 2: ask for work groups по курсу
-    const workOpts = [];
-    for (let g = 1; g <= 5; g++) workOpts.push('group_' + String(g).padStart(2, '0'));
-    const inputWG = prompt(
-      'РАБОЧИЕ группы по курсу (1-5 человек делают лабы вместе)\n' +
-      'Через запятую из: ' + workOpts.join(', ') + '\n' +
-      'Пусто = никаких. «all» = все.',
-      ''
-    );
-    if (inputWG === null) return;
-    let managedGroups = [];
-    if (inputWG.trim().toLowerCase() === 'all') {
-      managedGroups = workOpts.slice();
-    } else if (inputWG.trim()) {
-      managedGroups = inputWG.split(',').map(s => s.trim()).filter(s => workOpts.indexOf(s) !== -1);
-    }
+    if (inputSG.trim().toLowerCase() === 'all') managedStudyGroups = allStudyGroups.slice();
+    else if (inputSG.trim()) managedStudyGroups = inputSG.split(',').map(s => s.trim()).filter(Boolean);
 
     await db.collection('users').doc(uid).set({
       isAdmin: true,
+      managedCourses: managedCourses,
       managedStudyGroups: managedStudyGroups,
-      managedGroups: managedGroups
+      managedGroups: [] // legacy, оставляем пустым
     }, { merge: true });
     const u = allUsers.find(x => x.uid === uid);
-    if (u) { u.isAdmin = true; u.managedStudyGroups = managedStudyGroups; u.managedGroups = managedGroups; }
-    const sgLabel = managedStudyGroups.length ? managedStudyGroups.join(', ') : '(учебные — нет)';
-    const wgLabel = managedGroups.length ? managedGroups.join(', ') : '(рабочие — нет)';
-    alert('✓ ' + fioOrEmail + ' назначен админом.\nУчебные: ' + sgLabel + '\nРабочие: ' + wgLabel);
+    if (u) { u.isAdmin = true; u.managedCourses = managedCourses; u.managedStudyGroups = managedStudyGroups; u.managedGroups = []; }
+    const cLabel = managedCourses.length ? managedCourses.join(', ') : '(курсов не назначено — сможете только смотреть)';
+    const sgLabel = managedStudyGroups.length ? managedStudyGroups.join(', ') : '(без фильтра по МИФИ)';
+    alert('✓ ' + fioOrEmail + ' назначен админом.\nКурсы: ' + cLabel + '\nУчебные: ' + sgLabel);
   } else {
     if (!confirm('Снять права администратора у ' + fioOrEmail + '?')) return;
-    await db.collection('users').doc(uid).set({ isAdmin: false, managedGroups: [], managedStudyGroups: [] }, { merge: true });
+    await db.collection('users').doc(uid).set({
+      isAdmin: false, managedCourses: [], managedGroups: [], managedStudyGroups: []
+    }, { merge: true });
     const u = allUsers.find(x => x.uid === uid);
-    if (u) { u.isAdmin = false; u.managedGroups = []; u.managedStudyGroups = []; }
+    if (u) { u.isAdmin = false; u.managedCourses = []; u.managedGroups = []; u.managedStudyGroups = []; }
   }
   renderStudents();
 }
@@ -664,14 +1021,30 @@ async function editManagedGroups(uid, email) {
   const u = allUsers.find(x => x.uid === uid);
   if (!u || !u.isAdmin) { alert('Этот пользователь не админ'); return; }
 
-  // Study groups
+  // Courses (главное поле)
+  const courseOpts = (window.CFD_COURSES || []).map(c => c.id);
+  const courseLabels = (window.CFD_COURSES || []).map(c => c.id + ' — ' + c.name).join('\n  ');
+  const currentC = Array.isArray(u.managedCourses) ? u.managedCourses.join(', ') : '';
+  const inputC = prompt(
+    'КУРСЫ для админа ' + (u.fio || email) + '\n' +
+    'Текущие: ' + (currentC || '(пусто)') + '\n\n' +
+    'Через запятую из id:\n  ' + courseLabels + '\n\n' +
+    '«all» = все.',
+    currentC
+  );
+  if (inputC === null) return;
+  let managedCourses = [];
+  if (inputC.trim().toLowerCase() === 'all') managedCourses = courseOpts.slice();
+  else if (inputC.trim()) managedCourses = inputC.split(',').map(s => s.trim()).filter(s => courseOpts.indexOf(s) !== -1);
+
+  // Study groups (опц. фильтр)
   const currentSG = Array.isArray(u.managedStudyGroups) ? u.managedStudyGroups.join(', ') : '';
   const suggestion = (allStudyGroups && allStudyGroups.length) ? allStudyGroups.join(', ') : '(в базе пока нет)';
   const inputSG = prompt(
-    'УЧЕБНЫЕ группы МИФИ для админа ' + (u.fio || email) + '\n' +
+    '(необязательно) УЧЕБНЫЕ группы МИФИ — фильтр по потоку.\n' +
     'Текущие: ' + (currentSG || '(пусто)') + '\n\n' +
     'В базе сейчас: ' + suggestion + '\n' +
-    'Через запятую. Пусто = никаких. «all» = все.',
+    'Через запятую. Пусто = все потоки. «all» = все.',
     currentSG
   );
   if (inputSG === null) return;
@@ -679,29 +1052,14 @@ async function editManagedGroups(uid, email) {
   if (inputSG.trim().toLowerCase() === 'all') managedStudyGroups = allStudyGroups.slice();
   else if (inputSG.trim()) managedStudyGroups = inputSG.split(',').map(s => s.trim()).filter(Boolean);
 
-  // Work groups
-  const workOpts = [];
-  for (let g = 1; g <= 5; g++) workOpts.push('group_' + String(g).padStart(2, '0'));
-  const currentWG = Array.isArray(u.managedGroups) ? u.managedGroups.join(', ') : '';
-  const inputWG = prompt(
-    'РАБОЧИЕ группы для админа ' + (u.fio || email) + '\n' +
-    'Текущие: ' + (currentWG || '(пусто)') + '\n\n' +
-    'Через запятую из: ' + workOpts.join(', ') + '\n' +
-    'Пусто = никаких. «all» = все.',
-    currentWG
-  );
-  if (inputWG === null) return;
-  let managedGroups = [];
-  if (inputWG.trim().toLowerCase() === 'all') managedGroups = workOpts.slice();
-  else if (inputWG.trim()) managedGroups = inputWG.split(',').map(s => s.trim()).filter(s => workOpts.indexOf(s) !== -1);
-
   await db.collection('users').doc(uid).set({
-    managedStudyGroups: managedStudyGroups,
-    managedGroups: managedGroups
+    managedCourses: managedCourses,
+    managedStudyGroups: managedStudyGroups
   }, { merge: true });
+  u.managedCourses = managedCourses;
   u.managedStudyGroups = managedStudyGroups;
-  u.managedGroups = managedGroups;
-  alert('✓ Обновлено.\nУчебные: ' + (managedStudyGroups.length?managedStudyGroups.join(', '):'(пусто)') + '\nРабочие: ' + (managedGroups.length?managedGroups.join(', '):'(пусто)'));
+  alert('✓ Обновлено.\nКурсы: ' + (managedCourses.length?managedCourses.join(', '):'(пусто)')
+       + '\nУчебные: ' + (managedStudyGroups.length?managedStudyGroups.join(', '):'(пусто)'));
   renderStudents();
 }
 async function saveUserField(uid, field, value) {
@@ -727,12 +1085,273 @@ async function assignGroup(uid, group) {
   await loadAllData();
 }
 
+// ===== Рабочие группы =====
+function renderWorkgroupsTab() {
+  const wrap = document.getElementById('workgroupsList');
+  if (!wrap) return;
+  // Наполнить фильтр курсов один раз
+  const fC = document.getElementById('wgCourseFilter');
+  if (fC && fC.options.length <= 1 && window.CFD_COURSES) {
+    (window.CFD_COURSES || []).forEach(c => {
+      if (_currentAdminCourses !== null && _currentAdminCourses.indexOf(c.id) === -1) return;
+      const o = document.createElement('option'); o.value = c.id; o.textContent = c.name;
+      fC.appendChild(o);
+    });
+  }
+  const filterCid = fC ? fC.value : 'all';
+  const filterSt  = document.getElementById('wgStatusFilter').value;
+
+  const gids = Object.keys(allGroups).filter(gid => {
+    if (gid.indexOf('_group_') === -1) return false; // не показываем legacy
+    const cid = gid.split('_group_')[0];
+    if (filterCid !== 'all' && cid !== filterCid) return false;
+    const g = allGroups[gid];
+    if (filterSt === 'approved' && !g.approved) return false;
+    if (filterSt === 'pending'  &&  g.approved) return false;
+    return true;
+  }).sort();
+
+  if (!gids.length) {
+    wrap.innerHTML = '<div style="color:var(--text3);font-style:italic;padding:1rem;text-align:center">Групп нет</div>';
+    return;
+  }
+
+  wrap.innerHTML = gids.map(gid => {
+    const g = allGroups[gid];
+    const cid = gid.split('_group_')[0];
+    const course = (window.CFD_COURSE_BY_ID || {})[cid];
+    const uids = g.memberUids || [];
+    const membersHtml = uids.map(uid => {
+      const u = allUsers.find(x => x.uid === uid);
+      const label = u ? (u.fio || u.email) : uid;
+      const email = u ? u.email : '';
+      const isStaroste = uid === g.createdBy;
+      return '<span style="display:inline-flex;align-items:center;gap:.3rem;padding:.15rem .5rem;background:var(--bg3);border-radius:4px;font-size:.8rem;margin-right:.35rem;margin-bottom:.25rem">'
+           + (isStaroste ? '★ ' : '')
+           + '<strong>' + label + '</strong>'
+           + (email ? ' <span style="color:var(--text3);font-size:.7rem">' + email + '</span>' : '')
+           + ' <button title="Выкинуть из группы" onclick="adminKickMember(\''+gid+'\',\''+uid+'\')" style="background:none;border:none;color:#c44;cursor:pointer;font-size:.85rem;line-height:1;padding:0 2px">×</button>'
+           + '</span>';
+    }).join('');
+    const canDelete = uids.length <= 1;
+    return '<div class="card" style="padding:.7rem 1rem;background:#fff">'
+      + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin-bottom:.4rem">'
+      + '<span style="font-family:\'Playfair Display\',serif;font-weight:700;font-size:.95rem">' + (course ? course.short : cid) + ' · Группа №' + (g.groupIndex || gid.replace(/^.*_group_/,'')) + '</span>'
+      + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3)">' + uids.length + ' / ' + (g.maxSize || 3) + '</span>'
+      + (g.approved ? '<span class="badge b-pass">✓ подтверждена</span>' : '<span class="badge b-pending">на рассм.</span>')
+      + '<span style="flex:1"></span>'
+      + '<button class="btn btn-sm" onclick="adminToggleGroupApprove(\''+gid+'\')">' + (g.approved ? 'Снять подтв.' : '✓ Подтвердить') + '</button>'
+      + '<button class="btn btn-sm" onclick="adminRegenGroupCode(\''+gid+'\')">🔄 Новый код</button>'
+      + (canDelete ? '<button class="btn btn-sm" onclick="adminDeleteGroup(\''+gid+'\')" title="Удалить пустую/одиночную группу">🗑 Удалить</button>' : '')
+      + '</div>'
+      + '<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem"><span style="font-size:.78rem;color:var(--text2)">Код:</span>'
+      + '<code style="font-family:\'JetBrains Mono\',monospace;font-size:.95rem;letter-spacing:.15em;background:var(--code-bg,#2b2520);color:var(--code-text,#f0e6d8);padding:2px 8px;border-radius:4px">' + (g.joinCode || '—') + '</code>'
+      + '</div>'
+      + (membersHtml ? '<div style="margin-top:.3rem">' + membersHtml + '</div>' : '<div style="color:var(--text3);font-size:.8rem;font-style:italic">пустая</div>')
+      + '</div>';
+  }).join('');
+}
+
+async function adminToggleGroupApprove(gid) {
+  const g = allGroups[gid]; if (!g) return;
+  const target = !g.approved;
+  try {
+    await db.collection('groups').doc(gid).update({ approved: target });
+    g.approved = target;
+    renderWorkgroupsTab();
+  } catch(e) { alert('Ошибка: ' + e.message); }
+}
+
+async function adminRegenGroupCode(gid) {
+  const g = allGroups[gid]; if (!g) return;
+  if (!confirm('Сгенерировать новый код приглашения для группы?\nСтарый перестанет работать.')) return;
+  const ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  const buf = new Uint8Array(6); crypto.getRandomValues(buf);
+  let code = ''; for (let i = 0; i < 6; i++) code += ALPHA[buf[i] % ALPHA.length];
+  try {
+    await db.collection('groups').doc(gid).update({ joinCode: code });
+    g.joinCode = code;
+    renderWorkgroupsTab();
+  } catch(e) { alert('Ошибка: ' + e.message); }
+}
+
+async function adminKickMember(gid, uid) {
+  const g = allGroups[gid]; if (!g) return;
+  const u = allUsers.find(x => x.uid === uid) || { fio: uid, email: '' };
+  if (!confirm('Убрать «' + (u.fio || u.email) + '» из группы?\nЕго рабочая группа по этому курсу будет сброшена.')) return;
+  const cid = gid.split('_group_')[0];
+  try {
+    // Убрать из members
+    await db.collection('groups').doc(gid).update({
+      members: firebase.firestore.FieldValue.arrayRemove(uid)
+    });
+    // Сбросить users.courseGroups[cid]
+    const patch = {};
+    patch['courseGroups.' + cid] = firebase.firestore.FieldValue.delete();
+    try { await db.collection('users').doc(uid).update(patch); } catch(_) {}
+    // Обновить кэш
+    g.memberUids = (g.memberUids || []).filter(x => x !== uid);
+    const uu = allUsers.find(x => x.uid === uid);
+    if (uu && uu.courseGroups) delete uu.courseGroups[cid];
+    renderWorkgroupsTab();
+  } catch(e) { alert('Ошибка: ' + e.message); }
+}
+
+async function adminDeleteGroup(gid) {
+  const g = allGroups[gid]; if (!g) return;
+  const uids = g.memberUids || [];
+  if (uids.length > 1) { alert('Сначала уберите всех кроме старосты.'); return; }
+  if (!confirm('Удалить группу ' + gid + ' безвозвратно?')) return;
+  try {
+    // Сбросить courseGroups у последнего оставшегося члена
+    const cid = gid.split('_group_')[0];
+    for (const uid of uids) {
+      const patch = {};
+      patch['courseGroups.' + cid] = firebase.firestore.FieldValue.delete();
+      try { await db.collection('users').doc(uid).update(patch); } catch(_) {}
+    }
+    await db.collection('groups').doc(gid).delete();
+    delete allGroups[gid];
+    renderWorkgroupsTab();
+  } catch(e) { alert('Ошибка: ' + e.message); }
+}
+
+// ===== Bulk-действия над студентами =====
+function getSelectedStudentUids() {
+  return Array.from(document.querySelectorAll('.bulk-cb-student:checked'))
+              .map(x => x.getAttribute('data-uid'));
+}
+function bulkUpdateStudentsCount() {
+  const n = getSelectedStudentUids().length;
+  const panel = document.getElementById('bulkPanelStudents');
+  const cnt = document.getElementById('bulkCountStudents');
+  if (panel) panel.style.display = n ? 'flex' : 'none';
+  if (cnt) cnt.textContent = 'Выбрано: ' + n;
+}
+function bulkSelectAllStudents(checked) {
+  document.querySelectorAll('.bulk-cb-student').forEach(cb => cb.checked = !!checked);
+  const all = document.getElementById('bulkAllStudents'); if (all) all.checked = !!checked;
+  bulkUpdateStudentsCount();
+}
+async function bulkStudentsApprove(approve) {
+  const uids = getSelectedStudentUids();
+  if (!uids.length) return;
+  if (!confirm((approve ? 'Подтвердить ' : 'Снять подтверждение с ') + uids.length + ' студ.?')) return;
+  for (const uid of uids) {
+    try {
+      await db.collection('users').doc(uid).update({ approved: approve });
+      const u = allUsers.find(x => x.uid === uid); if (u) u.approved = approve;
+    } catch (e) { console.warn('approve failed for', uid, e); }
+  }
+  bulkSelectAllStudents(false);
+  renderStudents();
+}
+async function bulkStudentsSetStudyGroup() {
+  const uids = getSelectedStudentUids(); if (!uids.length) return;
+  const sg = prompt('Учебная группа МИФИ (например Б22-505):', '');
+  if (sg === null) return;
+  const val = sg.trim();
+  for (const uid of uids) {
+    try {
+      await db.collection('users').doc(uid).update({ studyGroup: val });
+      const u = allUsers.find(x => x.uid === uid); if (u) u.studyGroup = val;
+    } catch (e) { console.warn('sg failed for', uid, e); }
+  }
+  bulkSelectAllStudents(false);
+  renderStudents();
+}
+async function bulkStudentsEnroll() {
+  const uids = getSelectedStudentUids(); if (!uids.length) return;
+  const opts = (window.CFD_COURSES || []).map(c => c.id + ' — ' + c.name).join('\n  ');
+  const cid = (prompt('ID курса, на который записать выбранных (сразу approved):\n  ' + opts, '') || '').trim();
+  if (!cid) return;
+  const course = (window.CFD_COURSE_BY_ID || {})[cid];
+  if (!course) { alert('Неизвестный курс: ' + cid); return; }
+  if (_currentAdminCourses !== null && _currentAdminCourses.indexOf(cid) === -1) {
+    alert('У вас нет прав на курс ' + cid); return;
+  }
+  const me = auth.currentUser;
+  for (const uid of uids) {
+    try {
+      await db.collection('enrollments').doc(uid + '_' + cid).set({
+        uid: uid, courseId: cid, status: 'approved',
+        requestedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        decidedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        decidedBy: me ? me.email : null,
+      }, { merge: true });
+    } catch (e) { console.warn('enroll failed for', uid, e); }
+  }
+  bulkSelectAllStudents(false);
+  await loadAllData();
+}
+function bulkStudentsExportCSV() {
+  const uids = new Set(getSelectedStudentUids());
+  if (!uids.size) return;
+  const rows = [['ФИО','Email','Уч.группа','Раб.группы','Подтв.']];
+  allUsers.filter(u => uids.has(u.uid)).forEach(u => {
+    const cg = u.courseGroups || {};
+    const cgStr = Object.keys(cg).map(k => k + ':' + cg[k].replace('group_','№')).join('; ');
+    rows.push([u.fio||'', u.email||'', u.studyGroup||'', cgStr || (u.group||''), u.approved ? 'да' : 'нет']);
+  });
+  const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'students_selected.csv';
+  a.click();
+}
+
+// Занулить legacy общую рабочую группу студента.
+async function clearLegacyGroup(uid) {
+  if (!confirm('Убрать legacy общую группу у этого студента?\nЭто не влияет на его per-course группы.')) return;
+  try {
+    await db.collection('users').doc(uid).update({ group: firebase.firestore.FieldValue.delete() });
+  } catch(e) {
+    try { await db.collection('users').doc(uid).set({ group: null }, { merge:true }); } catch(_) {}
+  }
+  const u = allUsers.find(x => x.uid === uid);
+  if (u) delete u.group;
+  renderStudents();
+}
+
+// Per-course назначение: пишем в users.courseGroups.{cid}=gid (или удаляем).
+async function assignGroupForCourse(uid, cid, gid) {
+  const patch = {};
+  if (gid) patch['courseGroups.' + cid] = gid;
+  else     patch['courseGroups.' + cid] = firebase.firestore.FieldValue.delete();
+  try {
+    await db.collection('users').doc(uid).update(patch);
+  } catch (e) {
+    // Если courseGroups ещё не существует — update по dotted path падает; создаём.
+    if (String(e.code) === 'not-found' || String(e.message).indexOf('No document') !== -1) {
+      await db.collection('users').doc(uid).set({ courseGroups: gid ? { [cid]: gid } : {} }, { merge: true });
+    } else {
+      alert('Ошибка: ' + e.message); return;
+    }
+  }
+  const user = allUsers.find(u => u.uid === uid);
+  if (user) {
+    user.courseGroups = user.courseGroups || {};
+    if (gid) user.courseGroups[cid] = gid;
+    else delete user.courseGroups[cid];
+  }
+  await loadAllData();
+}
+
+// Красивое имя группы: 'group_02' → 'Группа 02'; 'sem2_group_02' → 'sem2 · Группа 02'
+function prettyGroupId(gid) {
+  const m = gid.match(/^(.*_)?group_(\d+)$/);
+  if (!m) return gid;
+  const prefix = m[1] ? m[1].replace(/_$/, '') + ' · ' : '';
+  return prefix + 'Группа ' + m[2];
+}
+
 // ===== Group results =====
 function renderGroupFilter() {
   const sel = document.getElementById('groupFilter');
   sel.innerHTML = '<option value="all">Все группы</option>';
   for (const gid of Object.keys(allGroups).sort()) {
-    sel.innerHTML += `<option value="${gid}">${gid.replace('group_', 'Группа ')}</option>`;
+    sel.innerHTML += `<option value="${gid}">${prettyGroupId(gid)}</option>`;
   }
 }
 
@@ -857,76 +1476,110 @@ function renderTasks() {
 
 function renderGrades() {
   const tbody = document.getElementById('gradesBody');
-  // Individual grades for each student
+  const enrollsByUid = window._enrollmentsByUid || {};
   let html = '';
-  for (const u of allUsers) {
-    if (isAdmin(u.email)) continue; // skip admin
+
+  function progressCell(uid, cid) {
+    const cg = (allUsers.find(x => x.uid === uid) || {}).courseGroups || {};
+    const gid = cid && cg[cid] ? (cid + '_' + cg[cid]) : null;
+    const grp = gid ? allGroups[gid] : null;
+    const ch = grp ? (grp.adminChecked || 0) : 0;
+    const tt = grp ? (grp.adminTotal || 71) : 71;
+    const pct = tt > 0 ? Math.round(ch / tt * 100) : 0;
+    const col = pct >= 80 ? '#1a6b5a' : (pct >= 40 ? '#854f0b' : '#c44');
+    return `<div style="display:flex;align-items:center;gap:.4rem"><div style="flex:1;background:#ede6da;border-radius:3px;height:8px;min-width:60px"><div style="background:${col};height:100%;border-radius:3px;width:${pct}%"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:${col};font-weight:700">${pct}%</span></div>`;
+  }
+
+  function row(u, cid, docId, isLegacy) {
     const fio = u.fio || u.email;
     const sg = u.studyGroup || '—';
-    const rg = u.group ? u.group.replace('group_', '№') : '—';
-    // Progress from admin checklist
-    const grp = u.group ? allGroups[u.group] : null;
-    const adminChecked = grp ? (grp.adminChecked || 0) : 0;
-    const adminTotal = grp ? (grp.adminTotal || 71) : 71;
-    const pct = adminTotal > 0 ? Math.round(adminChecked / adminTotal * 100) : 0;
-    const pctColor = pct >= 80 ? '#1a6b5a' : (pct >= 40 ? '#854f0b' : '#c44');
-    const progressHtml = `<div style="display:flex;align-items:center;gap:.4rem"><div style="flex:1;background:#ede6da;border-radius:3px;height:8px;min-width:60px"><div style="background:${pctColor};height:100%;border-radius:3px;width:${pct}%"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:${pctColor};font-weight:700">${pct}%</span></div>`;
-    // Find their task
-    const task = allTaskClaims[u.uid] || '—';
-    // Load existing grade
-    const g = allIndividualGrades[u.uid] || {};
-    const zachet = g.zachet || '';
-    const exam = g.exam || '';
-    const total = (parseInt(zachet)||0) + (parseInt(exam)||0);
+    const courseObj = cid ? (window.CFD_COURSE_BY_ID || {})[cid] : null;
+    const courseLabel = isLegacy
+      ? '<span class="badge b-pending" title="legacy — общая оценка без привязки к курсу">общая (legacy)</span>'
+      : (courseObj ? courseObj.name : cid);
+    const cg = u.courseGroups || {};
+    const rawGid = cid ? cg[cid] : u.group;
+    const rgHtml = rawGid ? '<span class="badge b-group">' + rawGid.replace('group_','№') + '</span>' : '<span class="badge b-pending">—</span>';
+    const g = allIndividualGrades[docId] || {};
+    const zachet = (g.zachet !== undefined && g.zachet !== null) ? g.zachet : '';
+    const exam   = (g.exam   !== undefined && g.exam   !== null) ? g.exam   : '';
+    const total  = (parseInt(zachet)||0) + (parseInt(exam)||0);
     const comment = g.comment || '';
-    html += `<tr>
+    return `<tr>
       <td style="font-weight:600">${fio}</td>
       <td style="font-size:.82rem">${sg}</td>
-      <td><span class="badge b-group">${rg}</span></td>
-      <td>${progressHtml}</td>
-      <td style="font-size:.82rem">${task}</td>
-      <td><input type="number" min="0" max="50" value="${zachet}" class="grade-input" id="zachet-${u.uid}" onchange="autoSaveGrade('${u.uid}')" oninput="debounceSaveGrade('${u.uid}')"></td>
-      <td><input type="number" min="0" max="50" value="${exam}" class="grade-input" id="exam-${u.uid}" onchange="autoSaveGrade('${u.uid}')" oninput="debounceSaveGrade('${u.uid}')"></td>
+      <td style="font-size:.82rem">${courseLabel}</td>
+      <td>${rgHtml}</td>
+      <td>${cid ? progressCell(u.uid, cid) : '<span style="color:var(--text3);font-size:.72rem">—</span>'}</td>
+      <td><input type="number" min="0" max="50" value="${zachet}" class="grade-input" id="zachet-${docId}" onchange="autoSaveGrade('${docId}')" oninput="debounceSaveGrade('${docId}')"></td>
+      <td><input type="number" min="0" max="50" value="${exam}" class="grade-input" id="exam-${docId}" onchange="autoSaveGrade('${docId}')" oninput="debounceSaveGrade('${docId}')"></td>
       <td style="font-weight:700;text-align:center">${total || ''}</td>
-      <td><input type="text" value="${comment}" class="comment-input" id="comment-${u.uid}" placeholder="Комментарий" onchange="autoSaveGrade('${u.uid}')" oninput="debounceSaveGrade('${u.uid}')"></td>
+      <td><input type="text" value="${comment}" class="comment-input" id="comment-${docId}" placeholder="Комментарий" onchange="autoSaveGrade('${docId}')" oninput="debounceSaveGrade('${docId}')"></td>
     </tr>`;
   }
-  if (!html) html = '<tr><td colspan="9" style="text-align:center;color:var(--text3)">Нет студентов</td></tr>';
+
+  for (const u of allUsers) {
+    if (isAdmin(u.email)) continue;
+    // Курсы: все approved enrollments. Для суперadmin — все; для курсового
+    // admin — уже отфильтрованы в _allEnrollments по managedCourses.
+    const enrolls = enrollsByUid[u.uid] || {};
+    const approvedCids = Object.keys(enrolls).filter(cid => enrolls[cid] === 'approved');
+
+    if (approvedCids.length === 0) {
+      // Legacy общая оценка (по документу individual_grades/{uid} без cid)
+      // — покажем только суперadmin, потому что писать её могут только они.
+      const isSA = _currentAdminUser && isSuperAdmin(_currentAdminUser.email);
+      if (isSA && allIndividualGrades[u.uid]) {
+        html += row(u, null, u.uid, true);
+      }
+      continue;
+    }
+    for (const cid of approvedCids) {
+      html += row(u, cid, u.uid + '_' + cid, false);
+    }
+  }
+  if (!html) html = '<tr><td colspan="9" style="text-align:center;color:var(--text3)">Нет студентов с одобренными курсами</td></tr>';
   tbody.innerHTML = html;
 }
 
 const _saveTimers = {};
 
-function debounceSaveGrade(uid) {
-  if (_saveTimers[uid]) clearTimeout(_saveTimers[uid]);
-  _saveTimers[uid] = setTimeout(() => autoSaveGrade(uid), 800);
+// docId в новом формате может быть '{uid}_{cid}' или '{uid}' (legacy).
+function debounceSaveGrade(docId) {
+  if (_saveTimers[docId]) clearTimeout(_saveTimers[docId]);
+  _saveTimers[docId] = setTimeout(() => autoSaveGrade(docId), 800);
 }
 
-async function autoSaveGrade(uid) {
-  if (_saveTimers[uid]) { clearTimeout(_saveTimers[uid]); delete _saveTimers[uid]; }
-  const zachetEl = document.getElementById('zachet-' + uid);
-  const examEl = document.getElementById('exam-' + uid);
-  const commentEl = document.getElementById('comment-' + uid);
+async function autoSaveGrade(docId) {
+  if (_saveTimers[docId]) { clearTimeout(_saveTimers[docId]); delete _saveTimers[docId]; }
+  const zachetEl = document.getElementById('zachet-' + docId);
+  const examEl = document.getElementById('exam-' + docId);
+  const commentEl = document.getElementById('comment-' + docId);
   if (!zachetEl || !examEl || !commentEl) return;
   const zachet = zachetEl.value;
   const exam = examEl.value;
   const comment = commentEl.value;
-  // Visual feedback — highlight row
+  const parts = docId.split('_');
+  const uid = parts[0];
+  const cid = parts.length > 1 ? parts[1] : null;
   const row = zachetEl.closest('tr');
+  const me = auth.currentUser;
   try {
-    await db.collection('individual_grades').doc(uid).set({
+    const payload = {
+      uid: uid,
       zachet: parseInt(zachet) || 0,
       exam: parseInt(exam) || 0,
       comment: comment,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    allIndividualGrades[uid] = { zachet, exam, comment };
-    // Update total cell inline without full re-render (avoids losing focus)
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy: me ? me.email : null,
+    };
+    if (cid) payload.courseId = cid;
+    await db.collection('individual_grades').doc(docId).set(payload, { merge: true });
+    allIndividualGrades[docId] = { zachet, exam, comment, courseId: cid };
+    // Итого — 8-я td (index 7)
     const totalVal = (parseInt(zachet)||0) + (parseInt(exam)||0);
     const cells = row.querySelectorAll('td');
-    // total is the 8th td (index 7)
     cells[7].textContent = totalVal || '';
-    // Flash green
     row.style.transition = 'background .3s';
     row.style.background = 'rgba(26,107,90,0.12)';
     setTimeout(() => { row.style.background = ''; }, 1000);
@@ -937,8 +1590,8 @@ async function autoSaveGrade(uid) {
   }
 }
 
-// Keep old name as alias in case it's referenced elsewhere
-function saveIndividualGrade(uid) { autoSaveGrade(uid); }
+// Legacy alias (в некоторых старых обработчиках может встречаться uid)
+function saveIndividualGrade(docId) { autoSaveGrade(docId); }
 
 
 async function saveGrade(gid) {

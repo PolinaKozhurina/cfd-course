@@ -78,11 +78,20 @@
       <div id="auth-profile-view" style="display:none">
         <h3>Профиль</h3>
         <p class="sub" id="auth-profile-email"></p>
-        <label>Номер группы</label>
+        <div id="auth-verify-row" style="display:none;background:#faeeda;color:#854f0b;padding:.5rem .7rem;border-radius:6px;font-size:.82rem;margin-bottom:.8rem">
+          <div style="margin-bottom:.4rem">✉ Email не подтверждён. Без подтверждения нельзя отправлять результаты.</div>
+          <button class="btn btn-secondary" style="margin:0;padding:.35rem .7rem;font-size:.78rem" onclick="CFDAuth.resendVerification()">Отправить письмо повторно</button>
+          <button class="btn btn-secondary" style="margin:0 0 0 .3rem;padding:.35rem .7rem;font-size:.78rem" onclick="location.reload()">Я подтвердил — обновить</button>
+        </div>
+        <label style="display:flex;align-items:center;justify-content:space-between">
+          <span>Общая рабочая группа <span style="font-family:'JetBrains Mono',monospace;font-size:.62rem;background:#faeeda;color:#854f0b;padding:1px 5px;border-radius:3px;margin-left:4px">legacy</span></span>
+          <a href="profile.html" style="font-size:.7rem;color:var(--accent);text-decoration:none">Задать по курсам →</a>
+        </label>
         <select id="auth-group">
-          <option value="">— выберите —</option>
+          <option value="">— не назначена —</option>
         </select>
-        <button class="btn btn-primary" onclick="CFDAuth.saveGroup()">Сохранить группу</button>
+        <p style="font-size:.72rem;color:var(--text3);margin-bottom:.6rem;line-height:1.4">Устаревшее поле для страниц, где ещё не подключена привязка к курсу. Новые рабочие группы — по каждому курсу в <a href="profile.html" style="color:var(--accent)">профиле</a>.</p>
+        <button class="btn btn-primary" onclick="CFDAuth.saveGroup()">Сохранить legacy-группу</button>
         <button class="btn btn-logout" onclick="CFDAuth.logout()">Выйти</button>
       </div>
     </div>
@@ -100,7 +109,22 @@
 
   // --- Auth State ---
   let currentUser = null;
-  let userGroup = null;
+  let userGroup = null;              // legacy: одна общая рабочая группа
+  let userCourseGroups = {};         // { courseId: 'group_NN' } — новая модель
+
+  // Вычислить cid текущей страницы (из <html data-course="…">, <body data-course=…>,
+  // либо из meta). Возвращает null, если не задан.
+  function pageCourseId() {
+    return (document.documentElement.getAttribute('data-course')
+         || document.body && document.body.getAttribute('data-course')
+         || null);
+  }
+
+  // Полный ID группы в Firestore: 'group_NN' (legacy) или 'mke_group_NN' (per-course).
+  function fullGroupId(cid, gid) {
+    if (!cid) return gid; // legacy fallback
+    return cid + '_' + gid;
+  }
 
   // --- Public API ---
   window.CFDAuth = {
@@ -159,7 +183,19 @@
           studyGroup: studyGroup,
           registeredAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        this.closeModal();
+        // Отправить письмо с подтверждением адреса.
+        // Без подтверждения студент не сможет сдавать results (см. firestore.rules).
+        try { await cred.user.sendEmailVerification(); } catch (_) {}
+        showInfo("Регистрация ок! Проверьте почту — мы отправили ссылку на " + email + ". После подтверждения обновите страницу.");
+      } catch (e) {
+        showError(translateError(e.code));
+      }
+    },
+    resendVerification: async function () {
+      if (!currentUser) return;
+      try {
+        await currentUser.sendEmailVerification();
+        showInfo("Письмо отправлено повторно на " + currentUser.email);
       } catch (e) {
         showError(translateError(e.code));
       }
@@ -176,9 +212,7 @@
       }
       try {
         await auth.sendPasswordResetEmail(email);
-        showError("Ссылка для сброса отправлена на " + email);
-        document.getElementById("auth-error").style.background = "#e8f4f0";
-        document.getElementById("auth-error").style.color = "#1a6b5a";
+        showInfo("Ссылка для сброса отправлена на " + email);
       } catch (e) {
         showError(translateError(e.code));
       }
@@ -205,21 +239,96 @@
     getUser: function () {
       return currentUser;
     },
+    // Legacy: возвращает общую группу.
     getGroup: function () {
       return userGroup;
     },
-    // Submit results for a test (called from checklist page)
-    submitResults: async function (testId, values) {
-      if (!currentUser || !userGroup) {
-        this.openModal();
+    getCourseGroups: function () {
+      return Object.assign({}, userCourseGroups);
+    },
+    // Рабочая группа для конкретного курса (например 'mke' → 'group_02').
+    // Legacy fallback: если per-course пусто, но есть общая userGroup, вернёт её.
+    getGroupForCourse: function (cid) {
+      if (cid && userCourseGroups[cid]) return userCourseGroups[cid];
+      return userGroup || null;
+    },
+    // Определить cid текущей страницы: <html data-course> / <body data-course>.
+    getPageCourseId: function () { return pageCourseId(); },
+
+    // Записать себя в рабочую группу по курсу. Клиентская проверка approved
+    // enrollment (правила Firestore пока не проверяют — окончательный контроль
+    // в п.7 через coded joins).
+    assignSelfToGroup: async function (cid, gid) {
+      if (!currentUser) return { ok:false, error:"Не авторизован" };
+      if (!currentUser.emailVerified) return { ok:false, error:"Подтвердите email" };
+      if (!cid || !gid) return { ok:false, error:"Не задан курс или группа" };
+      try {
+        // Обновляем map через FieldPath — не затирая другие курсы.
+        const patch = {};
+        patch["courseGroups." + cid] = gid;
+        await db.collection("users").doc(currentUser.uid).update(patch);
+        userCourseGroups[cid] = gid;
+        return { ok:true };
+      } catch (e) {
+        return { ok:false, error:e.message };
+      }
+    },
+    // Отписаться от рабочей группы курса.
+    leaveCourseGroup: async function (cid) {
+      if (!currentUser || !cid) return { ok:false, error:"Не авторизован" };
+      try {
+        const patch = {};
+        patch["courseGroups." + cid] = firebase.firestore.FieldValue.delete();
+        await db.collection("users").doc(currentUser.uid).update(patch);
+        delete userCourseGroups[cid];
+        return { ok:true };
+      } catch (e) {
+        return { ok:false, error:e.message };
+      }
+    },
+
+    // ---------- SUBMIT / GET results ----------
+    // Новый вариант: явно с cid — пишет в groups/{cid}_{gid}/results.
+    submitResultsForCourse: async function (cid, testId, values) {
+      if (!currentUser) { this.openModal(); return false; }
+      if (!currentUser.emailVerified) {
+        alert("Сначала подтвердите email — ссылка отправлена на " + currentUser.email + ".\n\nОткройте профиль и нажмите «Отправить письмо повторно», если письма нет.");
+        this.openModal(); return false;
+      }
+      const gid = this.getGroupForCourse(cid);
+      if (!gid) {
+        alert("Для курса «" + cid + "» не назначена рабочая группа. Откройте профиль → «Мои рабочие группы».");
         return false;
       }
+      const fullGid = fullGroupId(cid, gid);
       try {
-        await db
-          .collection("groups")
-          .doc(userGroup)
-          .collection("results")
-          .doc(testId)
+        await db.collection("groups").doc(fullGid)
+          .collection("results").doc(testId)
+          .set({
+            values: values,
+            courseId: cid,
+            submittedBy: currentUser.email,
+            submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+        return true;
+      } catch (e) {
+        console.error("submitResultsForCourse:", e);
+        return false;
+      }
+    },
+    // Legacy: если страница объявила data-course — маршрутизируем в per-course.
+    // Иначе — старый путь groups/{userGroup}/results/{testId}.
+    submitResults: async function (testId, values) {
+      const cid = pageCourseId();
+      if (cid) return this.submitResultsForCourse(cid, testId, values);
+      if (!currentUser || !userGroup) { this.openModal(); return false; }
+      if (!currentUser.emailVerified) {
+        alert("Сначала подтвердите email — ссылка отправлена на " + currentUser.email + ".\n\nОткройте профиль и нажмите «Отправить письмо повторно», если письма нет.");
+        this.openModal(); return false;
+      }
+      try {
+        await db.collection("groups").doc(userGroup)
+          .collection("results").doc(testId)
           .set({
             values: values,
             submittedBy: currentUser.email,
@@ -231,26 +340,33 @@
         return false;
       }
     },
-    // Get results for current group
+    // Get results for a specific course.
+    getResultsForCourse: async function (cid, testId) {
+      const gid = this.getGroupForCourse(cid);
+      if (!gid) return null;
+      try {
+        const doc = await db.collection("groups").doc(fullGroupId(cid, gid))
+          .collection("results").doc(testId).get();
+        return doc.exists ? doc.data() : null;
+      } catch (e) { return null; }
+    },
+    // Legacy get.
     getResults: async function (testId) {
+      const cid = pageCourseId();
+      if (cid) return this.getResultsForCourse(cid, testId);
       if (!userGroup) return null;
       try {
-        const doc = await db
-          .collection("groups")
-          .doc(userGroup)
-          .collection("results")
-          .doc(testId)
-          .get();
+        const doc = await db.collection("groups").doc(userGroup)
+          .collection("results").doc(testId).get();
         return doc.exists ? doc.data() : null;
-      } catch (e) {
-        return null;
-      }
+      } catch (e) { return null; }
     },
   };
 
   // --- Auth State Listener ---
   auth.onAuthStateChanged(async function (user) {
     currentUser = user;
+    window._userEmailVerified = !!(user && user.emailVerified);
     if (user) {
       // Ensure user document exists in Firestore (create on first login)
       try {
@@ -267,6 +383,9 @@
           window._userStudyGroup = doc.data().studyGroup || '';
           window._userManagedGroups = Array.isArray(doc.data().managedGroups) ? doc.data().managedGroups : [];
           window._userManagedStudyGroups = Array.isArray(doc.data().managedStudyGroups) ? doc.data().managedStudyGroups : [];
+          window._userManagedCourses = Array.isArray(doc.data().managedCourses) ? doc.data().managedCourses : [];
+          userCourseGroups = (doc.data().courseGroups && typeof doc.data().courseGroups === 'object') ? doc.data().courseGroups : {};
+          window._userCourseGroups = Object.assign({}, userCourseGroups);
           window._userRole = doc.data().isAdmin ? 'admin' : 'student';
           // Check superadmin (from ADMIN_EMAILS config)
           if (typeof ADMIN_EMAILS !== 'undefined' && ADMIN_EMAILS.includes(user.email)) {
@@ -288,6 +407,9 @@
           window._userFio = '';
           window._userManagedGroups = [];
           window._userManagedStudyGroups = [];
+          window._userManagedCourses = [];
+          userCourseGroups = {};
+          window._userCourseGroups = {};
           window._userRole = 'student';
         }
       } catch (e) {
@@ -295,6 +417,8 @@
       }
     } else {
       userGroup = null;
+      userCourseGroups = {};
+      window._userCourseGroups = {};
     }
     // Dispatch event so comment scripts can react
     window.dispatchEvent(new CustomEvent('authReady', { detail: { user: user, approved: !!window._userApproved } }));
@@ -382,8 +506,10 @@
       var roleBadge = '';
       if (window._userRole === 'superadmin') roleBadge = '<span style="font-family:JetBrains Mono,monospace;font-size:.62rem;background:#faeeda;color:#854f0b;padding:1px 5px;border-radius:3px;font-weight:700">главный</span>';
       else if (window._userRole === 'admin') roleBadge = '<span style="font-family:JetBrains Mono,monospace;font-size:.62rem;background:#fde8e8;color:#c44;padding:1px 5px;border-radius:3px">admin</span>';
+      var verifyDot = currentUser.emailVerified ? '' : '<span title="Email не подтверждён" style="width:8px;height:8px;border-radius:50%;background:#c44;display:inline-block;margin-right:2px;cursor:pointer" onclick="CFDAuth.openModal()"></span>';
       container.innerHTML = `
         <div class="auth-user-bar">
+          ${verifyDot}
           <span class="email">${window._userRole === "superadmin" ? "Admin" : (window._userFio || currentUser.email)}</span>
           ${roleBadge}
           ${userGroup ? '<span class="group-badge">' + userGroup.replace("group_", "Гр.") + "</span>" : ""}
@@ -394,6 +520,9 @@
       document.getElementById("auth-login-view").style.display = "none";
       document.getElementById("auth-profile-view").style.display = "";
       document.getElementById("auth-profile-email").textContent = currentUser.email;
+      // Показать/скрыть строку с просьбой подтвердить email
+      var vRow = document.getElementById("auth-verify-row");
+      if (vRow) vRow.style.display = currentUser.emailVerified ? "none" : "";
     } else {
       // Show login button
       container.innerHTML = '<button class="auth-btn" onclick="CFDAuth.openModal()">Войти</button>';
@@ -409,8 +538,15 @@
     const el = document.getElementById("auth-error");
     el.textContent = msg;
     el.style.display = "";
-    el.style.background = "";
-    el.style.color = "";
+    el.style.background = "#fde8e8";
+    el.style.color = "#c44";
+  }
+  function showInfo(msg) {
+    const el = document.getElementById("auth-error");
+    el.textContent = msg;
+    el.style.display = "";
+    el.style.background = "#e8f4f0";
+    el.style.color = "#1a6b5a";
   }
   function hideError() {
     document.getElementById("auth-error").style.display = "none";

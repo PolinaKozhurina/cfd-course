@@ -146,27 +146,25 @@ const ADMIN_EMAILS = ["ваш_email@university.ru"];  ← ваш email!
 ```
 
 ### 5.7 Настроить правила безопасности Firestore
-Firebase Console → Firestore Database → Rules → заменить на:
 
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-    match /groups/{groupId}/{document=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-    match /grades/{groupId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-  }
-}
-```
+Актуальные правила лежат в файле [`firestore.rules`](firestore.rules) в этом репозитории.
+
+Порядок деплоя:
+
+1. Открыть `firestore.rules` в репе, скопировать всё содержимое.
+2. Firebase Console → Firestore Database → **Rules**.
+3. Вставить, нажать **Publish**.
+4. Проверить в Rules Playground типовой кейс (например, студент пишет чужой `results` — должен быть DENY).
+
+**Важно:** список superadmin-емейлов внутри `firestore.rules`
+(`SUPERADMINS`) должен совпадать с `ADMIN_EMAILS`
+в `js/firebase-config.js`. При добавлении второго администратора —
+править оба файла и заново публиковать правила.
+
+> Старая «упрощённая» версия правил (`allow read, write: if auth != null`)
+> позволяла студенту сделать себя администратором, редактируя своё
+> user-документ. **Не используйте её** — задокументировано в
+> комментарии к `firestore.rules`.
 
 ### 5.8 Загрузить обновления
 ```bash
@@ -267,46 +265,11 @@ grades/                             ← оценки (ставит админ)
 - Firestore Spark: бесплатно (1 GB хранения, 50K чтений/день)
 - Для 50 студентов — запас в 100x
 
-## Рекомендуемые Firestore Rules
+## Firestore Rules
 
-Firebase Console → Firestore Database → Rules → заменить на:
+Актуальные правила — см. файл [`firestore.rules`](firestore.rules)
+(источник правды в репозитории). Инструкция по деплою — в шаге 5.7.
 
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Users — каждый может читать всех (для админки), писать только свой документ
-    match /users/{uid} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == uid;
-    }
-    // Task claims — все авторизованные читают, писать может любой
-    match /task_claims/{doc} {
-      allow read, write: if request.auth != null;
-    }
-    // Grades — все читают свои, писать может только админ
-    match /individual_grades/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
-      allow write: if request.auth != null && request.auth.token.email == "polinakozhurina2020@gmail.com";
-    }
-    // Groups, results, checklist — все авторизованные
-    match /{document=**} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
-```
-
-→ Нажать **Publish**
-
-**Пока для простоты** можно использовать упрощённые правила:
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
-```
+> **Не оставляйте** «упрощённые» правила `allow read, write: if request.auth != null` —
+> они позволяют студенту записать себе `isAdmin: true` через собственный
+> user-документ. Используйте `firestore.rules`.

@@ -461,6 +461,17 @@ service cloud.firestore {
       allow delete: if adminCanManageCourse(resource.data.get('courseId', ''));
     }
 
+    // ---------- lectures (гейтинг лекций) ----------
+    // ключ '{cid}_{lecId}'; например 'sem2_flic', 'nm_w01', 'sem1_s1-01'.
+    // Поля: { courseId, lectureId, releasedAt(Timestamp|null), updatedBy }.
+    // Читают все auth (нужно, чтобы UI показывал бейджи «⏳ откроется…»).
+    // Пишет курсовой admin по своему курсу или super.
+    match /lectures/{docId} {
+      function lecCid() { return docId.split('_')[0]; }
+      allow read: if isAuth();
+      allow create, update, delete: if adminCanManageCourse(lecCid());
+    }
+
     // ---------- fallback: всё остальное закрыто ----------
     match /{document=**} {
       allow read, write: if false;

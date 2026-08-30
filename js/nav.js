@@ -7,6 +7,23 @@
   // Apply saved theme as early as possible to minimise flash
   try { if (localStorage.getItem('cfd-theme') === 'dark') document.documentElement.classList.add('dark'); } catch (e) {}
 
+  // Подгружаем gating.js рядом (относительно nav.js) — включает
+  // блокировку страницы лекции, если у пользователя нет доступа.
+  (function () {
+    try {
+      var cur = document.currentScript;
+      if (!cur) {
+        var ss = document.getElementsByTagName('script');
+        for (var i = 0; i < ss.length; i++) if (/\/nav\.js/.test(ss[i].src)) { cur = ss[i]; break; }
+      }
+      if (!cur) return;
+      var s = document.createElement('script');
+      s.src = cur.src.replace(/nav\.js.*/, 'gating.js');
+      s.async = false;
+      document.head.appendChild(s);
+    } catch (_) {}
+  })();
+
   var NAV = {
     brand: { label: "CFD", href: "index.html" },
     courses: [

@@ -1345,18 +1345,13 @@ async function hwOpenSubmissions(aid) {
     btn.onclick = () => hwAutoAssignVariants(aid);
     bar.appendChild(btn);
   }
-  // Панель синхронизации в приватный GitHub-репо
-  const syncWrap = document.createElement('div');
-  syncWrap.style.cssText = 'display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;padding:.4rem .6rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px;margin-left:auto';
-  const repo = localStorage.getItem('gh_submissions_repo') || 'PolinaKozhurina/cfd-submissions';
-  syncWrap.innerHTML =
-    '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text2)">📂 Приватный репо:</span>'
-    + '<input type="text" id="hwSyncRepo" value="'+hwEscape(repo)+'" placeholder="owner/repo" oninput="localStorage.setItem(\'gh_submissions_repo\',this.value)" style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;padding:2px 6px;border:1px solid var(--border);border-radius:3px;width:220px">'
-    + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text2);margin-left:.3rem">🔑 PAT:</span>'
-    + '<input type="password" id="hwSyncToken" value="'+hwEscape(localStorage.getItem('gh_submissions_token')||'')+'" placeholder="github_pat_…" oninput="localStorage.setItem(\'gh_submissions_token\',this.value)" style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;padding:2px 6px;border:1px solid var(--border);border-radius:3px;width:180px">'
-    + '<button class="btn btn-sm btn-primary" onclick="hwSyncToGitHub(\''+aid+'\')">☁ Синхронизировать</button>'
-    + '<span id="hwSyncStatus" style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3);margin-left:.3rem"></span>';
-  bar.appendChild(syncWrap);
+  // Экспорт CSV и подсказка про приватный репо
+  const rightWrap = document.createElement('div');
+  rightWrap.style.cssText = 'display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;margin-left:auto';
+  rightWrap.innerHTML =
+    '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3)" title="Файлы автоматически кладутся сюда при загрузке студентом">📂 файлы → PolinaKozhurina/cfd-submissions</span>'
+    + '<button class="btn btn-sm" onclick="hwExportSubmissionsCsv(\''+aid+'\')">⬇ CSV сводки</button>';
+  bar.appendChild(rightWrap);
   document.getElementById('hwSubsTable').innerHTML = '<div style="color:var(--text3);padding:1rem;text-align:center">загрузка…</div>';
   await renderHwSubmissionsTable(aid);
 }
@@ -1384,9 +1379,16 @@ async function renderHwSubmissionsTable(aid) {
   const rows = enrolled.map(u => {
     const s = subs[u.uid];
     const g = grades[u.uid] || {};
-    const filesHtml = s && s.files && s.files.length
-      ? s.files.map(f => '<a href="'+f.url+'" target="_blank" style="color:var(--accent3);margin-right:.4rem;font-size:.78rem">📎 '+hwEscape(f.name)+'</a>').join('')
-      : '<span style="color:var(--text3);font-style:italic;font-size:.78rem">—</span>';
+    const filesPart = (s && s.files && s.files.length)
+      ? s.files.map(f => f.url
+          ? '<a href="'+f.url+'" target="_blank" style="color:var(--accent3);margin-right:.4rem;font-size:.78rem">📎 '+hwEscape(f.name)+'</a>'
+          : '<button onclick="hwAdminDownload(\''+encodeURIComponent(f.path)+'\',\''+hwEscape(f.name).replace(/\x27/g,"\\'")+'\')" style="background:none;border:none;color:var(--accent3);cursor:pointer;padding:0;margin-right:.4rem;font-size:.78rem;text-decoration:underline">📎 '+hwEscape(f.name)+'</button>'
+        ).join('')
+      : '';
+    const linksPart = (s && s.links && s.links.length)
+      ? s.links.map(l => '<a href="'+l.url+'" target="_blank" style="color:var(--accent3);margin-right:.4rem;font-size:.78rem" title="'+hwEscape(l.url)+'">🔗 '+hwEscape(l.name || l.url)+'</a>').join('')
+      : '';
+    const filesHtml = (filesPart + linksPart) || '<span style="color:var(--text3);font-style:italic;font-size:.78rem">—</span>';
     const submittedAt = s && s.updatedAt ? new Date(s.updatedAt.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) : '';
     let lateBadge = '';
     if (s && s.updatedAt && a.deadlineAt && s.updatedAt.toMillis() > a.deadlineAt.toMillis()) {
@@ -1445,6 +1447,40 @@ async function hwAutoAssignVariants(aid) {
   if (!r.ok) { alert(r.error); return; }
   a.assignedVariants = assigned;
   renderHwSubmissionsTable(aid);
+}
+
+// Скачать файл через Worker (админ, любой файл в scope superadmin).
+async function hwAdminDownload(encodedPath, name) {
+  try {
+    await CFDHomework.triggerDownload(decodeURIComponent(encodedPath), name);
+  } catch (e) { alert('Ошибка: ' + e.message); }
+}
+
+// Экспорт всех сдач в CSV (ФИО, email, ссылки через ;).
+function hwExportSubmissionsCsv(aid) {
+  const a = window._hwCurrentAssignment;
+  const subs = window._hwSubsCache || {};
+  const grades = window._hwGradesCache || {};
+  if (!a) return;
+  const enrByUid = window._enrollmentsByUid || {};
+  const enrolled = allUsers.filter(u => !isAdmin(u.email) && enrByUid[u.uid] && enrByUid[u.uid][a.courseId] === 'approved');
+  enrolled.sort((x, y) => (x.fio || x.email || '').localeCompare(y.fio || y.email || ''));
+  const rows = [['ФИО','Email','Уч.группа','Ссылки','Сдано (МСК)','Оценка','Комментарий']];
+  enrolled.forEach(u => {
+    const s = subs[u.uid] || {};
+    const links = (s.links || []).map(l => l.url).join(' ; ');
+    const submittedAt = s.updatedAt ? new Date(s.updatedAt.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' }) : '';
+    const g = grades[u.uid] || {};
+    rows.push([u.fio||'', u.email||'', u.studyGroup||'', links, submittedAt, g.grade!==undefined?g.grade:'', g.comment||'']);
+  });
+  const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a2 = document.createElement('a');
+  a2.href = url;
+  a2.download = 'submissions_' + (a.courseId || '') + '_' + aid + '.csv';
+  a2.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
 // ===== Синхронизация сдач в приватный GitHub-репо =====

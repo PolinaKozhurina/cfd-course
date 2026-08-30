@@ -484,13 +484,15 @@ td{padding:5px 10px;border:1px solid var(--border)}
         + 'Материалы: ' + a.filesCommon.map(f => '<a href="'+f.url+'" target="_blank" style="color:var(--accent3);margin-right:.6rem">📎 '+hwEsc(f.name)+'</a>').join('')
         + '</div>';
     }
+    const submittedFiles = (sub && sub.files) ? sub.files : [];
+    const submittedLinks = (sub && sub.links) ? sub.links : [];
+    const hasSomething = submittedFiles.length + submittedLinks.length > 0;
     let statusBadge = '';
     if (grade && grade.grade !== undefined && grade.grade !== null) statusBadge = '<span class="badge b-pass">оценено: '+grade.grade+' / 100</span>';
-    else if (sub && sub.files && sub.files.length) statusBadge = '<span class="badge b-pending">сдано, ожидание проверки</span>';
+    else if (hasSomething) statusBadge = '<span class="badge b-pending">сдано, ожидание проверки</span>';
     else if (isLate) statusBadge = '<span class="badge b-fail">просрочено</span>';
     else statusBadge = '<span class="badge b-pending">не сдано</span>';
 
-    const submitted = (sub && sub.files) ? sub.files : [];
     card.innerHTML =
       '<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:.5rem;margin-bottom:.3rem">'
       + '<strong style="font-family:\'Playfair Display\',serif;font-size:1rem">' + hwEsc(a.title) + '</strong>'
@@ -501,47 +503,103 @@ td{padding:5px 10px;border:1px solid var(--border)}
       + (a.description ? '<div style="font-size:.88rem;color:var(--text);white-space:pre-wrap;margin-bottom:.4rem">' + hwEsc(a.description) + '</div>' : '')
       + variantHtml
       + commonFilesHtml
-      + (submitted.length ? '<div style="font-size:.82rem;margin-top:.4rem"><span style="color:var(--text2)">Мои файлы:</span> ' + submitted.map((f,i) =>
-          '<a href="'+f.url+'" target="_blank" style="color:var(--accent3);margin-right:.4rem">📎 '+hwEsc(f.name)+'</a>'
-          + (grade && grade.grade !== undefined ? '' : ' <button data-rm="'+i+'" title="убрать" style="background:none;border:none;color:#c44;cursor:pointer">×</button>')
+      + (submittedLinks.length ? '<div style="font-size:.85rem;margin-top:.4rem"><span style="color:var(--text2)">Мои ссылки:</span><ul style="list-style:none;padding:0;margin:.2rem 0">' + submittedLinks.map((l,i) =>
+          '<li style="padding:2px 0">'
+          + '🔗 <a href="'+l.url+'" target="_blank" style="color:var(--accent3);word-break:break-all">'+hwEsc(l.name || l.url)+'</a>'
+          + (grade && grade.grade !== undefined ? '' : ' <button data-rml="'+i+'" title="убрать" style="background:none;border:none;color:#c44;cursor:pointer">×</button>')
+          + '</li>'
+        ).join('') + '</ul></div>' : '')
+      + (submittedFiles.length ? '<div style="font-size:.82rem;margin-top:.4rem"><span style="color:var(--text2)">Мои файлы:</span> ' + submittedFiles.map((f,i) =>
+          '<span style="display:inline-block;margin-right:.4rem">'
+          + '<button data-dl="'+i+'" style="background:none;border:none;color:var(--accent3);cursor:pointer;padding:0;font-size:.82rem;text-decoration:underline">📎 '+hwEsc(f.name)+'</button>'
+          + (grade && grade.grade !== undefined ? '' : ' <button data-rmf="'+i+'" title="убрать" style="background:none;border:none;color:#c44;cursor:pointer">×</button>')
+          + '</span>'
         ).join('') + '</div>' : '')
       + (grade && grade.comment ? '<div style="margin-top:.4rem;padding:.4rem .6rem;background:#e8f4f0;color:#1a6b5a;border-radius:4px;font-style:italic;font-size:.88rem">«' + hwEsc(grade.comment) + '»</div>' : '')
       + (canSubmit
-          ? '<div style="margin-top:.5rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">'
-            + '<input type="file" data-hw-files multiple>'
-            + '<button class="btn btn-primary" data-hw-submit>Загрузить</button>'
-            + '<span data-hw-status style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text3)"></span>'
-            + '</div>'
+          ? '<div style="margin-top:.5rem;padding:.5rem .7rem;background:var(--bg2);border-radius:5px">'
+            + (typeof WORKER_URL !== 'undefined' && WORKER_URL
+                ? '<div style="margin-bottom:.5rem">'
+                  + '<div style="font-size:.78rem;color:var(--text2);margin-bottom:.3rem">📎 Загрузить файлы (до 25 MB на файл, кладутся в приватный репо преподавателя):</div>'
+                  + '<div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">'
+                  + '<input type="file" data-hw-files multiple>'
+                  + '<button class="btn btn-primary" data-hw-upload>Загрузить</button>'
+                  + '<span data-hw-status style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text3)"></span>'
+                  + '</div>'
+                  + '</div>'
+                : '<div style="margin-bottom:.5rem;font-size:.75rem;color:var(--text3);font-style:italic">📎 Загрузка файлов пока не настроена — используйте ссылку на облако.</div>')
+            + '<div style="font-size:.78rem;color:var(--text2);margin-bottom:.3rem">🔗 Или прикрепите ссылкой (Google Drive / Яндекс.Диск / GitHub Gist — включите «доступ по ссылке»):</div>'
+            + '<div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">'
+            + '<input type="text" data-hw-name placeholder="Название (что за файл)" style="font-family:\'Source Serif 4\',serif;font-size:.85rem;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text);flex:1;min-width:150px">'
+            + '<input type="url" data-hw-url placeholder="https://…" style="font-family:\'JetBrains Mono\',monospace;font-size:.82rem;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text);flex:2;min-width:200px">'
+            + '<button class="btn btn-primary" data-hw-submit>Добавить</button>'
+            + '<span data-hw-status2 style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text3)"></span>'
+            + '</div></div>'
           : '<div style="margin-top:.4rem;font-size:.85rem;color:#c44">Приём закрыт (строгий дедлайн).</div>');
-    // Обработчики
-    const st = card.querySelector('[data-hw-status]');
-    const btnSubmit = card.querySelector('[data-hw-submit]');
-    if (btnSubmit) btnSubmit.onclick = async function () {
+    // Обработчики: загрузка файлов через Worker
+    const stFile = card.querySelector('[data-hw-status]');
+    const btnUpload = card.querySelector('[data-hw-upload]');
+    if (btnUpload) btnUpload.onclick = async function () {
       const files = Array.from(card.querySelector('[data-hw-files]').files || []);
-      if (!files.length) { st.textContent = 'выберите файлы'; return; }
-      btnSubmit.disabled = true;
+      if (!files.length) { stFile.textContent = 'выберите файлы'; return; }
+      btnUpload.disabled = true;
       const uploaded = [];
       try {
         for (let i = 0; i < files.length; i++) {
-          st.textContent = 'загрузка ' + (i+1) + '/' + files.length + '…';
+          stFile.textContent = 'загрузка ' + (i+1) + '/' + files.length + '…';
           const meta = await CFDHomework.uploadSubmissionFile(a.id, a.courseId, files[i], p => {
-            st.textContent = 'файл ' + (i+1) + '/' + files.length + ': ' + Math.round(p*100) + '%';
+            stFile.textContent = 'файл ' + (i+1) + '/' + files.length + ': ' + Math.round(p*100) + '%';
           });
           uploaded.push(meta);
         }
         const r = await CFDHomework.submit(a.id, a.courseId, uploaded);
         if (!r.ok) throw new Error(r.error);
-        st.textContent = '✓ сдано';
+        stFile.textContent = '✓ загружено';
         setTimeout(renderMyHomework, 500);
       } catch (e) {
-        st.textContent = '✗ ' + e.message;
-      } finally { btnSubmit.disabled = false; }
+        stFile.textContent = '✗ ' + e.message;
+      } finally { btnUpload.disabled = false; }
     };
-    card.querySelectorAll('[data-rm]').forEach(b => {
+
+    // Обработчики: добавление ссылки
+    const stLink = card.querySelector('[data-hw-status2]');
+    const btnSubmit = card.querySelector('[data-hw-submit]');
+    if (btnSubmit) btnSubmit.onclick = async function () {
+      const url = card.querySelector('[data-hw-url]').value.trim();
+      const name = card.querySelector('[data-hw-name]').value.trim();
+      if (!url) { stLink.textContent = 'вставьте ссылку'; return; }
+      btnSubmit.disabled = true; stLink.textContent = 'добавляю…';
+      const r = await CFDHomework.addSubmissionLink(a.id, a.courseId, url, name);
+      if (!r.ok) { stLink.textContent = '✗ ' + r.error; btnSubmit.disabled = false; return; }
+      stLink.textContent = '✓ добавлено';
+      setTimeout(renderMyHomework, 400);
+    };
+
+    // Скачивание файлов через Worker
+    card.querySelectorAll('[data-dl]').forEach(b => {
       b.onclick = async function () {
-        const i = parseInt(b.getAttribute('data-rm'), 10);
+        const i = parseInt(b.getAttribute('data-dl'), 10);
+        const f = submittedFiles[i];
+        b.textContent = '⏳ скачиваю…';
+        try { await CFDHomework.triggerDownload(f.path, f.name); }
+        catch (e) { alert(e.message); }
+        finally { b.textContent = '📎 ' + f.name; }
+      };
+    });
+    card.querySelectorAll('[data-rmf]').forEach(b => {
+      b.onclick = async function () {
+        const i = parseInt(b.getAttribute('data-rmf'), 10);
         if (!confirm('Убрать этот файл из сдачи?')) return;
-        const r = await CFDHomework.removeSubmissionFile(a.id, user.uid, submitted[i]);
+        const r = await CFDHomework.removeSubmissionFile(a.id, user.uid, submittedFiles[i]);
+        if (!r.ok) { alert(r.error); return; }
+        renderMyHomework();
+      };
+    });
+    card.querySelectorAll('[data-rml]').forEach(b => {
+      b.onclick = async function () {
+        const i = parseInt(b.getAttribute('data-rml'), 10);
+        if (!confirm('Убрать эту ссылку из сдачи?')) return;
+        const r = await CFDHomework.removeSubmissionLink(a.id, user.uid, submittedLinks[i].url);
         if (!r.ok) { alert(r.error); return; }
         renderMyHomework();
       };

@@ -140,13 +140,99 @@
 
     // ==== SUBMISSIONS ====
 
-    // Загрузить один файл сдачи → Storage → вернуть метаданные.
+    // Загрузить один файл сдачи → Cloudflare Worker → приватный GitHub-репо.
+    // Возвращает { path, name, size, uploadedAt } (без прямой url — доступ
+    // через downloadFile()).
     uploadSubmissionFile: async function (aid, cid, file, onProgress) {
       const me = auth.currentUser;
       if (!me) throw new Error("Не авторизован");
       if (!me.emailVerified) throw new Error("Подтвердите email");
-      const path = "homework/" + cid + "/" + aid + "/" + me.uid + "/" + Date.now() + "_" + slugify(file.name);
-      return await uploadTo(path, file, onProgress);
+      if (typeof WORKER_URL === "undefined" || !WORKER_URL) {
+        throw new Error("Загрузка файлов не настроена (WORKER_URL пуст). Пока пользуйтесь ссылками на облако.");
+      }
+      if (file.size > 25 * 1024 * 1024) throw new Error("Файл больше 25 MB");
+      if (typeof onProgress === "function") onProgress(0.05);
+      const base64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(String(r.result).split(",")[1] || "");
+        r.onerror = () => rej(new Error("read"));
+        r.readAsDataURL(file);
+      });
+      if (typeof onProgress === "function") onProgress(0.5);
+      const token = await me.getIdToken();
+      // Взять ФИО из users doc (лучший читаемый идентификатор в GitHub-пути)
+      let fio = "";
+      try {
+        const ud = await db.collection("users").doc(me.uid).get();
+        if (ud.exists) fio = ud.data().fio || "";
+      } catch (_) {}
+      const resp = await fetch(WORKER_URL + "/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: token, aid: aid, cid: cid, fio: fio,
+          filename: file.name, base64: base64, size: file.size,
+        }),
+      });
+      if (typeof onProgress === "function") onProgress(0.95);
+      const data = await resp.json();
+      if (!resp.ok || !data.ok) throw new Error(data.error || "upload failed");
+      if (typeof onProgress === "function") onProgress(1);
+      return {
+        path: data.path,
+        name: file.name,
+        size: file.size,
+        uploadedAt: data.uploadedAt,
+        contentType: file.type || "",
+      };
+    },
+
+    // Скачать файл через Worker → отдать Blob (для download или preview).
+    downloadFile: async function (path) {
+      if (!path) throw new Error("Нет пути");
+      if (typeof WORKER_URL === "undefined" || !WORKER_URL) {
+        throw new Error("WORKER_URL не настроен");
+      }
+      const me = auth.currentUser;
+      if (!me) throw new Error("Не авторизован");
+      const token = await me.getIdToken();
+      const resp = await fetch(WORKER_URL + "/file?path=" + encodeURIComponent(path), {
+        headers: { Authorization: "Bearer " + token },
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.ok) throw new Error(data.error || "download failed");
+      // Собираем Blob из base64 (может быть <25MB).
+      const bin = atob(String(data.base64).replace(/\n/g, ""));
+      const buf = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+      return { blob: new Blob([buf]), name: data.name, size: data.size };
+    },
+
+    // Триггер download (создать <a download> и кликнуть).
+    triggerDownload: async function (path, name) {
+      const d = await this.downloadFile(path);
+      const url = URL.createObjectURL(d.blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name || d.name || "file";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+    },
+
+    // Удалить файл на Worker-е и записать в submissions.
+    deleteRemoteFile: async function (path) {
+      if (typeof WORKER_URL === "undefined" || !WORKER_URL) return { ok: false, error: "WORKER_URL" };
+      const me = auth.currentUser;
+      if (!me) return { ok: false, error: "not authed" };
+      const token = await me.getIdToken();
+      const resp = await fetch(WORKER_URL + "/file?path=" + encodeURIComponent(path), {
+        method: "DELETE",
+        headers: { Authorization: "Bearer " + token },
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.ok) return { ok: false, error: data.error };
+      return { ok: true };
     },
 
     // Записать/обновить submission (после загрузки файлов).
@@ -180,7 +266,47 @@
       } catch (e) { return { ok: false, error: e.message }; }
     },
 
+    // Добавить ссылку на облако (Google Drive / Я.Диск / … — что угодно).
+    addSubmissionLink: async function (aid, cid, url, name) {
+      const me = auth.currentUser;
+      if (!me) return { ok: false, error: "Не авторизован" };
+      if (!me.emailVerified) return { ok: false, error: "Подтвердите email" };
+      url = String(url || "").trim();
+      if (!/^https?:\/\//i.test(url)) return { ok: false, error: "Ссылка должна начинаться с http(s)://" };
+      const entry = { url: url, name: (name || url).trim().slice(0, 200), addedAt: new Date().toISOString() };
+      const ref = db.collection("submissions").doc(subDocId(aid, me.uid));
+      try {
+        const snap = await ref.get();
+        if (snap.exists) {
+          const cur = snap.data();
+          const links = (cur.links || []).concat([entry]);
+          await ref.update({ links: links, updatedAt: nowTs() });
+        } else {
+          await ref.set({
+            assignmentId: aid, uid: me.uid, courseId: cid,
+            files: [], links: [entry], note: "",
+            submittedAt: nowTs(), updatedAt: nowTs(),
+          });
+        }
+        return { ok: true };
+      } catch (e) { return { ok: false, error: e.message }; }
+    },
+
+    // Удалить одну ссылку из своей сдачи.
+    removeSubmissionLink: async function (aid, uid, url) {
+      const ref = db.collection("submissions").doc(subDocId(aid, uid));
+      try {
+        const snap = await ref.get();
+        if (!snap.exists) return { ok: false, error: "no submission" };
+        const cur = snap.data();
+        const links = (cur.links || []).filter(l => l.url !== url);
+        await ref.update({ links: links, updatedAt: nowTs() });
+        return { ok: true };
+      } catch (e) { return { ok: false, error: e.message }; }
+    },
+
     // Удалить один файл из своей сдачи (студент) или чужой (admin).
+    // Удаляет файл и на Worker-е (в приватном GitHub-репо), и в Firestore.
     removeSubmissionFile: async function (aid, uid, fileEntry) {
       const ref = db.collection("submissions").doc(subDocId(aid, uid));
       try {
@@ -188,7 +314,14 @@
         if (!snap.exists) return { ok: false, error: "no submission" };
         const cur = snap.data();
         const files = (cur.files || []).filter(f => f.path !== fileEntry.path);
-        try { await storage.ref().child(fileEntry.path).delete(); } catch (_) {}
+        // Best-effort delete на Worker (не падаем, если Worker не задан).
+        try {
+          if (typeof WORKER_URL !== "undefined" && WORKER_URL) {
+            await this.deleteRemoteFile(fileEntry.path);
+          }
+        } catch (_) {}
+        // Legacy Storage-остатки:
+        try { if (storage) await storage.ref().child(fileEntry.path).delete(); } catch (_) {}
         await ref.update({ files: files, updatedAt: nowTs() });
         return { ok: true };
       } catch (e) { return { ok: false, error: e.message }; }

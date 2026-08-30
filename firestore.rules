@@ -318,12 +318,17 @@ service cloud.firestore {
                     && (resource.data.authorUid == request.auth.uid || isAdmin());
     }
 
-    // ---------- comments (под лекциями / заданиями) ----------
-    match /comments/{docId}/thread/{msgId} {
+    // ---------- comments (плоская коллекция под лекциями) ----------
+    // js/comments.js пишет { page, text, authorEmail, authorFio, authorUid,
+    //   authorRole, createdAt } в comments/{autoId}.
+    match /comments/{docId} {
       allow read: if isAuth();
       allow create: if isVerified()
                     && request.resource.data.authorUid == request.auth.uid;
-      allow update, delete: if isAuth()
+      allow update: if isAuth()
+                    && resource.data.authorUid == request.auth.uid
+                    && request.resource.data.authorUid == resource.data.authorUid;
+      allow delete: if isAuth()
                     && (resource.data.authorUid == request.auth.uid || isAdmin());
     }
 

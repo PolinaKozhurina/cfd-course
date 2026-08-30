@@ -253,6 +253,18 @@ service cloud.firestore {
         allow read:  if isAuth();
         allow write: if adminCanManageAnyGroup(gid);
       }
+
+      // messages — чат внутри группы (legacy путь, писался js/checklist-sync.js)
+      match /messages/{msgId} {
+        allow read: if isMemberOfGroup(gid) || adminCanManageAnyGroup(gid);
+        allow create: if (isMemberOfGroup(gid) || adminCanManageAnyGroup(gid))
+                      && isVerified()
+                      && request.resource.data.authorUid == request.auth.uid;
+        allow update: if isAuth()
+                      && (isMemberOfGroup(gid) || adminCanManageAnyGroup(gid));
+        allow delete: if isAuth()
+                      && (resource.data.authorUid == request.auth.uid || adminCanManageAnyGroup(gid));
+      }
     }
 
     // ---------- grades (по группам, legacy) ----------

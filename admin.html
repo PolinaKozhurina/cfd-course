@@ -143,9 +143,9 @@ if (location.search.indexOf('embedded=1') !== -1) {
   <button class="tab" onclick="showTab('homework');renderHomeworkTab()">Домашки</button>
   <button class="tab" onclick="showTab('gating');renderGatingTab()">Гейтинг лекций</button>
   <button class="tab" onclick="showTab('groups')">Результаты тестов</button>
-  <button class="tab" onclick="showTab('checklist')">Чек-лист (самооценка)</button>
+  <button class="tab" onclick="showTab('checklist');loadChecklistProgress()">Чек-лист (самооценка)</button>
   <button class="tab" onclick="showTab('tasks')">Задания</button>
-  <button class="tab" onclick="showTab('grades')">Оценки</button>
+  <button class="tab" onclick="showTab('grades');renderGrades()">Оценки</button>
   <button class="tab" onclick="showTab('github')">GitHub-проверка</button>
   <button class="tab" onclick="showTab('messages')" id="tabBtnMessages">Сообщения <span id="msgTabBadge" style="display:none;min-width:16px;height:16px;border-radius:8px;background:#c44;color:#fff;font-size:.6rem;font-weight:700;font-family:JetBrains Mono,monospace;align-items:center;justify-content:center;padding:0 4px;margin-left:2px;vertical-align:middle"></span></button>
 </div>
@@ -181,15 +181,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
     <span style="flex:1"></span>
     <button class="btn btn-sm" onclick="bulkSelectAllStudents(false)">Снять выбор</button>
   </div>
-  <div class="card">
-    <table>
-      <thead><tr>
-        <th style="width:24px;min-width:24px"><input type="checkbox" id="bulkAllStudents" onchange="bulkSelectAllStudents(this.checked)" title="Выбрать всех на странице"></th>
-        <th style="min-width:230px">ФИО</th><th style="min-width:200px">Email</th><th style="min-width:120px">Уч. группа МИФИ</th><th style="min-width:180px">Раб. группы по курсам</th><th style="min-width:60px">Подтв.</th><th style="min-width:80px">Роль</th><th style="min-width:80px">Legacy</th>
-      </tr></thead>
-      <tbody id="studentsBody"></tbody>
-    </table>
-  </div>
+  <div id="studentsFolders"></div>
 </div>
 
 <!-- TAB: Enrollments — заявки на курсы -->
@@ -1063,8 +1055,11 @@ function _adminOpenInitialTab() {
   if (!want) { try { want = localStorage.getItem('adminLastTab'); } catch (_) {} }
   if (!want || !document.getElementById('tab-' + want)) return;
   showTab(want);
-  // Для «gating» дополнительно триггерим renderGatingTab().
-  if (want === 'gating' && typeof renderGatingTab === 'function') renderGatingTab();
+  // Для табов с ленивой инициализацией — вызвать рендер, чтобы папки не оставались пустыми.
+  if (want === 'gating'   && typeof renderGatingTab === 'function')      renderGatingTab();
+  if (want === 'homework' && typeof renderHomeworkTab === 'function')    renderHomeworkTab();
+  if (want === 'grades'   && typeof renderGrades === 'function')         renderGrades();
+  if (want === 'checklist'&& typeof loadChecklistProgress === 'function') loadChecklistProgress();
 }
 
 // ===== Students table =====
@@ -1107,67 +1102,116 @@ function renderStudents() {
     }
     return true;
   });
-  const tbody = document.getElementById('studentsBody');
-  tbody.innerHTML = filtered.map(u => {
-    const isAdm = isAdmin(u.email);
-    const groupOptions = Array.from({length: 5}, (_, i) => {
-      const gid = 'group_' + String(i + 1).padStart(2, '0');
-      return `<option value="${gid}" ${u.group === gid ? 'selected' : ''}>№${i + 1}</option>`;
-    }).join('');
-    return `<tr>
-      <td style="text-align:center"><input type="checkbox" class="bulk-cb-student" data-uid="${u.uid}" onchange="bulkUpdateStudentsCount()"></td>
-      <td style="min-width:230px"><input type="text" value="${u.fio || ''}" placeholder="ФИО" id="fio-${u.uid}" onchange="saveUserField('${u.uid}','fio',this.value)" style="font-weight:600;font-size:.82rem;width:100%;min-width:210px;box-sizing:border-box;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'Source Serif 4',serif;background:#fff;color:var(--text)"></td>
-      <td style="font-size:.82rem">${u.email || '—'}</td>
-      <td><input type="text" value="${u.studyGroup || ''}" placeholder="Б22-505" id="sg-${u.uid}" onchange="saveUserField('${u.uid}','studyGroup',this.value)" style="font-size:.82rem;width:80px;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'JetBrains Mono',monospace;background:#fff;color:var(--text)"></td>
-      <td>${(function(){
-        const enrolls = (window._enrollmentsByUid && window._enrollmentsByUid[u.uid]) || {};
-        const cg = (u.courseGroups && typeof u.courseGroups === 'object') ? u.courseGroups : {};
-        const approvedCids = Object.keys(enrolls).filter(cid => enrolls[cid] === 'approved');
-        if (approvedCids.length === 0) {
-          return u.group
-            ? '<span class="badge b-group" title="legacy общая группа">' + u.group.replace('group_','№') + ' (legacy)</span>'
-            : '<span class="badge b-pending">—</span>';
-        }
-        return '<div style="display:flex;flex-direction:column;gap:2px">' + approvedCids.map(function(cid){
-          const c = (window.CFD_COURSE_BY_ID || {})[cid];
-          const short = c ? c.short : cid;
-          const cur = cg[cid] || '';
-          const opts = ['<option value="">—</option>']
-            .concat([1,2,3,4,5].map(function(i){
-              const gid = 'group_' + (i<10?'0':'') + i;
-              return '<option value="' + gid + '"' + (cur === gid ? ' selected' : '') + '>№' + i + '</option>';
-            })).join('');
-          return '<div style="display:flex;align-items:center;gap:4px;font-size:.7rem">'
-               + '<span style="min-width:44px;color:var(--text2);font-family:JetBrains Mono,monospace">'+short+':</span>'
-               + '<select onchange="assignGroupForCourse(\''+u.uid+'\',\''+cid+'\',this.value)" style="font-size:.72rem;padding:1px 4px">'+opts+'</select>'
-               + '</div>';
-        }).join('') + '</div>';
-      })()}</td>
-      <td style="text-align:center">${u.approved ? '<span class="badge b-pass" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', false)">✓</span>' : '<span class="badge b-fail" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', true)">✗</span>'}</td>
-      <td style="text-align:center">${(() => {
-        if (isSuperAdmin(u.email)) return '<span class="badge" style="background:#faeeda;color:#854f0b;font-weight:700">главный</span>';
-        if (viewerIsSuperAdmin && isAdm) {
-          const cs = Array.isArray(u.managedCourses) && u.managedCourses.length ? u.managedCourses.join(',') : '';
-          const sg = Array.isArray(u.managedStudyGroups) && u.managedStudyGroups.length ? u.managedStudyGroups.join(',') : '';
-          const scope = [cs && ('курсы: '+cs), sg && ('МИФИ: '+sg)].filter(Boolean).join(' · ') || '(нет курсов)';
-          return '<span class="badge b-admin" style="cursor:pointer" title="Снять права" onclick="toggleAdmin(\'' + u.uid + '\',\'' + u.email + '\',false)">admin ✕</span>' +
-                 ' <span class="badge" style="background:#e6f1fb;color:#3a5ba0;cursor:pointer;font-size:.62rem" title="Изменить курсы/группы" onclick="editManagedGroups(\'' + u.uid + '\',\'' + u.email + '\')">'+ scope +' ⚙</span>';
-        }
-        if (viewerIsSuperAdmin && !isAdm) return '<span class="badge b-student" style="cursor:pointer" title="Назначить админом" onclick="toggleAdmin(\'' + u.uid + '\',\'' + u.email + '\',true)">student →</span>';
-        if (isAdm) return '<span class="badge b-admin">admin</span>';
-        return '<span class="badge b-student">student</span>';
-      })()}</td>
-      <td>${showLegacyAssign
-          ? '<select onchange="assignGroup(\''+u.uid+'\', this.value)" style="font-size:.72rem" title="legacy общая группа"><option value="">—</option>'+groupOptions+'</select>'
-          + (u.group ? ' <button class="btn btn-sm" title="Занулить legacy общую" onclick="clearLegacyGroup(\''+u.uid+'\')" style="font-size:.62rem;padding:1px 4px">×</button>' : '')
-          : (u.group
-              ? '<span class="badge b-pending" style="font-size:.62rem" title="legacy общая — назначьте курсовую или включите legacy dropdown">'+u.group.replace('group_','№')+'</span>'
-              : '<span style="color:var(--text3);font-size:.65rem">—</span>')}</td>
-    </tr>`;
-  }).join('');
+  const cont = document.getElementById('studentsFolders');
+  if (!cont) return;
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--text2)">Нет зарегистрированных студентов.<br><span style="font-size:.82rem">Студенты появятся здесь после того, как войдут на сайт (кнопка «Войти» на любой странице).</span></td></tr>';
+    cont.innerHTML = '<div class="card" style="text-align:center;padding:1.5rem;color:var(--text2)">Нет зарегистрированных студентов.<br><span style="font-size:.82rem">Студенты появятся здесь после того, как войдут на сайт (кнопка «Войти» на любой странице).</span></div>';
+    return;
   }
+  // Группировка по учебной группе МИФИ (u.studyGroup); без неё — «(без учебной группы)».
+  const byGroup = {};
+  filtered.forEach(u => {
+    const key = (u.studyGroup || '').trim() || '__none__';
+    (byGroup[key] = byGroup[key] || []).push(u);
+  });
+  const keys = Object.keys(byGroup).sort((a, b) => {
+    if (a === '__none__') return 1;
+    if (b === '__none__') return -1;
+    return a.localeCompare(b, 'ru');
+  });
+  const tableHead = '<thead><tr>'
+      + '<th style="width:24px;min-width:24px"><input type="checkbox" class="bulkAllGroup" title="Выбрать группу"></th>'
+      + '<th style="min-width:230px">ФИО</th><th style="min-width:200px">Email</th>'
+      + '<th style="min-width:120px">Уч. группа МИФИ</th>'
+      + '<th style="min-width:180px">Раб. группы по курсам</th>'
+      + '<th style="min-width:60px">Подтв.</th><th style="min-width:80px">Роль</th><th style="min-width:80px">Legacy</th>'
+      + '</tr></thead>';
+  cont.innerHTML = keys.map(k => {
+    const users = byGroup[k];
+    const title = k === '__none__' ? '(без учебной группы)' : k;
+    const rows = users.map(u => studentRowHtml(u, viewerIsSuperAdmin, showLegacyAssign)).join('');
+    return '<details open style="margin-bottom:.6rem">'
+      +   '<summary style="cursor:pointer;font-weight:700;padding:.4rem .6rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-family:JetBrains Mono,monospace;font-size:.82rem">'
+      +     '📁 ' + esc(title) + ' <span style="color:var(--text2);font-weight:400">— ' + users.length + '</span>'
+      +   '</summary>'
+      +   '<div class="card" style="margin-top:.35rem"><table>' + tableHead + '<tbody>' + rows + '</tbody></table></div>'
+      + '</details>';
+  }).join('');
+  // Подтянуть чекбоксы «выбрать группу»
+  cont.querySelectorAll('details').forEach(d => {
+    const all = d.querySelector('.bulkAllGroup');
+    if (!all) return;
+    all.addEventListener('change', () => {
+      d.querySelectorAll('.bulk-cb-student').forEach(cb => { cb.checked = all.checked; });
+      bulkUpdateStudentsCount();
+    });
+  });
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Строка таблицы студента — вынесена, чтобы можно было раскладывать по папкам.
+function studentRowHtml(u, viewerIsSuperAdmin, showLegacyAssign) {
+  const isAdm = isAdmin(u.email);
+  const groupOptions = Array.from({length: 5}, (_, i) => {
+    const gid = 'group_' + String(i + 1).padStart(2, '0');
+    return `<option value="${gid}" ${u.group === gid ? 'selected' : ''}>№${i + 1}</option>`;
+  }).join('');
+  const workGroupsHtml = (function(){
+    const enrolls = (window._enrollmentsByUid && window._enrollmentsByUid[u.uid]) || {};
+    const cg = (u.courseGroups && typeof u.courseGroups === 'object') ? u.courseGroups : {};
+    const approvedCids = Object.keys(enrolls).filter(cid => enrolls[cid] === 'approved');
+    if (approvedCids.length === 0) {
+      return u.group
+        ? '<span class="badge b-group" title="legacy общая группа">' + u.group.replace('group_','№') + ' (legacy)</span>'
+        : '<span class="badge b-pending">—</span>';
+    }
+    return '<div style="display:flex;flex-direction:column;gap:2px">' + approvedCids.map(function(cid){
+      const c = (window.CFD_COURSE_BY_ID || {})[cid];
+      const short = c ? c.short : cid;
+      const cur = cg[cid] || '';
+      const opts = ['<option value="">—</option>']
+        .concat([1,2,3,4,5].map(function(i){
+          const gid = 'group_' + (i<10?'0':'') + i;
+          return '<option value="' + gid + '"' + (cur === gid ? ' selected' : '') + '>№' + i + '</option>';
+        })).join('');
+      return '<div style="display:flex;align-items:center;gap:4px;font-size:.7rem">'
+           + '<span style="min-width:44px;color:var(--text2);font-family:JetBrains Mono,monospace">'+short+':</span>'
+           + '<select onchange="assignGroupForCourse(\''+u.uid+'\',\''+cid+'\',this.value)" style="font-size:.72rem;padding:1px 4px">'+opts+'</select>'
+           + '</div>';
+    }).join('') + '</div>';
+  })();
+  const roleHtml = (() => {
+    if (isSuperAdmin(u.email)) return '<span class="badge" style="background:#faeeda;color:#854f0b;font-weight:700">главный</span>';
+    if (viewerIsSuperAdmin && isAdm) {
+      const cs = Array.isArray(u.managedCourses) && u.managedCourses.length ? u.managedCourses.join(',') : '';
+      const sg = Array.isArray(u.managedStudyGroups) && u.managedStudyGroups.length ? u.managedStudyGroups.join(',') : '';
+      const scope = [cs && ('курсы: '+cs), sg && ('МИФИ: '+sg)].filter(Boolean).join(' · ') || '(нет курсов)';
+      return '<span class="badge b-admin" style="cursor:pointer" title="Снять права" onclick="toggleAdmin(\'' + u.uid + '\',\'' + u.email + '\',false)">admin ✕</span>' +
+             ' <span class="badge" style="background:#e6f1fb;color:#3a5ba0;cursor:pointer;font-size:.62rem" title="Изменить курсы/группы" onclick="editManagedGroups(\'' + u.uid + '\',\'' + u.email + '\')">'+ scope +' ⚙</span>';
+    }
+    if (viewerIsSuperAdmin && !isAdm) return '<span class="badge b-student" style="cursor:pointer" title="Назначить админом" onclick="toggleAdmin(\'' + u.uid + '\',\'' + u.email + '\',true)">student →</span>';
+    if (isAdm) return '<span class="badge b-admin">admin</span>';
+    return '<span class="badge b-student">student</span>';
+  })();
+  const legacyHtml = showLegacyAssign
+    ? '<select onchange="assignGroup(\''+u.uid+'\', this.value)" style="font-size:.72rem" title="legacy общая группа"><option value="">—</option>'+groupOptions+'</select>'
+      + (u.group ? ' <button class="btn btn-sm" title="Занулить legacy общую" onclick="clearLegacyGroup(\''+u.uid+'\')" style="font-size:.62rem;padding:1px 4px">×</button>' : '')
+    : (u.group
+        ? '<span class="badge b-pending" style="font-size:.62rem" title="legacy общая — назначьте курсовую или включите legacy dropdown">'+u.group.replace('group_','№')+'</span>'
+        : '<span style="color:var(--text3);font-size:.65rem">—</span>');
+  return `<tr>
+    <td style="text-align:center"><input type="checkbox" class="bulk-cb-student" data-uid="${u.uid}" onchange="bulkUpdateStudentsCount()"></td>
+    <td style="min-width:230px"><input type="text" value="${esc(u.fio || '')}" placeholder="ФИО" id="fio-${u.uid}" onchange="saveUserField('${u.uid}','fio',this.value)" style="font-weight:600;font-size:.82rem;width:100%;min-width:210px;box-sizing:border-box;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'Source Serif 4',serif;background:#fff;color:var(--text)"></td>
+    <td style="font-size:.82rem">${esc(u.email || '—')}</td>
+    <td><input type="text" value="${esc(u.studyGroup || '')}" placeholder="Б22-505" id="sg-${u.uid}" onchange="saveUserField('${u.uid}','studyGroup',this.value)" style="font-size:.82rem;width:80px;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'JetBrains Mono',monospace;background:#fff;color:var(--text)"></td>
+    <td>${workGroupsHtml}</td>
+    <td style="text-align:center">${u.approved ? '<span class="badge b-pass" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', false)">✓</span>' : '<span class="badge b-fail" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', true)">✗</span>'}</td>
+    <td style="text-align:center">${roleHtml}</td>
+    <td>${legacyHtml}</td>
+  </tr>`;
 }
 
 
@@ -2386,39 +2430,102 @@ async function saveGrade(gid) {
 }
 
 // ===== Checklist progress =====
+// Раскрывающиеся папки: Курс → Группа (строка с прогрессом).
+// Legacy общие группы (просто group_NN без cid) — отдельная папка.
 async function loadChecklistProgress() {
-  const tbody = document.getElementById('checklistBody');
-  let html = '';
-  for (const gid of Object.keys(allGroups).sort()) {
-    const g = allGroups[gid];
-    const members = g.members.map(m => m.fio || m.email).join(', ');
-    // Load checklist items
-    let checked = 0, total = 72, lastUpdate = '—', items = {};
+  const card = document.querySelector('#tab-checklist .card');
+  const total = 72;
+
+  // 1) Собираем данные по всем группам параллельно.
+  const gids = Object.keys(allGroups);
+  await Promise.all(gids.map(async gid => {
+    let checked = 0, lastUpdate = '—', items = {};
     try {
       const snap = await db.collection('groups').doc(gid).collection('checklist').get();
       snap.forEach(doc => {
         items[doc.id] = doc.data();
         if (doc.data().checked) checked++;
         if (doc.data().timestamp && doc.data().timestamp.seconds) {
-          const d = new Date(doc.data().timestamp.seconds * 1000).toLocaleString('ru', {timeZone:'Europe/Moscow', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+          const d = new Date(doc.data().timestamp.seconds * 1000).toLocaleString('ru', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
           lastUpdate = d;
         }
       });
-    } catch(e) {}
-    const pct = Math.round(checked / total * 100);
-    const barColor = pct >= 80 ? 'var(--accent2)' : pct >= 40 ? '#854f0b' : '#c44';
-    html += `<tr style="cursor:pointer" onclick="showGroupChecklist('${gid}')" title="Нажмите чтобы развернуть">
-      <td><span class="badge b-group">${gid.replace('group_','Гр.')}</span></td>
-      <td style="font-size:.78rem;max-width:200px">${members}</td>
-      <td>${checked} / ${total}</td>
-      <td><div style="background:var(--bg3);height:8px;border-radius:4px;overflow:hidden;width:120px;display:inline-block;vertical-align:middle"><div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px"></div></div> ${pct}%</td>
-      <td style="font-size:.78rem">${lastUpdate}</td>
-    </tr>`;
-    // Store for detail view
+    } catch (_) {}
     allGroups[gid].checklistItems = items;
     allGroups[gid].checklistChecked = checked;
+    allGroups[gid].checklistLastUpdate = lastUpdate;
+  }));
+
+  // 2) Разбиваем группы: per-course '{cid}_group_NN' vs legacy 'group_NN'.
+  const byCourse = {}, legacy = [];
+  for (const gid of gids) {
+    const m = /^([a-z0-9]+)_group_(\d+)$/i.exec(gid);
+    if (m) {
+      const cid = m[1];
+      if (_currentAdminCourses !== null && _currentAdminCourses.indexOf(cid) === -1) continue;
+      if (!byCourse[cid]) byCourse[cid] = [];
+      byCourse[cid].push(gid);
+    } else if (/^group_\d+$/i.test(gid)) {
+      legacy.push(gid);
+    }
   }
-  tbody.innerHTML = html || '<tr><td colspan="5" style="text-align:center;color:var(--text3)">Нет данных</td></tr>';
+
+  function groupRow(gid) {
+    const g = allGroups[gid];
+    const members = (g.members || []).map(m => m.fio || m.email).join(', ');
+    const checked = g.checklistChecked || 0;
+    const pct = Math.round(checked / total * 100);
+    const barColor = pct >= 80 ? 'var(--accent2)' : pct >= 40 ? '#854f0b' : '#c44';
+    const shortGid = gid.replace(/^[^_]+_/, '').replace('group_', 'Гр. ');
+    return `<tr style="cursor:pointer" onclick="showGroupChecklist('${gid}')" title="Нажмите чтобы развернуть детали">
+      <td><span class="badge b-group">${shortGid}</span></td>
+      <td style="font-size:.78rem;max-width:260px">${members || '<span style="color:var(--text3)">пусто</span>'}</td>
+      <td>${checked} / ${total}</td>
+      <td><div style="background:var(--bg3);height:8px;border-radius:4px;overflow:hidden;width:120px;display:inline-block;vertical-align:middle"><div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px"></div></div> ${pct}%</td>
+      <td style="font-size:.78rem">${g.checklistLastUpdate || '—'}</td>
+    </tr>`;
+  }
+
+  const tableHead = `<thead><tr>
+    <th style="min-width:80px">Группа</th>
+    <th style="min-width:200px">Участники</th>
+    <th style="min-width:80px">Отмечено</th>
+    <th style="min-width:180px">Прогресс</th>
+    <th style="min-width:130px">Последнее обновление</th>
+  </tr></thead>`;
+
+  const cids = (window.CFD_COURSES || []).map(c => c.id).filter(cid => byCourse[cid]);
+  let out = '';
+  if (!cids.length && !legacy.length) {
+    out = '<div style="color:var(--text3);padding:1rem;text-align:center">Нет групп с данными чек-листа.</div>';
+  } else {
+    for (const cid of cids) {
+      const courseObj = (window.CFD_COURSE_BY_ID || {})[cid] || { name: cid };
+      const groups = byCourse[cid].sort();
+      out += `<details open style="margin-bottom:.5rem;background:var(--bg2);border-radius:6px;border:1px solid var(--border)">
+        <summary style="cursor:pointer;padding:.55rem .85rem;font-family:'Playfair Display',serif;font-weight:700;font-size:.98rem;color:var(--accent)">
+          📁 ${courseObj.name} <span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:500;color:var(--text3);margin-left:.4rem">${cid} · ${groups.length} гр.</span>
+        </summary>
+        <div style="padding:.4rem .8rem .8rem;overflow-x:auto">
+          <table style="width:100%">${tableHead}<tbody>${groups.map(groupRow).join('')}</tbody></table>
+        </div>
+      </details>`;
+    }
+    if (legacy.length) {
+      out += `<details style="margin-bottom:.5rem;background:var(--bg2);border-radius:6px;border:1px solid var(--border)">
+        <summary style="cursor:pointer;padding:.55rem .85rem;font-family:'Playfair Display',serif;font-weight:700;font-size:.95rem;color:var(--text2)">
+          📁 Legacy — общие группы без привязки к курсу <span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:500;color:var(--text3);margin-left:.4rem">${legacy.length} гр.</span>
+        </summary>
+        <div style="padding:.4rem .8rem .8rem;overflow-x:auto">
+          <table style="width:100%">${tableHead}<tbody>${legacy.sort().map(groupRow).join('')}</tbody></table>
+        </div>
+      </details>`;
+    }
+  }
+
+  card.innerHTML = `<h3>Самооценка студентов (галочки в чек-листе)</h3>
+    <p style="font-size:.85rem;color:var(--text2);margin-bottom:.8rem">Студенты сами отмечают что считают готовым. Здесь видно прогресс каждой группы. Раскладка по <em>курсам</em>.</p>
+    ${out}`;
 }
 
 

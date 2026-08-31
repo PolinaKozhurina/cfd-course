@@ -690,50 +690,14 @@ const TEST_IDS = [
 ];
 
 // ===== Admin panel loader =====
-// When the logged-in user is an admin or superadmin, their "profile" page
-// becomes the admin panel. We embed admin.html via iframe so we don't have
-// to re-implement all the admin logic. The iframe inherits Firebase auth
-// via IndexedDB (same-origin) and has its own internal auth check.
+// Для admin/superadmin показывать iframe с admin.html внутри профиля —
+// плохо: своя рамка, свой скролл. Раньше мы делали iframe, теперь
+// просто редиректим на admin.html — там уже есть навигация «Профиль»
+// сверху, если нужно вернуться.
 function loadAdminPanel(user, isSuperadmin) {
-  var container = document.getElementById('adminPanelContainer');
-  if (!container) return;
-  container.style.display = '';
-  container.innerHTML = '';
-
-  // Small header strip above the iframe (native-style, since iframe is admin.html).
-  // Быстрые кнопки-шорткаты вкладок убраны — они дублировали вкладки самой
-  // admin-панели внутри iframe. Оставляем только идентификацию + logout.
-  var headerStrip = document.createElement('div');
-  headerStrip.style.cssText = 'background:var(--bg2);border:1px solid var(--border);border-radius:8px 8px 0 0;padding:.6rem 1rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:0;gap:.6rem;flex-wrap:wrap';
-  headerStrip.innerHTML =
-    '<div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">' +
-      '<span style="font-family:\'Playfair Display\',serif;font-size:1rem;font-weight:700;color:var(--accent)">Личный кабинет</span>' +
-      '<span style="padding:2px 8px;border-radius:4px;font-family:\'JetBrains Mono\',monospace;font-size:.68rem;font-weight:700;' +
-        (isSuperadmin ? 'background:#b44a2d;color:#fff">SUPERADMIN' : 'background:#3a5ba0;color:#fff">ADMIN') + '</span>' +
-      '<span style="font-size:.8rem;color:var(--text2)">' + (user.email||'') + '</span>' +
-    '</div>' +
-    '<button id="profileLogoutBtn" style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;padding:4px 12px;border-radius:4px;background:#fde8e8;color:#c44;border:1px solid #f5c4c4;cursor:pointer">выйти</button>';
-  container.appendChild(headerStrip);
-
-  // Logout в шапке profile-admin.
-  headerStrip.querySelector('#profileLogoutBtn').onclick = function(){
-    if (!confirm('Выйти из аккаунта?')) return;
-    firebase.auth().signOut().then(function(){ location.href = 'index.html'; });
-  };
-
-  // Mount iframe pointing at admin.html. Same origin ⇒ Firebase auth is shared.
-  // Начальная вкладка — последняя из localStorage; иначе — по умолчанию из admin.html.
-  var savedTab = (function(){ try { return localStorage.getItem('adminLastTab'); } catch(_) { return null; } }) ();
-  var iframe = document.createElement('iframe');
-  var startTab = savedTab || 'students';
-  iframe.src = 'admin.html?embedded=1&tab=' + encodeURIComponent(startTab);
-  iframe.style.cssText = 'width:100%;min-height:calc(100vh - 140px);border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;background:var(--bg)';
-  iframe.title = 'Админ-панель';
-  container.appendChild(iframe);
-
-  // Make the profile wrap full-width for admin (admin panel is wider than default profile)
-  var wrap = document.querySelector('.wrap');
-  if (wrap) wrap.style.maxWidth = '1200px';
+  var savedTab = (function () { try { return localStorage.getItem('adminLastTab'); } catch (_) { return null; } })();
+  var q = savedTab ? ('?tab=' + encodeURIComponent(savedTab)) : '';
+  location.href = 'admin.html' + q;
 }
 
 firebase.auth().onAuthStateChanged(async user => {

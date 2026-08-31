@@ -261,6 +261,10 @@
     // Theme toggle button
     '#cfd-nav .theme-btn{background:none;border:none;cursor:pointer;color:#6b5d4f;padding:4px 7px;border-radius:4px;font-size:13px;line-height:1;transition:all .15s;flex-shrink:0}',
     '#cfd-nav .theme-btn:hover{background:#ede6da;color:#2c2419}',
+    // Logout button (виден только когда залогинен)
+    '#cfd-nav .logout-btn{background:none;border:none;cursor:pointer;color:#6b5d4f;padding:4px 8px;border-radius:4px;font:inherit;font-size:11px;transition:all .15s;flex-shrink:0;display:none}',
+    '#cfd-nav .logout-btn:hover{background:#fde8e8;color:#c44}',
+    '#cfd-nav .logout-btn.shown{display:inline-block}',
     // Dark theme overrides for the nav bar
     'html.dark #cfd-nav{background:#1a1611;border-bottom-color:#39322a}',
     'html.dark #cfd-nav .nav-brand{color:#e07a52}',
@@ -281,7 +285,9 @@
     'html.dark #cfd-nav .nav-items{background:#1a1611;border-bottom-color:#39322a}',
     'html.dark #cfd-nav .ham{color:#bcb0a0}',
     'html.dark #cfd-nav .theme-btn{color:#bcb0a0}',
-    'html.dark #cfd-nav .theme-btn:hover{background:#2c261f;color:#ece3d6}'
+    'html.dark #cfd-nav .theme-btn:hover{background:#2c261f;color:#ece3d6}',
+    'html.dark #cfd-nav .logout-btn{color:#bcb0a0}',
+    'html.dark #cfd-nav .logout-btn:hover{background:#3a1a1a;color:#e07a52}'
   ].join("\n");
   document.head.appendChild(css);
 
@@ -335,6 +341,7 @@
   h += '</div>'; // close .nav-items
   var darkNow = document.documentElement.classList.contains('dark');
   h += '<button class="theme-btn" onclick="window._navTheme()" aria-label="Переключить тему" title="Светлая / тёмная тема">' + (darkNow ? '☀' : '☾') + '</button>';
+  h += '<button class="logout-btn" id="cfd-nav-logout" onclick="window._navLogout()" title="Выйти из аккаунта">выйти</button>';
   h += '</div>'; // close .nav-inner
   nav.innerHTML = h;
   document.body.insertBefore(nav, document.body.firstChild);
@@ -364,6 +371,35 @@
     var btn = document.querySelector("#cfd-nav .theme-btn");
     if (btn) btn.textContent = dark ? "☀" : "☾";
   };
+
+  // Logout — работает если firebase загружен. Показывать только когда
+  // пользователь залогинен (подписываемся на onAuthStateChanged, если есть).
+  window._navLogout = function() {
+    if (typeof firebase === "undefined" || !firebase.apps || !firebase.apps.length) {
+      alert("Firebase не загружен на этой странице.");
+      return;
+    }
+    if (!confirm("Выйти из аккаунта?")) return;
+    firebase.auth().signOut().then(function(){ location.reload(); });
+  };
+  function _updateLogoutVisibility() {
+    var btn = document.getElementById("cfd-nav-logout");
+    if (!btn) return;
+    var loggedIn = typeof firebase !== "undefined"
+                && firebase.apps && firebase.apps.length
+                && firebase.auth().currentUser;
+    if (loggedIn) btn.classList.add("shown"); else btn.classList.remove("shown");
+  }
+  function _wireLogout() {
+    if (typeof firebase === "undefined" || !firebase.apps || !firebase.apps.length) {
+      // Попробуем ещё раз попозже — firebase-config может подгрузиться после nav.js.
+      setTimeout(_wireLogout, 400);
+      return;
+    }
+    _updateLogoutVisibility();
+    firebase.auth().onAuthStateChanged(_updateLogoutVisibility);
+  }
+  _wireLogout();
 
   // Touch support for groups (tap to toggle L2 on mobile)
   document.querySelectorAll('#cfd-nav .grp-btn').forEach(function(btn) {

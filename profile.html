@@ -704,21 +704,67 @@ function loadAdminPanel(user, isSuperadmin) {
   var headerStrip = document.createElement('div');
   headerStrip.style.cssText = 'background:var(--bg2);border:1px solid var(--border);border-radius:8px 8px 0 0;padding:.6rem 1rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:0;gap:.6rem;flex-wrap:wrap';
   headerStrip.innerHTML =
-    '<div style="display:flex;align-items:center;gap:.6rem">' +
+    '<div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">' +
       '<span style="font-family:\'Playfair Display\',serif;font-size:1rem;font-weight:700;color:var(--accent)">Личный кабинет</span>' +
       '<span style="padding:2px 8px;border-radius:4px;font-family:\'JetBrains Mono\',monospace;font-size:.68rem;font-weight:700;' +
         (isSuperadmin ? 'background:#b44a2d;color:#fff">SUPERADMIN' : 'background:#3a5ba0;color:#fff">ADMIN') + '</span>' +
       '<span style="font-size:.8rem;color:var(--text2)">' + (user.email||'') + '</span>' +
     '</div>' +
-    '<span style="font-size:.72rem;color:var(--text3);font-style:italic">Профиль → админ-панель</span>';
+    '<div id="adminQuickTabs" style="display:flex;gap:.25rem;flex-wrap:wrap"></div>' +
+    '<button id="profileLogoutBtn" style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;padding:4px 12px;border-radius:4px;background:#fde8e8;color:#c44;border:1px solid #f5c4c4;cursor:pointer">выйти</button>';
   container.appendChild(headerStrip);
 
+  // Кнопки-шорткаты вкладок админки (перезагружают iframe с ?tab=…).
+  var SHORTCUTS = [
+    { key: 'students',   label: 'Студенты' },
+    { key: 'enrollments',label: 'Заявки' },
+    { key: 'homework',   label: 'Домашки' },
+    { key: 'gating',     label: 'Гейтинг' },
+    { key: 'grades',     label: 'Оценки' },
+    { key: 'messages',   label: 'Сообщения' }
+  ];
+  var quickTabs = headerStrip.querySelector('#adminQuickTabs');
+  var savedTab = (function(){ try { return localStorage.getItem('adminLastTab'); } catch(_) { return null; } }) ();
+  SHORTCUTS.forEach(function(s){
+    var b = document.createElement('button');
+    b.textContent = s.label;
+    b.dataset.tab = s.key;
+    b.style.cssText = 'font-family:"JetBrains Mono",monospace;font-size:.72rem;padding:3px 9px;border-radius:4px;border:1px solid var(--border);background:#fff;color:var(--text2);cursor:pointer';
+    b.onclick = function(){
+      _adminSetActive(s.key);
+      iframe.src = 'admin.html?embedded=1&tab=' + encodeURIComponent(s.key);
+    };
+    quickTabs.appendChild(b);
+  });
+  function _adminSetActive(key) {
+    quickTabs.querySelectorAll('button').forEach(function(b){
+      var on = b.dataset.tab === key;
+      b.style.background = on ? 'var(--accent)' : '#fff';
+      b.style.color = on ? '#fff' : 'var(--text2)';
+      b.style.borderColor = on ? 'var(--accent)' : 'var(--border)';
+    });
+  }
+  // Слушаем от iframe: он посылает postMessage при переключении вкладки.
+  window.addEventListener('message', function(e){
+    if (e && e.data && e.data.type === 'admin-tab' && typeof e.data.tab === 'string') {
+      _adminSetActive(e.data.tab);
+    }
+  });
+  // Logout в шапке profile-admin.
+  headerStrip.querySelector('#profileLogoutBtn').onclick = function(){
+    if (!confirm('Выйти из аккаунта?')) return;
+    firebase.auth().signOut().then(function(){ location.href = 'index.html'; });
+  };
+
   // Mount iframe pointing at admin.html. Same origin ⇒ Firebase auth is shared.
+  // Начальная вкладка — последняя из localStorage; иначе — students (по умолчанию в admin.html).
   var iframe = document.createElement('iframe');
-  iframe.src = 'admin.html?embedded=1';
+  var startTab = savedTab || 'students';
+  iframe.src = 'admin.html?embedded=1&tab=' + encodeURIComponent(startTab);
   iframe.style.cssText = 'width:100%;min-height:calc(100vh - 140px);border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;background:var(--bg)';
   iframe.title = 'Админ-панель';
   container.appendChild(iframe);
+  _adminSetActive(startTab);
 
   // Make the profile wrap full-width for admin (admin panel is wider than default profile)
   var wrap = document.querySelector('.wrap');

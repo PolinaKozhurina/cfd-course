@@ -1,0 +1,30 @@
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  hygiene:
+    name: Слой 1 — гигиена (HTML / links / JS-парс)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: npm install
+        run: npm install --no-audit --no-fund
+
+      - name: JS syntax (js/*.js + inline <script>)
+        run: npm run test:js
+
+      - name: HTML lint (html-validate)
+        run: npm run test:html
+
+      - name: Link check (relative only)
+        run: npm run test:links

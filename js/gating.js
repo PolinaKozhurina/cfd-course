@@ -196,6 +196,61 @@
         return d.exists ? (d.data().releasedAt || null) : null;
       } catch (_) { return null; }
     },
+    // Все releasedAt курса одним запросом → { lec: Timestamp|null }.
+    getReleasesForCourse: async function (cid) {
+      await ensureFirebase();
+      const db = firebase.firestore();
+      const res = {};
+      try {
+        const snap = await db.collection("lectures").where("courseId", "==", cid).get();
+        snap.forEach(function (d) { res[d.data().lectureId] = d.data().releasedAt || null; });
+      } catch (_) {}
+      return res;
+    },
+    // Массовая установка releasedAt (одним батчем).
+    // entries: [{ lec, releasedAt: Timestamp|null }, …]
+    setManyReleases: async function (cid, entries) {
+      await ensureFirebase();
+      const db = firebase.firestore();
+      const me = firebase.auth().currentUser;
+      const batch = db.batch();
+      entries.forEach(function (e) {
+        const ref = db.collection("lectures").doc(docId(cid, e.lec));
+        batch.set(ref, {
+          courseId: cid, lectureId: e.lec,
+          releasedAt: e.releasedAt || null,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedBy: me ? me.email : null,
+        }, { merge: true });
+      });
+      try { await batch.commit(); return { ok: true, n: entries.length }; }
+      catch (e) { return { ok: false, error: e.message }; }
+    },
+    // Список лекций курса — тянем и парсим главную index.html,
+    // чтобы не размножать источники истины. Кэшируется на страницу.
+    listCourseLectures: async function (cid) {
+      window.CFDGating._indexCache = window.CFDGating._indexCache || (async function () {
+        const href = new URL("index.html", location.href).toString();
+        const r = await fetch(href, { cache: "no-cache" });
+        return await r.text();
+      })();
+      const html = await window.CFDGating._indexCache;
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const block = doc.querySelector('.course-block[data-course="' + cid + '"]');
+      if (!block) return [];
+      const out = [];
+      block.querySelectorAll('.card[href], a.card').forEach(function (card) {
+        const hr = card.getAttribute("href") || "";
+        const m = hr.match(/([^\/]+)\.html?$/i);
+        if (!m) return;
+        const lec = m[1];
+        if (/^index$/i.test(lec) || /^([a-z]+\-)?reference$/i.test(lec) || /^practice$/i.test(lec)) return;
+        const h4 = card.querySelector("h4");
+        const label = h4 ? (h4.textContent || "").trim() : lec;
+        out.push({ lec: lec, href: hr, label: label });
+      });
+      return out;
+    },
   };
 
   // ---------- Бейджи и админ-панельки у карточек на главной ----------

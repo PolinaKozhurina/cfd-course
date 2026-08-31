@@ -76,8 +76,20 @@ document.addEventListener('DOMContentLoaded', function() {
     <a href="profile.html">Профиль</a>
     <a href="checklist.html">Зачёт</a>
     <a href="review.html">Проверка</a>
+    <a href="#" id="adminNavLogout" onclick="event.preventDefault();adminLogout()" style="color:#c44;margin-left:auto" title="Выйти из аккаунта">выйти</a>
   </div>
 </nav>
+
+<script>
+function adminLogout() {
+  if (typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length) {
+    alert('Firebase не загружен.');
+    return;
+  }
+  if (!confirm('Выйти из аккаунта?')) return;
+  firebase.auth().signOut().then(function(){ location.href = 'index.html'; });
+}
+</script>
 
 <script>
 // Hide top navigation when this page is embedded inside profile.html via iframe
@@ -112,6 +124,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
   <div id="adminHeaderInfo" style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:var(--text2)">
     <span id="adminRoleLabel" style="padding:3px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600"></span>
     <span id="adminScopeLabel"></span>
+    <button onclick="adminLogout()" title="Выйти из аккаунта" style="font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:3px 10px;border-radius:4px;background:#fde8e8;color:#c44;border:1px solid #f5c4c4;cursor:pointer">выйти</button>
   </div>
 </div>
 <p class="sub" id="adminSub">Управление студентами, группами и результатами</p>
@@ -128,6 +141,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
   <button class="tab" onclick="showTab('enrollments')">Заявки на курсы <span id="enrollTabBadge" style="display:none;min-width:16px;height:16px;border-radius:8px;background:#c44;color:#fff;font-size:.6rem;font-weight:700;font-family:JetBrains Mono,monospace;align-items:center;justify-content:center;padding:0 4px;margin-left:2px;vertical-align:middle"></span></button>
   <button class="tab" onclick="showTab('workgroups')">Рабочие группы</button>
   <button class="tab" onclick="showTab('homework')">Домашки</button>
+  <button class="tab" onclick="showTab('gating');renderGatingTab()">Гейтинг лекций</button>
   <button class="tab" onclick="showTab('groups')">Результаты тестов</button>
   <button class="tab" onclick="showTab('checklist')">Чек-лист (самооценка)</button>
   <button class="tab" onclick="showTab('tasks')">Задания</button>
@@ -314,6 +328,112 @@ if (location.search.indexOf('embedded=1') !== -1) {
   </div>
 </div>
 
+<!-- Модалка «Права admin» — курсы/учебные группы чекбоксами -->
+<div id="adminScopeWrap" style="display:none;position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:10px;width:520px;max-width:96%;max-height:88vh;overflow:auto;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2);font-family:'Source Serif 4',Georgia,serif">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.5rem">
+      <h3 id="adminScopeTitle" style="margin:0;font-family:'Playfair Display',serif;font-size:1.1rem">Права admin</h3>
+      <button onclick="adminScopeClose()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text3)">×</button>
+    </div>
+    <p id="adminScopeSub" style="font-size:.82rem;color:var(--text2);margin-bottom:.7rem"></p>
+
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:.3rem">
+      <strong style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent)">Курсы</strong>
+      <div>
+        <button class="btn btn-sm" onclick="adminScopeAll('courses',true)" style="font-size:.65rem">Все</button>
+        <button class="btn btn-sm" onclick="adminScopeAll('courses',false)" style="font-size:.65rem">Снять</button>
+      </div>
+    </div>
+    <div id="adminScopeCourses" style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem .6rem;padding:.4rem .6rem;background:var(--bg2);border-radius:5px;margin-bottom:.7rem"></div>
+
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:.3rem">
+      <strong style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent)">Учебные группы МИФИ <span style="color:var(--text3);font-weight:400">(опц. фильтр)</span></strong>
+      <div>
+        <button class="btn btn-sm" onclick="adminScopeAll('studyGroups',true)" style="font-size:.65rem">Все</button>
+        <button class="btn btn-sm" onclick="adminScopeAll('studyGroups',false)" style="font-size:.65rem">Снять</button>
+      </div>
+    </div>
+    <div id="adminScopeStudyGroups" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.3rem .6rem;padding:.4rem .6rem;background:var(--bg2);border-radius:5px;margin-bottom:.4rem;min-height:24px"></div>
+    <div style="display:flex;gap:.3rem;margin-bottom:.8rem;font-size:.78rem">
+      <input type="text" id="adminScopeSgAdd" placeholder="+ добавить учебную (Б22-505)" style="flex:1;font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:4px 8px;border:1px solid var(--border);border-radius:4px">
+      <button class="btn btn-sm" onclick="adminScopeAddSg()">Добавить</button>
+    </div>
+    <p style="font-size:.7rem;color:var(--text3);margin-bottom:.5rem">Пусто = без фильтра по МИФИ, admin видит все потоки по своим курсам.</p>
+
+    <div style="display:flex;justify-content:flex-end;gap:.4rem;margin-top:.4rem">
+      <button class="btn" onclick="adminScopeClose()">Отмена</button>
+      <button class="btn btn-primary" onclick="adminScopeSave()">Сохранить</button>
+    </div>
+    <div id="adminScopeStatus" style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text3);margin-top:.4rem;min-height:1em"></div>
+  </div>
+</div>
+
+<!-- TAB: Гейтинг лекций (открытие по расписанию / вручную) -->
+<div id="tab-gating" class="panel">
+  <div class="card">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:.6rem;flex-wrap:wrap">
+      <h3 style="margin:0">Гейтинг лекций</h3>
+      <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
+        <select id="gateCourseSel" onchange="renderGatingTab()" style="font-family:'JetBrains Mono',monospace;font-size:.78rem">
+          <option value="">— выберите курс —</option>
+        </select>
+        <button class="btn" onclick="renderGatingTab(true)" title="Перечитать из Firestore">⟳</button>
+      </div>
+    </div>
+    <p style="font-size:.85rem;color:var(--text2);margin:.5rem 0 .6rem">
+      Каждая лекция открывается вручную «сейчас», по дате/времени (МСК) или закрывается.
+      Студенты видят только открытые. Admin/super — всё всегда.
+      Тот же UI доступен и через шестерёнку на карточке главной, но здесь удобнее делать массово.
+    </p>
+    <div id="gateBulkBar" style="display:none;flex-wrap:wrap;gap:.4rem;align-items:center;margin-bottom:.6rem;padding:.4rem .6rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Массово:</span>
+      <button class="btn" onclick="gateBulkOpenAll()">✓ Открыть все</button>
+      <button class="btn" onclick="gateBulkScheduleModal()">⏳ Расписание…</button>
+      <button class="btn" onclick="gateBulkCloseAll()">🔒 Закрыть все</button>
+      <span style="flex:1"></span>
+      <span id="gateSaveStatus" style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3)"></span>
+    </div>
+    <div id="gateTableWrap"></div>
+  </div>
+
+  <!-- Модалка «Расписание массово» -->
+  <div id="gateSchedWrap" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:10px;width:460px;max-width:96%;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.5rem">
+        <h3 style="margin:0;font-family:'Playfair Display',serif;font-size:1.1rem">Массовое расписание</h3>
+        <button onclick="document.getElementById('gateSchedWrap').style.display='none'" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text3)">×</button>
+      </div>
+      <p style="font-size:.82rem;color:var(--text2);margin-bottom:.6rem">
+        Разложит все лекции курса (по порядку из главной) на выбранные дни недели, начиная с указанной даты. Время — МСК.
+      </p>
+      <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Первый день</label>
+      <input type="date" id="gateSchedStart" style="width:100%;font-family:'JetBrains Mono',monospace;font-size:.9rem;padding:6px 10px;border:1px solid var(--border);border-radius:4px;margin-bottom:.5rem">
+      <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Время открытия (МСК)</label>
+      <input type="time" id="gateSchedTime" value="09:00" style="width:100%;font-family:'JetBrains Mono',monospace;font-size:.9rem;padding:6px 10px;border:1px solid var(--border);border-radius:4px;margin-bottom:.5rem">
+      <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Дни недели</label>
+      <div id="gateSchedDays" style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;font-size:.85rem">
+        <label style="display:inline-flex;align-items:center;gap:.25rem"><input type="checkbox" value="1"> Пн</label>
+        <label style="display:inline-flex;align-items:center;gap:.25rem"><input type="checkbox" value="2"> Вт</label>
+        <label style="display:inline-flex;align-items:center;gap:.25rem"><input type="checkbox" value="3"> Ср</label>
+        <label style="display:inline-flex;align-items:center;gap:.25rem"><input type="checkbox" value="4" checked> Чт</label>
+        <label style="display:inline-flex;align-items:center;gap:.25rem"><input type="checkbox" value="5"> Пт</label>
+        <label style="display:inline-flex;align-items:center;gap:.25rem"><input type="checkbox" value="6"> Сб</label>
+        <label style="display:inline-flex;align-items:center;gap:.25rem"><input type="checkbox" value="0"> Вс</label>
+      </div>
+      <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">
+        <input type="checkbox" id="gateSchedSkipReleased" checked style="vertical-align:middle"> не трогать уже открытые (те, у кого releasedAt в прошлом)
+      </label>
+      <div id="gateSchedPreview" style="font-size:.78rem;color:var(--text2);margin-top:.5rem;max-height:180px;overflow:auto;font-family:'JetBrains Mono',monospace;background:var(--bg2);padding:6px 10px;border-radius:4px"></div>
+      <div style="display:flex;gap:.4rem;justify-content:flex-end;margin-top:.6rem">
+        <button class="btn" onclick="document.getElementById('gateSchedWrap').style.display='none'">Отмена</button>
+        <button class="btn" onclick="gateSchedPreviewFill()">Предпросмотр</button>
+        <button class="btn btn-primary" onclick="gateSchedApply()">Применить</button>
+      </div>
+      <div id="gateSchedStatus" style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text3);margin-top:.4rem;min-height:1em"></div>
+    </div>
+  </div>
+</div>
+
 <!-- TAB 2: Groups & Results -->
 <div id="tab-groups" class="panel">
   <div class="export-bar">
@@ -429,6 +549,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
 <script src="js/courses.js"></script>
 <script src="js/enrollments.js"></script>
 <script src="js/homework.js"></script>
+<script src="js/gating.js"></script>
 <script>
 // ============================================================
 // ADMIN PANEL LOGIC
@@ -720,6 +841,9 @@ async function loadAllData() {
   renderGroupResults();
   renderGrades();
   renderTasks();
+
+  // ?tab=xxx или последняя вкладка из localStorage — открыть автоматически.
+  _adminOpenInitialTab();
   renderMsgGroupSelect();
   await loadChecklistProgress();
 }
@@ -909,11 +1033,38 @@ function updateStats() {
 }
 
 // ===== Tab switching =====
-function showTab(name) {
+function showTab(name, ev) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  event.target.classList.add('active');
+  const panel = document.getElementById('tab-' + name);
+  if (!panel) return;
+  panel.classList.add('active');
+  // Кнопка вкладки — либо из клика, либо ищем по onclick содержимому.
+  let btn = (ev && ev.target && ev.target.closest && ev.target.closest('.tab'))
+         || (typeof event !== 'undefined' && event.target && event.target.closest ? event.target.closest('.tab') : null);
+  if (!btn) {
+    btn = Array.from(document.querySelectorAll('.tabs .tab')).find(t =>
+      (t.getAttribute('onclick')||'').indexOf("showTab('" + name + "'") !== -1);
+  }
+  if (btn) btn.classList.add('active');
+  // Уведомить родителя (profile.html iframe) и запомнить.
+  try { localStorage.setItem('adminLastTab', name); } catch (_) {}
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'admin-tab', tab: name }, '*');
+    }
+  } catch (_) {}
+}
+
+// При загрузке — если задан ?tab=xxx, открыть его. Иначе — восстановить последний.
+function _adminOpenInitialTab() {
+  const q = new URLSearchParams(location.search);
+  let want = q.get('tab');
+  if (!want) { try { want = localStorage.getItem('adminLastTab'); } catch (_) {} }
+  if (!want || !document.getElementById('tab-' + want)) return;
+  showTab(want);
+  // Для «gating» дополнительно триггерим renderGatingTab().
+  if (want === 'gating' && typeof renderGatingTab === 'function') renderGatingTab();
 }
 
 // ===== Students table =====
@@ -1034,46 +1185,8 @@ async function toggleAdmin(uid, email, makeAdmin) {
   }
   const fioOrEmail = (allUsers.find(x=>x.uid===uid)||{}).fio || email;
   if (makeAdmin) {
-    if (!confirm('Дать права администратора: ' + fioOrEmail + '?\n\nДалее вы выберете, какими курсами он будет управлять.\nОн увидит только заявки/оценки/чек-лист по назначенным курсам.')) return;
-
-    // Step 1: ask for курсы (главное поле)
-    const courseOpts = (window.CFD_COURSES || []).map(c => c.id);
-    const courseLabels = (window.CFD_COURSES || []).map(c => c.id + ' — ' + c.name).join('\n  ');
-    const inputC = prompt(
-      'КУРСЫ, которыми управляет админ ' + fioOrEmail + '\n' +
-      'Через запятую из id:\n  ' + courseLabels + '\n\n' +
-      '«all» = все курсы.',
-      ''
-    );
-    if (inputC === null) return;
-    let managedCourses = [];
-    if (inputC.trim().toLowerCase() === 'all') managedCourses = courseOpts.slice();
-    else if (inputC.trim()) managedCourses = inputC.split(',').map(s => s.trim()).filter(s => courseOpts.indexOf(s) !== -1);
-
-    // Step 2 (опц.): учебные группы МИФИ — дополнительный фильтр по потоку
-    const suggestion = (allStudyGroups && allStudyGroups.length) ? allStudyGroups.join(', ') : '(в базе пока нет учебных групп)';
-    const inputSG = prompt(
-      '(необязательно) УЧЕБНЫЕ группы МИФИ — фильтр по потоку.\n' +
-      'Через запятую. Пусто = никаких, все потоки видны.\n\n' +
-      'В базе сейчас: ' + suggestion,
-      ''
-    );
-    if (inputSG === null) return;
-    let managedStudyGroups = [];
-    if (inputSG.trim().toLowerCase() === 'all') managedStudyGroups = allStudyGroups.slice();
-    else if (inputSG.trim()) managedStudyGroups = inputSG.split(',').map(s => s.trim()).filter(Boolean);
-
-    await db.collection('users').doc(uid).set({
-      isAdmin: true,
-      managedCourses: managedCourses,
-      managedStudyGroups: managedStudyGroups,
-      managedGroups: [] // legacy, оставляем пустым
-    }, { merge: true });
-    const u = allUsers.find(x => x.uid === uid);
-    if (u) { u.isAdmin = true; u.managedCourses = managedCourses; u.managedStudyGroups = managedStudyGroups; u.managedGroups = []; }
-    const cLabel = managedCourses.length ? managedCourses.join(', ') : '(курсов не назначено — сможете только смотреть)';
-    const sgLabel = managedStudyGroups.length ? managedStudyGroups.join(', ') : '(без фильтра по МИФИ)';
-    alert('✓ ' + fioOrEmail + ' назначен админом.\nКурсы: ' + cLabel + '\nУчебные: ' + sgLabel);
+    // Открываем модалку — без confirm/prompt.
+    adminScopeOpen(uid, email, 'new');
   } else {
     if (!confirm('Снять права администратора у ' + fioOrEmail + '?')) return;
     await db.collection('users').doc(uid).set({
@@ -1081,12 +1194,12 @@ async function toggleAdmin(uid, email, makeAdmin) {
     }, { merge: true });
     const u = allUsers.find(x => x.uid === uid);
     if (u) { u.isAdmin = false; u.managedCourses = []; u.managedGroups = []; u.managedStudyGroups = []; }
+    renderStudents();
   }
-  renderStudents();
 }
 
-// Only superadmin can call this — change which groups an admin manages
-async function editManagedGroups(uid, email) {
+// Редактирование scope у уже назначенного admin — та же модалка.
+function editManagedGroups(uid, email) {
   const me = auth.currentUser;
   if (!me || !isSuperAdmin(me.email)) {
     alert('Только главный администратор может изменять назначения групп');
@@ -1098,47 +1211,125 @@ async function editManagedGroups(uid, email) {
   }
   const u = allUsers.find(x => x.uid === uid);
   if (!u || !u.isAdmin) { alert('Этот пользователь не админ'); return; }
+  adminScopeOpen(uid, email, 'edit');
+}
 
-  // Courses (главное поле)
-  const courseOpts = (window.CFD_COURSES || []).map(c => c.id);
-  const courseLabels = (window.CFD_COURSES || []).map(c => c.id + ' — ' + c.name).join('\n  ');
-  const currentC = Array.isArray(u.managedCourses) ? u.managedCourses.join(', ') : '';
-  const inputC = prompt(
-    'КУРСЫ для админа ' + (u.fio || email) + '\n' +
-    'Текущие: ' + (currentC || '(пусто)') + '\n\n' +
-    'Через запятую из id:\n  ' + courseLabels + '\n\n' +
-    '«all» = все.',
-    currentC
-  );
-  if (inputC === null) return;
-  let managedCourses = [];
-  if (inputC.trim().toLowerCase() === 'all') managedCourses = courseOpts.slice();
-  else if (inputC.trim()) managedCourses = inputC.split(',').map(s => s.trim()).filter(s => courseOpts.indexOf(s) !== -1);
+// ------------------------------------------------------------
+// Модалка «Права admin» — курсы/учебные группы чекбоксами.
+// mode: 'new'  — назначить (также ставит isAdmin:true)
+//       'edit' — обновить у уже назначенного admin
+// ------------------------------------------------------------
+window._adminScopeCtx = null;
 
-  // Study groups (опц. фильтр)
-  const currentSG = Array.isArray(u.managedStudyGroups) ? u.managedStudyGroups.join(', ') : '';
-  const suggestion = (allStudyGroups && allStudyGroups.length) ? allStudyGroups.join(', ') : '(в базе пока нет)';
-  const inputSG = prompt(
-    '(необязательно) УЧЕБНЫЕ группы МИФИ — фильтр по потоку.\n' +
-    'Текущие: ' + (currentSG || '(пусто)') + '\n\n' +
-    'В базе сейчас: ' + suggestion + '\n' +
-    'Через запятую. Пусто = все потоки. «all» = все.',
-    currentSG
-  );
-  if (inputSG === null) return;
-  let managedStudyGroups = [];
-  if (inputSG.trim().toLowerCase() === 'all') managedStudyGroups = allStudyGroups.slice();
-  else if (inputSG.trim()) managedStudyGroups = inputSG.split(',').map(s => s.trim()).filter(Boolean);
+function adminScopeOpen(uid, email, mode) {
+  const u = allUsers.find(x => x.uid === uid);
+  if (!u) { alert('Пользователь не найден'); return; }
+  const curCourses = (mode === 'edit' && Array.isArray(u.managedCourses)) ? u.managedCourses.slice() : [];
+  const curSg      = (mode === 'edit' && Array.isArray(u.managedStudyGroups)) ? u.managedStudyGroups.slice() : [];
+  window._adminScopeCtx = { uid, email, mode, extraSg: [] };
 
-  await db.collection('users').doc(uid).set({
-    managedCourses: managedCourses,
-    managedStudyGroups: managedStudyGroups
-  }, { merge: true });
-  u.managedCourses = managedCourses;
-  u.managedStudyGroups = managedStudyGroups;
-  alert('✓ Обновлено.\nКурсы: ' + (managedCourses.length?managedCourses.join(', '):'(пусто)')
-       + '\nУчебные: ' + (managedStudyGroups.length?managedStudyGroups.join(', '):'(пусто)'));
-  renderStudents();
+  // Заголовок и подпись.
+  document.getElementById('adminScopeTitle').textContent =
+    mode === 'new' ? 'Назначить admin' : 'Права admin';
+  document.getElementById('adminScopeSub').innerHTML =
+    (mode === 'new' ? 'Дать права: ' : 'Изменить scope: ') +
+    '<strong>' + (u.fio || email) + '</strong>' +
+    '<br><span style="color:var(--text3);font-size:.75rem">Он увидит заявки/оценки/чек-лист/гейтинг только по выбранным курсам.</span>';
+
+  // Курсы.
+  const cBox = document.getElementById('adminScopeCourses');
+  cBox.innerHTML = (window.CFD_COURSES || []).map(function (c) {
+    const checked = curCourses.indexOf(c.id) !== -1 ? ' checked' : '';
+    return '<label style="display:flex;align-items:center;gap:.35rem;font-size:.85rem;cursor:pointer">' +
+             '<input type="checkbox" class="admScopeC" value="' + c.id + '"' + checked + '>' +
+             '<span><strong>' + c.short + '</strong> <span style="color:var(--text3);font-family:JetBrains Mono,monospace;font-size:.7rem">' + c.id + '</span> — ' + c.name + '</span>' +
+           '</label>';
+  }).join('');
+
+  // Учебные группы: объединение allStudyGroups + текущие + extraSg.
+  const sgSet = new Set();
+  (Array.isArray(allStudyGroups) ? allStudyGroups : []).forEach(function (s) { if (s) sgSet.add(s); });
+  curSg.forEach(function (s) { if (s) sgSet.add(s); });
+  window._adminScopeCtx.knownSg = Array.from(sgSet).sort();
+  window._adminScopeCtx.checkedSg = new Set(curSg);
+  _adminScopeRenderSg();
+  document.getElementById('adminScopeSgAdd').value = '';
+  document.getElementById('adminScopeStatus').textContent = '';
+  document.getElementById('adminScopeWrap').style.display = 'flex';
+}
+
+function _adminScopeRenderSg() {
+  const ctx = window._adminScopeCtx || {};
+  const box = document.getElementById('adminScopeStudyGroups');
+  const items = ctx.knownSg || [];
+  if (!items.length) {
+    box.innerHTML = '<span style="grid-column:1/-1;font-size:.75rem;color:var(--text3)">В базе пока нет учебных групп. Добавьте вручную ниже.</span>';
+    return;
+  }
+  box.innerHTML = items.map(function (s) {
+    const checked = ctx.checkedSg.has(s) ? ' checked' : '';
+    return '<label style="display:flex;align-items:center;gap:.3rem;font-size:.78rem;cursor:pointer">' +
+             '<input type="checkbox" class="admScopeSg" value="' + s + '"' + checked + ' onchange="_adminScopeSgToggle(this)">' +
+             s +
+           '</label>';
+  }).join('');
+}
+function _adminScopeSgToggle(cb) {
+  const ctx = window._adminScopeCtx; if (!ctx) return;
+  if (cb.checked) ctx.checkedSg.add(cb.value); else ctx.checkedSg.delete(cb.value);
+}
+
+function adminScopeAll(kind, on) {
+  const sel = kind === 'courses' ? '.admScopeC' : '.admScopeSg';
+  document.querySelectorAll('#adminScopeWrap ' + sel).forEach(function (cb) {
+    cb.checked = !!on;
+    if (kind === 'studyGroups') _adminScopeSgToggle(cb);
+  });
+}
+
+function adminScopeAddSg() {
+  const ctx = window._adminScopeCtx; if (!ctx) return;
+  const input = document.getElementById('adminScopeSgAdd');
+  const v = (input.value || '').trim();
+  if (!v) return;
+  if (ctx.knownSg.indexOf(v) === -1) ctx.knownSg.push(v);
+  ctx.knownSg.sort();
+  ctx.checkedSg.add(v);
+  input.value = '';
+  _adminScopeRenderSg();
+}
+
+function adminScopeClose() {
+  document.getElementById('adminScopeWrap').style.display = 'none';
+  window._adminScopeCtx = null;
+}
+
+async function adminScopeSave() {
+  const ctx = window._adminScopeCtx; if (!ctx) return;
+  const st = document.getElementById('adminScopeStatus');
+  const courses = Array.from(document.querySelectorAll('#adminScopeWrap .admScopeC:checked')).map(function (cb) { return cb.value; });
+  const sg = Array.from(ctx.checkedSg || []);
+  if (ctx.mode === 'new' && courses.length === 0) {
+    if (!confirm('Курсов не выбрано — admin ничего не сможет править. Всё равно назначить?')) return;
+  }
+  st.textContent = 'сохранение…';
+  try {
+    const patch = { managedCourses: courses, managedStudyGroups: sg };
+    if (ctx.mode === 'new') { patch.isAdmin = true; patch.managedGroups = []; }
+    await db.collection('users').doc(ctx.uid).set(patch, { merge: true });
+    const u = allUsers.find(x => x.uid === ctx.uid);
+    if (u) {
+      u.managedCourses = courses;
+      u.managedStudyGroups = sg;
+      if (ctx.mode === 'new') { u.isAdmin = true; u.managedGroups = []; }
+    }
+    st.textContent = '✓ сохранено';
+    st.style.color = 'var(--accent2)';
+    setTimeout(function () { adminScopeClose(); renderStudents(); }, 500);
+  } catch (e) {
+    st.textContent = '✗ ' + e.message;
+    st.style.color = '#c44';
+  }
 }
 async function saveUserField(uid, field, value) {
   try {
@@ -3186,6 +3377,263 @@ function adminFilterNewChat() {
   var q = (document.getElementById('adminNewChatSearch').value||'').toLowerCase();
   var items = document.querySelectorAll('#adminNewChatList > div');
   items.forEach(function(el){ el.style.display = (!q || el.dataset.search.includes(q)) ? '' : 'none'; });
+}
+
+// ============================================================
+// TAB: Гейтинг лекций
+// ------------------------------------------------------------
+// Список лекций тянем из главной (через CFDGating.listCourseLectures),
+// статусы — из коллекции lectures (getReleasesForCourse).
+// Пишем через CFDGating.setLectureRelease / setManyReleases.
+// ============================================================
+var _gatingState = { cid: null, lectures: [], releases: {} };
+
+function gatingCoursesAvailable() {
+  // Список курсов, которыми управляет текущий admin.
+  var all = (window.CFD_COURSES || []).map(function (c) { return c; });
+  if (_currentAdminCourses === null) return all;                     // super — все
+  return all.filter(function (c) { return _currentAdminCourses.indexOf(c.id) !== -1; });
+}
+
+function gateFmtWhen(ts) {
+  if (!ts) return '—';
+  try {
+    return new Date(ts.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' });
+  } catch (_) { return '—'; }
+}
+function gateStatusOf(ts) {
+  if (!ts) return { label: '🔒 закрыта', cls: 'b-fail' };
+  var ms = ts.toMillis();
+  if (ms <= Date.now()) return { label: '✓ открыта', cls: 'b-pass' };
+  return { label: '⏳ ' + gateFmtWhen(ts), cls: 'b-group' };
+}
+
+// datetime-local значение (в МСК) → Firestore Timestamp
+function gateLocalToTs(v) {
+  if (!v) return null;
+  var parts = v.split('T');
+  var d = parts[0].split('-').map(Number);
+  var t = parts[1].split(':').map(Number);
+  // МСК = UTC+3, без DST → UTC-3.
+  var ms = Date.UTC(d[0], d[1] - 1, d[2], t[0] - 3, t[1]);
+  return firebase.firestore.Timestamp.fromDate(new Date(ms));
+}
+// Firestore Timestamp → datetime-local (в МСК)
+function gateTsToLocal(ts) {
+  if (!ts) return '';
+  var d = new Date(ts.toMillis() + 3 * 3600 * 1000);
+  return d.toISOString().slice(0, 16);
+}
+
+async function renderGatingTab(force) {
+  if (!window.CFDGating) return;
+  // Наполнить селект курсов (один раз или при force).
+  var sel = document.getElementById('gateCourseSel');
+  var cur = sel.value;
+  if (sel.options.length <= 1 || force === true) {
+    sel.innerHTML = '<option value="">— выберите курс —</option>';
+    var courses = gatingCoursesAvailable();
+    courses.forEach(function (c) {
+      var o = document.createElement('option');
+      o.value = c.id; o.textContent = c.name + ' (' + c.id + ')';
+      sel.appendChild(o);
+    });
+    // Автовыбор: восстановить из localStorage → первый доступный
+    var saved = null;
+    try { saved = localStorage.getItem('adminGatingCid'); } catch (_) {}
+    var okSaved = saved && courses.some(function (c) { return c.id === saved; });
+    sel.value = cur || (okSaved ? saved : (courses[0] ? courses[0].id : ''));
+  }
+  var cid = sel.value;
+  if (!cid) {
+    document.getElementById('gateTableWrap').innerHTML = '<p style="color:var(--text2);font-size:.9rem">Нет курсов в вашей области admin. Обратитесь к superadmin.</p>';
+    document.getElementById('gateBulkBar').style.display = 'none';
+    return;
+  }
+  try { localStorage.setItem('adminGatingCid', cid); } catch (_) {}
+  _gatingState.cid = cid;
+
+  document.getElementById('gateTableWrap').innerHTML = '<p style="color:var(--text3);font-size:.85rem">Загрузка…</p>';
+  document.getElementById('gateBulkBar').style.display = 'none';
+
+  var lectures = [];
+  var releases = {};
+  try {
+    lectures = await window.CFDGating.listCourseLectures(cid);
+    releases = await window.CFDGating.getReleasesForCourse(cid);
+  } catch (e) {
+    document.getElementById('gateTableWrap').innerHTML = '<p style="color:#c44">Ошибка: ' + (e.message || e) + '</p>';
+    return;
+  }
+  _gatingState.lectures = lectures;
+  _gatingState.releases = releases;
+
+  if (!lectures.length) {
+    document.getElementById('gateTableWrap').innerHTML = '<p style="color:var(--text2)">Не нашёл карточек для этого курса в главной. Проверь, что <code>&lt;div class=&quot;course-block&quot; data-course=&quot;' + cid + '&quot;&gt;</code> присутствует и содержит <code>&lt;a class=&quot;card&quot; href=&quot;…&quot;&gt;</code>.</p>';
+    return;
+  }
+
+  var html = '<table>' +
+    '<thead><tr>' +
+      '<th style="width:36px">№</th>' +
+      '<th>Лекция</th>' +
+      '<th style="width:140px">Статус</th>' +
+      '<th style="width:200px">Открыть в (МСК)</th>' +
+      '<th style="width:250px">Действия</th>' +
+    '</tr></thead><tbody>';
+  lectures.forEach(function (l, i) {
+    var ts = releases[l.lec] || null;
+    var st = gateStatusOf(ts);
+    var localVal = gateTsToLocal(ts);
+    html += '<tr data-lec="' + l.lec + '">' +
+      '<td style="font-family:JetBrains Mono,monospace;color:var(--text3)">' + (i + 1) + '</td>' +
+      '<td><div style="font-weight:600">' + (l.label || l.lec) + '</div>' +
+        '<div style="font-family:JetBrains Mono,monospace;font-size:.7rem;color:var(--text3)">' +
+          l.lec + ' · <a href="' + l.href + '" target="_blank" style="color:var(--text3)">' + l.href + '</a></div></td>' +
+      '<td><span class="badge ' + st.cls + '" id="gate-badge-' + l.lec + '">' + st.label + '</span></td>' +
+      '<td><input type="datetime-local" id="gate-dt-' + l.lec + '" value="' + localVal + '" style="width:100%;font-family:JetBrains Mono,monospace;font-size:.78rem;padding:3px 6px;border:1px solid var(--border);border-radius:4px"></td>' +
+      '<td style="white-space:nowrap">' +
+        '<button class="btn btn-sm" onclick="gateRowOpenNow(\'' + l.lec + '\')" title="releasedAt = сейчас">✓ Сейчас</button> ' +
+        '<button class="btn btn-sm" onclick="gateRowSchedule(\'' + l.lec + '\')" title="из поля datetime-local">⏳ Дата</button> ' +
+        '<button class="btn btn-sm" onclick="gateRowClose(\'' + l.lec + '\')" title="releasedAt = null">🔒</button>' +
+      '</td></tr>';
+  });
+  html += '</tbody></table>' +
+    '<p style="font-size:.72rem;color:var(--text3);margin-top:.5rem">Всего лекций: ' + lectures.length + '. Открыто сейчас: ' +
+      lectures.filter(function (l) { var t = releases[l.lec]; return t && t.toMillis() <= Date.now(); }).length +
+    ' · запланировано: ' + lectures.filter(function (l) { var t = releases[l.lec]; return t && t.toMillis() > Date.now(); }).length +
+    ' · закрыто: ' + lectures.filter(function (l) { return !releases[l.lec]; }).length + '.</p>';
+
+  document.getElementById('gateTableWrap').innerHTML = html;
+  document.getElementById('gateBulkBar').style.display = 'flex';
+}
+
+function gateSetStatus(msg, ok) {
+  var el = document.getElementById('gateSaveStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = ok === false ? '#c44' : (ok === true ? 'var(--accent2)' : 'var(--text3)');
+}
+
+async function gateRowSave(lec, ts) {
+  gateSetStatus('сохранение…');
+  var r = await window.CFDGating.setLectureRelease(_gatingState.cid, lec, ts);
+  if (!r.ok) { gateSetStatus('✗ ' + r.error, false); return; }
+  _gatingState.releases[lec] = ts;
+  var st = gateStatusOf(ts);
+  var b = document.getElementById('gate-badge-' + lec);
+  if (b) { b.textContent = st.label; b.className = 'badge ' + st.cls; }
+  var dt = document.getElementById('gate-dt-' + lec);
+  if (dt) dt.value = gateTsToLocal(ts);
+  gateSetStatus('✓ ' + lec, true);
+}
+async function gateRowOpenNow(lec) {
+  await gateRowSave(lec, firebase.firestore.Timestamp.fromDate(new Date()));
+}
+async function gateRowClose(lec) {
+  await gateRowSave(lec, null);
+}
+async function gateRowSchedule(lec) {
+  var el = document.getElementById('gate-dt-' + lec);
+  if (!el || !el.value) { gateSetStatus('выберите дату для ' + lec, false); return; }
+  await gateRowSave(lec, gateLocalToTs(el.value));
+}
+
+async function gateBulkOpenAll() {
+  if (!confirm('Открыть ВСЕ лекции курса «' + _gatingState.cid + '» прямо сейчас?')) return;
+  var now = firebase.firestore.Timestamp.fromDate(new Date());
+  var entries = _gatingState.lectures.map(function (l) { return { lec: l.lec, releasedAt: now }; });
+  gateSetStatus('сохранение ' + entries.length + '…');
+  var r = await window.CFDGating.setManyReleases(_gatingState.cid, entries);
+  if (!r.ok) { gateSetStatus('✗ ' + r.error, false); return; }
+  gateSetStatus('✓ открыто: ' + r.n, true);
+  await renderGatingTab(true);
+}
+async function gateBulkCloseAll() {
+  if (!confirm('Закрыть ВСЕ лекции курса «' + _gatingState.cid + '»? Студенты перестанут их видеть.')) return;
+  var entries = _gatingState.lectures.map(function (l) { return { lec: l.lec, releasedAt: null }; });
+  gateSetStatus('сохранение ' + entries.length + '…');
+  var r = await window.CFDGating.setManyReleases(_gatingState.cid, entries);
+  if (!r.ok) { gateSetStatus('✗ ' + r.error, false); return; }
+  gateSetStatus('✓ закрыто: ' + r.n, true);
+  await renderGatingTab(true);
+}
+
+// Массовое расписание.
+function gateBulkScheduleModal() {
+  var w = document.getElementById('gateSchedWrap');
+  w.style.display = 'flex';
+  // Дефолт даты — сегодня.
+  var d = new Date();
+  document.getElementById('gateSchedStart').value = d.toISOString().slice(0, 10);
+  document.getElementById('gateSchedStatus').textContent = '';
+  document.getElementById('gateSchedPreview').textContent = '';
+  gateSchedPreviewFill();
+}
+
+// Вернёт [{lec, label, when: Date}] по параметрам модалки.
+function gateSchedCompute() {
+  var startStr = document.getElementById('gateSchedStart').value;
+  var timeStr = document.getElementById('gateSchedTime').value || '09:00';
+  if (!startStr) return { err: 'выберите первый день' };
+  var days = Array.from(document.querySelectorAll('#gateSchedDays input:checked')).map(function (i) { return Number(i.value); });
+  if (!days.length) return { err: 'выберите хотя бы один день недели' };
+  var skipReleased = document.getElementById('gateSchedSkipReleased').checked;
+  var start = new Date(startStr + 'T00:00:00');
+  var timeParts = timeStr.split(':').map(Number);
+  var hh = timeParts[0], mm = timeParts[1];
+  var picks = [];
+  var lectures = _gatingState.lectures.slice();
+  if (skipReleased) {
+    lectures = lectures.filter(function (l) {
+      var t = _gatingState.releases[l.lec];
+      return !(t && t.toMillis() <= Date.now());
+    });
+  }
+  // Идём по дням от start, находим ближайший matching weekday, пишем МСК-время.
+  var cursor = new Date(start);
+  var maxDays = 400; // safety
+  var i = 0;
+  while (i < lectures.length && maxDays-- > 0) {
+    if (days.indexOf(cursor.getDay()) !== -1) {
+      var ms = Date.UTC(cursor.getFullYear(), cursor.getMonth(), cursor.getDate(), hh - 3, mm);
+      picks.push({ lec: lectures[i].lec, label: lectures[i].label, when: new Date(ms) });
+      i++;
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  if (i < lectures.length) return { err: 'не хватило дней (safety cap)' };
+  return { picks: picks, skipped: _gatingState.lectures.length - lectures.length };
+}
+
+function gateSchedPreviewFill() {
+  var res = gateSchedCompute();
+  var pre = document.getElementById('gateSchedPreview');
+  if (res.err) { pre.textContent = res.err; return; }
+  var text = res.picks.map(function (p) {
+    var w = p.when.toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' });
+    return w + '  →  ' + p.lec + '  ' + (p.label || '');
+  }).join('\n');
+  if (res.skipped) text = '(пропущено уже открытых: ' + res.skipped + ')\n' + text;
+  pre.textContent = text || '(ничего не запланировано)';
+}
+
+async function gateSchedApply() {
+  var res = gateSchedCompute();
+  var st = document.getElementById('gateSchedStatus');
+  if (res.err) { st.textContent = res.err; st.style.color = '#c44'; return; }
+  if (!res.picks.length) { st.textContent = 'нечего сохранять'; return; }
+  if (!confirm('Записать ' + res.picks.length + ' расписаний для «' + _gatingState.cid + '»?')) return;
+  var entries = res.picks.map(function (p) { return { lec: p.lec, releasedAt: firebase.firestore.Timestamp.fromDate(p.when) }; });
+  st.style.color = 'var(--text3)'; st.textContent = 'сохранение…';
+  var r = await window.CFDGating.setManyReleases(_gatingState.cid, entries);
+  if (!r.ok) { st.textContent = '✗ ' + r.error; st.style.color = '#c44'; return; }
+  st.textContent = '✓ записано: ' + r.n;
+  st.style.color = 'var(--accent2)';
+  setTimeout(function () {
+    document.getElementById('gateSchedWrap').style.display = 'none';
+    renderGatingTab(true);
+  }, 700);
 }
 </script>
 </body>

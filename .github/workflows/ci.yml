@@ -49,3 +49,67 @@ jobs:
 
       - name: Firestore rules tests (emulator + vitest)
         run: npm run test:rules
+
+  e2e:
+    name: Слой 3 — E2E (Playwright + эмулятор auth/firestore/storage)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: npm install
+        run: npm install --no-audit --no-fund
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install chromium --with-deps
+
+      - name: Playwright E2E
+        run: npm run test:e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: test-results
+          retention-days: 7
+
+  deploy-rules:
+    name: Деплой firestore + storage rules в прод
+    runs-on: ubuntu-latest
+    needs: [hygiene, rules, e2e]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: npm install
+        run: npm install --no-audit --no-fund
+
+      - name: Deploy rules (нужен FIREBASE_TOKEN в GitHub Secrets)
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        # Пока секрет не задан — job'а просто выведет предупреждение и
+        # выйдет 0 (не блокирует CI). Как только пропишешь FIREBASE_TOKEN
+        # в Repo Settings → Secrets → Actions — деплой заработает.
+        run: |
+          if [ -z "$FIREBASE_TOKEN" ]; then
+            echo "::warning::FIREBASE_TOKEN не задан — правила не задеплоены. Добавь секрет в Settings → Secrets → Actions."
+            exit 0
+          fi
+          npx firebase deploy \
+            --only firestore:rules,storage \
+            --project cfd-course \
+            --non-interactive \
+            --token "$FIREBASE_TOKEN"

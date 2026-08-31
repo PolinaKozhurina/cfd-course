@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ru" data-course="sem1">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>§1. Слайды · Основные понятия разностной схемы</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:22px;line-height:1.55;color:var(--text);background:var(--bg);overflow:hidden}
+
+/* Слайд */
+.slide{position:fixed;inset:0;padding:4rem 5rem 5rem;display:none;flex-direction:column;overflow:auto}
+.slide.active{display:flex;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.slide-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:.6rem}
+h1{font-family:'Playfair Display',serif;font-weight:900;font-size:2.6rem;line-height:1.12;color:var(--text);margin-bottom:1rem;letter-spacing:-.01em}
+h2{font-family:'Playfair Display',serif;font-weight:700;font-size:1.8rem;color:var(--accent);margin-bottom:1.2rem;line-height:1.15}
+h3{font-family:'Source Serif 4',serif;font-weight:700;font-size:1.15rem;color:var(--text);margin:1rem 0 .5rem}
+p{margin-bottom:.9rem}
+ul,ol{margin:0 0 .9rem 1.6rem;line-height:1.65}
+li{margin-bottom:.35rem}
+em{color:var(--accent2)}
+strong{color:var(--text)}
+.eq{margin:1.2rem 0;text-align:center;font-size:1.05em}
+.definition{background:var(--bg2);border-left:4px solid var(--accent2);padding:1rem 1.3rem;border-radius:0 6px 6px 0;margin:1rem 0}
+.definition strong{color:var(--accent2)}
+.figure{margin:1rem auto;text-align:center;max-width:100%}
+.figure svg{max-width:100%;height:auto}
+.figure .caption{font-size:.78rem;color:var(--text2);margin-top:.4rem;font-style:italic}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+.callout{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;font-size:.95em;color:var(--text2)}
+.tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.12em;padding:.2rem .55rem;border-radius:3px;background:#f3e8f9;color:#7b3fa0;margin-right:.4rem;vertical-align:middle}
+
+/* Титульный */
+.slide.title{justify-content:center;align-items:center;text-align:center;padding:4rem}
+.slide.title h1{font-size:3.4rem;margin-bottom:1.5rem;max-width:900px}
+.slide.title .sub{font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--text2);margin-bottom:1rem;letter-spacing:.05em}
+.slide.title .course{font-size:.9rem;color:var(--text3);text-transform:uppercase;letter-spacing:.2em}
+
+/* HUD навигации */
+.hud{position:fixed;bottom:0;left:0;right:0;padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to top,rgba(250,248,244,.95),transparent);z-index:100;pointer-events:none}
+.hud > *{pointer-events:auto}
+.hud button{font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:.4rem .9rem;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text2);cursor:pointer;transition:all .12s}
+.hud button:hover{border-color:var(--accent);color:var(--accent);background:var(--bg2)}
+.hud button:disabled{opacity:.35;cursor:default}
+.hud .counter{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);letter-spacing:.06em}
+.hud .center{display:flex;gap:.4rem;align-items:center}
+.hud .back{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);text-decoration:none;padding:.35rem .7rem;border:1px dashed var(--border);border-radius:4px}
+.hud .back:hover{color:var(--accent);border-color:var(--accent)}
+
+/* Прогресс-бар вверху */
+.progress{position:fixed;top:0;left:0;right:0;height:3px;background:var(--bg3);z-index:99}
+.progress .fill{height:100%;background:var(--accent);transition:width .2s ease;width:0%}
+
+/* Адаптив под проектор / крупные экраны */
+@media(min-width:1600px){body{font-size:26px}h1{font-size:3rem}h2{font-size:2rem}}
+@media(max-width:900px){.slide{padding:2.5rem 1.5rem 4rem}h1{font-size:1.9rem}h2{font-size:1.4rem}.two-col{grid-template-columns:1fr}body{font-size:18px}}
+
+/* Печать/PDF: все слайды подряд */
+@media print{
+  body{overflow:visible;background:#fff}
+  .slide{position:relative;display:flex!important;page-break-after:always;min-height:100vh}
+  .hud,.progress{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="progress"><div class="fill" id="progressFill"></div></div>
+
+<!-- ============================================================
+     СЛАЙДЫ  (порядок = логика лекции §1)
+     ============================================================ -->
+
+<!-- 1: Титульный -->
+<section class="slide title active">
+  <div class="course">Теория разностных схем · Семестр 1</div>
+  <h1>Основные понятия разностной схемы</h1>
+  <div class="sub">§1 · Шаблон схемы · Разностный оператор и его свойства</div>
+</section>
+
+<!-- 2: Что такое ТРС -->
+<section class="slide">
+  <div class="slide-num">§1.1 · Основные определения</div>
+  <h2>Теория разностных схем</h2>
+  <p><em>Разностной схемой</em> будем называть приближение дифференциальной задачи (задачи для уравнения в частных производных) системой алгебраических уравнений на некоторой конечной сетке узлов.</p>
+  <div class="definition">
+    <strong>Теория разностных схем (ТРС)</strong> — раздел вычислительной математики, посвящённый <em>методам построения</em> таких приближений и <em>методам исследования их свойств</em>: прежде всего <em>аппроксимации</em>, <em>устойчивости</em> и <em>сходимости</em>.
+  </div>
+</section>
+
+<!-- 3: Вычислительный эксперимент -->
+<section class="slide">
+  <div class="slide-num">§1.2 · Схема вычислительного эксперимента</div>
+  <h2>Математическое моделирование и&nbsp;вычислительный эксперимент</h2>
+  <ol>
+    <li><strong>Этап №&nbsp;1.</strong> Объект исследования (физическая постановка задачи).</li>
+    <li><strong>Этап №&nbsp;2.</strong> Математическая модель (математическая постановка задачи).</li>
+    <li><strong>Этап №&nbsp;3.</strong> Численный метод решения задачи (дискретная задача + вычислительный алгоритм).</li>
+    <li><strong>Этап №&nbsp;4.</strong> Программирование на ЭВМ.</li>
+    <li><strong>Этап №&nbsp;5.</strong> Проведение вычислений и исследование полученных результатов.</li>
+  </ol>
+</section>
+
+<!-- 4: Построение численного метода -->
+<section class="slide">
+  <div class="slide-num">§1.2 · Этап 3, подшаги</div>
+  <h2>Построение численного метода</h2>
+  <ul>
+    <li>Дискретизация задачи.</li>
+    <li>Разработка численного метода решения дискретной задачи.</li>
+  </ul>
+  <div class="callout" style="margin-top:1.4rem">
+    Далее в курсе основное внимание уделяется именно этому этапу — построению разностных схем как одного из способов дискретизации и анализу их свойств.
+  </div>
+</section>
+
+<!-- 5: Классы численных методов -->
+<section class="slide">
+  <div class="slide-num">§1.3 · Классы численных методов</div>
+  <h2>Классы численных методов</h2>
+  <ul>
+    <li><strong>Стохастические методы</strong> — метод частиц и родственные модификации.</li>
+    <li><strong>Вариационные методы</strong> — сводят задачу к задачам оптимизации.</li>
+    <li><strong>Метод конечных элементов</strong> — метод Галёркина, разрывный метод Галёркина.</li>
+    <li><strong>Метод конечных объёмов.</strong></li>
+    <li><strong>Метод конечных разностей</strong> — предмет курса.</li>
+  </ul>
+</section>
+
+<!-- 6: Операторная запись -->
+<section class="slide">
+  <div class="slide-num">§1.4 · Абстрактная постановка</div>
+  <h2>Операторная запись задачи</h2>
+  <div class="eq">\[
+    A\,u \;=\; F.
+  \]</div>
+  <ul>
+    <li>\(u = u(x)\), \(x \in \Omega \subset \mathbb{R}^m\) — искомое решение, \(u \in B_1\);</li>
+    <li>\(F \in B_2\) — правая часть;</li>
+    <li>\(B_1, B_2\) — <em>линейные нормированные пространства</em> с нормами \(\|\cdot\|_1\), \(\|\cdot\|_2\);</li>
+    <li>\(A \colon B_1 \to B_2\) — <em>дифференциальный оператор</em> задачи (в общем случае нелинейный).</li>
+  </ul>
+</section>
+
+<!-- 7: Корректность — линейный случай -->
+<section class="slide">
+  <div class="slide-num">§1.5 · Корректность задачи</div>
+  <h2>Линейный случай</h2>
+  <p>Пусть \(A\) — линейный оператор. Для корректности задачи \(Au = F\) требуется существование <em>ограниченного</em> обратного оператора \(A^{-1}\). Тогда:</p>
+  <ol>
+    <li>Существование и единственность:
+      <div class="eq">\[ \forall\, F \in B_2 \ \Rightarrow \ \exists!\; u(x) \in B_1. \]</div>
+    </li>
+    <li>Непрерывная зависимость от данных: существует \(C = \mathrm{const} > 0\), такая что
+      <div class="eq">\[ \|u\|_1 \;\le\; C\,\|F\|_2, \qquad C = \|A^{-1}\|. \]</div>
+    </li>
+  </ol>
+</section>
+
+<!-- 8: Корректность — нелинейный случай -->
+<section class="slide">
+  <div class="slide-num">§1.5 · Корректность задачи</div>
+  <h2>Нелинейный случай. Условие Липшица</h2>
+  <p>Пусть \(A\) — нелинейный оператор. Существование решения требуется <em>локально</em> — для правых частей из окрестности некоторой опорной \(F_0 \in B_2\):</p>
+  <div class="eq">\[ \|F - F_0\|_2 \;&lt;\; \varepsilon. \]</div>
+  <p>Непрерывная зависимость решения от данных — <em>условие Липшица непрерывности обратного оператора</em>: существует \(C = \mathrm{const} > 0\), такая что для любых \(F_1, F_2\)</p>
+  <div class="eq">\[ \|u_2 - u_1\|_1 \;\le\; C\,\|F_2 - F_1\|_2. \]</div>
+</section>
+
+<!-- 9: Задача Коши -->
+<section class="slide">
+  <div class="slide-num">§1.6 · Модельная задача курса</div>
+  <h2>Задача Коши для уравнения переноса</h2>
+  <div class="eq">\[
+    \frac{\partial u}{\partial t} + a\,\frac{\partial u}{\partial x} = 0, \qquad -\infty &lt; x &lt; \infty,
+  \]</div>
+  <div class="eq">\[
+    u(x, 0) = u_0(x), \qquad -\infty &lt; x &lt; \infty,
+  \]</div>
+  <p>где \(x\) — пространственная координата, \(t\) — время, \(a = \mathrm{const}\). Уравнение называется <em>уравнением переноса</em>; задача с начальным условием — <em>задачей Коши</em>.</p>
+</section>
+
+<!-- 10: Определение сетки -->
+<section class="slide">
+  <div class="slide-num">§1.7 · Расчётная сетка</div>
+  <h2>Сетка в области \(\Omega\)</h2>
+  <div class="definition">
+    <strong>Определение 1.</strong> <em>Сеткой</em> в области \(\Omega \subset \mathbb{R}^m\) называется любое непустое конечное множество точек
+    \[
+      \omega \;=\; \{\,x_k \in \Omega,\ k = \overline{1,N}\;\colon\; x_i = x_j \Leftrightarrow i = j\,\}.
+    \]
+    Элементы \(\omega\) — <em>узлы сетки</em>.
+  </div>
+  <p>Для одномерной сетки на \([a,b]\): шаги \(h_k = x_k - x_{k-1}\), характеристический шаг \(|h| = \max_k h_k\), усреднённый шаг в узле \(\bar h_k = \tfrac12(h_k + h_{k+1})\).</p>
+</section>
+
+<!-- 11: Пример 1 -->
+<section class="slide">
+  <div class="slide-num">§1.8 · Примеры сеток</div>
+  <h2>Пример 1. Равномерная прямоугольная сетка на \([a, b]\)</h2>
+  <div class="eq">\[
+    \omega_h \;=\; \Bigl\{\,x_k = a + k\,h,\ k = \overline{0, N},\ h = \tfrac{b-a}{N}\,\Bigr\}.
+  \]</div>
+  <div class="figure">
+  <svg viewBox="0 0 560 90" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+    <line x1="30" y1="55" x2="530" y2="55" stroke="#2c2419" stroke-width="1.5"/>
+    <g fill="#b44a2d">
+      <circle cx="30"  cy="55" r="4"/><circle cx="100" cy="55" r="4"/><circle cx="170" cy="55" r="4"/>
+      <circle cx="240" cy="55" r="4"/><circle cx="310" cy="55" r="4"/><circle cx="380" cy="55" r="4"/>
+      <circle cx="450" cy="55" r="4"/><circle cx="520" cy="55" r="4"/>
+    </g>
+    <text x="30"  y="80" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">x₀=a</text>
+    <text x="520" y="80" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">x_N=b</text>
+    <text x="65"  y="42" font-family="Source Serif 4,serif" font-size="13" fill="#1a6b5a" text-anchor="middle" font-style="italic">h</text>
+    <text x="135" y="42" font-family="Source Serif 4,serif" font-size="13" fill="#1a6b5a" text-anchor="middle" font-style="italic">h</text>
+    <text x="205" y="42" font-family="Source Serif 4,serif" font-size="13" fill="#1a6b5a" text-anchor="middle" font-style="italic">h</text>
+    <text x="275" y="42" font-family="Source Serif 4,serif" font-size="13" fill="#1a6b5a" text-anchor="middle" font-style="italic">h</text>
+    <text x="345" y="42" font-family="Source Serif 4,serif" font-size="13" fill="#1a6b5a" text-anchor="middle" font-style="italic">h</text>
+    <text x="415" y="42" font-family="Source Serif 4,serif" font-size="13" fill="#1a6b5a" text-anchor="middle" font-style="italic">h</text>
+    <text x="485" y="42" font-family="Source Serif 4,serif" font-size="13" fill="#1a6b5a" text-anchor="middle" font-style="italic">h</text>
+  </svg>
+  <div class="caption">Равномерная сетка на \([a,b]\) с постоянным шагом \(h = (b-a)/N\).</div>
+  </div>
+</section>
+
+<!-- 12: Пример 2 -->
+<section class="slide">
+  <div class="slide-num">§1.8 · Примеры сеток</div>
+  <h2>Пример 2. Сетка общего вида (неравномерная) на \([a, b]\)</h2>
+  <div class="eq">\[
+    \omega = \bigl\{\,a \le x_0 &lt; x_1 &lt; \ldots &lt; x_N \le b;\ h_k = x_k - x_{k-1},\ k=\overline{1,N},\ h_k &gt; 0\,\bigr\}.
+  \]</div>
+  <p>Дополнительно: \(h_0 = a - x_0\), \(h_{N+1} = b - x_N\) — полный набор шагов \(h_k, k = \overline{0, N+1}\).</p>
+  <div class="figure">
+  <svg viewBox="0 0 560 90" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+    <line x1="30" y1="55" x2="530" y2="55" stroke="#2c2419" stroke-width="1.5"/>
+    <g fill="#b44a2d">
+      <circle cx="30"  cy="55" r="4"/><circle cx="105" cy="55" r="4"/><circle cx="215" cy="55" r="4"/>
+      <circle cx="290" cy="55" r="4"/><circle cx="345" cy="55" r="4"/><circle cx="420" cy="55" r="4"/>
+      <circle cx="475" cy="55" r="4"/><circle cx="530" cy="55" r="4"/>
+    </g>
+    <text x="30"  y="80" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">x₀=a</text>
+    <text x="530" y="80" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">x_N=b</text>
+    <text x="67"  y="42" font-family="Source Serif 4,serif" font-size="13" fill="#1a6b5a" text-anchor="middle" font-style="italic">h₁</text>
+    <text x="160" y="42" font-family="Source Serif 4,serif" font-size="13" fill="#1a6b5a" text-anchor="middle" font-style="italic">h₂</text>
+    <text x="252" y="42" font-family="Source Serif 4,serif" font-size="13" fill="#1a6b5a" text-anchor="middle" font-style="italic">h₃</text>
+  </svg>
+  <div class="caption">Неравномерная сетка на \([a, b]\).</div>
+  </div>
+</section>
+
+<!-- 13: Пример 3 -->
+<section class="slide">
+  <div class="slide-num">§1.8 · Примеры сеток</div>
+  <h2>Пример 3. Прямоугольная сетка в прямоугольной области</h2>
+  <div class="two-col">
+    <div>
+      <p>Область: \(\Pi = \{\,a \le x \le b,\ c \le y \le d\,\}\).</p>
+      <p>Разбиение отрезков на \(N_x\) и \(N_y\) частей соответственно:</p>
+      <div class="eq">\[ h_x = \tfrac{b - a}{N_x}, \quad h_y = \tfrac{d - c}{N_y}. \]</div>
+      <p>Узлы: \(x_{i,j} = (a + i h_x,\ c + j h_y)\), \(i = \overline{0, N_x}\), \(j = \overline{0, N_y}\).</p>
+    </div>
+    <div class="figure">
+    <svg viewBox="0 0 340 260" xmlns="http://www.w3.org/2000/svg" style="max-width:340px">
+      <g stroke="#d9cfc0" stroke-width="0.7">
+        <line x1="50" y1="30" x2="50" y2="220"/><line x1="110" y1="30" x2="110" y2="220"/>
+        <line x1="170" y1="30" x2="170" y2="220"/><line x1="230" y1="30" x2="230" y2="220"/>
+        <line x1="290" y1="30" x2="290" y2="220"/>
+        <line x1="50" y1="30" x2="290" y2="30"/><line x1="50" y1="80" x2="290" y2="80"/>
+        <line x1="50" y1="130" x2="290" y2="130"/><line x1="50" y1="180" x2="290" y2="180"/>
+        <line x1="50" y1="220" x2="290" y2="220"/>
+      </g>
+      <g fill="#b44a2d">
+        <circle cx="50"  cy="30" r="3"/><circle cx="110" cy="30" r="3"/><circle cx="170" cy="30" r="3"/>
+        <circle cx="230" cy="30" r="3"/><circle cx="290" cy="30" r="3"/>
+        <circle cx="50"  cy="80" r="3"/><circle cx="110" cy="80" r="3"/><circle cx="170" cy="80" r="3"/>
+        <circle cx="230" cy="80" r="3"/><circle cx="290" cy="80" r="3"/>
+        <circle cx="50"  cy="130" r="3"/><circle cx="110" cy="130" r="3"/><circle cx="170" cy="130" r="3"/>
+        <circle cx="230" cy="130" r="3"/><circle cx="290" cy="130" r="3"/>
+        <circle cx="50"  cy="180" r="3"/><circle cx="110" cy="180" r="3"/><circle cx="170" cy="180" r="3"/>
+        <circle cx="230" cy="180" r="3"/><circle cx="290" cy="180" r="3"/>
+        <circle cx="50"  cy="220" r="3"/><circle cx="110" cy="220" r="3"/><circle cx="170" cy="220" r="3"/>
+        <circle cx="230" cy="220" r="3"/><circle cx="290" cy="220" r="3"/>
+      </g>
+      <line x1="35" y1="240" x2="310" y2="240" stroke="#2c2419" stroke-width="1.3"/>
+      <line x1="35" y1="240" x2="35" y2="15" stroke="#2c2419" stroke-width="1.3"/>
+      <text x="315" y="245" font-family="Source Serif 4,serif" font-size="12" font-style="italic" fill="#2c2419">x</text>
+      <text x="28" y="10" font-family="Source Serif 4,serif" font-size="12" font-style="italic" fill="#2c2419">y</text>
+      <text x="50" y="253" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">a</text>
+      <text x="290" y="253" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">b</text>
+      <text x="23" y="223" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="end">c</text>
+      <text x="23" y="33" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="end">d</text>
+    </svg>
+    </div>
+  </div>
+</section>
+
+<!-- 14: Пример 4 -->
+<section class="slide">
+  <div class="slide-num">§1.8 · Примеры сеток</div>
+  <h2>Пример 4. Сетка через монотонное преобразование</h2>
+  <p>Пусть на \([0, 1]\) задана непрерывная и монотонно возрастающая функция \(\varphi(t)\), а \(\omega_h\) — равномерная сетка с шагом \(h = 1/N\). Определим</p>
+  <div class="eq">\[
+    \Phi(t) \;=\; \frac{\varphi(t) - \varphi(0)}{\varphi(1) - \varphi(0)}\,(b - a) + a, \qquad
+    x_k \;=\; \Phi(k\,h).
+  \]</div>
+  <p>Тогда \(\omega = \{x_k\}\) — сетка общего вида (Пример 2) с шагами</p>
+  <div class="eq">\[
+    h_k \;=\; \Phi(k h) - \Phi((k-1)\,h), \qquad k = \overline{1, N}.
+  \]</div>
+  <div class="callout">Выбор \(\varphi\) управляет распределением узлов вдоль отрезка при сохранении регулярности параметризации.</div>
+</section>
+
+<!-- 15: Расчётная сетка задачи Коши -->
+<section class="slide">
+  <div class="slide-num">§1.9 · Сетка задачи Коши</div>
+  <h2>Расчётная сетка задачи Коши</h2>
+  <p>Пространственный шаг \(h > 0\), узлы \(x_i = i\,h\), \(i = 0, \pm 1, \pm 2, \ldots\); временной шаг \(\tau = T/N\), узлы \(t_n = n\,\tau\), \(n = \overline{0,N}\). Сетка \(G_h\) — точки пересечения прямых \(x = x_i\) и \(t = t_n\).</p>
+  <div class="figure">
+  <svg viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg" style="max-width:480px">
+    <defs><marker id="ah3" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2c2419"/></marker></defs>
+    <g stroke="#d9cfc0" stroke-width="0.5">
+      <line x1="80" y1="30" x2="80" y2="220"/><line x1="140" y1="30" x2="140" y2="220"/>
+      <line x1="200" y1="30" x2="200" y2="220"/><line x1="260" y1="30" x2="260" y2="220"/>
+      <line x1="320" y1="30" x2="320" y2="220"/><line x1="380" y1="30" x2="380" y2="220"/>
+      <line x1="440" y1="30" x2="440" y2="220"/>
+      <line x1="60" y1="220" x2="460" y2="220"/><line x1="60" y1="160" x2="460" y2="160"/>
+      <line x1="60" y1="100" x2="460" y2="100"/><line x1="60" y1="40" x2="460" y2="40"/>
+    </g>
+    <g fill="#b44a2d">
+      <circle cx="80"  cy="220" r="3"/><circle cx="140" cy="220" r="3"/><circle cx="200" cy="220" r="3"/>
+      <circle cx="260" cy="220" r="3"/><circle cx="320" cy="220" r="3"/><circle cx="380" cy="220" r="3"/><circle cx="440" cy="220" r="3"/>
+      <circle cx="80"  cy="160" r="3"/><circle cx="140" cy="160" r="3"/><circle cx="200" cy="160" r="3"/>
+      <circle cx="260" cy="160" r="3"/><circle cx="320" cy="160" r="3"/><circle cx="380" cy="160" r="3"/><circle cx="440" cy="160" r="3"/>
+      <circle cx="80"  cy="100" r="3"/><circle cx="140" cy="100" r="3"/><circle cx="200" cy="100" r="3"/>
+      <circle cx="260" cy="100" r="3"/><circle cx="320" cy="100" r="3"/><circle cx="380" cy="100" r="3"/><circle cx="440" cy="100" r="3"/>
+      <circle cx="80"  cy="40" r="3"/><circle cx="140" cy="40" r="3"/><circle cx="200" cy="40" r="3"/>
+      <circle cx="260" cy="40" r="3"/><circle cx="320" cy="40" r="3"/><circle cx="380" cy="40" r="3"/><circle cx="440" cy="40" r="3"/>
+    </g>
+    <line x1="50" y1="240" x2="500" y2="240" stroke="#2c2419" stroke-width="1.3" marker-end="url(#ah3)"/>
+    <line x1="50" y1="240" x2="50" y2="20" stroke="#2c2419" stroke-width="1.3" marker-end="url(#ah3)"/>
+    <text x="505" y="244" font-family="Source Serif 4,serif" font-size="13" font-style="italic" fill="#2c2419">x</text>
+    <text x="42" y="14" font-family="Source Serif 4,serif" font-size="13" font-style="italic" fill="#2c2419">t</text>
+    <circle cx="260" cy="160" r="6" fill="none" stroke="#b44a2d" stroke-width="2"/>
+    <text x="272" y="155" font-family="Source Serif 4,serif" font-size="12" fill="#b44a2d" font-style="italic">u<tspan font-size="9" dy="3">i</tspan><tspan font-size="9" dy="-6">n</tspan></text>
+    <line x1="260" y1="230" x2="320" y2="230" stroke="#1a6b5a" stroke-width="1.3"/>
+    <text x="290" y="244" font-family="Source Serif 4,serif" font-size="12" fill="#1a6b5a" text-anchor="middle" font-style="italic">h</text>
+    <line x1="455" y1="220" x2="455" y2="160" stroke="#1a6b5a" stroke-width="1.3"/>
+    <text x="466" y="194" font-family="Source Serif 4,serif" font-size="12" fill="#1a6b5a" font-style="italic">τ</text>
+  </svg>
+  <div class="caption">Равномерная сетка \(G_h\) в плоскости \((x, t)\).</div>
+  </div>
+</section>
+
+<!-- 16: Сеточная функция -->
+<section class="slide">
+  <div class="slide-num">§1.10 · Сеточная функция</div>
+  <h2>Сеточная функция</h2>
+  <p>Функция \(u_i^n\), определённая в узлах сетки \(G_h\), называется <em>сеточной функцией</em>. Величина \(u_i^n\) — приближённое значение решения задачи в узле \((x_i, t_n)\); истинное значение точного решения обозначается \(u(x_i, t_n)\).</p>
+  <div class="callout">Сеточная функция — основной объект численного анализа. Все дальнейшие рассуждения — об оценках погрешности \(\bigl|u_i^n - u(x_i, t_n)\bigr|\) и о сходимости \(u_i^n \to u(x_i, t_n)\) при \(h, \tau \to 0\).</div>
+</section>
+
+<!-- 17: Сеточные нормы -->
+<section class="slide">
+  <div class="slide-num">§1.11 · Сеточные нормы</div>
+  <h2>Сеточные нормы</h2>
+  <h3>Сеточный аналог равномерной нормы</h3>
+  <div class="eq">\[
+    \|u\|_C = \max_{x \in G} |u(x)| \ \ \Longrightarrow\ \ \|u_h\| = \max_{x \in G_h} |u_h(x)|.
+  \]</div>
+  <h3>Сеточный аналог нормы \(L_2\)</h3>
+  <div class="eq">\[
+    \|u\|_{L_2} = \left(\int_0^1 u^2(x)\,dx\right)^{1/2}
+    \ \ \Longrightarrow\ \
+    \|u_h\| = \sqrt{\sum_{i=1}^{N} u_h^2(x_i)\,h\,}.
+  \]</div>
+</section>
+
+<!-- 18: Разностная схема + Шаблон -->
+<section class="slide">
+  <div class="slide-num">§1.12 · Определения</div>
+  <h2>Разностная схема и шаблон</h2>
+  <div class="definition">
+    <strong>Определение 1.</strong> <em>Разностная схема</em> — совокупность разностных уравнений для определения значений сеточной функции внутри расчётной области, дополненная соответствующими начальными и граничными условиями для этой сеточной функции.
+  </div>
+  <div class="definition">
+    <strong>Определение 2.</strong> <em>Шаблон схемы</em> — конфигурация расчётных узлов в области интегрирования, используемых на каждом элементарном шаге вычислений.
+  </div>
+</section>
+
+<!-- 19: Шаблоны — примеры -->
+<section class="slide">
+  <div class="slide-num">§1.12 · Примеры шаблонов</div>
+  <h2>Типовые шаблоны</h2>
+  <div class="figure">
+  <svg viewBox="0 0 600 180" xmlns="http://www.w3.org/2000/svg" style="max-width:600px">
+    <g transform="translate(30,10)">
+      <text x="60" y="8" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">Явный шаблон</text>
+      <circle cx="60" cy="40" r="5" fill="#b44a2d"/>
+      <circle cx="20" cy="110" r="5" fill="#6b5d4f"/><circle cx="60" cy="110" r="5" fill="#6b5d4f"/><circle cx="100" cy="110" r="5" fill="#6b5d4f"/>
+      <line x1="60" y1="45" x2="20" y2="105" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <line x1="60" y1="45" x2="60" y2="105" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <line x1="60" y1="45" x2="100" y2="105" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <text x="8" y="132" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">i−1</text>
+      <text x="60" y="132" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">i</text>
+      <text x="108" y="132" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">i+1</text>
+      <text x="82" y="37" font-family="JetBrains Mono,monospace" font-size="9" fill="#b44a2d">n+1</text>
+      <text x="118" y="113" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f">n</text>
+    </g>
+    <g transform="translate(210,10)">
+      <text x="60" y="8" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">Неявный шаблон</text>
+      <circle cx="20" cy="40" r="5" fill="#b44a2d"/><circle cx="60" cy="40" r="5" fill="#b44a2d"/><circle cx="100" cy="40" r="5" fill="#b44a2d"/>
+      <circle cx="60" cy="110" r="5" fill="#6b5d4f"/>
+      <line x1="20" y1="45" x2="60" y2="105" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <line x1="60" y1="45" x2="60" y2="105" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <line x1="100" y1="45" x2="60" y2="105" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <line x1="20" y1="40" x2="100" y2="40" stroke="#b44a2d" stroke-width="1"/>
+      <text x="8" y="132" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">i−1</text>
+      <text x="60" y="132" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">i</text>
+      <text x="108" y="132" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">i+1</text>
+      <text x="118" y="37" font-family="JetBrains Mono,monospace" font-size="9" fill="#b44a2d">n+1</text>
+      <text x="78" y="113" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f">n</text>
+    </g>
+    <g transform="translate(410,10)">
+      <text x="60" y="8" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">«Крест»</text>
+      <circle cx="60" cy="35" r="5" fill="#b44a2d"/>
+      <circle cx="20" cy="75" r="5" fill="#6b5d4f"/><circle cx="60" cy="75" r="5" fill="#6b5d4f"/><circle cx="100" cy="75" r="5" fill="#6b5d4f"/>
+      <circle cx="60" cy="115" r="5" fill="#6b5d4f"/>
+      <line x1="60" y1="40" x2="60" y2="70" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <line x1="20" y1="75" x2="100" y2="75" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <line x1="60" y1="80" x2="60" y2="110" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <text x="8" y="150" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">i−1</text>
+      <text x="60" y="150" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">i</text>
+      <text x="108" y="150" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">i+1</text>
+      <text x="78" y="32" font-family="JetBrains Mono,monospace" font-size="9" fill="#b44a2d">n+1</text>
+      <text x="118" y="78" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f">n</text>
+      <text x="78" y="128" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f">n−1</text>
+    </g>
+  </svg>
+  <div class="caption">Явный трёхточечный (уголок), неявный трёхточечный и «крест» (три временных слоя).</div>
+  </div>
+</section>
+
+<!-- 20: Финальный / что дальше -->
+<section class="slide">
+  <div class="slide-num">§1 · Итого</div>
+  <h2>Итого и что дальше</h2>
+  <p>В &sect;1 введены:</p>
+  <ul>
+    <li>операторная запись задачи \(A u = F\), корректность (линейная и нелинейная);</li>
+    <li>сетка в области \(\Omega\); четыре стандартных типа сеток; расчётная сетка задачи Коши в плоскости \((x, t)\);</li>
+    <li>сеточные функции и сеточные нормы (\(C\), \(L_2\));</li>
+    <li>определения разностной схемы и шаблона.</li>
+  </ul>
+  <div class="callout" style="margin-top:1rem">
+    <strong>Далее:</strong> §2 — <em>аппроксимация</em> дифференциального оператора разностным, порядок аппроксимации на гладких функциях, невязка, локальная погрешность.
+  </div>
+</section>
+
+<!-- ============================================================
+     HUD навигации
+     ============================================================ -->
+<div class="hud">
+  <a href="s1-01.html" class="back" title="Полный текст лекции">← полная лекция</a>
+  <div class="center">
+    <button id="btnPrev" onclick="prev()" title="←">◀</button>
+    <span class="counter" id="counter">1 / 20</span>
+    <button id="btnNext" onclick="next()" title="→ / Space">▶</button>
+  </div>
+  <a href="s1-02.html" class="back" title="Следующая лекция">§2 →</a>
+</div>
+
+<script>
+(function(){
+  var slides = Array.from(document.querySelectorAll('.slide'));
+  var counter = document.getElementById('counter');
+  var fill = document.getElementById('progressFill');
+  var i = 0;
+  function show(n) {
+    slides[i].classList.remove('active');
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides[i].classList.add('active');
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+    fill.style.width = ((i + 1) / slides.length * 100) + '%';
+    history.replaceState(null, '', '#' + (i + 1));
+    document.getElementById('btnPrev').disabled = (i === 0);
+    document.getElementById('btnNext').disabled = (i === slides.length - 1);
+    window.scrollTo({ top: 0 });
+  }
+  window.next = function(){ show(i + 1); };
+  window.prev = function(){ show(i - 1); };
+  document.addEventListener('keydown', function(e) {
+    // Не перехватываем клавиши, если пользователь в input/textarea
+    if (/^(INPUT|TEXTAREA)$/i.test((e.target || {}).tagName)) return;
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+    else if (e.key === 'Home') { e.preventDefault(); show(0); }
+    else if (e.key === 'End')  { e.preventDefault(); show(slides.length - 1); }
+    else if (e.key === 'f' || e.key === 'F') {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+    }
+  });
+  // Deep-link через #N
+  var h = parseInt((location.hash || '').replace('#', ''), 10);
+  if (!isNaN(h) && h >= 1 && h <= slides.length) show(h - 1);
+  else show(0);
+})();
+</script>
+</body>
+</html>

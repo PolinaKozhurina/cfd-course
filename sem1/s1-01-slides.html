@@ -17,15 +17,17 @@ window.MathJax = {
 :root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
-body{font-family:'Source Serif 4',Georgia,serif;font-size:22px;line-height:1.55;color:var(--text);background:var(--bg);overflow:hidden}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:24px;line-height:1.55;color:var(--text);background:var(--bg);overflow:hidden}
 
-/* Слайд */
-.slide{position:fixed;inset:0;padding:4rem 5rem 5rem;display:none;flex-direction:column;overflow:auto}
-.slide.active{display:flex}
+/* Слайд — фиксирован в viewport, контент центрирован по вертикали и горизонтали */
+.slide{position:fixed;inset:0;padding:0;display:none;overflow:auto}
+.slide.active{display:flex;align-items:center;justify-content:center}
+.slide-content{width:100%;max-width:1180px;margin:auto;padding:2.2rem 3rem 3.5rem;box-sizing:border-box}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-/* Поэтапное появление детей активного слайда (JS проставляет --i) */
-.slide.active > *{
+/* Поэтапное появление детей активного слайда (JS проставляет --i)
+   Теперь после обёртки — целим на .slide-content > *  */
+.slide.active .slide-content > *{
   animation: slideStep .38s cubic-bezier(.22,.61,.36,1) both;
   animation-delay: calc(var(--i, 0) * 85ms);
 }
@@ -64,11 +66,11 @@ body{font-family:'Source Serif 4',Georgia,serif;font-size:22px;line-height:1.55;
 }
 
 /* Титульный — единая анимация, без формул */
-.slide.title.active > *{animation:slideStep .55s ease both;animation-delay:calc(var(--i,0) * 140ms)}
+.slide.title.active .slide-content > *{animation:slideStep .55s ease both;animation-delay:calc(var(--i,0) * 140ms)}
 
 /* Уважаем настройку prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce){
-  .slide.active > *, .slide.active .eq, .slide.active .eq::after{animation:none}
+  .slide.active .slide-content > *, .slide.active .eq, .slide.active .eq::after{animation:none}
 }
 .slide-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:.6rem}
 h1{font-family:'Playfair Display',serif;font-weight:900;font-size:2.6rem;line-height:1.12;color:var(--text);margin-bottom:1rem;letter-spacing:-.01em}
@@ -80,12 +82,30 @@ li{margin-bottom:.35rem}
 em{color:var(--accent2)}
 strong{color:var(--text)}
 .eq{margin:1.2rem 0;text-align:center;font-size:1.05em}
-.definition{background:var(--bg2);border-left:4px solid var(--accent2);padding:1rem 1.3rem;border-radius:0 6px 6px 0;margin:1rem 0}
-.definition strong{color:var(--accent2)}
-.condition{background:#fdf5ee;border-left:4px solid var(--accent);padding:1rem 1.3rem;border-radius:0 6px 6px 0;margin:1rem 0}
-.condition strong{color:var(--accent)}
-.theorem{background:#eef3fa;border-left:4px solid var(--accent3);padding:1rem 1.3rem;border-radius:0 6px 6px 0;margin:1rem 0}
-.theorem strong{color:var(--accent3)}
+/* Карточки: определение / условие / теорема — вертикальный ярлык слева */
+.definition,.condition,.theorem{position:relative;padding:1rem 1.3rem 1rem 3.9rem;border-radius:9px;margin:1rem 0;box-shadow:0 3px 10px rgba(44,36,25,.05);border:1.5px solid var(--border);overflow:hidden}
+.definition{background:var(--bg2);border-color:var(--accent2)}
+.condition {background:#fdf5ee;border-color:var(--accent)}
+.theorem   {background:#eef3fa;border-color:var(--accent3)}
+.definition strong,.condition strong,.theorem strong{color:var(--text)}
+.definition::before,.condition::before,.theorem::before{
+  position:absolute;left:0;top:0;bottom:0;width:2.6rem;
+  display:flex;align-items:center;justify-content:center;
+  writing-mode:vertical-rl;transform:rotate(180deg);
+  font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:700;
+  letter-spacing:.24em;text-transform:uppercase;color:#fff;
+  border-radius:7px 0 0 7px;
+}
+.definition::before{background:var(--accent2);content:'Определение'}
+.definition[data-num]::before{content:'Определение ' attr(data-num)}
+.condition::before{background:var(--accent);content:'Условие'}
+.condition[data-num]::before{content:'Условие ' attr(data-num)}
+.theorem::before{background:var(--accent3);content:'Теорема'}
+.theorem[data-num]::before{content:'Теорема ' attr(data-num)}
+@media(max-width:900px){
+  .definition,.condition,.theorem{padding-left:3rem}
+  .definition::before,.condition::before,.theorem::before{width:2rem;font-size:.62rem;letter-spacing:.18em}
+}
 .figure{margin:1rem auto;text-align:center;max-width:100%}
 .figure svg{max-width:100%;height:auto}
 .figure .caption{font-size:.78rem;color:var(--text2);margin-top:.4rem;font-style:italic}
@@ -121,7 +141,8 @@ strong{color:var(--text)}
 .commutative .v-arr .lbl{display:block;font-size:.75rem}
 
 /* Титульный */
-.slide.title{justify-content:center;align-items:center;text-align:center;padding:4rem;background:radial-gradient(ellipse at 30% 20%,#fff 0%,var(--bg) 55%,var(--bg2) 100%)}
+.slide.title{text-align:center;background:radial-gradient(ellipse at 30% 20%,#fff 0%,var(--bg) 55%,var(--bg2) 100%)}
+.slide.title .slide-content{max-width:1000px}
 .slide.title h1{font-size:3.4rem;margin-bottom:1.5rem;max-width:900px}
 .slide.title h1 .u{color:var(--accent);border-bottom:4px solid var(--accent);padding-bottom:.15rem}
 .slide.title .sub{font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--text2);margin-bottom:1rem;letter-spacing:.05em}
@@ -145,12 +166,12 @@ strong{color:var(--text)}
 
 /* Адаптив под проектор / крупные экраны */
 @media(min-width:1600px){body{font-size:26px}h1{font-size:3rem}h2{font-size:2rem}}
-@media(max-width:900px){.slide{padding:2.5rem 1.5rem 4rem}h1{font-size:1.9rem}h2{font-size:1.4rem}.two-col{grid-template-columns:1fr}body{font-size:18px}}
+@media(max-width:900px){.slide-content{padding:1.6rem 1.2rem 3rem}h1{font-size:1.9rem}h2{font-size:1.4rem}.two-col{grid-template-columns:1fr}body{font-size:19px}}
 
 /* Печать/PDF: все слайды подряд */
 @media print{
   body{overflow:visible;background:#fff}
-  .slide{position:relative;display:flex!important;page-break-after:always;min-height:100vh}
+  .slide{position:relative;display:flex!important;page-break-after:always;min-height:100vh;align-items:center;justify-content:center}
   .hud,.progress{display:none}
 }
 </style>
@@ -364,7 +385,7 @@ strong{color:var(--text)}
   <div class="slide-num">§1.5 · Корректность задачи</div>
   <h2>Линейный случай</h2>
   <div class="condition">
-    <strong>Условие корректности (линейный случай).</strong> Оператор \(A\) обратим, т.&nbsp;е. существует ограниченный обратный оператор \(A^{-1}\colon B_2 \to B_1\). Тогда:
+<em style="color:inherit;font-weight:600">корректности (линейный случай).</em> Оператор \(A\) обратим, т.&nbsp;е. существует ограниченный обратный оператор \(A^{-1}\colon B_2 \to B_1\). Тогда:
     <ol style="margin:.5rem 0 .1rem 1.2rem">
       <li>существование и единственность: \(\forall\, F \in B_2 \Rightarrow \exists!\; u(x) \in B_1\);</li>
       <li>непрерывная зависимость от данных: \(\|u\|_1 \le C\,\|F\|_2\), \(C = \|A^{-1}\|\).</li>
@@ -378,7 +399,7 @@ strong{color:var(--text)}
   <h2>Нелинейный случай</h2>
   <p>Пусть \(A\) — нелинейный оператор. Существование решения — <em>локально</em>, для правых частей из окрестности опорной \(F_0 \in B_2\): \(\|F - F_0\|_2 &lt; \varepsilon\).</p>
   <div class="condition">
-    <strong>Условие (Липшица непрерывности обратного оператора).</strong> Существует постоянная \(C = \mathrm{const} &gt; 0\), такая что для любых допустимых правых частей \(F_1, F_2 \in B_2\) и соответствующих им решений \(u_1, u_2\) задач \(A u_k = F_k\), \(k = 1, 2\), выполнено
+<em style="color:inherit;font-weight:600">Липшица непрерывности обратного оператора.</em> Существует постоянная \(C = \mathrm{const} &gt; 0\), такая что для любых допустимых правых частей \(F_1, F_2 \in B_2\) и соответствующих им решений \(u_1, u_2\) задач \(A u_k = F_k\), \(k = 1, 2\), выполнено
     \[ \|u_2 - u_1\|_1 \;\le\; C\,\|F_2 - F_1\|_2. \]
   </div>
 </section>
@@ -426,8 +447,8 @@ strong{color:var(--text)}
 <section class="slide">
   <div class="slide-num">§1.7 · Расчётная сетка</div>
   <h2>Сетка в области \(\Omega\)</h2>
-  <div class="definition">
-    <strong>Определение 1.</strong> <em>Сеткой</em> в области \(\Omega \subset \mathbb{R}^m\) называется любое непустое конечное множество точек
+  <div class="definition" data-num="1">
+<em>Сеткой</em> в области \(\Omega \subset \mathbb{R}^m\) называется любое непустое конечное множество точек
     \[
       \omega \;=\; \{\,x_k \in \Omega,\ k = \overline{1,N}\;\colon\; x_i = x_j \Leftrightarrow i = j\,\}.
     \]
@@ -686,11 +707,11 @@ strong{color:var(--text)}
 <section class="slide">
   <div class="slide-num">§1.14 · Определения</div>
   <h2>Разностная схема и шаблон</h2>
-  <div class="definition">
-    <strong>Определение 1.</strong> <em>Разностная схема</em> — совокупность разностных уравнений для определения значений сеточной функции внутри расчётной области, дополненная соответствующими начальными и граничными условиями для этой сеточной функции.
+  <div class="definition" data-num="1">
+<em>Разностная схема</em> — совокупность разностных уравнений для определения значений сеточной функции внутри расчётной области, дополненная соответствующими начальными и граничными условиями для этой сеточной функции.
   </div>
-  <div class="definition">
-    <strong>Определение 2.</strong> <em>Шаблон схемы</em> — конфигурация расчётных узлов в области интегрирования, используемых на каждом элементарном шаге вычислений.
+  <div class="definition" data-num="2">
+<em>Шаблон схемы</em> — конфигурация расчётных узлов в области интегрирования, используемых на каждом элементарном шаге вычислений.
   </div>
 </section>
 
@@ -789,7 +810,7 @@ strong{color:var(--text)}
   <h2>Нелинейный случай</h2>
   <p>Если \(\hat A\) — нелинейный, требуется разностный аналог условия Липшица непрерывности обратного оператора.</p>
   <div class="condition">
-    <strong>Условие (разностный аналог условия Липшица).</strong> Существует постоянная \(C = \mathrm{const} &gt; 0\), такая что для любых допустимых правых частей \(\hat F_1, \hat F_2 \in H\) и соответствующих им решений \(y_1, y_2\) задач \(\hat A\, y_k = \hat F_k\), \(k = 1, 2\), выполнено
+<em style="color:inherit;font-weight:600">разностный аналог условия Липшица.</em> Существует постоянная \(C = \mathrm{const} &gt; 0\), такая что для любых допустимых правых частей \(\hat F_1, \hat F_2 \in H\) и соответствующих им решений \(y_1, y_2\) задач \(\hat A\, y_k = \hat F_k\), \(k = 1, 2\), выполнено
     \[ \|y_1 - y_2\|_{1,H} \;\le\; C\,\|\hat F_1 - \hat F_2\|_{2,H}. \]
   </div>
 </section>
@@ -800,8 +821,8 @@ strong{color:var(--text)}
   <h2>Сеточная функция погрешности</h2>
   <div class="two-col">
     <div>
-      <div class="definition">
-        <strong>Определение 3.</strong> Сеточная функция
+      <div class="definition" data-num="3">
+Сеточная функция
         \[
           z(x) \;=\; y(x) \;-\; \bigl(P_{\tau\omega}\, u\bigr)(x), \qquad x \in \omega,
         \]
@@ -855,8 +876,8 @@ strong{color:var(--text)}
 <section class="slide">
   <div class="slide-num">§1.16 · Погрешность и сходимость</div>
   <h2>Сходимость разностной схемы</h2>
-  <div class="definition">
-    <strong>Определение 4.</strong> Разностная схема называется <em>сходящейся</em>, если сеточная функция погрешности \(z(x) \in H\) в некоторой норме \(\|\cdot\|_{1,H}\) пространства \(H\) может быть сделана меньше наперёд выбранного (произвольно малого) числа за счёт выбора количества узлов \(N \in \mathbb{N}\) и их расположения в области \(\Omega\).
+  <div class="definition" data-num="4">
+Разностная схема называется <em>сходящейся</em>, если сеточная функция погрешности \(z(x) \in H\) в некоторой норме \(\|\cdot\|_{1,H}\) пространства \(H\) может быть сделана меньше наперёд выбранного (произвольно малого) числа за счёт выбора количества узлов \(N \in \mathbb{N}\) и их расположения в области \(\Omega\).
   </div>
 </section>
 
@@ -864,8 +885,8 @@ strong{color:var(--text)}
 <section class="slide">
   <div class="slide-num">§1.16 · Погрешность и сходимость</div>
   <h2>Точная разностная схема</h2>
-  <div class="definition">
-    <strong>Определение 5.</strong> Разностная схема называется <em>точной на сетке</em> \(\omega\), если
+  <div class="definition" data-num="5">
+Разностная схема называется <em>точной на сетке</em> \(\omega\), если
     \[ \|z(x)\|_{1,H} \;=\; 0. \]
   </div>
   <p>В общем случае для поставленной разностной задачи существует единственное решение (в силу корректности), однако \(\|z(x)\|_{1,H} = \mathrm{const} &gt; 0\) — схема даёт лишь приближение точного решения на выбранной сетке.</p>
@@ -906,16 +927,25 @@ strong{color:var(--text)}
   var counter = document.getElementById('counter');
   var fill = document.getElementById('progressFill');
   var i = 0;
+  // Одноразовая обёртка содержимого каждого слайда в .slide-content —
+  // нужна для вертикального/горизонтального центрирования (см. CSS).
+  slides.forEach(function(s){
+    var wrap = document.createElement('div');
+    wrap.className = 'slide-content';
+    while (s.firstChild) wrap.appendChild(s.firstChild);
+    s.appendChild(wrap);
+  });
   function show(n) {
     slides[i].classList.remove('active');
     i = Math.max(0, Math.min(slides.length - 1, n));
     var s = slides[i];
+    var content = s.querySelector('.slide-content') || s;
     // Собираем в едином порядке появления: сначала топ-уровень, затем
     // вложенные .eq, чтобы каждый последующий элемент получал свою
     // задержку. Порядок делаем DFS: пройти по детям, у каждого сначала
     // сам ребёнок (индекс), потом его вложенные формулы.
     var animated = [];
-    Array.from(s.children).forEach(function(child){
+    Array.from(content.children).forEach(function(child){
       animated.push(child);
       var innerEq = child.querySelectorAll('.eq');
       for (var j = 0; j < innerEq.length; j++) animated.push(innerEq[j]);
@@ -934,7 +964,7 @@ strong{color:var(--text)}
     history.replaceState(null, '', '#' + (i + 1));
     document.getElementById('btnPrev').disabled = (i === 0);
     document.getElementById('btnNext').disabled = (i === slides.length - 1);
-    window.scrollTo({ top: 0 });
+    s.scrollTop = 0;
   }
   window.next = function(){ show(i + 1); };
   window.prev = function(){ show(i - 1); };

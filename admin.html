@@ -142,7 +142,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
   <button class="tab" onclick="showTab('workgroups')">Рабочие группы</button>
   <button class="tab" onclick="showTab('homework');renderHomeworkTab()">Домашки</button>
   <button class="tab" onclick="showTab('gating');renderGatingTab()">Гейтинг лекций</button>
-  <button class="tab" onclick="showTab('groups')">Результаты тестов</button>
+  <button class="tab" onclick="showTab('groups');renderGroupResults()">Результаты тестов</button>
   <button class="tab" onclick="showTab('checklist');loadChecklistProgress()">Чек-лист (самооценка)</button>
   <button class="tab" onclick="showTab('tasks')">Задания</button>
   <button class="tab" onclick="showTab('grades');renderGrades()">Оценки</button>
@@ -1060,6 +1060,7 @@ function _adminOpenInitialTab() {
   if (want === 'homework' && typeof renderHomeworkTab === 'function')    renderHomeworkTab();
   if (want === 'grades'   && typeof renderGrades === 'function')         renderGrades();
   if (want === 'checklist'&& typeof loadChecklistProgress === 'function') loadChecklistProgress();
+  if (want === 'groups'   && typeof renderGroupResults === 'function')   renderGroupResults();
 }
 
 // ===== Students table =====
@@ -2110,20 +2111,21 @@ function renderGroupFilter() {
 function renderGroupResults() {
   const filter = document.getElementById('groupFilter').value;
   const container = document.getElementById('groupResults');
-  let html = '';
   const groups = filter === 'all' ? Object.keys(allGroups).sort() : [filter];
-  for (const gid of groups) {
-    if (!allGroups[gid]) continue;
+
+  function groupCardHtml(gid) {
+    if (!allGroups[gid]) return '';
     const members = allGroups[gid].members.map(m => m.fio || m.email).join(', ');
     const results = allResults[gid] || {};
     const repoLink = allGroups[gid].repoUrl ? '<a href="' + allGroups[gid].repoUrl + '" target="_blank" style="color:var(--accent3);font-family:\'JetBrains Mono\',monospace;font-size:.75rem;text-decoration:none;border-bottom:1px dashed var(--accent3)">' + allGroups[gid].repoUrl.replace('https://github.com/','') + '</a>' : '<span style="color:var(--text3);font-size:.78rem">не указан</span>';
-    html += `<div class="card"><h3>${gid.replace('group_', 'Группа ')}</h3>
+    const shortGid = gid.replace(/^[^_]+_/, '').replace('group_', 'Группа ');
+    let h = `<div class="card"><h3>${shortGid} <span style="font-family:JetBrains Mono,monospace;font-size:.7rem;font-weight:400;color:var(--text3)">${gid}</span></h3>
       <p style="font-size:.82rem;color:var(--text2);margin-bottom:.3rem">${members}</p>
       <p style="font-size:.82rem;margin-bottom:.5rem">GitHub: ${repoLink}</p>
       <table><thead><tr><th>Тест</th><th>Статус</th><th>Кто принял</th><th>Когда</th></tr></thead><tbody>`;
     for (const t of TEST_IDS) {
       const r = results[t.id];
-      const manualStatus = r ? r.manualStatus : null; // 'pass', 'fail', or null/undefined = pending
+      const manualStatus = r ? r.manualStatus : null;
       let statusBadge, who, when;
       if (manualStatus === 'pass') {
         statusBadge = `<span class="badge b-pass" style="cursor:pointer" onclick="cycleTestStatus('${gid}','${t.id}')" title="Клик = изменить">сдано</span>`;
@@ -2138,9 +2140,43 @@ function renderGroupResults() {
         who = '—';
         when = '—';
       }
-      html += `<tr><td>${t.name}</td><td>${statusBadge}</td><td style="font-size:.78rem">${who}</td><td style="font-size:.78rem">${when}</td></tr>`;
+      h += `<tr><td>${t.name}</td><td>${statusBadge}</td><td style="font-size:.78rem">${who}</td><td style="font-size:.78rem">${when}</td></tr>`;
     }
-    html += '</tbody></table></div>';
+    h += '</tbody></table></div>';
+    return h;
+  }
+
+  // Раскладка по курсам: '{cid}_group_NN' → cid; 'group_NN' → legacy.
+  const byCourse = {}, legacy = [];
+  for (const gid of groups) {
+    if (!allGroups[gid]) continue;
+    const m = /^([a-z0-9]+)_group_\d+$/i.exec(gid);
+    if (m) {
+      if (_currentAdminCourses !== null && _currentAdminCourses.indexOf(m[1]) === -1) continue;
+      (byCourse[m[1]] = byCourse[m[1]] || []).push(gid);
+    } else if (/^group_\d+$/i.test(gid)) {
+      legacy.push(gid);
+    }
+  }
+  const cids = (window.CFD_COURSES || []).map(c => c.id).filter(cid => byCourse[cid]);
+  let html = '';
+  for (const cid of cids) {
+    const co = (window.CFD_COURSE_BY_ID || {})[cid] || { name: cid };
+    const list = byCourse[cid].sort();
+    html += `<details open style="margin-bottom:.6rem;background:var(--bg2);border-radius:6px;border:1px solid var(--border)">
+      <summary style="cursor:pointer;padding:.55rem .85rem;font-family:'Playfair Display',serif;font-weight:700;font-size:.98rem;color:var(--accent)">
+        📁 ${co.name} <span style="font-family:JetBrains Mono,monospace;font-size:.7rem;font-weight:500;color:var(--text3);margin-left:.4rem">${cid} · ${list.length} гр.</span>
+      </summary>
+      <div style="padding:.4rem .8rem .8rem">${list.map(groupCardHtml).join('')}</div>
+    </details>`;
+  }
+  if (legacy.length) {
+    html += `<details style="margin-bottom:.6rem;background:var(--bg2);border-radius:6px;border:1px solid var(--border)">
+      <summary style="cursor:pointer;padding:.55rem .85rem;font-family:'Playfair Display',serif;font-weight:700;font-size:.95rem;color:var(--text2)">
+        📁 Legacy — общие группы без привязки к курсу <span style="font-family:JetBrains Mono,monospace;font-size:.7rem;font-weight:500;color:var(--text3);margin-left:.4rem">${legacy.length} гр.</span>
+      </summary>
+      <div style="padding:.4rem .8rem .8rem">${legacy.sort().map(groupCardHtml).join('')}</div>
+    </details>`;
   }
   if (!html) html = '<p style="color:var(--text3);text-align:center;padding:2rem">Нет групп с участниками</p>';
   container.innerHTML = html;
@@ -3364,21 +3400,73 @@ function renderChatList() {
   const body = document.getElementById('chatListBody');
   if (!body) return;
   const search = (document.getElementById('chatSearchInput').value||'').toLowerCase();
-  let html = '';
-  for (const c of _chatListData) {
-    if (_chatFilter!=='all' && c.type!==_chatFilter) continue;
-    if (search && !(c.label+' '+c.sub).toLowerCase().includes(search)) continue;
+
+  // Отфильтровать один раз, потом разложить по папкам.
+  const items = _chatListData.filter(c => {
+    if (_chatFilter!=='all' && c.type!==_chatFilter) return false;
+    if (search && !(c.label+' '+c.sub).toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  function chatRowHtml(c) {
     const isActive = c.type===_currentChatMode && c.id===_currentChatId;
     const icon = c.type==='group'?'👥':'✉️';
     const unreadBadge = c.unread>0?'<span style="min-width:16px;height:16px;border-radius:8px;background:#c44;color:#fff;font-size:.58rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;font-family:JetBrains Mono,monospace">'+c.unread+'</span>':'';
     const time = c.lastTime?new Date(c.lastTime*1000).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-    html += '<div onclick="openChat(\''+c.type+'\',\''+c.id+'\')" style="padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--border);'+(isActive?'background:#fff;':'')+'transition:background .1s">';
-    html += '<div style="display:flex;justify-content:space-between;align-items:center">';
-    html += '<span style="font-size:.82rem;font-weight:600">'+icon+' '+c.label+'</span>';
-    html += '<span style="display:flex;align-items:center;gap:4px">'+unreadBadge+'<span style="font-size:.6rem;color:var(--text3)">'+time+'</span></span></div>';
-    if (c.sub) html += '<div style="font-size:.68rem;color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.sub+'</div>';
-    if (c.lastMsg) html += '<div style="font-size:.72rem;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.lastMsg+'</div>';
-    html += '</div>';
+    let h = '<div onclick="openChat(\''+c.type+'\',\''+c.id+'\')" style="padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--border);'+(isActive?'background:#fff;':'')+'transition:background .1s">';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center">';
+    h += '<span style="font-size:.82rem;font-weight:600">'+icon+' '+c.label+'</span>';
+    h += '<span style="display:flex;align-items:center;gap:4px">'+unreadBadge+'<span style="font-size:.6rem;color:var(--text3)">'+time+'</span></span></div>';
+    if (c.sub) h += '<div style="font-size:.68rem;color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.sub+'</div>';
+    if (c.lastMsg) h += '<div style="font-size:.72rem;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.lastMsg+'</div>';
+    h += '</div>';
+    return h;
+  }
+
+  // Группируем: 📁 Курс → чаты рабочих групп; 📁 Legacy — 'group_NN' без cid; ✉️ Личные — DM.
+  const byCourse = {};      // cid -> [chats]
+  const legacyGroups = [];  // group_NN без привязки
+  const dms = [];
+  for (const c of items) {
+    if (c.type === 'dm') { dms.push(c); continue; }
+    if (c.type === 'group') {
+      const m = /^([a-z0-9]+)_group_\d+$/i.exec(c.id);
+      if (m) (byCourse[m[1]] = byCourse[m[1]] || []).push(c);
+      else if (/^group_\d+$/i.test(c.id)) legacyGroups.push(c);
+      else (byCourse['__other__'] = byCourse['__other__'] || []).push(c);
+    }
+  }
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+  function folderSummary(icon, title, count, unread) {
+    const b = unread>0 ? ' <span style="min-width:16px;height:16px;border-radius:8px;background:#c44;color:#fff;font-size:.58rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;font-family:JetBrains Mono,monospace">'+unread+'</span>' : '';
+    return '<summary style="cursor:pointer;padding:6px 10px;font-size:.75rem;font-weight:700;background:var(--bg2);border-bottom:1px solid var(--border);font-family:JetBrains Mono,monospace;color:var(--text2);display:flex;align-items:center;justify-content:space-between;gap:4px;list-style:none">'
+      + '<span>'+icon+' '+esc(title)+' <span style="color:var(--text3);font-weight:400">('+count+')</span></span>'+b+'</summary>';
+  }
+  function sumUnread(list){return list.reduce((s,c)=>s+(c.unread||0),0);}
+
+  let html = '';
+  const cids = (window.CFD_COURSES || []).map(c => c.id).filter(cid => byCourse[cid]);
+  for (const cid of cids) {
+    const co = (window.CFD_COURSE_BY_ID || {})[cid] || { name: cid, short: cid };
+    const list = byCourse[cid].sort((a,b)=> (a.label||'').localeCompare(b.label||'','ru'));
+    html += '<details open>' + folderSummary('📁', co.short + ' — ' + co.name, list.length, sumUnread(list))
+      + '<div>' + list.map(chatRowHtml).join('') + '</div></details>';
+  }
+  if (byCourse['__other__']) {
+    const list = byCourse['__other__'];
+    html += '<details open>' + folderSummary('📁', 'Прочие курсы', list.length, sumUnread(list))
+      + '<div>' + list.map(chatRowHtml).join('') + '</div></details>';
+  }
+  if (legacyGroups.length) {
+    const list = legacyGroups.sort((a,b)=> (a.label||'').localeCompare(b.label||'','ru'));
+    html += '<details>' + folderSummary('📁', 'Legacy — без привязки к курсу', list.length, sumUnread(list))
+      + '<div>' + list.map(chatRowHtml).join('') + '</div></details>';
+  }
+  if (dms.length) {
+    const list = dms;
+    html += '<details open>' + folderSummary('✉️', 'Личные', list.length, sumUnread(list))
+      + '<div>' + list.map(chatRowHtml).join('') + '</div></details>';
   }
   if (!html) html = '<p style="text-align:center;padding:1.5rem;color:var(--text3);font-size:.82rem">Нет чатов</p>';
   body.innerHTML = html;

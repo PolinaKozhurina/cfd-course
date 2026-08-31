@@ -33,11 +33,42 @@ body{font-family:'Source Serif 4',Georgia,serif;font-size:22px;line-height:1.55;
   from{opacity:0;transform:translateY(12px)}
   to  {opacity:1;transform:none}
 }
-/* Титульный — единая анимация */
+
+/* Анимация формул — с эффектом «фокус» (scale + blur → sharp).
+   Специфичность .slide.active .eq (3) > .slide.active > * (2) —
+   вложенные и топ-уровневые .eq получают свой сценарий. */
+.slide.active .eq{
+  animation: formulaIn .55s cubic-bezier(.22,.61,.36,1) both;
+  animation-delay: calc(var(--i, 0) * 85ms);
+  transform-origin: center;
+}
+@keyframes formulaIn{
+  0%  {opacity:0;transform:scale(.92) translateY(4px);filter:blur(3.5px)}
+  55% {opacity:1;transform:scale(1.02);filter:blur(0)}
+  100%{opacity:1;transform:scale(1)}
+}
+
+/* Тонкая подсветка формулы в конце анимации — как «включили лампу» */
+.slide.active .eq::after{
+  content:'';position:absolute;left:0;right:0;bottom:-6px;height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent) 50%,transparent);
+  transform:scaleX(0);opacity:0;
+  animation: formulaUnderline .55s ease-out both;
+  animation-delay: calc(var(--i, 0) * 85ms + .35s);
+}
+.slide.active .eq{position:relative}
+@keyframes formulaUnderline{
+  0%  {transform:scaleX(0);opacity:0}
+  40% {transform:scaleX(1);opacity:.7}
+  100%{transform:scaleX(1);opacity:0}
+}
+
+/* Титульный — единая анимация, без формул */
 .slide.title.active > *{animation:slideStep .55s ease both;animation-delay:calc(var(--i,0) * 140ms)}
+
 /* Уважаем настройку prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce){
-  .slide.active > *{animation:none}
+  .slide.active > *, .slide.active .eq, .slide.active .eq::after{animation:none}
 }
 .slide-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:.6rem}
 h1{font-family:'Playfair Display',serif;font-weight:900;font-size:2.6rem;line-height:1.12;color:var(--text);margin-bottom:1rem;letter-spacing:-.01em}
@@ -879,16 +910,24 @@ strong{color:var(--text)}
     slides[i].classList.remove('active');
     i = Math.max(0, Math.min(slides.length - 1, n));
     var s = slides[i];
-    // Проставить индексы детям для поэтапной анимации и перезапустить её.
-    var kids = s.children;
-    for (var k = 0; k < kids.length; k++) {
-      kids[k].style.setProperty('--i', k);
-      // Сбросить анимацию, чтобы она запустилась заново на этом показе.
-      kids[k].style.animation = 'none';
-    }
+    // Собираем в едином порядке появления: сначала топ-уровень, затем
+    // вложенные .eq, чтобы каждый последующий элемент получал свою
+    // задержку. Порядок делаем DFS: пройти по детям, у каждого сначала
+    // сам ребёнок (индекс), потом его вложенные формулы.
+    var animated = [];
+    Array.from(s.children).forEach(function(child){
+      animated.push(child);
+      var innerEq = child.querySelectorAll('.eq');
+      for (var j = 0; j < innerEq.length; j++) animated.push(innerEq[j]);
+    });
+    // Сброс анимации + переиндексация.
+    animated.forEach(function(el, k){
+      el.style.setProperty('--i', k);
+      el.style.animation = 'none';
+    });
     // Force reflow — иначе браузер не «увидит» сброс.
     void s.offsetWidth;
-    for (var k2 = 0; k2 < kids.length; k2++) kids[k2].style.animation = '';
+    animated.forEach(function(el){ el.style.animation = ''; });
     s.classList.add('active');
     counter.textContent = (i + 1) + ' / ' + slides.length;
     fill.style.width = ((i + 1) / slides.length * 100) + '%';

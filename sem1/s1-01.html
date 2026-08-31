@@ -145,7 +145,23 @@ p{margin-bottom:1rem;text-align:justify;hyphens:auto}
   <li><strong>Этап № 2.</strong> Математическая модель (математическая постановка задачи).
     <div style="font-size:.9em;color:var(--text2);margin:.15rem 0 .1rem"><em>Примеры математических моделей (соответственно):</em></div>
     <ul style="margin:0 0 .3rem 1.4rem;font-size:.93em">
-      <li>уравнения Эйлера или Навье – Стокса + граничные условия на профиле и в дальнем поле;</li>
+      <li>для обтекания крыла — <strong>уравнения Эйлера</strong> (невязкий сжимаемый газ, консервативная форма):
+        <div class="eq" style="margin:.35rem 0">\[
+          \frac{\partial \mathbf{U}}{\partial t}
+            + \frac{\partial \mathbf{F}(\mathbf{U})}{\partial x}
+            + \frac{\partial \mathbf{G}(\mathbf{U})}{\partial y} = 0,
+          \qquad
+          \mathbf{U} = \begin{pmatrix}\rho \\ \rho u \\ \rho v \\ E\end{pmatrix},
+        \]</div>
+        либо — с учётом вязкости — <strong>уравнения Навье&nbsp;–&nbsp;Стокса</strong> (несжимаемое приближение):
+        <div class="eq" style="margin:.35rem 0">\[
+          \rho\!\left(\frac{\partial \mathbf{v}}{\partial t}
+            + (\mathbf{v}\cdot\nabla)\mathbf{v}\right)
+            = -\nabla p + \mu\, \Delta \mathbf{v},
+          \qquad \nabla\cdot \mathbf{v} = 0;
+        \]</div>
+        с условиями непротекания на профиле и условиями в дальнем поле;
+      </li>
       <li>уравнение теплопроводности \(u_t = \kappa\, u_{xx}\) + начальное распределение и граничные условия;</li>
       <li>волновое уравнение \(u_{tt} = c^2\, u_{xx}\) с закреплёнными концами: \(u(0, t) = u(L, t) = 0\);</li>
       <li>уравнение Пуассона \(-\Delta \varphi = \rho/\varepsilon_0\) с условиями Дирихле или Неймана на границе;</li>
@@ -912,6 +928,12 @@ z(x) \;=\; y(x) - \bigl(P_{\tau\omega}\, u\bigr)(x), \qquad x \in \omega,
   function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function loadComments() {
     var list = document.getElementById('comments-list'); if (!list) return;
+    // Правила Firestore разрешают чтение комментариев только auth-пользователям.
+    // До логина показываем «пусто», а не Missing-permissions ошибку.
+    if (!auth.currentUser) {
+      list.innerHTML = '<p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Войдите, чтобы читать и оставлять комментарии.</p>';
+      return;
+    }
     db.collection('comments').where('page','==',PAGE_ID).get().then(function(snap) {
       var docs = []; snap.forEach(function(d) { docs.push(d); });
       docs.sort(function(a,b) { return (b.data().createdAt?b.data().createdAt.seconds:0) - (a.data().createdAt?a.data().createdAt.seconds:0); });
@@ -924,7 +946,14 @@ z(x) \;=\; y(x) - \bigl(P_{\tau\omega}\, u\bigr)(x), \qquad x \in \omega,
         html += '<div style="padding:.6rem 0;border-bottom:1px solid #ede6da"><div style="display:flex;justify-content:space-between;align-items:baseline"><strong style="font-size:.88rem">'+(c.authorFio||c.authorEmail)+badge+'</strong><span style="font-size:.72rem;color:#9a8d7e">'+date+del+'</span></div><p style="font-size:.88rem;margin-top:.2rem;margin-bottom:0">'+esc(c.text)+'</p></div>';
       });
       list.innerHTML = html;
-    }).catch(function(e) { list.innerHTML = '<p style="color:#c44;font-size:.85rem">Ошибка: '+e.message+'</p>'; });
+    }).catch(function(e) {
+      // permission-denied — тоже показываем мягкое сообщение, а не «Ошибка: ...»
+      if ((e.code || '').indexOf('permission') !== -1 || /Missing or insufficient permissions/i.test(e.message || '')) {
+        list.innerHTML = '<p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Войдите (и подтвердите email), чтобы читать комментарии.</p>';
+      } else {
+        list.innerHTML = '<p style="color:#c44;font-size:.85rem">Не удалось загрузить комментарии: ' + e.message + '</p>';
+      }
+    });
   }
   window._postComment = function() {
     var text = document.getElementById('comment-text').value.trim(); if (!text) return;
@@ -946,7 +975,7 @@ z(x) \;=\; y(x) - \bigl(P_{\tau\omega}\, u\bigr)(x), \qquad x \in \omega,
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadComments); else loadComments();
   function safeCheck() { if (document.getElementById('comment-form')) checkAuth(); else setTimeout(safeCheck, 200); }
-  auth.onAuthStateChanged(function() { setTimeout(safeCheck, 500); });
+  auth.onAuthStateChanged(function() { setTimeout(safeCheck, 500); loadComments(); });
   window.addEventListener('authReady', safeCheck);
 })();
 </script>

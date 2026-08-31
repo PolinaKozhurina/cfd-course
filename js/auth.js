@@ -186,7 +186,16 @@
         // Отправить письмо с подтверждением адреса.
         // Без подтверждения студент не сможет сдавать results (см. firestore.rules).
         try { await cred.user.sendEmailVerification(); } catch (_) {}
-        showInfo("Регистрация ок! Проверьте почту — мы отправили ссылку на " + email + ". После подтверждения обновите страницу.");
+        // Явно закрываем регистрационное окно — auth.onAuthStateChanged
+        // потом сам переключит UI на профиль-панель. Без этого форма
+        // регистрации оставалась поверх новой панели профиля.
+        document.getElementById("auth-email").value = "";
+        document.getElementById("auth-pass").value = "";
+        document.getElementById("auth-fio").value = "";
+        document.getElementById("auth-study-group").value = "";
+        hideError();
+        this.closeModal();
+        alert("Регистрация ок! Мы отправили письмо со ссылкой подтверждения на " + email + ".\nПосле подтверждения обновите страницу.");
       } catch (e) {
         showError(translateError(e.code));
       }

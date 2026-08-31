@@ -156,18 +156,57 @@
     document.body.appendChild(b);
   }
 
+  // Прячем контент лекции СРАЗУ, до асинхронной проверки прав.
+  // Иначе студент видит закрытую лекцию первые ~2–5 секунд (пока
+  // подгружается firebase, определяется user, читаются user doc /
+  // enrollment / releasedAt). Ставим маркер на <html> моментально —
+  // после проверки либо снимаем его (доступ есть), либо показываем
+  // блокер (тогда маркер уже стоит и контент так и не мелькнёт).
+  function preHideLectureIfNeeded() {
+    const cid = pageCid();
+    const lec = pageLecId();
+    if (!cid) return false;
+    if (lec === "index") return false;
+    if (/^([a-z]+\-)?reference$/i.test(lec)) return false;
+    if (/^practice$/i.test(lec)) return false;
+    // Синхронно — до firebase, до пикселя рендера.
+    const style = document.createElement("style");
+    style.id = "gating-prehide";
+    style.textContent = "html.gating-checking body>*{visibility:hidden!important}"
+                      + "html.gated body>*{display:none!important}"
+                      + "html.gated body>.gating-blocker,"
+                      + "html.gating-checking body>.gating-loader{display:flex!important;visibility:visible!important}";
+    document.head.appendChild(style);
+    document.documentElement.classList.add("gating-checking");
+    // Лёгкий лоадер, чтобы страница не была совсем пустой во время проверки.
+    const loader = document.createElement("div");
+    loader.className = "gating-loader";
+    loader.style.cssText = "position:fixed;inset:0;display:none;align-items:center;justify-content:center;"
+                         + "background:#faf8f4;font-family:'JetBrains Mono',monospace;font-size:.85rem;color:#9a8d7e;z-index:99998";
+    loader.textContent = "…проверка доступа к лекции";
+    // Добавим loader после того как body появится
+    if (document.body) document.body.appendChild(loader);
+    else document.addEventListener("DOMContentLoaded", function(){ document.body.appendChild(loader); });
+    return true;
+  }
+
   async function enforceLecturePage() {
     const cid = pageCid();
     const lec = pageLecId();
     if (!cid) return; // не лекция
     if (lec === "index") return; // обзорная страница курса — не блокируем
-    // Разрешаем справочные: python-reference, maple-reference и т.п.
     if (/^([a-z]+\-)?reference$/i.test(lec)) return;
-    // «practice» тоже относится к курсу (МКЭ) — не блокируем.
     if (/^practice$/i.test(lec)) return;
     const access = await computeAccess(cid, lec);
+    // Проверка завершена — снимаем «шторку» перед принятием решения.
+    document.documentElement.classList.remove("gating-checking");
+    const ld = document.querySelector(".gating-loader");
+    if (ld) ld.remove();
     if (!access.open) showBlocker(access);
   }
+
+  // Вызвать pre-hide как можно раньше — синхронно при загрузке скрипта.
+  preHideLectureIfNeeded();
 
   // ---------- Публичное API ----------
   window.CFDGating = {

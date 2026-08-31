@@ -25,7 +25,8 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const rulesPath = resolve(__dirname, '..', '..', 'firestore.rules');
+const rulesPath        = resolve(__dirname, '..', '..', 'firestore.rules');
+const storageRulesPath = resolve(__dirname, '..', '..', 'storage.rules');
 
 export const SUPER_EMAIL = 'polinakozhurina2020@gmail.com';
 
@@ -38,6 +39,11 @@ export async function getEnv() {
       rules: readFileSync(rulesPath, 'utf8'),
       host: '127.0.0.1',
       port: 8080,
+    },
+    storage: {
+      rules: readFileSync(storageRulesPath, 'utf8'),
+      host: '127.0.0.1',
+      port: 9199,
     },
   });
   return env;

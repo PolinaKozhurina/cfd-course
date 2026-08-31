@@ -96,14 +96,20 @@ service cloud.firestore {
     }
 
     // Студент числится в рабочей группе gid?
-    // Мультикурс: courseGroups.{courseId} == gid.
-    // Legacy: одно общее поле group.
+    // Legacy: gid == 'group_NN', сверяем с callerDoc().group.
+    // Мультикурс: gid == '{cid}_group_NN', тогда courseGroups[cid] == 'group_NN'.
+    // Раньше здесь было `gid in courseGroups.values()`, но courseGroups хранит
+    // короткие 'group_NN', а gid всегда полный — сравнение никогда не срабатывало,
+    // из-за чего чат groups/{full_gid}/messages для студента-per-course блокировался.
     function isMemberOfGroup(gid) {
       return isAuth() &&
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              (
                callerDoc().get('group', '') == gid ||
-               gid in callerDoc().get('courseGroups', {}).values()
+               (gid.matches('.+_group_.+') &&
+                callerDoc().get('courseGroups', {})
+                  .get(gid.split('_group_')[0], '')
+                  == 'group_' + gid.split('_group_')[1])
              );
     }
 

@@ -140,7 +140,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
   <button class="tab active" onclick="showTab('students')">Студенты</button>
   <button class="tab" onclick="showTab('enrollments')">Заявки на курсы <span id="enrollTabBadge" style="display:none;min-width:16px;height:16px;border-radius:8px;background:#c44;color:#fff;font-size:.6rem;font-weight:700;font-family:JetBrains Mono,monospace;align-items:center;justify-content:center;padding:0 4px;margin-left:2px;vertical-align:middle"></span></button>
   <button class="tab" onclick="showTab('workgroups')">Рабочие группы</button>
-  <button class="tab" onclick="showTab('homework')">Домашки</button>
+  <button class="tab" onclick="showTab('homework');renderHomeworkTab()">Домашки</button>
   <button class="tab" onclick="showTab('gating');renderGatingTab()">Гейтинг лекций</button>
   <button class="tab" onclick="showTab('groups')">Результаты тестов</button>
   <button class="tab" onclick="showTab('checklist')">Чек-лист (самооценка)</button>
@@ -2183,9 +2183,12 @@ function renderTasks() {
 }
 
 function renderGrades() {
-  const tbody = document.getElementById('gradesBody');
+  // Раскрывающиеся папки: Курс → Группа → студенты.
+  // Раньше была одна сплошная таблица — теперь двухуровневый accordion
+  // через нативные <details>.
+  const container = document.getElementById('tab-grades');
+  const card = container.querySelector('.card');
   const enrollsByUid = window._enrollmentsByUid || {};
-  let html = '';
 
   function progressCell(uid, cid) {
     const cg = (allUsers.find(x => x.uid === uid) || {}).courseGroups || {};
@@ -2201,10 +2204,6 @@ function renderGrades() {
   function row(u, cid, docId, isLegacy) {
     const fio = u.fio || u.email;
     const sg = u.studyGroup || '—';
-    const courseObj = cid ? (window.CFD_COURSE_BY_ID || {})[cid] : null;
-    const courseLabel = isLegacy
-      ? '<span class="badge b-pending" title="legacy — общая оценка без привязки к курсу">общая (legacy)</span>'
-      : (courseObj ? courseObj.name : cid);
     const cg = u.courseGroups || {};
     const rawGid = cid ? cg[cid] : u.group;
     const rgHtml = rawGid ? '<span class="badge b-group">' + rawGid.replace('group_','№') + '</span>' : '<span class="badge b-pending">—</span>';
@@ -2216,7 +2215,6 @@ function renderGrades() {
     return `<tr>
       <td style="font-weight:600">${fio}</td>
       <td style="font-size:.82rem">${sg}</td>
-      <td style="font-size:.82rem">${courseLabel}</td>
       <td>${rgHtml}</td>
       <td>${cid ? progressCell(u.uid, cid) : '<span style="color:var(--text3);font-size:.72rem">—</span>'}</td>
       <td><input type="number" min="0" max="50" value="${zachet}" class="grade-input" id="zachet-${docId}" onchange="autoSaveGrade('${docId}')" oninput="debounceSaveGrade('${docId}')"></td>
@@ -2226,28 +2224,101 @@ function renderGrades() {
     </tr>`;
   }
 
+  // Собираем: { cid: { groupKey: [users] } }.
+  // groupKey = сеточный ID рабочей группы 'group_NN', либо '__no-group__'.
+  const byCourse = {};
   for (const u of allUsers) {
     if (isAdmin(u.email)) continue;
-    // Курсы: все approved enrollments. Для суперadmin — все; для курсового
-    // admin — уже отфильтрованы в _allEnrollments по managedCourses.
     const enrolls = enrollsByUid[u.uid] || {};
     const approvedCids = Object.keys(enrolls).filter(cid => enrolls[cid] === 'approved');
-
-    if (approvedCids.length === 0) {
-      // Legacy общая оценка (по документу individual_grades/{uid} без cid)
-      // — покажем только суперadmin, потому что писать её могут только они.
-      const isSA = _currentAdminUser && isSuperAdmin(_currentAdminUser.email);
-      if (isSA && allIndividualGrades[u.uid]) {
-        html += row(u, null, u.uid, true);
-      }
-      continue;
-    }
     for (const cid of approvedCids) {
-      html += row(u, cid, u.uid + '_' + cid, false);
+      if (_currentAdminCourses !== null && _currentAdminCourses.indexOf(cid) === -1) continue;
+      if (!byCourse[cid]) byCourse[cid] = {};
+      const cg = u.courseGroups || {};
+      const gkey = cg[cid] || '__no-group__';
+      if (!byCourse[cid][gkey]) byCourse[cid][gkey] = [];
+      byCourse[cid][gkey].push(u);
     }
   }
-  if (!html) html = '<tr><td colspan="9" style="text-align:center;color:var(--text3)">Нет студентов с одобренными курсами</td></tr>';
-  tbody.innerHTML = html;
+
+  // Legacy общие оценки — блок для суперadmin.
+  const isSA = _currentAdminUser && isSuperAdmin(_currentAdminUser.email);
+  const legacyUsers = [];
+  if (isSA) {
+    for (const u of allUsers) {
+      if (isAdmin(u.email)) continue;
+      const enrolls = enrollsByUid[u.uid] || {};
+      const approvedCids = Object.keys(enrolls).filter(cid => enrolls[cid] === 'approved');
+      if (approvedCids.length === 0 && allIndividualGrades[u.uid]) legacyUsers.push(u);
+    }
+  }
+
+  const cids = (window.CFD_COURSES || []).map(c => c.id).filter(cid => byCourse[cid]);
+  let out = '';
+
+  if (!cids.length && !legacyUsers.length) {
+    out = '<div style="color:var(--text3);padding:1rem;text-align:center">Нет студентов с одобренными курсами.</div>';
+  } else {
+    for (const cid of cids) {
+      const courseObj = (window.CFD_COURSE_BY_ID || {})[cid] || { name: cid, id: cid };
+      const groups = byCourse[cid];
+      const groupKeys = Object.keys(groups).sort((a, b) => {
+        if (a === '__no-group__') return 1;
+        if (b === '__no-group__') return -1;
+        return a.localeCompare(b);
+      });
+      const totalStudents = Object.values(groups).reduce((s, arr) => s + arr.length, 0);
+      out += `<details open style="margin-bottom:.5rem;background:var(--bg2);border-radius:6px;border:1px solid var(--border)">
+        <summary style="cursor:pointer;padding:.55rem .85rem;font-family:'Playfair Display',serif;font-weight:700;font-size:.98rem;color:var(--accent)">
+          📁 ${courseObj.name} <span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:500;color:var(--text3);margin-left:.4rem">${cid} · ${totalStudents} студ.</span>
+        </summary>
+        <div style="padding:.4rem .8rem .8rem">`;
+      for (const gk of groupKeys) {
+        const users = groups[gk].slice().sort((a, b) => (a.fio||a.email).localeCompare(b.fio||b.email));
+        const gLabel = gk === '__no-group__' ? '(без рабочей группы)' : ('Группа ' + gk.replace('group_', '№'));
+        out += `<details open style="margin-bottom:.35rem;background:#fff;border:1px solid var(--border);border-radius:5px">
+          <summary style="cursor:pointer;padding:.4rem .7rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2)">
+            📂 ${gLabel} <span style="color:var(--text3);margin-left:.3rem">— ${users.length} студ.</span>
+          </summary>
+          <div style="padding:.3rem .7rem .6rem;overflow-x:auto">
+            <table style="width:100%">
+              <thead><tr>
+                <th style="min-width:200px">ФИО</th>
+                <th style="min-width:100px">Уч. группа</th>
+                <th>Раб. гр.</th>
+                <th style="min-width:130px">Прогресс</th>
+                <th>Зачёт (50)</th>
+                <th>Экзамен (50)</th>
+                <th>Итого</th>
+                <th style="min-width:160px">Комментарий</th>
+              </tr></thead>
+              <tbody>${users.map(u => row(u, cid, u.uid + '_' + cid, false)).join('')}</tbody>
+            </table>
+          </div>
+        </details>`;
+      }
+      out += `</div></details>`;
+    }
+    if (legacyUsers.length) {
+      out += `<details style="margin-bottom:.5rem;background:var(--bg2);border-radius:6px;border:1px solid var(--border)">
+        <summary style="cursor:pointer;padding:.55rem .85rem;font-family:'Playfair Display',serif;font-weight:700;font-size:.95rem;color:var(--text2)">
+          📁 Legacy — общие оценки без привязки к курсу <span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:500;color:var(--text3);margin-left:.4rem">${legacyUsers.length} студ.</span>
+        </summary>
+        <div style="padding:.4rem .8rem .8rem;overflow-x:auto">
+          <table style="width:100%">
+            <thead><tr>
+              <th>ФИО</th><th>Уч. группа</th><th>Раб. гр.</th><th>Прогресс</th><th>Зачёт (50)</th><th>Экзамен (50)</th><th>Итого</th><th>Комментарий</th>
+            </tr></thead>
+            <tbody>${legacyUsers.map(u => row(u, null, u.uid, true)).join('')}</tbody>
+          </table>
+        </div>
+      </details>`;
+    }
+  }
+
+  card.innerHTML = `<h3>Индивидуальные оценки</h3>
+    <p style="font-size:.85rem;color:var(--text2);margin-bottom:.8rem"><strong>Зачёт</strong> (работа за семестр, групповая) — до 50 баллов. <strong>Экзамен</strong> (индивидуальное задание) — до 50 баллов. Итого 100. Раскладка по <em>курсам</em> и <em>рабочим группам</em>.</p>
+    ${out}`;
 }
 
 const _saveTimers = {};

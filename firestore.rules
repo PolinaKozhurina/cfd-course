@@ -411,8 +411,12 @@ service cloud.firestore {
       function subUid()      { return docId.split('_')[1]; }
       function subAid()      { return docId.split('_')[0]; }
       function isOwnSub()    { return isAuth() && request.auth.uid == subUid(); }
+      // При create resource == null → resource.data.get() дал бы Null value error.
+      // Поэтому default в этой ветке возвращаем без обращения к resource.
       function subCourseId() {
-        return request.resource.data.get('courseId', resource.data.get('courseId', ''));
+        return resource == null
+          ? request.resource.data.get('courseId', '')
+          : request.resource.data.get('courseId', resource.data.get('courseId', ''));
       }
       // Строгий дедлайн: если у assignment strictDeadline==true — не пускаем
       // после `deadlineAt`.

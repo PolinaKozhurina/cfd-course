@@ -576,10 +576,11 @@
 
   // Auth button is managed by updateUI()
 
-  // Close modal on overlay click
-  overlay.addEventListener("click", function (e) {
-    if (e.target === overlay) CFDAuth.closeModal();
-  });
+  // Клик по фону НЕ закрывает модалку — пользователь жаловалась,
+  // что окно логина «само вылетает». Закрытие — только по «×» или Escape.
+  // overlay.addEventListener("click", function (e) {
+  //   if (e.target === overlay) CFDAuth.closeModal();
+  // });
 
   // Close on Escape
   document.addEventListener("keydown", function (e) {

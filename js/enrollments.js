@@ -22,7 +22,12 @@
     request: async function (courseId) {
       const u = auth.currentUser;
       if (!u) return { ok: false, error: "Не авторизован" };
-      if (!u.emailVerified) return { ok: false, error: "Сначала подтвердите email" };
+      // Firebase кэширует ID-токен ~1 час. Если пользователь подтвердил
+      // email в этой сессии, поле email_verified в токене всё ещё старое
+      // и правила Firestore (isVerified смотрит на token.email_verified)
+      // отбивают запрос как permission-denied. Форсируем обновление токена.
+      try { await u.reload(); await u.getIdToken(true); } catch (_) {}
+      if (!u.emailVerified) return { ok: false, error: "Сначала подтвердите email (ссылка в письме), затем обновите страницу" };
       try {
         await db.collection("enrollments").doc(docId(u.uid, courseId)).set({
           uid: u.uid,
@@ -32,7 +37,11 @@
         });
         return { ok: true };
       } catch (e) {
-        return { ok: false, error: e.message };
+        const raw = e.message || "";
+        if ((e.code || '').indexOf('permission') !== -1 || /Missing or insufficient permissions/i.test(raw)) {
+          return { ok: false, error: "Заявка отклонена правилами базы. Скорее всего email ещё не подтверждён — проверьте письмо и обновите страницу." };
+        }
+        return { ok: false, error: raw };
       }
     },
 
@@ -64,19 +73,23 @@
     },
 
     // Все свои заявки. { courseId: {status, requestedAt, ...} }
+    // Раньше делали where('uid','==',uid).get() — но firestore.rules
+    // разрешает read enrollments только per-doc (по ключу), а не по
+    // list-query, поэтому query падал permission-denied → возвращали
+    // пустой map, и после request() кнопка «Отправлено» не обновлялась.
+    // Идём per-course, каждый doc отдельно — гарантированно проходит.
     listMine: async function () {
       const u = auth.currentUser;
       if (!u) return {};
-      try {
-        const snap = await db.collection("enrollments")
-          .where("uid", "==", u.uid).get();
-        const map = {};
-        snap.forEach(function (d) { map[d.data().courseId] = d.data(); });
-        return map;
-      } catch (e) {
-        console.warn("enrollments.listMine failed:", e);
-        return {};
-      }
+      const courses = (window.CFD_COURSES || []).map(function (c) { return c.id; });
+      const map = {};
+      await Promise.all(courses.map(async function (cid) {
+        try {
+          const d = await db.collection("enrollments").doc(u.uid + "_" + cid).get();
+          if (d.exists) map[cid] = d.data();
+        } catch (_) {}
+      }));
+      return map;
     },
 
     // Все заявки (для админки). Опционально фильтр по массиву курсов.

@@ -21,8 +21,24 @@ body{font-family:'Source Serif 4',Georgia,serif;font-size:22px;line-height:1.55;
 
 /* Слайд */
 .slide{position:fixed;inset:0;padding:4rem 5rem 5rem;display:none;flex-direction:column;overflow:auto}
-.slide.active{display:flex;animation:fadeIn .25s ease}
+.slide.active{display:flex}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Поэтапное появление детей активного слайда (JS проставляет --i) */
+.slide.active > *{
+  animation: slideStep .38s cubic-bezier(.22,.61,.36,1) both;
+  animation-delay: calc(var(--i, 0) * 85ms);
+}
+@keyframes slideStep{
+  from{opacity:0;transform:translateY(12px)}
+  to  {opacity:1;transform:none}
+}
+/* Титульный — единая анимация */
+.slide.title.active > *{animation:slideStep .55s ease both;animation-delay:calc(var(--i,0) * 140ms)}
+/* Уважаем настройку prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce){
+  .slide.active > *{animation:none}
+}
 .slide-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:.6rem}
 h1{font-family:'Playfair Display',serif;font-weight:900;font-size:2.6rem;line-height:1.12;color:var(--text);margin-bottom:1rem;letter-spacing:-.01em}
 h2{font-family:'Playfair Display',serif;font-weight:700;font-size:1.8rem;color:var(--accent);margin-bottom:1.2rem;line-height:1.15}
@@ -35,6 +51,10 @@ strong{color:var(--text)}
 .eq{margin:1.2rem 0;text-align:center;font-size:1.05em}
 .definition{background:var(--bg2);border-left:4px solid var(--accent2);padding:1rem 1.3rem;border-radius:0 6px 6px 0;margin:1rem 0}
 .definition strong{color:var(--accent2)}
+.condition{background:#fdf5ee;border-left:4px solid var(--accent);padding:1rem 1.3rem;border-radius:0 6px 6px 0;margin:1rem 0}
+.condition strong{color:var(--accent)}
+.theorem{background:#eef3fa;border-left:4px solid var(--accent3);padding:1rem 1.3rem;border-radius:0 6px 6px 0;margin:1rem 0}
+.theorem strong{color:var(--accent3)}
 .figure{margin:1rem auto;text-align:center;max-width:100%}
 .figure svg{max-width:100%;height:auto}
 .figure .caption{font-size:.78rem;color:var(--text2);margin-top:.4rem;font-style:italic}
@@ -312,25 +332,24 @@ strong{color:var(--text)}
 <section class="slide">
   <div class="slide-num">§1.5 · Корректность задачи</div>
   <h2>Линейный случай</h2>
-  <p>Пусть \(A\) — линейный оператор. Для корректности задачи \(Au = F\) требуется существование <em>ограниченного</em> обратного оператора \(A^{-1}\). Тогда:</p>
-  <ol>
-    <li>Существование и единственность:
-      <div class="eq">\[ \forall\, F \in B_2 \ \Rightarrow \ \exists!\; u(x) \in B_1. \]</div>
-    </li>
-    <li>Непрерывная зависимость от данных: существует \(C = \mathrm{const} > 0\), такая что
-      <div class="eq">\[ \|u\|_1 \;\le\; C\,\|F\|_2, \qquad C = \|A^{-1}\|. \]</div>
-    </li>
-  </ol>
+  <div class="condition">
+    <strong>Условие корректности (линейный случай).</strong> Оператор \(A\) обратим, т.&nbsp;е. существует ограниченный обратный оператор \(A^{-1}\colon B_2 \to B_1\). Тогда:
+    <ol style="margin:.5rem 0 .1rem 1.2rem">
+      <li>существование и единственность: \(\forall\, F \in B_2 \Rightarrow \exists!\; u(x) \in B_1\);</li>
+      <li>непрерывная зависимость от данных: \(\|u\|_1 \le C\,\|F\|_2\), \(C = \|A^{-1}\|\).</li>
+    </ol>
+  </div>
 </section>
 
 <!-- 8: Корректность — нелинейный случай -->
 <section class="slide">
   <div class="slide-num">§1.5 · Корректность задачи</div>
-  <h2>Нелинейный случай. Условие Липшица</h2>
-  <p>Пусть \(A\) — нелинейный оператор. Существование решения требуется <em>локально</em> — для правых частей из окрестности некоторой опорной \(F_0 \in B_2\):</p>
-  <div class="eq">\[ \|F - F_0\|_2 \;&lt;\; \varepsilon. \]</div>
-  <p>Непрерывная зависимость решения от данных — <em>условие Липшица непрерывности обратного оператора</em>: существует \(C = \mathrm{const} > 0\), такая что для любых \(F_1, F_2\)</p>
-  <div class="eq">\[ \|u_2 - u_1\|_1 \;\le\; C\,\|F_2 - F_1\|_2. \]</div>
+  <h2>Нелинейный случай</h2>
+  <p>Пусть \(A\) — нелинейный оператор. Существование решения — <em>локально</em>, для правых частей из окрестности опорной \(F_0 \in B_2\): \(\|F - F_0\|_2 &lt; \varepsilon\).</p>
+  <div class="condition">
+    <strong>Условие (Липшица непрерывности обратного оператора).</strong> Существует постоянная \(C = \mathrm{const} &gt; 0\), такая что для любых допустимых правых частей \(F_1, F_2 \in B_2\) и соответствующих им решений \(u_1, u_2\) задач \(A u_k = F_k\), \(k = 1, 2\), выполнено
+    \[ \|u_2 - u_1\|_1 \;\le\; C\,\|F_2 - F_1\|_2. \]
+  </div>
 </section>
 
 <!-- 9: Задача Коши + характеристики -->
@@ -705,11 +724,13 @@ strong{color:var(--text)}
     <div>
       <p>Разностной схеме сопоставим дискретный оператор \(\hat A\colon H \to H\):</p>
       <div class="eq">\[ \hat A\, y \;=\; \hat F, \qquad \hat F = P_{\tau\omega}(F). \]</div>
-      <h3>Линейный случай: корректность</h3>
-      <ol>
-        <li>\(\forall\, \hat F \in H\ \Rightarrow\ \exists!\; y \in H\colon\ \hat A\, y = \hat F\);</li>
-        <li>\(\exists\, C = \mathrm{const} &gt; 0\colon\ \|y\|_{1,H} \le C\,\|\hat F\|_{2,H}\).</li>
-      </ol>
+      <div class="condition">
+        <strong>Условие корректности (лин. случай).</strong> Оператор \(\hat A\) обратим:
+        <ol style="margin:.4rem 0 .1rem 1.2rem">
+          <li>\(\forall\, \hat F \in H \Rightarrow \exists!\; y \in H\colon \hat A\, y = \hat F\);</li>
+          <li>\(\|y\|_{1,H} \le C\,\|\hat F\|_{2,H}\).</li>
+        </ol>
+      </div>
     </div>
     <div>
       <p style="font-size:.85em;color:var(--text2);text-align:center;margin-bottom:.3rem">Связь непрерывной задачи и её дискретного аналога:</p>
@@ -734,9 +755,12 @@ strong{color:var(--text)}
 <!-- 23: Нелинейный случай -->
 <section class="slide">
   <div class="slide-num">§1.15 · Разностная схема как оператор</div>
-  <h2>Нелинейный случай. Разностный аналог условия Липшица</h2>
-  <p>Если \(\hat A\) — нелинейный, требуется разностный аналог условия Липшица непрерывности обратного оператора: существует \(C = \mathrm{const} &gt; 0\), такая что для любых допустимых правых частей \(\hat F_1, \hat F_2 \in H\) и соответствующих им решений \(y_1, y_2\) задач \(\hat A\, y_k = \hat F_k\), \(k = 1, 2\), выполнено</p>
-  <div class="eq">\[ \|y_1 - y_2\|_{1,H} \;\le\; C\,\|\hat F_1 - \hat F_2\|_{2,H}. \]</div>
+  <h2>Нелинейный случай</h2>
+  <p>Если \(\hat A\) — нелинейный, требуется разностный аналог условия Липшица непрерывности обратного оператора.</p>
+  <div class="condition">
+    <strong>Условие (разностный аналог условия Липшица).</strong> Существует постоянная \(C = \mathrm{const} &gt; 0\), такая что для любых допустимых правых частей \(\hat F_1, \hat F_2 \in H\) и соответствующих им решений \(y_1, y_2\) задач \(\hat A\, y_k = \hat F_k\), \(k = 1, 2\), выполнено
+    \[ \|y_1 - y_2\|_{1,H} \;\le\; C\,\|\hat F_1 - \hat F_2\|_{2,H}. \]
+  </div>
 </section>
 
 <!-- 24: Опр 3 + SVG погрешность -->
@@ -854,7 +878,18 @@ strong{color:var(--text)}
   function show(n) {
     slides[i].classList.remove('active');
     i = Math.max(0, Math.min(slides.length - 1, n));
-    slides[i].classList.add('active');
+    var s = slides[i];
+    // Проставить индексы детям для поэтапной анимации и перезапустить её.
+    var kids = s.children;
+    for (var k = 0; k < kids.length; k++) {
+      kids[k].style.setProperty('--i', k);
+      // Сбросить анимацию, чтобы она запустилась заново на этом показе.
+      kids[k].style.animation = 'none';
+    }
+    // Force reflow — иначе браузер не «увидит» сброс.
+    void s.offsetWidth;
+    for (var k2 = 0; k2 < kids.length; k2++) kids[k2].style.animation = '';
+    s.classList.add('active');
     counter.textContent = (i + 1) + ' / ' + slides.length;
     fill.style.width = ((i + 1) / slides.length * 100) + '%';
     history.replaceState(null, '', '#' + (i + 1));

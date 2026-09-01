@@ -1684,7 +1684,7 @@ async function renderHwSubmissionsTable(aid) {
   // Список кому показывать: студенты с approved-enrollment на этот курс.
   const enrByUid = window._enrollmentsByUid || {};
   const enrolled = allUsers.filter(u => !isAdmin(u.email) && enrByUid[u.uid] && enrByUid[u.uid][a.courseId] === 'approved');
-  enrolled.sort((x, y) => (x.fio || x.email || '').localeCompare(y.fio || y.email || ''));
+  enrolled.sort((x, y) => (x.fio || x.email || '').localeCompare(y.fio || y.email || '', 'ru'));
 
   let submittedCnt = 0, gradedCnt = 0;
   enrolled.forEach(u => { if (subs[u.uid]) submittedCnt++; if (grades[u.uid]) gradedCnt++; });
@@ -1693,9 +1693,10 @@ async function renderHwSubmissionsTable(aid) {
     + ' · Оценено <strong>' + gradedCnt + '</strong>';
 
   const variantsOpts = (a.variants || []).map((v, i) => '<option value="' + i + '">В' + (i+1) + '</option>').join('');
-  const rows = enrolled.map(u => {
+  const rows = enrolled.map((u, _idx) => {
     const s = subs[u.uid];
     const g = grades[u.uid] || {};
+    const _num = _idx + 1;
     const filesPart = (s && s.files && s.files.length)
       ? s.files.map(f => f.url
           ? '<a href="'+f.url+'" target="_blank" style="color:var(--accent3);margin-right:.4rem;font-size:.78rem">📎 '+hwEscape(f.name)+'</a>'
@@ -1723,6 +1724,7 @@ async function renderHwSubmissionsTable(aid) {
     const zVal = (g.grade !== undefined && g.grade !== null) ? g.grade : '';
     const cVal = g.comment || '';
     return '<tr>'
+      + '<td style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3);text-align:right;padding-right:.4rem">' + _num + '.</td>'
       + '<td style="font-weight:600">' + hwEscape(u.fio || u.email) + '</td>'
       + '<td style="font-size:.78rem">' + hwEscape(u.email || '') + '</td>'
       + '<td style="font-size:.78rem">' + hwEscape(u.studyGroup || '—') + '</td>'
@@ -1735,8 +1737,8 @@ async function renderHwSubmissionsTable(aid) {
   }).join('');
   document.getElementById('hwSubsTable').innerHTML =
     '<table style="width:100%">'
-    + '<thead><tr><th>ФИО</th><th>Email</th><th>Уч. группа</th><th>Вар.</th><th>Файлы</th><th>Сдано</th><th>Оценка</th><th>Комментарий</th></tr></thead>'
-    + '<tbody>' + (rows || '<tr><td colspan="8" style="text-align:center;color:var(--text3)">Никто не записан на курс</td></tr>') + '</tbody>'
+    + '<thead><tr><th style="width:2em">№</th><th>ФИО</th><th>Email</th><th>Уч. группа</th><th>Вар.</th><th>Файлы</th><th>Сдано</th><th>Оценка</th><th>Комментарий</th></tr></thead>'
+    + '<tbody>' + (rows || '<tr><td colspan="9" style="text-align:center;color:var(--text3)">Никто не записан на курс</td></tr>') + '</tbody>'
     + '</table>';
 }
 
@@ -1756,7 +1758,7 @@ async function hwAutoAssignVariants(aid) {
   if (!a || !a.variants || !a.variants.length) return;
   const enrByUid = window._enrollmentsByUid || {};
   const enrolled = allUsers.filter(u => !isAdmin(u.email) && enrByUid[u.uid] && enrByUid[u.uid][a.courseId] === 'approved');
-  enrolled.sort((x, y) => (x.fio || x.email || '').localeCompare(y.fio || y.email || ''));
+  enrolled.sort((x, y) => (x.fio || x.email || '').localeCompare(y.fio || y.email || '', 'ru'));
   if (!confirm('Раздать ' + a.variants.length + ' вариантов по кругу для ' + enrolled.length + ' студентов? Существующие назначения будут перезаписаны.')) return;
   const assigned = {};
   enrolled.forEach((u, i) => { assigned[u.uid] = i % a.variants.length; });
@@ -1781,7 +1783,7 @@ function hwExportSubmissionsCsv(aid) {
   if (!a) return;
   const enrByUid = window._enrollmentsByUid || {};
   const enrolled = allUsers.filter(u => !isAdmin(u.email) && enrByUid[u.uid] && enrByUid[u.uid][a.courseId] === 'approved');
-  enrolled.sort((x, y) => (x.fio || x.email || '').localeCompare(y.fio || y.email || ''));
+  enrolled.sort((x, y) => (x.fio || x.email || '').localeCompare(y.fio || y.email || '', 'ru'));
   const rows = [['ФИО','Email','Уч.группа','Ссылки','Сдано (МСК)','Оценка','Комментарий']];
   enrolled.forEach(u => {
     const s = subs[u.uid] || {};
@@ -4016,7 +4018,7 @@ async function _attStudentsForCourseGroup(cid, studyGroup) {
   const uids = await _attApprovedUids(cid);
   return (allUsers || [])
     .filter(u => uids.has(u.uid) && u.studyGroup === studyGroup)
-    .sort((a, b) => (a.fio || a.email || '').localeCompare(b.fio || b.email || ''));
+    .sort((a, b) => (a.fio || a.email || '').localeCompare(b.fio || b.email || '', 'ru'));
 }
 
 async function renderAttendanceTab() {
@@ -4142,9 +4144,10 @@ async function attFormLoadStudents(preselectRecords) {
     return;
   }
   const records = preselectRecords || (_attCurrent && _attCurrent.records) || {};
-  const rows = students.map(u => {
+  const rows = students.map((u, idx) => {
     const cur = records[u.uid] || 'present';   // default: пришёл
-    return '<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:.5rem;align-items:center;padding:.35rem 0;border-bottom:1px dotted var(--border)">'
+    return '<div style="display:grid;grid-template-columns:2em 1fr auto auto auto;gap:.5rem;align-items:center;padding:.35rem 0;border-bottom:1px dotted var(--border)">'
+      + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3);text-align:right">' + (idx + 1) + '.</div>'
       + '<div>' + escapeHtml(u.fio || u.email || u.uid) + ' <span style="color:var(--text3);font-size:.78rem">' + escapeHtml(u.email || '') + '</span></div>'
       + '<label style="display:inline-flex;align-items:center;gap:.2rem;font-size:.82rem;cursor:pointer;color:#3d6b5a">'
         + '<input type="radio" name="att_' + u.uid + '" value="present" ' + (cur === 'present' ? 'checked' : '') + '> ✅'

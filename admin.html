@@ -157,9 +157,11 @@ if (location.search.indexOf('embedded=1') !== -1) {
   <button class="tab" onclick="showTab('homework');renderHomeworkTab()">ДЗ</button>
   <button class="tab" onclick="showTab('attendance');renderAttendanceTab()">Посещаемость</button>
   <button class="tab" onclick="showTab('gating');renderGatingTab()">Гейтинг лекций</button>
-  <button class="tab" onclick="showTab('groups');renderGroupResults()">Результаты тестов</button>
-  <button class="tab" onclick="showTab('checklist');loadChecklistProgress()">Чек-лист (самооценка)</button>
-  <button class="tab" onclick="showTab('tasks')">Задания</button>
+  <!-- Скрыто: относилось к одному конкретному курсу, пока не нужно.
+       При необходимости вернуть — раскомментировать. -->
+  <button class="tab" onclick="showTab('groups');renderGroupResults()" style="display:none">Результаты тестов</button>
+  <button class="tab" onclick="showTab('checklist');loadChecklistProgress()" style="display:none">Чек-лист (самооценка)</button>
+  <button class="tab" onclick="showTab('tasks')" style="display:none">Задания</button>
   <button class="tab" onclick="showTab('grades');renderGrades()">Оценки</button>
   <button class="tab" onclick="showTab('github')">GitHub-проверка</button>
   <button class="tab" onclick="showTab('messages')" id="tabBtnMessages">Сообщения <span id="msgTabBadge" style="display:none;min-width:16px;height:16px;border-radius:8px;background:#c44;color:#fff;font-size:.6rem;font-weight:700;font-family:JetBrains Mono,monospace;align-items:center;justify-content:center;padding:0 4px;margin-left:2px;vertical-align:middle"></span></button>
@@ -752,89 +754,108 @@ async function loadAllData() {
     });
   }
 
-  // Load рабочие groups and results
-  allGroups = {};
+  // ========== Параллельно грузим всё, что не зависит друг от друга ==========
+  // Ускорение: раньше здесь было ~100 последовательных await (каждая group ×
+  // 3 endpoint'а × 5 старых + 5 курсов × 5 = 75 per-course), из-за чего
+  // админка открывалась 20+ секунд. Теперь всё запускается одновременно
+  // через Promise.all, и общее время ≈ времени самого медленного запроса.
+
+  allGroups  = {};
   allResults = {};
+
+  // 1) Старые «legacy» рабочие группы group_01..group_05.
+  const legacyPromises = [];
   for (let g = 1; g <= 5; g++) {
     const gid = 'group_' + String(g).padStart(2, '0');
-    if (!canManageGroup(gid)) {
-      // But: this admin may still need group info if one of his studyGroup students is here
-      const anyVisibleHere = allUsers.some(u => u.group === gid);
-      if (!anyVisibleHere) continue;
-    }
+    if (!canManageGroup(gid) && !allUsers.some(u => u.group === gid)) continue;
     const members = allUsers.filter(u => u.group === gid);
     if (members.length === 0) continue;
     allGroups[gid] = { members };
-    // Load repo URL
-    try { const gDoc = await db.collection('groups').doc(gid).get();
-      if (gDoc.exists && gDoc.data().repoUrl) allGroups[gid].repoUrl = gDoc.data().repoUrl;
-    } catch(e) {}
-    // Load results
-    const resultsSnap = await db.collection('groups').doc(gid).collection('results').get();
-    allResults[gid] = {};
-    resultsSnap.forEach(doc => {
-      allResults[gid][doc.id] = doc.data();
-    });
-    // Load admin checklist progress
-    try {
-      const aSnap = await db.collection('groups').doc(gid).collection('admin_checklist').get();
+    legacyPromises.push((async () => {
+      const [gDoc, resultsSnap, aSnap] = await Promise.all([
+        db.collection('groups').doc(gid).get().catch(() => null),
+        db.collection('groups').doc(gid).collection('results').get().catch(() => null),
+        db.collection('groups').doc(gid).collection('admin_checklist').get().catch(() => null),
+      ]);
+      if (gDoc && gDoc.exists && gDoc.data().repoUrl) allGroups[gid].repoUrl = gDoc.data().repoUrl;
+      allResults[gid] = {};
+      if (resultsSnap) resultsSnap.forEach(d => { allResults[gid][d.id] = d.data(); });
       let checked = 0;
-      aSnap.forEach(doc => { if (doc.data().checked) checked++; });
+      if (aSnap) aSnap.forEach(d => { if (d.data().checked) checked++; });
       allGroups[gid].adminChecked = checked;
-      allGroups[gid].adminTotal = 71; // total checkboxes in review
-    } catch(e) { allGroups[gid].adminChecked = 0; allGroups[gid].adminTotal = 71; }
+      allGroups[gid].adminTotal = 71;
+    })());
   }
 
-  // Per-course рабочие группы: {cid}_group_01..05.
-  // Загружаем только если в scope этого admin (superadmin — все).
+  // 2) Per-course рабочие группы: {cid}_group_01..05 — параллельно.
+  const coursePromises = [];
   const courseIds = (window.CFD_COURSES || []).map(c => c.id);
   for (const cid of courseIds) {
     if (_currentAdminCourses !== null && _currentAdminCourses.indexOf(cid) === -1) continue;
     for (let g = 1; g <= 5; g++) {
-      const rawGid = 'group_' + String(g).padStart(2, '0');
+      const rawGid  = 'group_' + String(g).padStart(2, '0');
       const fullGid = cid + '_' + rawGid;
       const members = allUsers.filter(u => u.courseGroups && u.courseGroups[cid] === rawGid);
       if (members.length === 0) continue;
       allGroups[fullGid] = { members, courseId: cid };
-      try {
-        const gDoc = await db.collection('groups').doc(fullGid).get();
-        if (gDoc.exists) {
+      coursePromises.push((async () => {
+        const [gDoc, resultsSnap, aSnap] = await Promise.all([
+          db.collection('groups').doc(fullGid).get().catch(() => null),
+          db.collection('groups').doc(fullGid).collection('results').get().catch(() => null),
+          db.collection('groups').doc(fullGid).collection('admin_checklist').get().catch(() => null),
+        ]);
+        if (gDoc && gDoc.exists) {
           const gd = gDoc.data();
           if (gd.repoUrl) allGroups[fullGid].repoUrl = gd.repoUrl;
-          allGroups[fullGid].joinCode = gd.joinCode || '';
-          allGroups[fullGid].approved = !!gd.approved;
-          allGroups[fullGid].createdBy = gd.createdBy || '';
-          allGroups[fullGid].maxSize = gd.maxSize || 3;
+          allGroups[fullGid].joinCode   = gd.joinCode || '';
+          allGroups[fullGid].approved   = !!gd.approved;
+          allGroups[fullGid].createdBy  = gd.createdBy || '';
+          allGroups[fullGid].maxSize    = gd.maxSize || 3;
           allGroups[fullGid].groupIndex = gd.groupIndex || rawGid.replace('group_','');
-          allGroups[fullGid].memberUids = gd.members || members.map(m => m.uid); // авторитетный список UIDs
+          allGroups[fullGid].memberUids = gd.members || members.map(m => m.uid);
         }
-      } catch(e) {}
-      try {
-        const resultsSnap = await db.collection('groups').doc(fullGid).collection('results').get();
         allResults[fullGid] = {};
-        resultsSnap.forEach(doc => { allResults[fullGid][doc.id] = doc.data(); });
-      } catch(e) { allResults[fullGid] = {}; }
-      try {
-        const aSnap = await db.collection('groups').doc(fullGid).collection('admin_checklist').get();
+        if (resultsSnap) resultsSnap.forEach(d => { allResults[fullGid][d.id] = d.data(); });
         let checked = 0;
-        aSnap.forEach(doc => { if (doc.data().checked) checked++; });
+        if (aSnap) aSnap.forEach(d => { if (d.data().checked) checked++; });
         allGroups[fullGid].adminChecked = checked;
         allGroups[fullGid].adminTotal = 71;
-      } catch(e) { allGroups[fullGid].adminChecked = 0; allGroups[fullGid].adminTotal = 71; }
+      })());
     }
   }
 
-  // Load grades
-  const gradesSnap = await db.collection('grades').get();
-  gradesSnap.forEach(doc => {
+  // 3) Топ-уровневые независимые коллекции — все сразу.
+  const topPromise = Promise.all([
+    db.collection('grades').get().catch(() => null),
+    db.collection('task_claims').get().catch(() => null),
+    db.collection('individual_grades').get().catch(() => null),
+    (async () => {
+      if (_currentAdminCourses === null) {
+        return await db.collection('enrollments').get().catch(() => null);
+      } else if (_currentAdminCourses.length === 0) {
+        return { forEach: function(){} };
+      }
+      return await db.collection('enrollments')
+        .where('courseId', 'in', _currentAdminCourses).get().catch(() => null);
+    })(),
+  ]);
+
+  // Ждём всё параллельно.
+  const [_, __, [gradesSnap, claimsSnap, indivGradesSnap, enrSnap]] = await Promise.all([
+    Promise.all(legacyPromises),
+    Promise.all(coursePromises),
+    topPromise,
+  ]);
+
+  // Разбор результатов топ-уровневых коллекций.
+  if (gradesSnap) gradesSnap.forEach(doc => {
     const gid = doc.id;
     if (allGroups[gid]) allGroups[gid].grade = doc.data();
   });
 
-  // Load individual task claims
-  allTaskClaims = {}; // uid -> task name
-  try {
-    const claimsSnap = await db.collection('task_claims').get();
+  allTaskClaims = {};
+  window._taskClaimsRaw = window._taskClaimsRaw || {};
+  if (claimsSnap) {
     const TASK_NAMES = {
       t1:'1. Скругление угла', t2:'2. Переход RR→MR', t3:'3. Хаас–Штуртевант',
       t4:'4. Рихтмайер–Мешков', t5:'5. Инициирование', t6:'6. Каверна Re→10k',
@@ -844,42 +865,20 @@ async function loadAllData() {
     };
     claimsSnap.forEach(doc => {
       const d = doc.data();
-      if (d.claimedByUid) {
-        allTaskClaims[d.claimedByUid] = TASK_NAMES[doc.id] || doc.id;
-      }
-      // Also store by task id for the tasks panel
-      if (!window._taskClaimsRaw) window._taskClaimsRaw = {};
+      if (d.claimedByUid) allTaskClaims[d.claimedByUid] = TASK_NAMES[doc.id] || doc.id;
       window._taskClaimsRaw[doc.id] = d;
     });
-  } catch(e) { console.warn('Could not load task claims:', e); }
+  }
 
-  // Load individual grades
   allIndividualGrades = {};
-  try {
-    const gradesSnap = await db.collection('individual_grades').get();
-    gradesSnap.forEach(doc => {
-      allIndividualGrades[doc.id] = doc.data();
-    });
-  } catch(e) { console.warn('Could not load individual grades:', e); }
+  if (indivGradesSnap) indivGradesSnap.forEach(doc => {
+    allIndividualGrades[doc.id] = doc.data();
+  });
 
-  // Load enrollments (заявки на курсы).
-  // Superadmin — все; курсовой admin — только по своим managedCourses.
   _allEnrollments = [];
-  try {
-    let enrSnap;
-    if (_currentAdminCourses === null) {
-      enrSnap = await db.collection('enrollments').get();
-    } else if (_currentAdminCourses.length === 0) {
-      enrSnap = { forEach: function(){} }; // нет курсов — нет заявок
-    } else {
-      // Firestore 'in' поддерживает до 10 значений — у нас курсов 5.
-      enrSnap = await db.collection('enrollments')
-        .where('courseId', 'in', _currentAdminCourses).get();
-    }
-    enrSnap.forEach(doc => {
-      _allEnrollments.push({ id: doc.id, ...doc.data() });
-    });
-  } catch(e) { console.warn('Could not load enrollments:', e); }
+  if (enrSnap) enrSnap.forEach(doc => {
+    _allEnrollments.push({ id: doc.id, ...doc.data() });
+  });
 
   // Индекс: uid → { courseId: status }
   window._enrollmentsByUid = {};
@@ -1244,7 +1243,7 @@ function renderStudents() {
     const summaryStyle = isAdminsBlock
       ? 'cursor:pointer;font-weight:700;padding:.4rem .6rem;background:#f6ecdc;border:1px solid #dcc79c;color:#8a5236;border-radius:6px;font-family:JetBrains Mono,monospace;font-size:.82rem'
       : 'cursor:pointer;font-weight:700;padding:.4rem .6rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-family:JetBrains Mono,monospace;font-size:.82rem';
-    return '<details ' + (isAdminsBlock ? '' : 'open ') + 'style="margin-bottom:.6rem">'
+    return '<details style="margin-bottom:.6rem">'
       +   '<summary style="' + summaryStyle + '">'
       +     summaryIcon + ' ' + esc(title) + ' <span style="color:var(--text2);font-weight:400">— ' + users.length + '</span>'
       +   '</summary>'
@@ -1318,7 +1317,7 @@ function studentRowHtml(u, viewerIsSuperAdmin, showLegacyAssign, num, isAdminsBl
         : '<span style="color:var(--text3);font-size:.65rem">—</span>');
   return `<tr>
     <td style="text-align:center"><input type="checkbox" class="bulk-cb-student" data-uid="${u.uid}" onchange="bulkUpdateStudentsCount()"></td>
-    <td style="min-width:220px"><span class="row-num">${num || ''}.</span><input type="text" value="${esc(u.fio || '')}" placeholder="ФИО" id="fio-${u.uid}" onchange="saveUserField('${u.uid}','fio',this.value)" style="font-weight:600;font-size:.82rem;width:calc(100% - 2.2em);min-width:180px;box-sizing:border-box;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'Source Serif 4',serif;background:#fff;color:var(--text)"></td>
+    <td style="min-width:240px;white-space:nowrap"><span class="row-num">${num || ''}.</span><input type="text" value="${esc(u.fio || '')}" placeholder="ФИО" id="fio-${u.uid}" onchange="saveUserField('${u.uid}','fio',this.value)" style="font-weight:600;font-size:.82rem;width:calc(100% - 2.2em);min-width:200px;box-sizing:border-box;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'Source Serif 4',serif;background:#fff;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></td>
     <td style="font-size:.82rem;word-break:break-all">${esc(u.email || '—')}</td>
     <td>${isAdminsBlock
         ? '<span style="color:var(--text3);font-size:.78rem;font-style:italic">—</span>'

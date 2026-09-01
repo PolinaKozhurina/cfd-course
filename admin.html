@@ -1129,12 +1129,13 @@ function showTab(name, ev) {
       (t.getAttribute('onclick')||'').indexOf("showTab('" + name + "'") !== -1);
   }
   if (btn) btn.classList.add('active');
-  // Сохранение в localStorage — ТОЛЬКО при реальном клике (event.isTrusted),
-  // не при программном вызове из _adminOpenInitialTab и т.п. Иначе последняя
-  // сохранённая вкладка могла зафиксироваться случайно.
+  // Сохранение — только при реальном клике (event.isTrusted). Хранение в
+  // sessionStorage (а не localStorage): помним вкладку в рамках открытой
+  // вкладки браузера, при закрытии-открытии — открывается Students. Это
+  // избавляет от «залипшего» значения, оставшегося когда-то давно.
   const isRealClick = (ev && ev.isTrusted) || (typeof event !== 'undefined' && event && event.isTrusted);
   if (isRealClick) {
-    try { localStorage.setItem('adminLastTab', name); } catch (_) {}
+    try { sessionStorage.setItem('adminLastTab', name); } catch (_) {}
   }
   try {
     if (window.parent && window.parent !== window) {
@@ -1145,18 +1146,20 @@ function showTab(name, ev) {
 
 // При загрузке — если задан ?tab=xxx, открыть его. Иначе — восстановить последний.
 function _adminOpenInitialTab() {
+  // Одноразовая чистка: старый ключ в localStorage — не читаем и стираем.
+  try { localStorage.removeItem('adminLastTab'); } catch (_) {}
   const q = new URLSearchParams(location.search);
   let want = q.get('tab');
-  if (!want) { try { want = localStorage.getItem('adminLastTab'); } catch (_) {} }
+  if (!want) { try { want = sessionStorage.getItem('adminLastTab'); } catch (_) {} }
   if (!want) return;
   const panel = document.getElementById('tab-' + want);
-  if (!panel) { try { localStorage.removeItem('adminLastTab'); } catch (_) {} return; }
+  if (!panel) { try { sessionStorage.removeItem('adminLastTab'); } catch (_) {} return; }
   // Пропустить если tab-кнопка этой вкладки скрыта (display:none) — не хотим
   // восстанавливать посещаемость какой-нибудь отключённой вкладки.
   const btn = Array.from(document.querySelectorAll('.tabs .tab')).find(t =>
     (t.getAttribute('onclick')||'').indexOf("showTab('" + want + "'") !== -1);
   if (btn && (btn.style.display === 'none' || getComputedStyle(btn).display === 'none')) {
-    try { localStorage.removeItem('adminLastTab'); } catch (_) {}
+    try { sessionStorage.removeItem('adminLastTab'); } catch (_) {}
     return;
   }
   showTab(want);

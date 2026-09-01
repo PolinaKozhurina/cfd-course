@@ -33,6 +33,9 @@ export default {
       if (url.pathname === "/upload" && request.method === "POST") {
         return await handleUpload(request, env);
       }
+      if (url.pathname === "/upload-common" && request.method === "POST") {
+        return await handleUploadCommon(request, env);
+      }
       if (url.pathname === "/file" && request.method === "GET") {
         return await handleDownload(request, env, url.searchParams.get("path"));
       }
@@ -95,6 +98,62 @@ async function handleUpload(request, env) {
   }, env);
 }
 
+// Admin-загрузка условия ДЗ в открытый учебный репо. Тело:
+//   { token, cid, aid, filename, base64, size, subdir? }
+// subdir — опциональный подкаталог внутри {cid}/_src/hw/{aid}/{subdir}/
+// (по умолчанию — плоско в {cid}/_src/hw/{aid}/{filename}).
+async function handleUploadCommon(request, env) {
+  const body = await request.json();
+  const idToken = body.token || "";
+  const cid = sanitizeSlug(String(body.cid || ""));
+  const aid = sanitizeSlug(String(body.aid || ""));
+  const filename = sanitizeName(String(body.filename || "file.bin"));
+  const base64 = String(body.base64 || "");
+  const size = parseInt(body.size || 0, 10) || 0;
+  const subdir = body.subdir ? sanitizeSlug(String(body.subdir)) : "";
+  if (!cid || !aid || !base64) return json({ ok: false, error: "missing fields" }, env, 400);
+  if (size > 25 * 1024 * 1024) return json({ ok: false, error: "file > 25MB" }, env, 400);
+
+  const claims = await verifyIdToken(idToken, env);
+  if (!authorizeAdminForCourse(claims, cid, env)) {
+    return json({ ok: false, error: "forbidden (not admin of course " + cid + ")" }, env, 403);
+  }
+
+  const owner = env.GITHUB_OWNER;
+  const repo  = env.GITHUB_REPO_COMMON || env.GITHUB_REPO;
+  const branch = env.GITHUB_BRANCH_COMMON || "master";
+  if (!owner || !repo) return json({ ok: false, error: "owner/repo not configured" }, env, 500);
+
+  const path = cid + "/_src/hw/" + aid + (subdir ? "/" + subdir : "") + "/" + filename;
+
+  // Если файл существует — перезаписываем (передаём sha).
+  let sha = null;
+  try {
+    const cur = await ghApiRepo("GET", owner, repo, "/contents/" + encodeURI(path) + "?ref=" + encodeURIComponent(branch), null, env);
+    if (cur && cur.sha) sha = cur.sha;
+  } catch (_) {}
+
+  const put = await ghApiRepo("PUT", owner, repo, "/contents/" + encodeURI(path), {
+    message: "hw common upload by " + claims.email + " → " + filename,
+    content: base64,
+    sha: sha || undefined,
+    branch: branch,
+  }, env);
+
+  // Публичный URL через GitHub Pages основного репо (owner в GH-Pages URL — lowercase).
+  const publicUrl = "https://" + String(owner).toLowerCase() + ".github.io/" + repo + "/" + path;
+
+  return json({
+    ok: true,
+    path: path,
+    url: publicUrl,
+    sha: put && put.content ? put.content.sha : null,
+    name: filename,
+    size: size,
+    uploadedAt: new Date().toISOString(),
+  }, env);
+}
+
 async function handleDownload(request, env, path) {
   if (!path) return json({ ok: false, error: "missing path" }, env, 400);
   const idToken = extractBearer(request);
@@ -139,6 +198,22 @@ function authorizePath(claims, path, env) {
   const studentDir = parts[2] || "";
   const uid = claims.user_id || claims.sub;
   return studentDir.startsWith(uid);
+}
+
+// Разрешение admin-доступа к курсу. Superadmin — по email в env.SUPERADMINS.
+// Курсовые admin — по опциональному env.COURSE_ADMINS_JSON вида
+//   {"email@example.com": ["sem1", "sem2", ...]}
+// Строка COURSE_ADMINS_JSON, если задана, парсится один раз на запрос.
+function authorizeAdminForCourse(claims, cid, env) {
+  const email = claims.email || "";
+  const supers = (env.SUPERADMINS || "").split(",").map(s => s.trim()).filter(Boolean);
+  if (supers.indexOf(email) !== -1) return true;
+  try {
+    const map = JSON.parse(env.COURSE_ADMINS_JSON || "{}");
+    const list = map[email];
+    if (Array.isArray(list) && list.indexOf(cid) !== -1) return true;
+  } catch (_) {}
+  return false;
 }
 
 function extractBearer(request) {
@@ -215,6 +290,28 @@ async function ghApi(method, path, body, env) {
 }
 function ghGet(path, env)  { return ghApi("GET",  path, null, env); }
 function ghPut(path, b, env){ return ghApi("PUT", path, b, env); }
+
+// Как ghApi, но с явным owner/repo — для endpoints, работающих не с
+// основным репо приёма сдач, а с другим (например, публичным cfd-course).
+async function ghApiRepo(method, owner, repo, path, body, env) {
+  if (!owner || !repo) throw new Error("owner/repo not configured");
+  const resp = await fetch("https://api.github.com/repos/" + owner + "/" + repo + path, {
+    method: method,
+    headers: {
+      Authorization: "Bearer " + env.GITHUB_PAT,
+      Accept: "application/vnd.github+json",
+      "Content-Type": "application/json",
+      "User-Agent": "cfd-course-worker",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (resp.status === 404 && method === "GET") return null;
+  if (!resp.ok) {
+    const t = await resp.text();
+    throw new Error("github " + method + " " + owner + "/" + repo + " " + resp.status + ": " + t.slice(0, 300));
+  }
+  return await resp.json();
+}
 
 // ============================================================
 // Utils

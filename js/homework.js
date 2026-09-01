@@ -22,7 +22,7 @@
       .replace(/[^\w.\-]+/g, "_").slice(0, 80);
   }
 
-  // ---------- Storage upload helper ----------
+  // ---------- Storage upload helper (студенческие сдачи, если понадобится) ----------
   async function uploadTo(path, file, onProgress) {
     if (!storage) throw new Error("Firebase Storage не подключён");
     const ref = storage.ref().child(path);
@@ -39,6 +39,51 @@
              contentType: file.type || "" };
   }
 
+  // ---------- Worker upload: admin-условие ДЗ ----------
+  // Загружает файл условия в основной публичный репо cfd-course через
+  // Cloudflare Worker (endpoint /upload-common). Storage при этом не
+  // используется вообще — Firebase Storage требует Blaze-плана и часто
+  // молча висит в свободных проектах. Возвращает { path, url, name, size,
+  // uploadedAt, contentType }.
+  async function uploadCommonViaWorker(cid, aid, file, subdir, onProgress) {
+    const me = auth.currentUser;
+    if (!me) throw new Error("Не авторизован");
+    if (typeof WORKER_URL === "undefined" || !WORKER_URL) {
+      throw new Error("WORKER_URL не настроен — загрузка условия ДЗ невозможна");
+    }
+    if (file.size > 25 * 1024 * 1024) throw new Error("Файл больше 25 MB");
+    if (typeof onProgress === "function") onProgress(0.05);
+    const base64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result).split(",")[1] || "");
+      r.onerror = () => rej(new Error("read"));
+      r.readAsDataURL(file);
+    });
+    if (typeof onProgress === "function") onProgress(0.5);
+    const token = await me.getIdToken();
+    const resp = await fetch(WORKER_URL + "/upload-common", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        token: token, cid: cid, aid: aid,
+        filename: file.name, base64: base64, size: file.size,
+        subdir: subdir || "",
+      }),
+    });
+    if (typeof onProgress === "function") onProgress(0.95);
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) throw new Error(data.error || "upload-common failed");
+    if (typeof onProgress === "function") onProgress(1);
+    return {
+      path: data.path,
+      url: data.url,
+      name: file.name,
+      size: file.size,
+      uploadedAt: data.uploadedAt,
+      contentType: file.type || "",
+    };
+  }
+
   window.CFDHomework = {
     // ==== ASSIGNMENTS ====
 
@@ -49,11 +94,12 @@
       const ref = db.collection("assignments").doc(); // auto-id
       const aid = ref.id;
       try {
-        // Загрузка файлов условий (common)
+        // Загрузка файлов условий (common) — через Cloudflare Worker в
+        // публичный репо cfd-course (Firebase Storage требует Blaze,
+        // часто молча висит; Worker уже настроен и работает).
         const commonUploads = [];
         for (const f of (filesCommon || [])) {
-          const path = "homework/" + cid + "/" + aid + "/common/" + slugify(f.name);
-          commonUploads.push(await uploadTo(path, f, onProgress));
+          commonUploads.push(await uploadCommonViaWorker(cid, aid, f, "common", onProgress));
         }
         // Файлы вариантов (personal). variantsFiles: [[File...], [File...], ...]
         const variantsOut = [];
@@ -62,8 +108,7 @@
           const vfs = (variantsFiles && variantsFiles[i]) || [];
           const uploaded = [];
           for (const f of vfs) {
-            const path = "homework/" + cid + "/" + aid + "/variants/" + i + "/" + slugify(f.name);
-            uploaded.push(await uploadTo(path, f, onProgress));
+            uploaded.push(await uploadCommonViaWorker(cid, aid, f, "variants/" + i, onProgress));
           }
           variantsOut.push({ text: variants[i].text || "", files: uploaded });
         }

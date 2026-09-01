@@ -24,12 +24,17 @@ Free-тариф Cloudflare, без карты.
 
 | Тип | Имя | Значение |
 |-----|-----|----------|
-| Plaintext | `GITHUB_OWNER` | `PolinaKozhurina` |
-| Plaintext | `GITHUB_REPO` | `cfd-submissions` |
-| Plaintext | `FIREBASE_PROJECT_ID` | `cfd-course` |
-| Plaintext | `SUPERADMINS` | `polinakozhurina2020@gmail.com` |
-| Plaintext | `ALLOWED_ORIGIN` | `https://polinakozhurina.github.io` |
-| **Secret** | `GITHUB_PAT` | `github_pat_…` (см. п.4) |
+| Тип | Имя | Значение | Для чего |
+|-----|-----|----------|----------|
+| Plaintext | `GITHUB_OWNER` | `PolinaKozhurina` | владелец репо |
+| Plaintext | `GITHUB_REPO` | `cfd-submissions` | приватный репо студенческих сдач (`/upload`) |
+| Plaintext | `GITHUB_REPO_COMMON` | `cfd-course` | публичный репо для условий ДЗ (`/upload-common`) |
+| Plaintext | `GITHUB_BRANCH_COMMON` | `master` | ветка публичного репо (по умолчанию — `master`) |
+| Plaintext | `FIREBASE_PROJECT_ID` | `cfd-course` | |
+| Plaintext | `SUPERADMINS` | `polinakozhurina2020@gmail.com` | эти email могут `/upload-common` в любой курс |
+| Plaintext | `COURSE_ADMINS_JSON` | `{"a.tsybulenko.work@gmail.com":["sem1"]}` | опционально: курсовые admin с их курсами |
+| Plaintext | `ALLOWED_ORIGIN` | `https://polinakozhurina.github.io` | |
+| **Secret** | `GITHUB_PAT` | `github_pat_…` (см. п.4) | PAT с доступом к ОБОИМ репо |
 
 **Важно:** `GITHUB_PAT` — именно тип **Secret** (Encrypt). После сохранения его нельзя посмотреть, только заменить.
 
@@ -40,10 +45,12 @@ Free-тариф Cloudflare, без карты.
 1. https://github.com/settings/personal-access-tokens/new
 2. Token name: `cfd-worker`, Expiration: **No expiration** или год.
 3. Resource owner: **PolinaKozhurina**.
-4. Repository access: **Only select repositories** → выбрать **cfd-submissions**.
+4. Repository access: **Only select repositories** → выбрать **обоих**: `cfd-submissions` (для сдач) и `cfd-course` (для условий ДЗ через `/upload-common`).
 5. Repository permissions: **Contents → Read and write**.
 6. **Generate token** → скопировать `github_pat_…`.
 7. Вставить в поле `GITHUB_PAT` в Cloudflare (п.3). **Никогда не отправляйте PAT в чат/переписку/код.**
+
+**Если PAT уже существует** и вы только сейчас добавляете endpoint `/upload-common` — либо создайте новый PAT с доступом к обоим репо, либо в GitHub → Settings → Developer settings → Personal access tokens (fine-grained) → откройте существующий → **Edit** → добавьте `cfd-course` в список repositories и сохраните.
 
 ## 5. Проверить
 

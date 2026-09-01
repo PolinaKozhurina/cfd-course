@@ -838,10 +838,13 @@ async function loadAllData() {
       return await db.collection('enrollments')
         .where('courseId', 'in', _currentAdminCourses).get().catch(() => null);
     })(),
+    // ДЗ и сдачи — для расчёта колонки «Прогресс» на вкладке «Оценки».
+    db.collection('assignments').get().catch(() => null),
+    db.collection('submissions').get().catch(() => null),
   ]);
 
   // Ждём всё параллельно.
-  const [_, __, [gradesSnap, claimsSnap, indivGradesSnap, enrSnap]] = await Promise.all([
+  const [_, __, [gradesSnap, claimsSnap, indivGradesSnap, enrSnap, assignSnap, subsSnap]] = await Promise.all([
     Promise.all(legacyPromises),
     Promise.all(coursePromises),
     topPromise,
@@ -878,6 +881,31 @@ async function loadAllData() {
   _allEnrollments = [];
   if (enrSnap) enrSnap.forEach(doc => {
     _allEnrollments.push({ id: doc.id, ...doc.data() });
+  });
+
+  // ---- Индексы для колонки «Прогресс» на вкладке «Оценки» ----
+  // { cid: totalAssignments } и { cid: { uid: submittedCount } }.
+  window._hwByCourse = {};
+  window._subsByCourseUid = {};
+  if (assignSnap) assignSnap.forEach(doc => {
+    const d = doc.data();
+    const cid = d.courseId;
+    if (!cid) return;
+    window._hwByCourse[cid] = (window._hwByCourse[cid] || 0) + 1;
+  });
+  const _aidToCourse = {};
+  if (assignSnap) assignSnap.forEach(doc => { _aidToCourse[doc.id] = (doc.data() || {}).courseId; });
+  if (subsSnap) subsSnap.forEach(doc => {
+    const d = doc.data();
+    const cid = d.courseId || _aidToCourse[d.assignmentId];
+    const uid = d.uid;
+    if (!cid || !uid) return;
+    // Считаем сдачу «сданной», если есть хотя бы один файл/ссылка.
+    const hasContent = (Array.isArray(d.files) && d.files.length > 0)
+                    || (Array.isArray(d.links) && d.links.length > 0);
+    if (!hasContent) return;
+    if (!window._subsByCourseUid[cid]) window._subsByCourseUid[cid] = {};
+    window._subsByCourseUid[cid][uid] = (window._subsByCourseUid[cid][uid] || 0) + 1;
   });
 
   // Индекс: uid → { courseId: status }
@@ -2388,14 +2416,23 @@ function renderGrades() {
   const enrollsByUid = window._enrollmentsByUid || {};
 
   function progressCell(uid, cid) {
-    const cg = (allUsers.find(x => x.uid === uid) || {}).courseGroups || {};
-    const gid = cid && cg[cid] ? (cid + '_' + cg[cid]) : null;
-    const grp = gid ? allGroups[gid] : null;
-    const ch = grp ? (grp.adminChecked || 0) : 0;
-    const tt = grp ? (grp.adminTotal || 71) : 71;
-    const pct = tt > 0 ? Math.round(ch / tt * 100) : 0;
+    // Прогресс = сколько ДЗ по курсу студент сдал (submissions с файлами
+    // или ссылками) / сколько ДЗ по курсу вообще есть.
+    const total   = (window._hwByCourse       && window._hwByCourse[cid])         || 0;
+    const done    = (window._subsByCourseUid  && window._subsByCourseUid[cid]     && window._subsByCourseUid[cid][uid]) || 0;
+    if (total === 0) {
+      return `<div style="display:flex;align-items:center;gap:.4rem;color:var(--text3);font-size:.72rem;font-family:'JetBrains Mono',monospace">
+        <span title="По этому курсу ещё нет ни одного ДЗ">—</span>
+      </div>`;
+    }
+    const pct = Math.round(done / total * 100);
     const col = pct >= 80 ? '#1a6b5a' : (pct >= 40 ? '#854f0b' : '#c44');
-    return `<div style="display:flex;align-items:center;gap:.4rem"><div style="flex:1;background:#ede6da;border-radius:3px;height:8px;min-width:60px"><div style="background:${col};height:100%;border-radius:3px;width:${pct}%"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:${col};font-weight:700">${pct}%</span></div>`;
+    return `<div style="display:flex;align-items:center;gap:.4rem" title="Сдал ${done} ДЗ из ${total}">
+      <div style="flex:1;background:#ede6da;border-radius:3px;height:8px;min-width:60px">
+        <div style="background:${col};height:100%;border-radius:3px;width:${pct}%"></div>
+      </div>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:${col};font-weight:700;white-space:nowrap">${done}/${total} · ${pct}%</span>
+    </div>`;
   }
 
   function row(u, cid, docId, isLegacy) {

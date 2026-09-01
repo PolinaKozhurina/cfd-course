@@ -1071,9 +1071,12 @@ function _hwApplyPrefillFromUrl() {
     const q = new URLSearchParams(location.search);
     const raw = q.get('hwPrefill');
     if (!raw) return;
+    // URLSearchParams превращает '+' в пробел; поддержим и base64url (- и _).
+    let b64 = String(raw).replace(/\s+/g, '+').replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
     let json;
-    try { json = JSON.parse(decodeURIComponent(escape(atob(raw)))); }
-    catch (_) { json = JSON.parse(atob(raw)); }
+    try { json = JSON.parse(decodeURIComponent(escape(atob(b64)))); }
+    catch (_) { json = JSON.parse(atob(b64)); }
     if (typeof hwOpenCreateForm !== 'function') return;
     hwOpenCreateForm();
     if (json.cid) {

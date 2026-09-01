@@ -204,7 +204,9 @@
     uploadSubmissionFile: async function (aid, cid, file, onProgress) {
       const me = auth.currentUser;
       if (!me) throw new Error("Не авторизован");
-      if (!me.emailVerified) throw new Error("Подтвердите email");
+      // Форс-обновление токена — иначе Worker получит email_verified=false из старого токена.
+      try { await me.reload(); await me.getIdToken(true); } catch (_) {}
+      if (!me.emailVerified) throw new Error("Подтвердите email (ссылка в письме) и обновите страницу");
       if (typeof WORKER_URL === "undefined" || !WORKER_URL) {
         throw new Error("Загрузка файлов не настроена (WORKER_URL пуст). Пока пользуйтесь ссылками на облако.");
       }
@@ -297,7 +299,11 @@
     submit: async function (aid, cid, files, note) {
       const me = auth.currentUser;
       if (!me) return { ok: false, error: "Не авторизован" };
-      if (!me.emailVerified) return { ok: false, error: "Подтвердите email" };
+      // Форсируем обновление ID-токена: Firebase кэширует его ~1 час,
+      // и после недавнего подтверждения email в токене всё ещё
+      // email_verified=false — Firestore-правило isVerified() отбивает.
+      try { await me.reload(); await me.getIdToken(true); } catch (_) {}
+      if (!me.emailVerified) return { ok: false, error: "Подтвердите email (ссылка в письме) и обновите страницу" };
       const ref = db.collection("submissions").doc(subDocId(aid, me.uid));
       try {
         const snap = await ref.get();
@@ -328,7 +334,8 @@
     addSubmissionLink: async function (aid, cid, url, name) {
       const me = auth.currentUser;
       if (!me) return { ok: false, error: "Не авторизован" };
-      if (!me.emailVerified) return { ok: false, error: "Подтвердите email" };
+      try { await me.reload(); await me.getIdToken(true); } catch (_) {}
+      if (!me.emailVerified) return { ok: false, error: "Подтвердите email (ссылка в письме) и обновите страницу" };
       url = String(url || "").trim();
       if (!/^https?:\/\//i.test(url)) return { ok: false, error: "Ссылка должна начинаться с http(s)://" };
       const entry = { url: url, name: (name || url).trim().slice(0, 200), addedAt: new Date().toISOString() };

@@ -429,6 +429,26 @@ td{padding:5px 10px;border:1px solid var(--border)}
   }
   function hwEsc(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+  // Достаём из описания первый http(s)-URL и вычищаем строку с ним из видимого текста,
+  // чтобы под описанием повесить кнопку «Показать задачи ▾» с iframe этой страницы.
+  // Формат «Условие: <url>» / «Ссылка: <url>» / голый URL — все свариваются одинаково.
+  function hwExtractEmbedUrl(desc) {
+    if (!desc) return { visibleText: '', embedUrl: null };
+    const m = desc.match(/https?:\/\/[^\s<>"']+/);
+    if (!m) return { visibleText: desc, embedUrl: null };
+    const url = m[0];
+    const lines = desc.split(/\r?\n/);
+    const cleaned = lines.filter(line => {
+      const t = line.trim();
+      if (!t) return true;
+      if (t === url) return false;
+      if (/^[^:]{1,40}:\s*https?:\/\/\S+\s*$/.test(t) && t.indexOf(url) !== -1) return false;
+      return true;
+    });
+    const out = cleaned.join('\n').replace(/^\s*\n+/, '').replace(/\n\s*\n\s*\n+/g, '\n\n').trim();
+    return { visibleText: out, embedUrl: url };
+  }
+
   async function renderMyHomework() {
     const wrap = document.getElementById('myHomeworkList');
     if (!wrap) return;
@@ -500,7 +520,22 @@ td{padding:5px 10px;border:1px solid var(--border)}
       + '<span style="flex:1"></span>'
       + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text3)" title="Дедлайн в МСК">' + deadline + (left ? ' · ' + left : '') + '</span>'
       + '</div>'
-      + (a.description ? '<div style="font-size:.88rem;color:var(--text);white-space:pre-wrap;margin-bottom:.4rem">' + hwEsc(a.description) + '</div>' : '')
+      + (function(){
+          const emb = hwExtractEmbedUrl(a.description);
+          let html = '';
+          if (emb.visibleText) html += '<div style="font-size:.88rem;color:var(--text);white-space:pre-wrap;margin-bottom:.4rem">' + hwEsc(emb.visibleText) + '</div>';
+          if (emb.embedUrl) {
+            html +=
+              '<div style="display:flex;gap:.6rem;align-items:center;margin:.2rem 0 .4rem;font-family:\'JetBrains Mono\',monospace;font-size:.76rem">'
+              + '<button data-hw-embed-toggle data-embed-url="'+hwEsc(emb.embedUrl)+'" style="background:#e0e8f2;color:#4a5f88;border:1px solid #c8d4e6;border-radius:4px;padding:.25rem .55rem;cursor:pointer;font-family:inherit;font-size:inherit">📖 Показать задачи ▾</button>'
+              + '<a href="'+hwEsc(emb.embedUrl)+'" target="_blank" rel="noopener" style="color:var(--accent3);text-decoration:none">↗ в новой вкладке</a>'
+              + '</div>'
+              + '<div data-hw-embed-wrap hidden style="margin:.2rem 0 .5rem;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:#fff">'
+              + '<iframe data-hw-embed-frame src="about:blank" title="Условие домашки" style="width:100%;border:0;display:block;min-height:420px"></iframe>'
+              + '</div>';
+          }
+          return html;
+        })()
       + variantHtml
       + commonFilesHtml
       + (submittedLinks.length ? '<div style="font-size:.85rem;margin-top:.4rem"><span style="color:var(--text2)">Мои ссылки:</span><ul style="list-style:none;padding:0;margin:.2rem 0">' + submittedLinks.map((l,i) =>
@@ -595,6 +630,40 @@ td{padding:5px 10px;border:1px solid var(--border)}
         renderMyHomework();
       };
     });
+    // Разворот/сворот встроенного iframe с условием
+    const embedBtn = card.querySelector('[data-hw-embed-toggle]');
+    if (embedBtn) {
+      const wrap = card.querySelector('[data-hw-embed-wrap]');
+      const frame = card.querySelector('[data-hw-embed-frame]');
+      const url = embedBtn.getAttribute('data-embed-url');
+      let loaded = false;
+      embedBtn.onclick = function () {
+        const opening = wrap.hasAttribute('hidden');
+        if (opening) {
+          if (!loaded) {
+            // ?embed=1 подсказывает встраиваемым страницам (nav.js) не рисовать шапку/FAB
+            const sep = url.indexOf('?') === -1 ? '?' : '&';
+            frame.src = url + sep + 'embed=1';
+            frame.onload = function () {
+              try {
+                const doc = frame.contentDocument;
+                if (doc && doc.body) {
+                  const h = Math.min(1400, Math.max(420, doc.body.scrollHeight + 24));
+                  frame.style.height = h + 'px';
+                }
+              } catch (_) { /* cross-origin — оставляем min-height */ }
+            };
+            loaded = true;
+          }
+          wrap.removeAttribute('hidden');
+          embedBtn.textContent = '📖 Скрыть задачи ▴';
+        } else {
+          wrap.setAttribute('hidden', '');
+          embedBtn.textContent = '📖 Показать задачи ▾';
+        }
+      };
+    }
+
     card.querySelectorAll('[data-rml]').forEach(b => {
       b.onclick = async function () {
         const i = parseInt(b.getAttribute('data-rml'), 10);

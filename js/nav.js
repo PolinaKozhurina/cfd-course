@@ -7,6 +7,12 @@
   // Apply saved theme as early as possible to minimise flash
   try { if (localStorage.getItem('cfd-theme') === 'dark') document.documentElement.classList.add('dark'); } catch (e) {}
 
+  // Встраиваемый режим: страница открыта в iframe карточки ДЗ на профиле (?embed=1).
+  // Ни шапку, ни FAB, ни гейтинг не строим — родитель уже отвечает и за навигацию, и за доступ.
+  try {
+    if (/(?:^|[?&])embed=1(?:&|$)/.test(location.search || '')) return;
+  } catch (_) {}
+
   // Подгружаем gating.js рядом (относительно nav.js) — включает
   // блокировку страницы лекции, если у пользователя нет доступа.
   (function () {

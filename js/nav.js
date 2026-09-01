@@ -35,8 +35,8 @@
     courses: [
       {
         id: "diff-schemes",
-        label: "Разностные схемы",
-        semester: "Весна 2026",
+        label: "Разн. схемы ‖",
+        semester: "8 семестр · Весна 2027",
         sections: [
           { title: "Газодинамика", items: [
               { href: "sem2/flic.html", label: "FLIC" },
@@ -59,8 +59,8 @@
       },
       {
         id: "sem1",
-        label: "Теория разн. схем",
-        semester: "Осень 2026",
+        label: "Разностные методы",
+        semester: "7 семестр · Осень 2026",
         sections: [
           { title: "Основы", items: [
               { href: "sem1/s1-01.html", label: "§1 Основные понятия" },
@@ -112,7 +112,7 @@
       {
         id: "sph",
         label: "Мини-курс SPH",
-        semester: "1 неделя · Maple",
+        semester: "Мини-курс",
         sections: [
           { title: "Лекции", items: [
               { href: "sph/lec1-kernel.html", label: "Лек. 1 Ядро" },
@@ -137,7 +137,7 @@
       {
         id: "nm",
         label: "Численные методы",
-        semester: "Семестр · 16 занятий",
+        semester: "5 семестр · Осень 2026",
         sections: [
           { title: "Основы и аппроксимация", items: [
               { href: "nm/w01.html", label: "Зан. 1 Машинная арифметика" },
@@ -174,7 +174,7 @@
       {
         id: "mke",
         label: "Метод конечных элементов",
-        semester: "Курс · МКЭ",
+        semester: "8 семестр · Весна 2027",
         sections: [
           { title: "Основы метода", items: [
               { href: "mke/lec1.html", label: "Лек. 1 Введение" },

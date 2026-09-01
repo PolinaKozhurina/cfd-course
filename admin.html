@@ -1057,10 +1057,38 @@ function _adminOpenInitialTab() {
   showTab(want);
   // Для табов с ленивой инициализацией — вызвать рендер, чтобы папки не оставались пустыми.
   if (want === 'gating'   && typeof renderGatingTab === 'function')      renderGatingTab();
-  if (want === 'homework' && typeof renderHomeworkTab === 'function')    renderHomeworkTab();
+  if (want === 'homework' && typeof renderHomeworkTab === 'function')    { renderHomeworkTab(); _hwApplyPrefillFromUrl(); }
   if (want === 'grades'   && typeof renderGrades === 'function')         renderGrades();
   if (want === 'checklist'&& typeof loadChecklistProgress === 'function') loadChecklistProgress();
   if (want === 'groups'   && typeof renderGroupResults === 'function')   renderGroupResults();
+}
+
+// Prefill формы новой домашки из URL: ?tab=homework&hwPrefill=<base64(JSON)>.
+// JSON поля: cid, title, description, deadlineLocal ('YYYY-MM-DDTHH:mm' — МСК), strict.
+// Открывает форму создания и заполняет поля. Файл условия загружается вручную.
+function _hwApplyPrefillFromUrl() {
+  try {
+    const q = new URLSearchParams(location.search);
+    const raw = q.get('hwPrefill');
+    if (!raw) return;
+    let json;
+    try { json = JSON.parse(decodeURIComponent(escape(atob(raw)))); }
+    catch (_) { json = JSON.parse(atob(raw)); }
+    if (typeof hwOpenCreateForm !== 'function') return;
+    hwOpenCreateForm();
+    if (json.cid) {
+      const sel = document.getElementById('hwFormCourse');
+      if (sel && Array.from(sel.options).some(o => o.value === json.cid)) sel.value = json.cid;
+    }
+    if (json.title != null) document.getElementById('hwFormTitleInput').value = json.title;
+    if (json.description != null) document.getElementById('hwFormDesc').value = json.description;
+    if (json.deadlineLocal) document.getElementById('hwFormDeadline').value = json.deadlineLocal;
+    if (typeof json.strict === 'boolean') document.getElementById('hwFormStrict').checked = json.strict;
+    // Удаляем параметр из URL, чтобы повторное открытие таба не открывало форму снова.
+    q.delete('hwPrefill');
+    const newSearch = q.toString();
+    history.replaceState(null, '', location.pathname + (newSearch ? '?' + newSearch : '') + location.hash);
+  } catch (e) { console.warn('hwPrefill failed:', e); }
 }
 
 // ===== Students table =====

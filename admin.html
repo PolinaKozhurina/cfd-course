@@ -1123,14 +1123,19 @@ function showTab(name, ev) {
   panel.classList.add('active');
   // Кнопка вкладки — либо из клика, либо ищем по onclick содержимому.
   let btn = (ev && ev.target && ev.target.closest && ev.target.closest('.tab'))
-         || (typeof event !== 'undefined' && event.target && event.target.closest ? event.target.closest('.tab') : null);
+         || (typeof event !== 'undefined' && event && event.target && event.target.closest ? event.target.closest('.tab') : null);
   if (!btn) {
     btn = Array.from(document.querySelectorAll('.tabs .tab')).find(t =>
       (t.getAttribute('onclick')||'').indexOf("showTab('" + name + "'") !== -1);
   }
   if (btn) btn.classList.add('active');
-  // Уведомить родителя (profile.html iframe) и запомнить.
-  try { localStorage.setItem('adminLastTab', name); } catch (_) {}
+  // Сохранение в localStorage — ТОЛЬКО при реальном клике (event.isTrusted),
+  // не при программном вызове из _adminOpenInitialTab и т.п. Иначе последняя
+  // сохранённая вкладка могла зафиксироваться случайно.
+  const isRealClick = (ev && ev.isTrusted) || (typeof event !== 'undefined' && event && event.isTrusted);
+  if (isRealClick) {
+    try { localStorage.setItem('adminLastTab', name); } catch (_) {}
+  }
   try {
     if (window.parent && window.parent !== window) {
       window.parent.postMessage({ type: 'admin-tab', tab: name }, '*');
@@ -1143,7 +1148,17 @@ function _adminOpenInitialTab() {
   const q = new URLSearchParams(location.search);
   let want = q.get('tab');
   if (!want) { try { want = localStorage.getItem('adminLastTab'); } catch (_) {} }
-  if (!want || !document.getElementById('tab-' + want)) return;
+  if (!want) return;
+  const panel = document.getElementById('tab-' + want);
+  if (!panel) { try { localStorage.removeItem('adminLastTab'); } catch (_) {} return; }
+  // Пропустить если tab-кнопка этой вкладки скрыта (display:none) — не хотим
+  // восстанавливать посещаемость какой-нибудь отключённой вкладки.
+  const btn = Array.from(document.querySelectorAll('.tabs .tab')).find(t =>
+    (t.getAttribute('onclick')||'').indexOf("showTab('" + want + "'") !== -1);
+  if (btn && (btn.style.display === 'none' || getComputedStyle(btn).display === 'none')) {
+    try { localStorage.removeItem('adminLastTab'); } catch (_) {}
+    return;
+  }
   showTab(want);
   // Для табов с ленивой инициализацией — вызвать рендер, чтобы папки не оставались пустыми.
   if (want === 'gating'   && typeof renderGatingTab === 'function')      renderGatingTab();

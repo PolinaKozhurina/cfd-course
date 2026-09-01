@@ -372,12 +372,23 @@ service cloud.firestore {
                     || adminCanManageCourse(enrollCourseId())
                   );
 
-      allow create: if isVerified()
-                    && isOwnEnroll()
-                    && docId.split('_').size() == 2
-                    && request.resource.data.uid == request.auth.uid
-                    && request.resource.data.courseId == enrollCourseId()
-                    && request.resource.data.status == 'pending';
+      allow create: if
+        // Обычный путь: студент подаёт заявку сам.
+        (isVerified()
+         && isOwnEnroll()
+         && docId.split('_').size() == 2
+         && request.resource.data.uid == request.auth.uid
+         && request.resource.data.courseId == enrollCourseId()
+         && request.resource.data.status == 'pending')
+        // Админский путь: записывает студента на курс напрямую (approve
+        // без предварительной заявки — set-merge). Обязательно
+        // uid == первому сегменту docId, courseId == второму, status:
+        // approved.
+        || (adminCanManageCourse(enrollCourseId())
+            && docId.split('_').size() == 2
+            && request.resource.data.uid == docId.split('_')[0]
+            && request.resource.data.courseId == enrollCourseId()
+            && request.resource.data.status == 'approved');
 
       allow update: if
         // 1) admin курса меняет статус (approve/reject/переоткрытие)

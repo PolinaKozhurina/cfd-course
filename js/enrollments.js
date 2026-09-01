@@ -109,15 +109,22 @@
       }
     },
 
-    // Admin: одобрить.
+    // Admin: одобрить. Использует set-merge, чтобы работать и когда
+    // студент вообще ни разу не подавал заявку (doc отсутствует) —
+    // тогда admin, по сути, "записывает" его на курс напрямую.
     approve: async function (uid, courseId) {
       const me = auth.currentUser;
       try {
-        await db.collection("enrollments").doc(docId(uid, courseId)).update({
+        await db.collection("enrollments").doc(docId(uid, courseId)).set({
+          uid: uid,
+          courseId: courseId,
           status: "approved",
           decidedAt: firebase.firestore.FieldValue.serverTimestamp(),
           decidedBy: me ? me.email : null,
-        });
+          // requestedAt проставляем только если doc'а не было раньше — при merge:true
+          // Firestore не перезаписывает существующее значение поля, если его нет в патче.
+          requestedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
         return { ok: true };
       } catch (e) {
         return { ok: false, error: e.message };

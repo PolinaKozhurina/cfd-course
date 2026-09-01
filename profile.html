@@ -114,6 +114,12 @@ td{padding:5px 10px;border:1px solid var(--border)}
     <div id="legacyGroupNotice" style="display:none;margin-top:.6rem;padding:.5rem .7rem;background:#faeeda;color:#854f0b;border-radius:6px;font-size:.82rem"></div>
   </div>
 
+  <div class="card" id="myAttendanceCard">
+    <h2 style="margin-top:1.5rem">Посещаемость</h2>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:.6rem">Процент занятий, на которых вы фактически присутствовали, по каждому вашему курсу. Уважительные пропуски не учитываются ни в числителе, ни в знаменателе.</p>
+    <div id="myAttendanceList" style="display:flex;flex-direction:column;gap:.4rem"></div>
+  </div>
+
   <div id="myHomeworkCard">
     <h2 style="margin-top:1.5rem">Домашние задания</h2>
     <p style="font-size:.82rem;color:var(--text2);margin-bottom:.6rem">По каждому вашему курсу — актуальные домашки, срок сдачи, файлы решения, оценки и комментарии преподавателя. Перед сдачей — ознакомьтесь с <a href="policy.html" style="color:var(--accent)">правилами курса</a> (в частности с политикой по генеративным моделям).</p>
@@ -200,6 +206,7 @@ td{padding:5px 10px;border:1px solid var(--border)}
 <script src="js/enrollments.js"></script>
 <script src="js/workgroups.js"></script>
 <script src="js/homework.js"></script>
+<script src="js/attendance.js"></script>
 <style>
 .mycourse-row{display:flex;align-items:center;gap:.6rem;padding:.5rem .7rem;border:1px solid var(--border);border-radius:6px;background:var(--bg2)}
 .mycourse-row .name{flex:1;font-family:'Playfair Display',serif;font-weight:700;font-size:.95rem;color:var(--text)}
@@ -678,11 +685,54 @@ td{padding:5px 10px;border:1px solid var(--border)}
 
   window._renderMyHomework = renderMyHomework;
 
+  // ====== Моя посещаемость ======
+  async function renderMyAttendance() {
+    const wrap = document.getElementById('myAttendanceList');
+    if (!wrap) return;
+    const user = firebase.auth().currentUser;
+    if (!user) { wrap.innerHTML = '<div style="color:var(--text3);font-size:.85rem">войдите, чтобы увидеть посещаемость</div>'; return; }
+    wrap.innerHTML = '<div style="color:var(--text3);font-size:.85rem">загрузка…</div>';
+    // Мои курсы — те, у которых у меня approved enrollment
+    const enrSnap = await firebase.firestore().collection('enrollments')
+      .where('uid', '==', user.uid).where('status', '==', 'approved').get()
+      .catch(() => null);
+    if (!enrSnap || enrSnap.empty) {
+      wrap.innerHTML = '<div style="color:var(--text3);font-size:.85rem;font-style:italic">Вы пока не записаны ни на один курс. Посещаемость появится, как только преподаватель отметит хотя бы одно занятие.</div>';
+      return;
+    }
+    const cids = []; enrSnap.forEach(d => cids.push(d.data().courseId));
+    const stats = await CFDAttendance.getMyStatsForCourses(cids);
+    const rows = cids.map(cid => {
+      const c = (window.CFD_COURSE_BY_ID || {})[cid] || { id: cid, name: cid };
+      const s = stats[cid] || { total: 0, present: 0, absent: 0, excused: 0, percent: null };
+      const pct = (s.percent == null) ? '—' : s.percent + '%';
+      const color = (s.percent == null) ? 'var(--text3)' : (s.percent >= 70 ? '#3d6b5a' : (s.percent >= 50 ? '#8a6e2a' : '#b44a2d'));
+      const barW = (s.percent == null) ? 0 : Math.max(2, Math.round(s.percent));
+      return '<div style="display:grid;grid-template-columns:1fr 60px;gap:.6rem;align-items:center;padding:.35rem .5rem;background:var(--bg2);border-radius:5px">'
+        + '<div>'
+          + '<div style="font-family:\'Playfair Display\',serif;font-size:.95rem;color:var(--text);margin-bottom:.15rem">' + hwEsc(c.name) + '</div>'
+          + '<div style="height:6px;background:#e6dfd0;border-radius:3px;overflow:hidden">'
+            + '<div style="height:100%;width:' + barW + '%;background:' + color + '"></div>'
+          + '</div>'
+          + '<div style="font-size:.72rem;color:var(--text3);margin-top:.15rem">'
+          + (s.total > 0
+              ? 'Занятий отмечено: ' + s.total + ' · присутствовал: ' + s.present + (s.excused ? ' · уваж.: ' + s.excused : '') + (s.absent ? ' · прогул: ' + s.absent : '')
+              : 'Занятий по курсу ещё не отмечено')
+          + '</div>'
+        + '</div>'
+        + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:1.1rem;font-weight:700;color:' + color + ';text-align:right">' + pct + '</div>'
+        + '</div>';
+    });
+    wrap.innerHTML = rows.join('');
+  }
+  window._renderMyAttendance = renderMyAttendance;
+
   document.addEventListener('DOMContentLoaded', function(){
     firebase.auth().onAuthStateChanged(function(){
       renderMyCourses();
       renderMyWorkGroups();
       renderMyHomework();
+      renderMyAttendance();
     });
   });
 })();

@@ -409,6 +409,21 @@ service cloud.firestore {
                     && adminCanManageCourse(resource.data.get('courseId', ''));
     }
 
+    // ---------- attendance (учёт посещаемости занятий) ----------
+    // документ = одно занятие: { courseId, studyGroup, date, title?,
+    //   records: { uid: 'present'|'excused'|'absent' },
+    //   createdBy, createdByUid, createdAt, updatedAt }.
+    //
+    // Читать может любой авторизованный (студент видит свои проценты);
+    // писать — админ курса. Курс определяется полем courseId документа.
+    match /attendance/{aid} {
+      allow read: if isAuth();
+      allow create: if isAdmin()
+                    && adminCanManageCourse(request.resource.data.get('courseId', ''));
+      allow update, delete: if isAdmin()
+                    && adminCanManageCourse(resource.data.get('courseId', ''));
+    }
+
     // ---------- submissions (сдача студента) ----------
     // ключ: '{aid}_{uid}'; поля: { assignmentId, uid, courseId,
     //   files:[{path,url,name,size,uploadedAt}], submittedAt, updatedAt,

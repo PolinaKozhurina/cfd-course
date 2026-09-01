@@ -141,6 +141,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
   <button class="tab" onclick="showTab('enrollments')">Заявки на курсы <span id="enrollTabBadge" style="display:none;min-width:16px;height:16px;border-radius:8px;background:#c44;color:#fff;font-size:.6rem;font-weight:700;font-family:JetBrains Mono,monospace;align-items:center;justify-content:center;padding:0 4px;margin-left:2px;vertical-align:middle"></span></button>
   <button class="tab" onclick="showTab('workgroups')">Рабочие группы</button>
   <button class="tab" onclick="showTab('homework');renderHomeworkTab()">Домашки</button>
+  <button class="tab" onclick="showTab('attendance');renderAttendanceTab()">Посещаемость</button>
   <button class="tab" onclick="showTab('gating');renderGatingTab()">Гейтинг лекций</button>
   <button class="tab" onclick="showTab('groups');renderGroupResults()">Результаты тестов</button>
   <button class="tab" onclick="showTab('checklist');loadChecklistProgress()">Чек-лист (самооценка)</button>
@@ -360,6 +361,53 @@ if (location.search.indexOf('embedded=1') !== -1) {
   </div>
 </div>
 
+<!-- TAB: Посещаемость -->
+<div id="tab-attendance" class="panel">
+  <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:.7rem">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3)">Курс:</label>
+    <select id="attCourse" onchange="renderAttendanceTab()" style="font-family:'JetBrains Mono',monospace;font-size:.85rem"></select>
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);margin-left:.4rem">Группа:</label>
+    <select id="attGroup" onchange="attRenderList()" style="font-family:'JetBrains Mono',monospace;font-size:.85rem"><option value="">— все —</option></select>
+    <span style="flex:1"></span>
+    <button class="btn btn-primary" onclick="attOpenNewForm()">+ Новое занятие</button>
+  </div>
+  <div id="attList" style="border-top:1px solid var(--border);padding-top:.6rem"></div>
+</div>
+
+<!-- Модалка «Новое / редактирование занятия» -->
+<div id="attFormWrap" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:10px;width:720px;max-width:95%;max-height:90vh;overflow:auto;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2)">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.5rem">
+      <h3 id="attFormTitle" style="margin:0;font-family:'Playfair Display',serif">Новое занятие</h3>
+      <button onclick="attCloseForm()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text3)">×</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;margin-bottom:.5rem">
+      <div>
+        <label style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text3)">Курс</label>
+        <select id="attFormCourse" style="width:100%" onchange="attFormLoadStudents()"></select>
+      </div>
+      <div>
+        <label style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text3)">Учебная группа</label>
+        <select id="attFormGroup" style="width:100%" onchange="attFormLoadStudents()"></select>
+      </div>
+      <div>
+        <label style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text3)">Дата и время (МСК)</label>
+        <input type="datetime-local" id="attFormDate" style="width:100%;font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:#fff">
+      </div>
+    </div>
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text3)">Тема (необязательно)</label>
+    <input type="text" id="attFormTitle_" placeholder="§1 · Основные понятия разностной схемы" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text);font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;margin-bottom:.6rem">
+
+    <div id="attFormStudents" style="border:1px solid var(--border);border-radius:6px;padding:.5rem .7rem;max-height:45vh;overflow:auto;font-size:.85rem"></div>
+
+    <div style="display:flex;gap:.4rem;justify-content:flex-end;margin-top:.8rem">
+      <button class="btn" onclick="attCloseForm()">Отмена</button>
+      <button class="btn btn-primary" onclick="attSubmitForm()" id="attSubmitBtn">Сохранить</button>
+    </div>
+    <div id="attFormStatus" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text3);margin-top:.4rem;min-height:1em"></div>
+  </div>
+</div>
+
 <!-- TAB: Гейтинг лекций (открытие по расписанию / вручную) -->
 <div id="tab-gating" class="panel">
   <div class="card">
@@ -541,6 +589,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
 <script src="js/courses.js"></script>
 <script src="js/enrollments.js"></script>
 <script src="js/homework.js"></script>
+<script src="js/attendance.js"></script>
 <script src="js/gating.js"></script>
 <script>
 // ============================================================
@@ -1061,6 +1110,7 @@ function _adminOpenInitialTab() {
   if (want === 'grades'   && typeof renderGrades === 'function')         renderGrades();
   if (want === 'checklist'&& typeof loadChecklistProgress === 'function') loadChecklistProgress();
   if (want === 'groups'   && typeof renderGroupResults === 'function')   renderGroupResults();
+  if (want === 'attendance' && typeof renderAttendanceTab === 'function') renderAttendanceTab();
 }
 
 // Prefill формы новой домашки из URL: ?tab=homework&hwPrefill=<base64(JSON)>.
@@ -3931,6 +3981,251 @@ async function gateSchedApply() {
     document.getElementById('gateSchedWrap').style.display = 'none';
     renderGatingTab(true);
   }, 700);
+}
+
+// ============================================================
+// Посещаемость (attendance)
+// ============================================================
+
+let _attCurrent = null;             // { aid: null | id, editing: bool }
+let _attList = [];                  // текущая выборка занятий по фильтру
+
+// Список uid'ов approved-студентов курса cid (через прямой firestore-запрос).
+async function _attApprovedUids(cid) {
+  try {
+    const snap = await firebase.firestore().collection('enrollments')
+      .where('courseId', '==', cid).where('status', '==', 'approved').get();
+    const uids = new Set();
+    snap.forEach(d => uids.add(d.data().uid));
+    return uids;
+  } catch (e) { console.warn('_attApprovedUids:', e); return new Set(); }
+}
+
+// Учебные группы курса = уникальные studyGroup среди students, у которых
+// enrollment по этому курсу approved. Строится в памяти из allUsers и enrollments.
+async function _attStudyGroupsForCourse(cid) {
+  const uids = await _attApprovedUids(cid);
+  const groups = new Set();
+  (allUsers || []).forEach(u => {
+    if (uids.has(u.uid) && u.studyGroup) groups.add(u.studyGroup);
+  });
+  return Array.from(groups).sort();
+}
+
+async function _attStudentsForCourseGroup(cid, studyGroup) {
+  const uids = await _attApprovedUids(cid);
+  return (allUsers || [])
+    .filter(u => uids.has(u.uid) && u.studyGroup === studyGroup)
+    .sort((a, b) => (a.fio || a.email || '').localeCompare(b.fio || b.email || ''));
+}
+
+async function renderAttendanceTab() {
+  // Заполнить селект курсов
+  const selC = document.getElementById('attCourse');
+  if (selC && selC.options.length === 0) {
+    const cids = (window.CFD_COURSES || []);
+    cids.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c.id; o.textContent = c.name;
+      selC.appendChild(o);
+    });
+  }
+  const cid = selC.value || (selC.options[0] && selC.options[0].value);
+  if (!cid) { document.getElementById('attList').innerHTML = '<div style="color:var(--text3);padding:1rem">Нет доступных курсов.</div>'; return; }
+  // Заполнить селект групп
+  const selG = document.getElementById('attGroup');
+  const groups = await _attStudyGroupsForCourse(cid);
+  const prev = selG.value;
+  selG.innerHTML = '<option value="">— все —</option>' + groups.map(g => '<option value="' + g + '">' + g + '</option>').join('');
+  if (prev && groups.indexOf(prev) !== -1) selG.value = prev;
+  await attRenderList();
+}
+
+async function attRenderList() {
+  const cid = document.getElementById('attCourse').value;
+  const gid = document.getElementById('attGroup').value;
+  const wrap = document.getElementById('attList');
+  wrap.innerHTML = '<div style="color:var(--text3);padding:.5rem">загрузка…</div>';
+  _attList = await CFDAttendance.listByCourse(cid);
+  if (gid) _attList = _attList.filter(a => a.studyGroup === gid);
+  if (!_attList.length) {
+    wrap.innerHTML = '<div style="color:var(--text3);padding:1rem;text-align:center;font-style:italic">Занятий по выбранному фильтру ещё нет. Нажмите «+ Новое занятие», чтобы отметить первое.</div>';
+    return;
+  }
+  const rows = _attList.map(a => {
+    const d = a.date ? new Date(a.date.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'medium', timeStyle: 'short' }) : '—';
+    const p = CFDAttendance.percentFromRecords(a.records || {});
+    const pctText = (p.percent == null) ? '—' : Math.round(p.percent) + '%';
+    const total = p.present + p.absent + p.excused;
+    return '<div style="display:grid;grid-template-columns:130px 1fr 110px 60px 60px;gap:.6rem;align-items:center;padding:.5rem 0;border-bottom:1px dotted var(--border);font-size:.88rem">'
+      + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.78rem;color:var(--text2)">' + d + ' МСК</div>'
+      + '<div><strong>' + escapeHtml(a.studyGroup || '') + '</strong>'
+        + (a.title ? ' <span style="color:var(--text3);font-style:italic">— ' + escapeHtml(a.title) + '</span>' : '')
+      + '</div>'
+      + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text2)">✅ ' + p.present + ' · 🟡 ' + p.excused + ' · ❌ ' + p.absent + '</div>'
+      + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.85rem;font-weight:600;text-align:right;color:' + (p.percent == null ? 'var(--text3)' : (p.percent >= 70 ? '#3d6b5a' : '#b44a2d')) + '">' + pctText + '</div>'
+      + '<div style="display:flex;gap:.3rem;justify-content:flex-end">'
+        + '<button class="btn btn-sm" onclick="attOpenEditForm(\'' + a.id + '\')" title="Редактировать">✎</button>'
+        + '<button class="btn btn-sm" style="color:#c44" onclick="attDelete(\'' + a.id + '\')" title="Удалить">×</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+  wrap.innerHTML = rows;
+}
+
+function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function attOpenNewForm() {
+  _attCurrent = { aid: null, editing: false };
+  const selC = document.getElementById('attFormCourse');
+  selC.innerHTML = '';
+  const cids = (window.CFD_COURSES || []);
+  cids.forEach(c => {
+    const o = document.createElement('option'); o.value = c.id; o.textContent = c.name; selC.appendChild(o);
+  });
+  // Предзаполнить из фильтра, если есть
+  const preC = document.getElementById('attCourse').value;
+  const preG = document.getElementById('attGroup').value;
+  if (preC && Array.from(selC.options).some(o => o.value === preC)) selC.value = preC;
+  // Дата по умолчанию — сейчас (округл. до 5 минут)
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getMinutes() % 5, 0, 0);
+  document.getElementById('attFormDate').value = now.toISOString().slice(0, 16);
+  document.getElementById('attFormTitle_').value = '';
+  document.getElementById('attFormTitle').textContent = 'Новое занятие';
+  document.getElementById('attFormStatus').textContent = '';
+  await attFormLoadGroupsAndStudents(preG || null, null);
+  document.getElementById('attFormWrap').style.display = 'flex';
+}
+
+async function attOpenEditForm(aid) {
+  const a = _attList.find(x => x.id === aid);
+  if (!a) { alert('Занятие не найдено'); return; }
+  _attCurrent = { aid: aid, editing: true, records: Object.assign({}, a.records || {}) };
+  const selC = document.getElementById('attFormCourse');
+  selC.innerHTML = '';
+  const cids = (window.CFD_COURSES || []);
+  cids.forEach(c => {
+    const o = document.createElement('option'); o.value = c.id; o.textContent = c.name; selC.appendChild(o);
+  });
+  selC.value = a.courseId;
+  const dt = a.date ? new Date(a.date.toMillis()) : new Date();
+  // Локальное время (МСК) в поле datetime-local
+  const mskShift = dt.getTimezoneOffset() * 60000 - 3 * 3600 * 1000;
+  const local = new Date(dt.getTime() - mskShift);
+  document.getElementById('attFormDate').value = local.toISOString().slice(0, 16);
+  document.getElementById('attFormTitle_').value = a.title || '';
+  document.getElementById('attFormTitle').textContent = 'Редактирование занятия';
+  document.getElementById('attFormStatus').textContent = '';
+  await attFormLoadGroupsAndStudents(a.studyGroup, a.records || {});
+  document.getElementById('attFormWrap').style.display = 'flex';
+}
+
+async function attFormLoadGroupsAndStudents(preselectGroup, preselectRecords) {
+  const cid = document.getElementById('attFormCourse').value;
+  const groups = await _attStudyGroupsForCourse(cid);
+  const selG = document.getElementById('attFormGroup');
+  selG.innerHTML = groups.map(g => '<option value="' + g + '">' + g + '</option>').join('') || '<option value="">— в этом курсе нет групп —</option>';
+  if (preselectGroup && groups.indexOf(preselectGroup) !== -1) selG.value = preselectGroup;
+  await attFormLoadStudents(preselectRecords);
+}
+
+async function attFormLoadStudents(preselectRecords) {
+  const cid = document.getElementById('attFormCourse').value;
+  const gid = document.getElementById('attFormGroup').value;
+  const wrap = document.getElementById('attFormStudents');
+  wrap.innerHTML = '<div style="color:var(--text3);padding:.5rem">загрузка списка…</div>';
+  if (!cid || !gid) { wrap.innerHTML = '<div style="color:var(--text3);padding:.5rem;font-style:italic">Выберите курс и группу.</div>'; return; }
+  const students = await _attStudentsForCourseGroup(cid, gid);
+  if (!students.length) {
+    wrap.innerHTML = '<div style="color:var(--text3);padding:.5rem;font-style:italic">В группе «' + escapeHtml(gid) + '» нет approved-студентов на курсе.</div>';
+    return;
+  }
+  const records = preselectRecords || (_attCurrent && _attCurrent.records) || {};
+  const rows = students.map(u => {
+    const cur = records[u.uid] || 'present';   // default: пришёл
+    return '<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:.5rem;align-items:center;padding:.35rem 0;border-bottom:1px dotted var(--border)">'
+      + '<div>' + escapeHtml(u.fio || u.email || u.uid) + ' <span style="color:var(--text3);font-size:.78rem">' + escapeHtml(u.email || '') + '</span></div>'
+      + '<label style="display:inline-flex;align-items:center;gap:.2rem;font-size:.82rem;cursor:pointer;color:#3d6b5a">'
+        + '<input type="radio" name="att_' + u.uid + '" value="present" ' + (cur === 'present' ? 'checked' : '') + '> ✅'
+      + '</label>'
+      + '<label style="display:inline-flex;align-items:center;gap:.2rem;font-size:.82rem;cursor:pointer;color:#8a6e2a">'
+        + '<input type="radio" name="att_' + u.uid + '" value="excused" ' + (cur === 'excused' ? 'checked' : '') + '> 🟡'
+      + '</label>'
+      + '<label style="display:inline-flex;align-items:center;gap:.2rem;font-size:.82rem;cursor:pointer;color:#b44a2d">'
+        + '<input type="radio" name="att_' + u.uid + '" value="absent" ' + (cur === 'absent' ? 'checked' : '') + '> ❌'
+      + '</label>'
+      + '</div>';
+  }).join('');
+  const summary = '<div style="display:flex;gap:.6rem;font-size:.78rem;color:var(--text3);margin-bottom:.5rem;padding-bottom:.3rem;border-bottom:1px solid var(--border)">'
+    + '<span>Всего в группе: <strong>' + students.length + '</strong></span>'
+    + '<span style="margin-left:auto">'
+      + '<button class="btn btn-sm" onclick="attMarkAll(\'present\')">все ✅</button> '
+      + '<button class="btn btn-sm" onclick="attMarkAll(\'absent\')">все ❌</button>'
+    + '</span></div>';
+  wrap.innerHTML = summary + rows;
+}
+
+function attMarkAll(status) {
+  document.querySelectorAll('#attFormStudents input[type=radio]').forEach(r => {
+    if (r.value === status) r.checked = true;
+  });
+}
+
+function attCloseForm() { document.getElementById('attFormWrap').style.display = 'none'; }
+
+async function attSubmitForm() {
+  const btn = document.getElementById('attSubmitBtn');
+  const st = document.getElementById('attFormStatus');
+  const cid = document.getElementById('attFormCourse').value;
+  const gid = document.getElementById('attFormGroup').value;
+  const dl  = document.getElementById('attFormDate').value;
+  const title = document.getElementById('attFormTitle_').value.trim();
+  if (!cid || !gid) { st.textContent = 'Выберите курс и группу'; return; }
+  if (!dl) { st.textContent = 'Укажите дату'; return; }
+  // Дата: считаем что введено МСК (Europe/Moscow, UTC+3, без DST).
+  const [d, t] = dl.split('T');
+  const [Y, M, D] = d.split('-').map(Number);
+  const [h, m] = t.split(':').map(Number);
+  const dateUtcMs = Date.UTC(Y, M - 1, D, h - 3, m);
+  // Собрать records
+  const records = {};
+  document.querySelectorAll('#attFormStudents input[type=radio]:checked').forEach(r => {
+    const uid = r.name.replace(/^att_/, '');
+    records[uid] = r.value;
+  });
+  btn.disabled = true; st.textContent = 'сохраняю…';
+  let res;
+  if (_attCurrent && _attCurrent.aid) {
+    res = await CFDAttendance.update(_attCurrent.aid, {
+      courseId: cid, studyGroup: gid,
+      date: firebase.firestore.Timestamp.fromDate(new Date(dateUtcMs)),
+      title: title, records: records,
+    });
+  } else {
+    res = await CFDAttendance.create({
+      courseId: cid, studyGroup: gid,
+      date: new Date(dateUtcMs),
+      title: title, records: records,
+    });
+  }
+  btn.disabled = false;
+  if (!res.ok) { st.textContent = '✗ ' + res.error; return; }
+  st.textContent = '✓ сохранено';
+  attCloseForm();
+  // Синхронизировать фильтры с только что созданным, если курс/группа отличались
+  document.getElementById('attCourse').value = cid;
+  await renderAttendanceTab();
+  document.getElementById('attGroup').value = gid;
+  await attRenderList();
+}
+
+async function attDelete(aid) {
+  const a = _attList.find(x => x.id === aid);
+  if (!confirm('Удалить занятие ' + (a && a.title ? '«' + a.title + '»' : 'от ' + (a && a.date ? new Date(a.date.toMillis()).toLocaleDateString('ru-RU') : '?')) + '? Отменить будет нельзя.')) return;
+  const res = await CFDAttendance.delete(aid);
+  if (!res.ok) { alert('Ошибка: ' + res.error); return; }
+  await attRenderList();
 }
 </script>
 </body>

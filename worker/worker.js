@@ -49,7 +49,23 @@ export default {
         return await handleDelete(request, env, url.searchParams.get("path"));
       }
       if (url.pathname === "/health") {
-        return json({ ok: true, ts: Date.now() }, env);
+        return json({
+          ok: true,
+          ts: Date.now(),
+          // Диагностика какие env реально видит Worker (без выдачи значений).
+          env: {
+            has_GITHUB_OWNER:          !!env.GITHUB_OWNER,
+            has_GITHUB_REPO:           !!env.GITHUB_REPO,
+            has_GITHUB_REPO_COMMON:    !!env.GITHUB_REPO_COMMON,
+            has_FIREBASE_PROJECT_ID:   !!env.FIREBASE_PROJECT_ID,
+            has_SUPERADMINS:           !!env.SUPERADMINS,
+            has_COURSE_ADMINS_JSON:    !!env.COURSE_ADMINS_JSON,
+            has_ALLOWED_ORIGIN:        !!env.ALLOWED_ORIGIN,
+            has_GITHUB_PAT:            !!env.GITHUB_PAT,
+            has_FIREBASE_ADMIN_SA_JSON:!!env.FIREBASE_ADMIN_SA_JSON,
+            sa_len: env.FIREBASE_ADMIN_SA_JSON ? env.FIREBASE_ADMIN_SA_JSON.length : 0,
+          },
+        }, env);
       }
       return json({ ok: false, error: "not found" }, env, 404);
     } catch (e) {

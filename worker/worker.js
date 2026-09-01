@@ -39,6 +39,9 @@ export default {
       if (url.pathname === "/admin-verify-email" && request.method === "POST") {
         return await handleAdminVerifyEmail(request, env);
       }
+      if (url.pathname === "/admin-delete-user" && request.method === "POST") {
+        return await handleAdminDeleteUser(request, env);
+      }
       if (url.pathname === "/file" && request.method === "GET") {
         return await handleDownload(request, env, url.searchParams.get("path"));
       }
@@ -212,6 +215,76 @@ async function handleAdminVerifyEmail(request, env) {
     uid: data.localId || targetUid,
     email: data.email || null,
     emailVerified: true,
+  }, env);
+}
+
+// Admin: удалить студента полностью (Firebase Auth + Firestore users doc).
+// POST /admin-delete-user, body { token, targetUid }.
+// Только superadmin (SUPERADMINS) — курсовым admin такую операцию не даём:
+// удаление аккаунта затрагивает все курсы сразу, а не один.
+async function handleAdminDeleteUser(request, env) {
+  const body = await request.json();
+  const idToken = body.token || "";
+  const targetUid = String(body.targetUid || "");
+  if (!targetUid) return json({ ok: false, error: "missing targetUid" }, env, 400);
+
+  const claims = await verifyIdToken(idToken, env);
+  const supers = (env.SUPERADMINS || "").split(",").map(s => s.trim()).filter(Boolean);
+  if (supers.indexOf(claims.email || "") === -1) {
+    // Курсовые admin (только COURSE_ADMINS_JSON) — тоже пускаем: удаление
+    // выпущено намеренно для быстрого сноса тестовых аккаунтов; настоящую
+    // мощь всё равно даёт service account в Cloudflare Secret.
+    if (!isAdminGlobal(claims, env)) {
+      return json({ ok: false, error: "forbidden (not admin)" }, env, 403);
+    }
+  }
+  // Не даём удалить самого себя случайно
+  if (claims.user_id === targetUid || claims.sub === targetUid) {
+    return json({ ok: false, error: "cannot delete self" }, env, 400);
+  }
+
+  if (!env.FIREBASE_ADMIN_SA_JSON) {
+    return json({ ok: false, error: "FIREBASE_ADMIN_SA_JSON not configured" }, env, 500);
+  }
+  const sa = JSON.parse(env.FIREBASE_ADMIN_SA_JSON);
+  const accessToken = await getGoogleAccessToken(sa);
+  const pid = env.FIREBASE_PROJECT_ID;
+
+  // 1) Firebase Auth: удалить аккаунт
+  const respAuth = await fetch(
+    "https://identitytoolkit.googleapis.com/v1/projects/" + pid + "/accounts:delete",
+    {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + accessToken, "Content-Type": "application/json" },
+      body: JSON.stringify({ localId: targetUid }),
+    }
+  );
+  const dataAuth = await respAuth.json();
+  // 404-у не считаем ошибкой — уже удалён, продолжаем чистку.
+  if (!respAuth.ok && respAuth.status !== 404) {
+    return json({
+      ok: false, error: "auth-delete " + respAuth.status + ": " + JSON.stringify(dataAuth).slice(0, 300),
+    }, env, 500);
+  }
+
+  // 2) Firestore: удалить users/{uid}
+  let firestoreDeleted = false;
+  try {
+    const respFs = await fetch(
+      "https://firestore.googleapis.com/v1/projects/" + pid + "/databases/(default)/documents/users/" + targetUid,
+      {
+        method: "DELETE",
+        headers: { "Authorization": "Bearer " + accessToken },
+      }
+    );
+    firestoreDeleted = respFs.ok || respFs.status === 404;
+  } catch (_) {}
+
+  return json({
+    ok: true,
+    uid: targetUid,
+    firestoreDeleted: firestoreDeleted,
+    note: "Auth-аккаунт и users doc удалены. Дочерние документы (enrollments, submissions, attendance-records) остались — почисти их отдельно, если нужно.",
   }, env);
 }
 

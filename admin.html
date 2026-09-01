@@ -1209,9 +1209,9 @@ function renderStudents() {
       + '<th style="min-width:60px">Подтв.</th><th style="min-width:80px">Роль</th><th style="min-width:80px">Legacy</th>'
       + '</tr></thead>';
   cont.innerHTML = keys.map(k => {
-    const users = byGroup[k];
+    const users = byGroup[k].slice().sort((a, b) => (a.fio || a.email || '').localeCompare(b.fio || b.email || '', 'ru'));
     const title = k === '__none__' ? '(без учебной группы)' : k;
-    const rows = users.map(u => studentRowHtml(u, viewerIsSuperAdmin, showLegacyAssign)).join('');
+    const rows = users.map((u, i) => studentRowHtml(u, viewerIsSuperAdmin, showLegacyAssign, i + 1)).join('');
     return '<details open style="margin-bottom:.6rem">'
       +   '<summary style="cursor:pointer;font-weight:700;padding:.4rem .6rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-family:JetBrains Mono,monospace;font-size:.82rem">'
       +     '📁 ' + esc(title) + ' <span style="color:var(--text2);font-weight:400">— ' + users.length + '</span>'
@@ -1235,7 +1235,7 @@ function esc(s) {
 }
 
 // Строка таблицы студента — вынесена, чтобы можно было раскладывать по папкам.
-function studentRowHtml(u, viewerIsSuperAdmin, showLegacyAssign) {
+function studentRowHtml(u, viewerIsSuperAdmin, showLegacyAssign, num) {
   const isAdm = isAdmin(u.email);
   const groupOptions = Array.from({length: 5}, (_, i) => {
     const gid = 'group_' + String(i + 1).padStart(2, '0');
@@ -1286,8 +1286,8 @@ function studentRowHtml(u, viewerIsSuperAdmin, showLegacyAssign) {
         : '<span style="color:var(--text3);font-size:.65rem">—</span>');
   return `<tr>
     <td style="text-align:center"><input type="checkbox" class="bulk-cb-student" data-uid="${u.uid}" onchange="bulkUpdateStudentsCount()"></td>
-    <td style="min-width:230px"><input type="text" value="${esc(u.fio || '')}" placeholder="ФИО" id="fio-${u.uid}" onchange="saveUserField('${u.uid}','fio',this.value)" style="font-weight:600;font-size:.82rem;width:100%;min-width:210px;box-sizing:border-box;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'Source Serif 4',serif;background:#fff;color:var(--text)"></td>
-    <td style="font-size:.82rem;white-space:nowrap">${esc(u.email || '—')} <button class="btn btn-sm" title="Ручная верификация email через Admin API (обход email-письма)" onclick="adminVerifyEmail('${u.uid}','${esc(u.email || '')}')" style="padding:1px 5px;font-size:.7rem;margin-left:.2rem">🔓</button></td>
+    <td style="min-width:230px"><span style="color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:.72rem;margin-right:.3rem;min-width:1.6em;display:inline-block;text-align:right">${num || ''}.</span><input type="text" value="${esc(u.fio || '')}" placeholder="ФИО" id="fio-${u.uid}" onchange="saveUserField('${u.uid}','fio',this.value)" style="font-weight:600;font-size:.82rem;width:calc(100% - 2.2em);min-width:190px;box-sizing:border-box;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'Source Serif 4',serif;background:#fff;color:var(--text)"></td>
+    <td style="font-size:.82rem;white-space:nowrap">${esc(u.email || '—')} <button class="btn btn-sm" title="Записать на курс (approve enrollment без предварительной заявки)" onclick="adminEnrollTo('${u.uid}','${esc(u.fio || u.email || '')}')" style="padding:1px 5px;font-size:.7rem;margin-left:.2rem;color:#1a6b5a">➕</button> <button class="btn btn-sm" title="Ручная верификация email через Admin API (обход email-письма)" onclick="adminVerifyEmail('${u.uid}','${esc(u.email || '')}')" style="padding:1px 5px;font-size:.7rem">🔓</button> <button class="btn btn-sm" title="Удалить студента (Auth + users doc). Дочерние документы (enrollments, сдачи и т.п.) не чистятся автоматически." onclick="adminDeleteUser('${u.uid}','${esc(u.email || '')}','${esc(u.fio || '')}')" style="padding:1px 5px;font-size:.7rem;color:#c44">🗑</button></td>
     <td><input type="text" value="${esc(u.studyGroup || '')}" placeholder="Б22-505" id="sg-${u.uid}" onchange="saveUserField('${u.uid}','studyGroup',this.value)" style="font-size:.82rem;width:80px;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'JetBrains Mono',monospace;background:#fff;color:var(--text)"></td>
     <td>${workGroupsHtml}</td>
     <td style="text-align:center">${u.approved ? '<span class="badge b-pass" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', false)">✓</span>' : '<span class="badge b-fail" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', true)">✗</span>'}</td>
@@ -4224,6 +4224,55 @@ async function attSubmitForm() {
 // Admin: ручная верификация email студента через Worker
 // (обход mephi.ru и других почт, режущих Firebase-письма).
 // ============================================================
+// ============================================================
+// Admin: записать студента на курс без предварительной заявки.
+// Использует CFDEnroll.approve (set-merge) — создаёт enrollment
+// сразу в статусе approved, работает и когда doc'а нет.
+// ============================================================
+async function adminEnrollTo(uid, label) {
+  const courses = (window.CFD_COURSES || []).map(c => c.id + ' — ' + c.name).join('\n');
+  const cid = prompt('Записать «' + label + '» на курс. Введи cid (например sem1, nm, mke, sph, diff-schemes):\n\n' + courses, 'sem1');
+  if (!cid) return;
+  const cidClean = String(cid).trim();
+  const valid = (window.CFD_COURSES || []).some(c => c.id === cidClean);
+  if (!valid) { alert('Курса «' + cidClean + '» нет в реестре. Валидные cid: ' + (window.CFD_COURSES || []).map(c => c.id).join(', ')); return; }
+  if (!confirm('Записать «' + label + '» на курс «' + cidClean + '»? Enrollment создастся сразу как approved.')) return;
+  const res = await CFDEnroll.approve(uid, cidClean);
+  if (!res.ok) { alert('✗ ' + res.error); return; }
+  alert('✓ Записан на «' + cidClean + '». Курс появится у студента на профиле сразу.');
+  if (typeof loadAllEnrollments === 'function') { try { await loadAllEnrollments(); } catch (_) {} }
+  if (typeof renderStudents === 'function') renderStudents();
+  if (typeof renderEnrollments === 'function') renderEnrollments();
+}
+
+async function adminDeleteUser(uid, email, fio) {
+  const label = fio || email || uid;
+  if (!confirm('Удалить студента «' + label + '» (' + (email || '?') + ')?\n\nЭто:\n• снесёт Firebase Auth-аккаунт (студент больше не сможет войти),\n• удалит документ users/' + uid + '.\n\nЕго заявки на курсы, сдачи ДЗ, посещаемость останутся в базе — почистишь их отдельно, если нужно.')) return;
+  if (!confirm('Точно удалить «' + label + '»? Действие необратимо.')) return;
+  const me = firebase.auth().currentUser;
+  if (!me) { alert('Не авторизованы'); return; }
+  if (typeof WORKER_URL === 'undefined' || !WORKER_URL) { alert('WORKER_URL не настроен'); return; }
+  try {
+    const token = await me.getIdToken();
+    const resp = await fetch(WORKER_URL + '/admin-delete-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, targetUid: uid }),
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) {
+      alert('✗ Не удалось: ' + (data.error || resp.status));
+      return;
+    }
+    alert('✓ Студент удалён. Список обновится.');
+    // Перезагрузить список
+    if (typeof loadUsersAll === 'function') { await loadUsersAll(); }
+    if (typeof renderStudents === 'function') renderStudents();
+  } catch (e) {
+    alert('✗ Ошибка: ' + e.message);
+  }
+}
+
 async function adminVerifyEmail(uid, email) {
   if (!confirm('Пометить email «' + (email || uid) + '» как подтверждённый (без письма пользователю)? Обычно нужно, когда почтовик блокирует Firebase-письма.')) return;
   const me = firebase.auth().currentUser;

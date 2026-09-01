@@ -1,13 +1,25 @@
-name = "cfd-course-worker"
+name = "cfd-course"
 main = "worker/worker.js"
 compatibility_date = "2024-10-01"
 
 # Публичные переменные окружения.
+# ВАЖНО: если Worker когда-либо деплоится через `wrangler deploy` (даже
+# случайно из CI или из локального терминала), Cloudflare заменяет ВЕСЬ
+# список env-переменных Worker'а на то, что тут написано, стирая всё
+# что было добавлено вручную через Dashboard. Поэтому любые постоянные
+# переменные лучше держать в этом файле, а не в UI.
+#
 # Секреты (GITHUB_PAT) задаются отдельно через Cloudflare Dashboard →
-# Worker → Settings → Variables and Secrets → Add → Type: Secret.
+# Worker → Settings → Variables and Secrets → Add → Type: Secret
+# (в wrangler.toml им не место — commit'нется в git).
+#
+# COURSE_ADMINS_JSON = {"email":["cid",...]} — тоже удобнее держать в
+# UI как Plaintext var, чтобы адреса не коммитились сюда открыто.
 [vars]
-GITHUB_OWNER = "PolinaKozhurina"
-GITHUB_REPO = "cfd-submissions"
-FIREBASE_PROJECT_ID = "cfd-course"
-SUPERADMINS = "polinakozhurina2020@gmail.com"
-ALLOWED_ORIGIN = "https://polinakozhurina.github.io"
+GITHUB_OWNER          = "PolinaKozhurina"
+GITHUB_REPO           = "cfd-submissions"    # приватный, для сдач (/upload)
+GITHUB_REPO_COMMON    = "cfd-course"         # публичный, для условий ДЗ (/upload-common)
+GITHUB_BRANCH_COMMON  = "master"
+FIREBASE_PROJECT_ID   = "cfd-course"
+SUPERADMINS           = "polinakozhurina2020@gmail.com"
+ALLOWED_ORIGIN        = "https://polinakozhurina.github.io"

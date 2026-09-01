@@ -36,6 +36,9 @@ export default {
       if (url.pathname === "/upload-common" && request.method === "POST") {
         return await handleUploadCommon(request, env);
       }
+      if (url.pathname === "/admin-verify-email" && request.method === "POST") {
+        return await handleAdminVerifyEmail(request, env);
+      }
       if (url.pathname === "/file" && request.method === "GET") {
         return await handleDownload(request, env, url.searchParams.get("path"));
       }
@@ -155,6 +158,144 @@ async function handleUploadCommon(request, env) {
     size: size,
     uploadedAt: new Date().toISOString(),
   }, env);
+}
+
+// ============================================================
+// Admin: ручная верификация email студента
+// ------------------------------------------------------------
+// Endpoint POST /admin-verify-email. Тело: { token, targetUid }.
+// Проверяет, что вызывающий — admin (SUPERADMINS или COURSE_ADMINS_JSON
+// для любого курса), затем через Firebase Admin REST помечает
+// emailVerified=true у указанного пользователя. Нужен ENV
+// FIREBASE_ADMIN_SA_JSON — полный JSON service account (Firebase
+// Console → Project Settings → Service accounts → Generate new
+// private key), сохранённый в Cloudflare как Secret.
+// ============================================================
+
+async function handleAdminVerifyEmail(request, env) {
+  const body = await request.json();
+  const idToken = body.token || "";
+  const targetUid = String(body.targetUid || "");
+  if (!targetUid) return json({ ok: false, error: "missing targetUid" }, env, 400);
+
+  const claims = await verifyIdToken(idToken, env);
+  if (!isAdminGlobal(claims, env)) {
+    return json({ ok: false, error: "forbidden (not admin)" }, env, 403);
+  }
+
+  if (!env.FIREBASE_ADMIN_SA_JSON) {
+    return json({ ok: false, error: "FIREBASE_ADMIN_SA_JSON not configured" }, env, 500);
+  }
+  const sa = JSON.parse(env.FIREBASE_ADMIN_SA_JSON);
+  const accessToken = await getGoogleAccessToken(sa);
+
+  const resp = await fetch(
+    "https://identitytoolkit.googleapis.com/v1/projects/" + env.FIREBASE_PROJECT_ID + "/accounts:update",
+    {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ localId: targetUid, emailVerified: true }),
+    }
+  );
+  const data = await resp.json();
+  if (!resp.ok) {
+    return json({
+      ok: false,
+      error: "admin-api " + resp.status + ": " + JSON.stringify(data).slice(0, 300),
+    }, env, 500);
+  }
+  return json({
+    ok: true,
+    uid: data.localId || targetUid,
+    email: data.email || null,
+    emailVerified: true,
+  }, env);
+}
+
+// Глобальный admin — superadmin ИЛИ email присутствует в COURSE_ADMINS_JSON
+// хотя бы для одного курса. Для verify-email не важно, каким именно
+// курсом человек управляет — важно, что он вообще admin.
+function isAdminGlobal(claims, env) {
+  const email = claims.email || "";
+  const supers = (env.SUPERADMINS || "").split(",").map(s => s.trim()).filter(Boolean);
+  if (supers.indexOf(email) !== -1) return true;
+  try {
+    const map = JSON.parse(env.COURSE_ADMINS_JSON || "{}");
+    const list = map[email];
+    if (Array.isArray(list) && list.length > 0) return true;
+  } catch (_) {}
+  return false;
+}
+
+// ============================================================
+// Google Service Account → OAuth2 access_token (JWT bearer flow)
+// ============================================================
+
+async function getGoogleAccessToken(sa) {
+  // sa: { client_email, private_key, ... } из Firebase Service Account JSON.
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: "RS256", typ: "JWT" };
+  const payload = {
+    iss: sa.client_email,
+    scope: "https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/firebase",
+    aud: "https://oauth2.googleapis.com/token",
+    exp: now + 3600,
+    iat: now,
+  };
+  const enc = new TextEncoder();
+  const seg = (obj) => b64urlEncode(enc.encode(JSON.stringify(obj)));
+  const signedInput = seg(header) + "." + seg(payload);
+
+  const key = await importPkcs8PrivateKey(sa.private_key);
+  const sig = await crypto.subtle.sign(
+    { name: "RSASSA-PKCS1-v1_5" }, key,
+    enc.encode(signedInput)
+  );
+  const jwt = signedInput + "." + b64urlEncode(new Uint8Array(sig));
+
+  const resp = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=" + encodeURIComponent(jwt),
+  });
+  const data = await resp.json();
+  if (!resp.ok || !data.access_token) {
+    throw new Error("oauth-token " + resp.status + ": " + JSON.stringify(data).slice(0, 300));
+  }
+  return data.access_token;
+}
+
+async function importPkcs8PrivateKey(pem) {
+  // Убираем header/footer и newlines.
+  const b64 = pem
+    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
+    .replace(/-----END PRIVATE KEY-----/g, "")
+    .replace(/\s+/g, "");
+  const der = base64ToBytes(b64);
+  return await crypto.subtle.importKey(
+    "pkcs8",
+    der,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+}
+
+function base64ToBytes(b64) {
+  const bin = atob(b64);
+  const buf = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  return buf;
+}
+
+function b64urlEncode(bytes) {
+  // bytes: Uint8Array
+  let s = "";
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 async function handleDownload(request, env, path) {

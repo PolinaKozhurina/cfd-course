@@ -1287,7 +1287,7 @@ function studentRowHtml(u, viewerIsSuperAdmin, showLegacyAssign) {
   return `<tr>
     <td style="text-align:center"><input type="checkbox" class="bulk-cb-student" data-uid="${u.uid}" onchange="bulkUpdateStudentsCount()"></td>
     <td style="min-width:230px"><input type="text" value="${esc(u.fio || '')}" placeholder="ФИО" id="fio-${u.uid}" onchange="saveUserField('${u.uid}','fio',this.value)" style="font-weight:600;font-size:.82rem;width:100%;min-width:210px;box-sizing:border-box;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'Source Serif 4',serif;background:#fff;color:var(--text)"></td>
-    <td style="font-size:.82rem">${esc(u.email || '—')}</td>
+    <td style="font-size:.82rem;white-space:nowrap">${esc(u.email || '—')} <button class="btn btn-sm" title="Ручная верификация email через Admin API (обход email-письма)" onclick="adminVerifyEmail('${u.uid}','${esc(u.email || '')}')" style="padding:1px 5px;font-size:.7rem;margin-left:.2rem">🔓</button></td>
     <td><input type="text" value="${esc(u.studyGroup || '')}" placeholder="Б22-505" id="sg-${u.uid}" onchange="saveUserField('${u.uid}','studyGroup',this.value)" style="font-size:.82rem;width:80px;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'JetBrains Mono',monospace;background:#fff;color:var(--text)"></td>
     <td>${workGroupsHtml}</td>
     <td style="text-align:center">${u.approved ? '<span class="badge b-pass" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', false)">✓</span>' : '<span class="badge b-fail" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', true)">✗</span>'}</td>
@@ -4218,6 +4218,33 @@ async function attSubmitForm() {
   await renderAttendanceTab();
   document.getElementById('attGroup').value = gid;
   await attRenderList();
+}
+
+// ============================================================
+// Admin: ручная верификация email студента через Worker
+// (обход mephi.ru и других почт, режущих Firebase-письма).
+// ============================================================
+async function adminVerifyEmail(uid, email) {
+  if (!confirm('Пометить email «' + (email || uid) + '» как подтверждённый (без письма пользователю)? Обычно нужно, когда почтовик блокирует Firebase-письма.')) return;
+  const me = firebase.auth().currentUser;
+  if (!me) { alert('Не авторизованы'); return; }
+  if (typeof WORKER_URL === 'undefined' || !WORKER_URL) { alert('WORKER_URL не настроен'); return; }
+  try {
+    const token = await me.getIdToken();
+    const resp = await fetch(WORKER_URL + '/admin-verify-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, targetUid: uid }),
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) {
+      alert('✗ Не удалось: ' + (data.error || resp.status));
+      return;
+    }
+    alert('✓ Email подтверждён у пользователя ' + (data.email || uid) + '. Ему теперь можно сдавать ДЗ и т. п.');
+  } catch (e) {
+    alert('✗ Ошибка: ' + e.message);
+  }
 }
 
 async function attDelete(aid) {

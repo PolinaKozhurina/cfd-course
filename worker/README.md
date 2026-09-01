@@ -35,6 +35,7 @@ Free-тариф Cloudflare, без карты.
 | Plaintext | `COURSE_ADMINS_JSON` | `{"a.tsybulenko.work@gmail.com":["sem1"]}` | опционально: курсовые admin с их курсами |
 | Plaintext | `ALLOWED_ORIGIN` | `https://polinakozhurina.github.io` | |
 | **Secret** | `GITHUB_PAT` | `github_pat_…` (см. п.4) | PAT с доступом к ОБОИМ репо |
+| **Secret** | `FIREBASE_ADMIN_SA_JSON` | полный JSON service account | опц., только для `/admin-verify-email` — ручной верификации email студента через Admin API |
 
 **Важно:** `GITHUB_PAT` — именно тип **Secret** (Encrypt). После сохранения его нельзя посмотреть, только заменить.
 
@@ -51,6 +52,20 @@ Free-тариф Cloudflare, без карты.
 7. Вставить в поле `GITHUB_PAT` в Cloudflare (п.3). **Никогда не отправляйте PAT в чат/переписку/код.**
 
 **Если PAT уже существует** и вы только сейчас добавляете endpoint `/upload-common` — либо создайте новый PAT с доступом к обоим репо, либо в GitHub → Settings → Developer settings → Personal access tokens (fine-grained) → откройте существующий → **Edit** → добавьте `cfd-course` в список repositories и сохраните.
+
+## 4а. Firebase Service Account (для endpoint `/admin-verify-email`)
+
+Только если пользуетесь ручной верификацией email (обход почтовиков, которые режут Firebase-письма — например mephi.ru).
+
+1. https://console.firebase.google.com/project/cfd-course/settings/serviceaccounts/adminsdk
+2. **Generate new private key** → скачивается JSON-файл вида
+   ```
+   {"type":"service_account","project_id":"cfd-course",
+    "private_key_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...","client_email":"firebase-adminsdk-xxx@cfd-course.iam.gserviceaccount.com", ...}
+   ```
+3. Скопировать **всё содержимое файла** (одной строкой JSON) и вставить в Cloudflare как **Secret** `FIREBASE_ADMIN_SA_JSON`.
+4. В IAM убедиться, что у service account'а есть роль **Firebase Authentication Admin** (обычно уже есть по умолчанию у Firebase-SA).
+5. Сохранить JSON-файл локально в надёжном месте. **Никогда не коммитить в git, не пересылать по чату, не публиковать.**
 
 ## 5. Проверить
 

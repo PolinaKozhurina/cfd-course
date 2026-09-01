@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ru" data-course="sem1">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Решения задач к §1. Основные понятия разностной схемы</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#3d6b5a;--border:#d9cfc0}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
+.main{max-width:820px;margin:0 auto;padding:2rem 2.5rem 4rem}
+
+.doc-kind{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.18em;color:var(--text3);margin-bottom:.4rem}
+h1{font-family:'Playfair Display',serif;font-size:1.7rem;font-weight:700;line-height:1.2;margin-bottom:.4rem;color:var(--text)}
+.subtitle{color:var(--text2);font-size:.95rem;font-style:italic;margin-bottom:2rem;line-height:1.5}
+.subtitle a{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(180,74,45,.3)}
+.subtitle a:hover{border-bottom-color:var(--accent)}
+
+h2{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:2.2rem 0 .3rem;padding-bottom:.3rem;border-bottom:1px solid var(--border);font-style:italic}
+
+p{margin-bottom:.7rem;text-align:justify;hyphens:auto}
+.eq{margin:.9rem 0;text-align:center;overflow-x:auto}
+
+.task{margin:1.4rem 0;padding-top:.2rem}
+.task-head{font-family:'Source Serif 4',serif;font-size:1rem;font-weight:700;color:var(--text);margin-bottom:.4rem}
+.task-head .num{font-family:'JetBrains Mono',monospace;font-weight:500;font-size:.85rem;color:var(--accent2);margin-right:.5rem;letter-spacing:.02em}
+.task ol, .task ul{margin:.3rem 0 .3rem 1.6rem}
+.task li{margin-bottom:.2rem}
+.task + .task{border-top:1px dotted var(--border);padding-top:1.2rem}
+
+/* Ответ / вывод — без цветного фона, спокойный левый бордер */
+.ans{margin:.7rem 0;padding:.2rem 0 .2rem .9rem;border-left:2px solid var(--accent2);font-size:.94em;color:var(--text)}
+.ans .lbl{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.66rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);margin-right:.5rem;vertical-align:middle}
+
+.note{font-size:.9rem;color:var(--text2);margin:.4rem 0 2rem;padding:0 0 0 1rem;border-left:2px solid var(--border)}
+.note .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:.35rem}
+
+table.tbl{border-collapse:collapse;margin:.6rem 0;font-size:.92em}
+table.tbl th,table.tbl td{border:1px solid var(--border);padding:.3rem .6rem;text-align:center;font-family:'JetBrains Mono',monospace;font-size:.82em}
+table.tbl th{background:var(--bg3);font-weight:600}
+table.tbl td.l{text-align:left;font-family:'Source Serif 4',serif;font-style:italic}
+
+.hint{font-size:.9em;color:var(--text2);font-style:italic;margin-top:.4rem;display:block}
+
+.back{display:inline-block;margin-top:2.5rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);text-decoration:none;padding:.4rem .7rem;border:1px solid var(--border);border-radius:4px;margin-right:.5rem}
+.back:hover{border-color:var(--accent)}
+
+@media(max-width:700px){
+  .main{padding:1.5rem}
+  table.tbl{font-size:.78em}
+}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<div class="main">
+<div class="doc-kind">Решения ДЗ · §1 · Семестр 1</div>
+<h1>Решения задач к §1. Основные понятия разностной схемы</h1>
+<div class="subtitle">Разбор задач со страницы <a href="s1-01-hw.html">домашнего задания к §1</a>. Ссылки на формулы и определения — по сквозной нумерации <a href="s1-01.html">лекции §1</a>.</div>
+
+<div class="note">
+  <span class="lbl">Как пользоваться</span>
+  Здесь — эталонные решения. Если ваш ответ отличается численно, но идея та же, — сначала проверьте свою арифметику; если и она правильна, вернитесь к формулировке задачи и уточните, что именно требовалось. Идентичность формы ответа не так важна, как правильность рассуждения.
+</div>
+
+<h2>Нормы, пространства, корректность</h2>
+
+<div class="task">
+<div class="task-head"><span class="num">Решение 1.</span>Аксиомы нормы</div>
+
+<p><em>1) Чебышёвская норма</em> \(\|x\|_\infty = \max_{1\le i\le n} |x_i|\).</p>
+<ul>
+  <li><em>N1 (положительность).</em> \(\max_i |x_i| \ge 0\); равенство нулю возможно только когда все \(|x_i| = 0\), т.е. \(x = 0\).</li>
+  <li><em>N2 (однородность).</em> \(\|\alpha x\|_\infty = \max_i |\alpha x_i| = |\alpha|\,\max_i |x_i| = |\alpha|\,\|x\|_\infty\).</li>
+  <li><em>N3 (неравенство треугольника).</em> Для каждого \(i\) верно \(|x_i + y_i| \le |x_i| + |y_i| \le \|x\|_\infty + \|y\|_\infty\), значит и максимум по \(i\) не превосходит правой части:
+  \[\|x + y\|_\infty \;=\; \max_i |x_i + y_i| \;\le\; \|x\|_\infty + \|y\|_\infty.\]
+  Ключевое место — неравенство \(|x_i + y_i| \le |x_i| + |y_i|\); это в точности <em>неравенство треугольника для обычного модуля</em> \(|\cdot|\) на \(\mathbb{R}\).</li>
+</ul>
+
+<p><em>2) Манхэттенская норма</em> \(\|x\|_1 = \sum_{i=1}^n |x_i|\).</p>
+<ul>
+  <li><em>N1.</em> Сумма неотрицательных слагаемых неотрицательна и равна нулю тогда и только тогда, когда каждое из них нуль ⇒ \(x = 0\).</li>
+  <li><em>N2.</em> \(\|\alpha x\|_1 = \sum_i |\alpha x_i| = |\alpha| \sum_i |x_i| = |\alpha|\,\|x\|_1\).</li>
+  <li><em>N3.</em> Складывая покомпонентное неравенство \(|x_i + y_i| \le |x_i| + |y_i|\), получаем
+  \[\|x + y\|_1 \;=\; \sum_i |x_i + y_i| \;\le\; \sum_i |x_i| + \sum_i |y_i| \;=\; \|x\|_1 + \|y\|_1.\]
+  </li>
+</ul>
+
+<div class="ans"><span class="lbl">Итог</span>обе функции удовлетворяют аксиомам N1–N3 из Опр. 2 и, следовательно, задают норму на \(\mathbb{R}^n\); обе опираются на неравенство треугольника для модуля на \(\mathbb{R}\).</div>
+</div>
+
+<div class="task">
+<div class="task-head"><span class="num">Решение 2.</span>Задача Коши в операторной форме</div>
+<p>Задачу (1.3)–(1.4) записываем в виде операторного уравнения (1.0):</p>
+<div class="eq">\[ A\,u \;=\; F. \]</div>
+
+<p><em>Оператор и правая часть.</em> Естественный вариант — включить начальное условие в область определения:</p>
+<ul>
+  <li>\(B_1 = \{\,u(x, t)\in C^{1}(\mathbb{R}\times[0, T]) : u(x, 0) = u_0(x)\,\}\) — точное указание того, куда «упаковано» начальное условие;</li>
+  <li>\(A u \;:=\; u_t + a\,u_x\), \(A\colon B_1 \to B_2\);</li>
+  <li>\(F \equiv 0\) — правая часть тождественно нулевая (уравнение переноса однородное).</li>
+</ul>
+<span class="hint">Возможна и эквивалентная запись, где \(B_1\) не заужен, а начальное условие «уводят» в правую часть отдельным уравнением; здесь принят первый, наиболее компактный вариант.</span>
+
+<p><em>Две пары пространств \((B_1, B_2)\).</em></p>
+<ul>
+  <li><em>Равномерная норма</em> (для гладких данных): \(\|u\|_1 = \|u\|_C = \sup_{x, t} |u(x, t)|\); \(B_2 = C(\mathbb{R}\times[0, T])\), \(\|\cdot\|_2 = \|\cdot\|_C\).</li>
+  <li><em>Интегральная норма</em> (для оценок в среднеквадратичном): \(\|u\|_1 = \|u\|_{L_2}\); \(B_2 = L_2(\mathbb{R}\times[0, T])\), \(\|\cdot\|_2 = \|\cdot\|_{L_2}\).</li>
+</ul>
+
+<div class="ans"><span class="lbl">Итог</span>уравнение переноса — частный случай линейной операторной задачи \(Au = F\) с \(F \equiv 0\); выбор пар \((B_1, B_2)\) — вопрос того, в какой норме мы намерены оценивать сходимость.</div>
+</div>
+
+<h2>Сетки</h2>
+
+<div class="task">
+<div class="task-head"><span class="num">Решение 3.</span>Неравномерная сетка через \(\varphi(t) = t^2\)</div>
+<p>По формуле (1.8а) при \(a=0,\ b=1\), \(\varphi(t)=t^2\), \(\varphi(0)=0\), \(\varphi(1)=1\) получаем</p>
+<div class="eq">\[ \Phi(t) = t^2, \qquad x_k = \Phi(k h) = (k h)^2 = \frac{k^2}{16},\ \ k = 0, 1, 2, 3, 4. \]</div>
+
+<p><em>Узлы</em> и <em>шаги</em> \(h_k = x_k - x_{k-1}\):</p>
+<table class="tbl">
+<tr><th>\(k\)</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th></tr>
+<tr><td class="l">\(x_k\)</td><td>0</td><td>\(\tfrac{1}{16}\)</td><td>\(\tfrac{4}{16}\)</td><td>\(\tfrac{9}{16}\)</td><td>\(\tfrac{16}{16}\)</td></tr>
+<tr><td class="l">\(h_k\)</td><td>—</td><td>\(\tfrac{1}{16}\)</td><td>\(\tfrac{3}{16}\)</td><td>\(\tfrac{5}{16}\)</td><td>\(\tfrac{7}{16}\)</td></tr>
+</table>
+
+<p><em>Характеристический шаг</em> (1.5): \(|h| = \max_k h_k = \tfrac{7}{16} \approx 0{,}4375\).</p>
+
+<p><em>Усреднённые шаги</em> (1.6) во внутренних узлах \(k = 1, 2, 3\):</p>
+<div class="eq">\[
+\bar h_1 = \tfrac12(h_1 + h_2) = \tfrac{1}{8},\quad
+\bar h_2 = \tfrac12(h_2 + h_3) = \tfrac{1}{4},\quad
+\bar h_3 = \tfrac12(h_3 + h_4) = \tfrac{3}{8}.
+\]</div>
+
+<p><em>Сравнение краёв.</em> \(h_1 = \tfrac{1}{16}\), \(h_4 = \tfrac{7}{16}\) — в семь раз крупнее. Значит сетка <strong>сгущается к левому концу</strong> \(x = 0\).</p>
+<p><em>Почему.</em> У \(\varphi(t) = t^2\) производная \(\varphi'(0) = 0\), а \(\varphi'(1) = 2\). Отображение «плоское» у нуля и «крутое» у единицы, поэтому равные шаги параметра \(t\) переходят в очень мелкие шаги \(x\) около \(x = 0\) и в крупные — около \(x = 1\).</p>
+</div>
+
+<div class="task">
+<div class="task-head"><span class="num">Решение 4.</span>Прямоугольная сетка в круге</div>
+<p>Координаты узлов равномерной сетки \(x_i, y_j \in \{-1,\ -\tfrac12,\ 0,\ \tfrac12,\ 1\}\) (5×5 = 25 узлов пересечений).</p>
+
+<p><em>Внутренние узлы</em> \(\omega_h\) — те, для которых \(x_i^2 + y_j^2 &lt; 1\) (строго):</p>
+<div class="eq">\[
+\omega_h = \bigl\{\,(0,0),\ (\pm\tfrac12,\,0),\ (0,\,\pm\tfrac12),\ (\pm\tfrac12,\,\pm\tfrac12)\,\bigr\}, \qquad |\omega_h| = 9.
+\]</div>
+<span class="hint">Крайние узлы \((\pm 1, 0)\) и \((0, \pm 1)\) лежат <em>на</em> окружности, поэтому в открытую область \(\Omega\) не входят и относятся к \(\partial_h\).</span>
+
+<p><em>Граничные узлы</em> \(\partial_h\) — пересечения прямых сетки с окружностью \(x^2 + y^2 = 1\):</p>
+<ul>
+  <li>по вертикалям \(x = 0\), \(x = \pm\tfrac12\), \(x = \pm 1\) — точки \((0, \pm 1)\), \((\pm\tfrac12, \pm\tfrac{\sqrt3}{2})\), \((\pm 1, 0)\) — итого 8;</li>
+  <li>по горизонталям \(y = \pm\tfrac12\) — дополнительно \((\pm\tfrac{\sqrt3}{2}, \pm\tfrac12)\), итого ещё 4 (пересечения с \(y = 0, \pm 1\) дают точки, уже учтённые выше).</li>
+</ul>
+<div class="eq">\[ |\partial_h| = 8 + 4 = 12. \]</div>
+
+<div class="ans"><span class="lbl">Итог</span>\(|\omega_h| = 9\), \(|\partial_h| = 12\), полная сетка \(|\bar\omega_h| = 21\) узел.</div>
+
+<div style="text-align:center;margin:.8rem 0">
+<svg viewBox="-1.35 -1.35 2.7 2.7" xmlns="http://www.w3.org/2000/svg" style="max-width:280px;width:100%">
+  <rect x="-1" y="-1" width="2" height="2" fill="none" stroke="#8a5236" stroke-width=".012" stroke-dasharray=".05,.03"/>
+  <g stroke="#d9cfc0" stroke-width=".008">
+    <line x1="-.5" y1="-1" x2="-.5" y2="1"/><line x1="0" y1="-1" x2="0" y2="1"/><line x1=".5" y1="-1" x2=".5" y2="1"/>
+    <line x1="-1" y1="-.5" x2="1" y2="-.5"/><line x1="-1" y1="0" x2="1" y2="0"/><line x1="-1" y1=".5" x2="1" y2=".5"/>
+  </g>
+  <circle cx="0" cy="0" r="1" fill="none" stroke="#8a5236" stroke-width=".02"/>
+  <g fill="#3d6b5a">
+    <circle cx="0" cy="0" r=".045"/>
+    <circle cx="-.5" cy="0" r=".045"/><circle cx=".5" cy="0" r=".045"/>
+    <circle cx="0" cy="-.5" r=".045"/><circle cx="0" cy=".5" r=".045"/>
+    <circle cx="-.5" cy="-.5" r=".045"/><circle cx=".5" cy="-.5" r=".045"/>
+    <circle cx="-.5" cy=".5" r=".045"/><circle cx=".5" cy=".5" r=".045"/>
+  </g>
+  <g fill="#8a5236">
+    <circle cx="0" cy="1" r=".045"/><circle cx="0" cy="-1" r=".045"/>
+    <circle cx="1" cy="0" r=".045"/><circle cx="-1" cy="0" r=".045"/>
+    <circle cx=".5" cy=".866" r=".045"/><circle cx=".5" cy="-.866" r=".045"/>
+    <circle cx="-.5" cy=".866" r=".045"/><circle cx="-.5" cy="-.866" r=".045"/>
+    <circle cx=".866" cy=".5" r=".045"/><circle cx=".866" cy="-.5" r=".045"/>
+    <circle cx="-.866" cy=".5" r=".045"/><circle cx="-.866" cy="-.5" r=".045"/>
+  </g>
+</svg>
+<div style="font-size:.82rem;color:var(--text2);margin-top:.3rem;font-style:italic">Зелёные точки — \(\omega_h\), коричневые — \(\partial_h\).</div>
+</div>
+</div>
+
+<h2>Сеточные функции, нормы, проекторы</h2>
+
+<div class="task">
+<div class="task-head"><span class="num">Решение 5.</span>Сеточные аналоги норм \(C\) и \(L_2\)</div>
+<p>Проектор (1.17): \(y_k = \sin(\pi k h)\). Пригодятся два наблюдения, справедливые при любом целом \(N\):</p>
+<ul>
+  <li>функция \(\sin(\pi x)\) на \([0, 1]\) симметрична относительно \(x = \tfrac12\); при чётном \(N\) в узле \(k = N/2\) значение равно \(1\);</li>
+  <li>тождество \(\sum_{k=1}^{N-1} \sin^2\!\bigl(\tfrac{\pi k}{N}\bigr) = \tfrac{N}{2}\) (следствие \(\sin^2\alpha = \tfrac{1 - \cos 2\alpha}{2}\) и суммирования геометрической прогрессии по \(\cos\)).</li>
+</ul>
+<p>Учитывая, что \(y_0 = y_N = \sin 0 = \sin\pi = 0\), получаем при обоих способах суммирования из (1.14):</p>
+<div class="eq">\[
+\sum_{k=1}^{N} y_k^2 \;=\; \sum_{k=0}^{N-1} y_k^2 \;=\; \sum_{k=1}^{N-1} \sin^2\!\Bigl(\tfrac{\pi k}{N}\Bigr) \;=\; \frac{N}{2}.
+\]</div>
+<p>Тогда обе версии сеточного \(L_2\) равны \(\sqrt{\tfrac{N}{2} \cdot h} = \sqrt{\tfrac{N}{2} \cdot \tfrac{1}{N}} = \tfrac{1}{\sqrt 2}\) — <em>не зависят от \(N\)</em> (и совпадают между собой).</p>
+
+<table class="tbl">
+<tr><th>\(N\)</th><th>\(\|y\|_C\)<br>(1.13)</th><th>\(\|y\|\), \(k=1..N\)<br>(1.14)</th><th>\(\|y\|\), \(k=0..N-1\)<br>(1.14)</th></tr>
+<tr><td>10</td><td>1</td><td>\(\tfrac{1}{\sqrt 2} \approx 0{,}7071\)</td><td>\(\tfrac{1}{\sqrt 2} \approx 0{,}7071\)</td></tr>
+<tr><td>20</td><td>1</td><td>\(\tfrac{1}{\sqrt 2} \approx 0{,}7071\)</td><td>\(\tfrac{1}{\sqrt 2} \approx 0{,}7071\)</td></tr>
+</table>
+
+<div class="ans"><span class="lbl">Как это читать</span>сеточная \(C\)-норма совпадает с \(\|u\|_C = 1\) уже для очень грубых сеток, потому что «максимум по узлам» ловит максимум непрерывной функции ровно тогда, когда её точка максимума попадает в узел (при чётном \(N\) — попадает). Сеточные \(L_2\)-нормы дают точное значение \(\|u\|_{L_2} = 1/\sqrt 2\) <em>для любой</em> равномерной сетки — квадратурная формула прямоугольников на этой конкретной функции оказывается точной.</div>
+</div>
+
+<div class="task">
+<div class="task-head"><span class="num">Решение 6.</span>Два проектора \(P_\tau\) для \(u(x) = x^2\)</div>
+<p>Сетка \(h = \tfrac14\), \(x_k = \tfrac{k}{4}\), \(k = 0, 1, 2, 3, 4\).</p>
+
+<p><em>Проектор (1.17)</em> — значение в узле: \((P_\tau u)_k = x_k^2\).</p>
+
+<p><em>Проектор (1.18).</em> Для внутренних узлов \(k = 1, 2, 3\) пределы интегрирования — \([x_k - \tfrac{h}{2},\ x_k + \tfrac{h}{2}]\), длина ячейки \(\bar h_k = h\). Пользуемся тождеством \((a+b)^3 - (a-b)^3 = 2b\,(3a^2 + b^2)\):</p>
+<div class="eq">\[
+(P_\tau u)_k \;=\; \frac{1}{h}\!\int_{x_k - h/2}^{x_k + h/2}\! x^2\,dx \;=\; \frac{1}{3h}\cdot 2\cdot\frac{h}{2}\!\left(3 x_k^2 + \Bigl(\tfrac{h}{2}\Bigr)^{\!2}\right) \;=\; x_k^2 + \frac{h^2}{12}.
+\]</div>
+<p>Для крайних узлов интеграл берётся по «половине» ячейки: \(k = 0 \Rightarrow [0,\ h/2]\), \(k = 4 \Rightarrow [1 - h/2,\ 1]\), делитель \(h/2\):</p>
+<div class="eq">\[
+(P_\tau u)_0 \;=\; \frac{2}{h}\!\int_0^{h/2}\! x^2\,dx \;=\; \frac{h^2}{12},\qquad
+(P_\tau u)_4 \;=\; \frac{2}{h}\!\int_{1-h/2}^1\! x^2\,dx \;=\; 1 - \frac{h}{2} + \frac{h^2}{12}.
+\]</div>
+<p>Подставляя \(h = 1/4\) (\(h^2/12 = 1/192\)):</p>
+
+<table class="tbl">
+<tr><th>\(k\)</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th></tr>
+<tr><td class="l">\(x_k\)</td><td>0</td><td>1/4</td><td>1/2</td><td>3/4</td><td>1</td></tr>
+<tr><td class="l">(1.17)</td><td>0</td><td>\(\tfrac{12}{192}\)</td><td>\(\tfrac{48}{192}\)</td><td>\(\tfrac{108}{192}\)</td><td>\(\tfrac{192}{192}\)</td></tr>
+<tr><td class="l">(1.18)</td><td>\(\tfrac{1}{192}\)</td><td>\(\tfrac{13}{192}\)</td><td>\(\tfrac{49}{192}\)</td><td>\(\tfrac{109}{192}\)</td><td>\(\tfrac{169}{192}\)</td></tr>
+</table>
+
+<div class="ans"><span class="lbl">Совпадений нет ни в одном узле</span>для внутренних узлов проектор (1.18) даёт систематический сдвиг \(+ h^2/12\) относительно (1.17) — потому что усреднение по ячейке гладкой выпуклой функции всегда выше значения в её центре (правило Йенсена для \(u'' &gt; 0\)). На крайних узлах картина ещё резче: (1.18) даёт значение на «половине ячейки», которая целиком лежит по одну сторону от узла. Совпадение возможно тогда и только тогда, когда \(u\) — линейная функция: тогда \(h^2/12 = 0\) и оба проектора одинаковы для всех внутренних узлов (на крайних — по-прежнему сместятся).</div>
+</div>
+
+<h2>Разностные схемы и шаблоны</h2>
+
+<div class="task">
+<div class="task-head"><span class="num">Решение 7.</span>Анализ шаблонов на верхнем слое</div>
+
+<p><em>Явный трёхточечный.</em> Узлы шаблона: \((i, n+1)\); \((i-1, n)\), \((i, n)\), \((i+1, n)\).
+Известные — со слоя \(n\); неизвестное — \((i, n+1)\), на верхнем слое всего <strong>1 узел</strong>.
+<span class="hint">Каждое \(y_i^{n+1}\) выражается через известные значения слоя \(n\) явной формулой; никакой системы решать не нужно.</span></p>
+
+<p><em>Неявный трёхточечный.</em> Узлы: \((i-1, n+1)\), \((i, n+1)\), \((i+1, n+1)\); \((i, n)\).
+Известное — \((i, n)\) (и всё, что вычислено на слоях \(\le n\)); неизвестных на слое \(n+1\) — <strong>3 узла</strong>: \(y_{i-1}^{n+1}, y_i^{n+1}, y_{i+1}^{n+1}\).
+<span class="hint">Пробегая \(i\), получаем систему линейных уравнений (при подходящих граничных условиях — трёхдиагональную), которую надо решить сразу для всего слоя.</span></p>
+
+<p><em>«Крест».</em> Узлы: \((i, n+1)\); \((i-1, n)\), \((i, n)\), \((i+1, n)\); \((i, n-1)\).
+Известные — со слоёв \(n\) и \(n-1\); неизвестное — \((i, n+1)\), на верхнем слое <strong>1 узел</strong>.
+<span class="hint">Явный расчёт, но для старта нужны два начальных временных слоя (задаются либо начальным условием + одношаговым разгоном по другой схеме).</span></p>
+
+<div class="ans"><span class="lbl">Явный vs неявный</span>Признак явности — <em>ровно один</em> неизвестный узел на верхнем слое: тогда каждое разностное уравнение — прямая формула для этого узла. Если верхний слой связан двумя и более узлами, схема неявная и требует решения линейной системы.</div>
+</div>
+
+<h2>Погрешность, сходимость, точная схема</h2>
+
+<div class="task">
+<div class="task-head"><span class="num">Решение 8.</span>Сеточная функция погрешности</div>
+<p><em>(1) Погрешность (Опр. 7).</em> С проектором (1.17) \((P_{\tau\omega} u)_k = \sin(\pi x_k)\), поэтому</p>
+<div class="eq">\[ z_k \;=\; y_k - \sin(\pi x_k) \;=\; (-1)^k\cdot 10^{-2}, \qquad k = 0, 1, \ldots, 10. \]</div>
+<p>Значения \(z_k\) чередуются: \(+10^{-2}, -10^{-2}, +10^{-2}, \ldots\).</p>
+
+<p><em>(2) Норма \(C\)</em> по (1.13):</p>
+<div class="eq">\[ \|z\|_C \;=\; \max_{0 \le k \le 10} |z_k| \;=\; 10^{-2}. \]</div>
+
+<p><em>(3) Сеточная норма \(L_2\)</em> по (1.14), сумма \(k = 0..N-1 = 0..9\); все \(|z_k| = 10^{-2}\), поэтому \(z_k^2 = 10^{-4}\), а сумма содержит 10 таких слагаемых:</p>
+<div class="eq">\[
+\|z\|_{L_2, h} \;=\; \Bigl(\sum_{k=0}^{9} z_k^2\,h\Bigr)^{1/2}
+\;=\; \bigl(10 \cdot 10^{-4} \cdot 10^{-1}\bigr)^{1/2}
+\;=\; \bigl(10^{-4}\bigr)^{1/2}
+\;=\; 10^{-2}.
+\]</div>
+
+<p><em>(4) Что это говорит о сходимости (Опр. 8).</em> Опр. 8 требует, чтобы норма погрешности могла быть сделана меньше <em>любого</em> наперёд заданного \(\varepsilon &gt; 0\) за счёт выбора \(N\) (и расположения узлов). Мы имеем <em>одну</em> точку — при \(h = 1/10\) обе нормы равны \(10^{-2}\). Это ничего не говорит ни о сходимости, ни о её отсутствии: чтобы делать вывод, нужно провести <em>серию</em> измерений при \(h, h/2, h/4, \ldots\) и убедиться, что \(\|z\|_{1,H} \to 0\) при \(h \to 0\). Только тогда, если для любого \(\varepsilon\) удаётся подобрать \(N\), — по Опр. 8 схема сходится.</p>
+</div>
+
+<div class="task">
+<div class="task-head"><span class="num">Решение 9.</span>Точная схема (Опр. 9)</div>
+<p><em>(1) Подстановка \(a\tau/h = 1\).</em></p>
+<div class="eq">\[
+y_i^{n+1} \;=\; y_i^n - 1\cdot\bigl(y_i^n - y_{i-1}^n\bigr) \;=\; y_{i-1}^n.
+\]</div>
+
+<p><em>(2) Индукция по \(n\)</em> для утверждения \(y_i^n = u_0(x_i - a\,t_n)\).</p>
+<ul>
+  <li><em>База, \(n = 0\).</em> По условию \(y_i^0 = u_0(x_i)\), а \(t_0 = 0\), значит \(y_i^0 = u_0(x_i - a \cdot 0) = u_0(x_i - a t_0)\).</li>
+  <li><em>Переход.</em> Пусть \(y_i^n = u_0(x_i - a t_n)\). Тогда
+  \[
+  y_i^{n+1} \;\overset{(1)}{=}\; y_{i-1}^n
+  \;=\; u_0(x_{i-1} - a t_n)
+  \;=\; u_0(x_i - h - a t_n).
+  \]
+  Используем условие связи шагов: \(a\tau = h\). Значит \(h + a t_n = a\tau + a\cdot n\tau = a(n+1)\tau = a\,t_{n+1}\). Подставляя:
+  \[ y_i^{n+1} \;=\; u_0(x_i - a\,t_{n+1}). \]
+  Индукционный шаг доказан.</li>
+</ul>
+
+<p><em>(3) Точная схема (Опр. 9).</em> Точное решение задачи Коши \(u_t + a u_x = 0\), \(u(x, 0) = u_0(x)\) — это перенос начального условия вдоль характеристик:
+\[ u(x, t) = u_0(x - a t). \]
+В узлах сетки \(u(x_i, t_n) = u_0(x_i - a t_n) = y_i^n\) (по пункту 2), поэтому сеточная функция погрешности из Опр. 7</p>
+<div class="eq">\[ z_i^n \;=\; y_i^n - (P_{\tau\omega}\,u)_i^n \;=\; 0 \quad \forall\,i,\ n. \]</div>
+<p>По Опр. 9 (\(\|z\|_{1,H} = 0\)) — схема <strong>точна на сетке \(G_h\)</strong> при условии \(a\tau/h = 1\), причём <em>для произвольного</em> начального условия \(u_0(x)\).</p>
+
+<div class="ans"><span class="lbl">Смысл</span>условие \(a\tau/h = 1\) (число Куранта, равное единице) синхронизирует шаг схемы с характеристикой уравнения переноса: за один шаг \(\tau\) значение сдвигается ровно на один узел \(h\) — то же, что делает точное решение. Ошибки просто некуда взяться.</div>
+</div>
+
+<h2>Вычислительный эксперимент: V&nbsp;и&nbsp;V</h2>
+
+<div class="task">
+<div class="task-head"><span class="num">Решение 10.</span>Верификация и валидация</div>
+
+<p><em>1) Верификация — «решаем уравнения правильно».</em></p>
+<ol>
+  <li><em>Сравнение с аналитическим решением.</em> Модельная задача: \(u_t + u_x = 0\) на периоде \([0, 1]\) с \(u_0(x) = \sin(2\pi x)\); точное решение — \(u(x, t) = \sin(2\pi(x - t))\). Считаем при \(t = 1\) (волна должна сделать один полный оборот), сравниваем \(y_i^N\) с \(u(x_i, 1) = \sin(2\pi x_i) = u_0(x_i)\). При \(a\tau/h = 1\) должно совпасть с машинной точностью (Задача 9); при иных значениях числа Куранта — ошибка должна убывать с уменьшением шагов.</li>
+  <li><em>Исследование сходимости (grid refinement).</em> Считаем на серии сеток \(h, h/2, h/4, h/8, h/16\), для каждой — \(\varepsilon_h = \|y - u\|_C\) (или \(L_2\)). На log-log графике \((\log h,\ \log\varepsilon)\) точки должны лечь на прямую с наклоном 1 — теоретический порядок схемы-«уголок» равен \(p = 1\). Наклон меньше единицы или излом графика — сигнал, что в реализации ошибка.</li>
+</ol>
+
+<p><em>2) Валидация — «решаем правильные уравнения».</em></p>
+<ol>
+  <li><em>Сравнение с экспериментом.</em> Если моделируем реальный процесс — например, перенос красителя пассивным течением в лабораторной трубе, — сравниваем расчётное распределение концентрации с измеренным. В отличие от верификации, здесь под вопрос ставится не программа, а <em>сама модель</em>: «Правда ли, что \(u_t + a\,u_x = 0\) достаточно описывает наш процесс, или мы забыли диффузию, сжимаемость, что-то ещё?»</li>
+  <li><em>Границы применимости модели.</em> Уравнение \(u_t + u_x = 0\) — линейное, беcдиссипативное, скалярное. Валидация ставит вопрос: при каких режимах \((Re, Pe, \text{Mach})\) допущение об отсутствии диссипации остаётся адекватным, а где начинает влиять пренебрегаемая физика (диффузия, вязкость, нелинейность).</li>
+</ol>
+
+<p><em>3) Верификация ≠ валидация — на примерах.</em></p>
+<ul>
+  <li><em>Верификация пройдена, валидация провалена.</em> Программа корректно решает уравнение переноса — на всех модельных задачах наблюдается теоретический порядок сходимости. Но применяют её к переносу тепла в металлическом стержне, где на самом деле доминирует <em>диффузия</em> (\(u_t = \kappa\,u_{xx}\)). Результат расчёта не будет иметь ничего общего с реальным профилем температуры — не из-за ошибки в программе, а из-за неадекватности модели.</li>
+  <li><em>Валидация пройдена, верификация провалена.</em> Программа решает уравнения Навье – Стокса — модель, физически адекватную для течения жидкости. Но в схеме допущена ошибка в разностном операторе: на грубой сетке результат случайно попадает в диапазон измерений (валидация даже «слабо» проходит). Grid refinement, однако, порядок сходимости не показывает, а при измельчении сетки решение начинает <em>уходить</em> от эксперимента — верификация ловит эту ошибку.</li>
+</ul>
+
+<div class="ans"><span class="lbl">Почему одна не заменяет другую</span>верификация отвечает на вопрос «правильно ли алгоритм решает <em>заданную</em> математическую задачу»; валидация — «правильно ли <em>заданная</em> математическая задача описывает реальность». Между ними нет причинно-следственной связи: адекватную модель можно испортить реализацией; корректно реализованную программу можно применить к неверной модели.</div>
+</div>
+
+<a class="back" href="s1-01-hw.html">← К задачам</a>
+<a class="back" href="s1-01.html">← К лекции §1</a>
+
+</div><!-- /main -->
+</body>
+</html>

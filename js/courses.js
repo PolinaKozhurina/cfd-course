@@ -12,7 +12,7 @@
 
 window.CFD_COURSES = [
   { id: 'nm',   short: 'ЧМ',       name: 'Численные методы',                          semester: 'Семестр',        path: 'nm/'   },
-  { id: 'sem1', short: 'Теория',   name: 'Теория разностных схем',                    semester: 'Осень 2025',     path: 'sem1/' },
+  { id: 'sem1', short: 'Теория',   name: 'Теория разностных схем',                    semester: 'Осень 2026',     path: 'sem1/' },
   { id: 'sem2', short: 'Разн. схемы', name: 'Разностные схемы и параллельная реализация', semester: 'Весна 2026', path: 'sem2/' },
   { id: 'mke',  short: 'МКЭ',      name: 'Метод конечных элементов',                  semester: 'Курс',           path: 'mke/'  },
   { id: 'sph',  short: 'SPH',      name: 'Метод сглаженных частиц (SPH)',             semester: 'Мини-курс',      path: 'sph/'  },

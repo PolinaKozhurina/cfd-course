@@ -60,7 +60,7 @@
       {
         id: "sem1",
         label: "Теория разн. схем",
-        semester: "Осень 2025",
+        semester: "Осень 2026",
         sections: [
           { title: "Основы", items: [
               { href: "sem1/s1-01.html", label: "§1 Основные понятия" },

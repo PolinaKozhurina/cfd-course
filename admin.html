@@ -154,7 +154,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
   <button class="tab active" onclick="showTab('students')">Студенты</button>
   <button class="tab" onclick="showTab('enrollments')">Заявки на курсы <span id="enrollTabBadge" style="display:none;min-width:16px;height:16px;border-radius:8px;background:#c44;color:#fff;font-size:.6rem;font-weight:700;font-family:JetBrains Mono,monospace;align-items:center;justify-content:center;padding:0 4px;margin-left:2px;vertical-align:middle"></span></button>
   <button class="tab" onclick="showTab('workgroups')">Рабочие группы</button>
-  <button class="tab" onclick="showTab('homework');renderHomeworkTab()">Домашки</button>
+  <button class="tab" onclick="showTab('homework');renderHomeworkTab()">ДЗ</button>
   <button class="tab" onclick="showTab('attendance');renderAttendanceTab()">Посещаемость</button>
   <button class="tab" onclick="showTab('gating');renderGatingTab()">Гейтинг лекций</button>
   <button class="tab" onclick="showTab('groups');renderGroupResults()">Результаты тестов</button>
@@ -260,7 +260,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
   </div>
 </div>
 
-<!-- TAB: Домашки -->
+<!-- TAB: ДЗ -->
 <div id="tab-homework" class="panel">
   <div class="card">
     <div style="display:flex;align-items:baseline;justify-content:space-between;gap:.6rem;flex-wrap:wrap">
@@ -269,13 +269,13 @@ if (location.search.indexOf('embedded=1') !== -1) {
         <select id="hwCourseFilter" onchange="renderHomeworkTab()">
           <option value="">— выберите курс —</option>
         </select>
-        <button class="btn btn-primary" onclick="hwOpenCreateForm()">+ Новая домашка</button>
+        <button class="btn btn-primary" onclick="hwOpenCreateForm()">+ Новое ДЗ</button>
       </div>
     </div>
     <p style="font-size:.85rem;color:var(--text2);margin:.5rem 0 .8rem">
-      Домашка — по одному курсу. Common — всем один и тот же файл/текст.
-      Personal — вы задаёте список вариантов, потом привязываете студента к варианту вручную (или автораздача по кругу).
-      Дедлайн с датой и временем; поставите «строгий» — Firestore не примет сдачу после дедлайна.
+      Каждое ДЗ привязано к одному курсу. Common — всем один и тот же файл/текст.
+      Personal — задаёте список вариантов, потом привязываете студента к варианту вручную (или автораздача по кругу).
+      Дедлайн с датой и временем; при «строгом» — Firestore не примет сдачу после дедлайна.
     </p>
     <div id="hwList"></div>
   </div>
@@ -297,7 +297,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
   <div id="hwFormWrap" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
     <div style="background:#fff;border-radius:10px;width:640px;max-width:92%;max-height:88vh;overflow:auto;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2)">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.6rem">
-        <h3 style="margin:0" id="hwFormTitle">Новая домашка</h3>
+        <h3 style="margin:0" id="hwFormTitle">Новое ДЗ</h3>
         <button onclick="hwCloseForm()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text3)">×</button>
       </div>
       <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2);display:block;margin-top:.5rem">Курс</label>
@@ -1204,13 +1204,19 @@ function renderStudents() {
     cont.innerHTML = '<div class="card" style="text-align:center;padding:1.5rem;color:var(--text2)">Нет зарегистрированных студентов.<br><span style="font-size:.82rem">Студенты появятся здесь после того, как войдут на сайт (кнопка «Войти» на любой странице).</span></div>';
     return;
   }
-  // Группировка по учебной группе МИФИ (u.studyGroup); без неё — «(без учебной группы)».
+  // Группировка: сначала «Администраторы» (isAdmin), потом учебные группы
+  // (u.studyGroup), в конце «(без учебной группы)». У админов учебной группы
+  // не показываем — им она не нужна.
   const byGroup = {};
   filtered.forEach(u => {
-    const key = (u.studyGroup || '').trim() || '__none__';
+    let key;
+    if (isAdmin(u.email)) key = '__admins__';
+    else key = (u.studyGroup || '').trim() || '__none__';
     (byGroup[key] = byGroup[key] || []).push(u);
   });
   const keys = Object.keys(byGroup).sort((a, b) => {
+    if (a === '__admins__') return -1;
+    if (b === '__admins__') return 1;
     if (a === '__none__') return 1;
     if (b === '__none__') return -1;
     return a.localeCompare(b, 'ru');
@@ -1228,11 +1234,19 @@ function renderStudents() {
       + '</tr></thead>';
   cont.innerHTML = keys.map(k => {
     const users = byGroup[k].slice().sort((a, b) => (a.fio || a.email || '').localeCompare(b.fio || b.email || '', 'ru'));
-    const title = k === '__none__' ? '(без учебной группы)' : k;
-    const rows = users.map((u, i) => studentRowHtml(u, viewerIsSuperAdmin, showLegacyAssign, i + 1)).join('');
-    return '<details open style="margin-bottom:.6rem">'
-      +   '<summary style="cursor:pointer;font-weight:700;padding:.4rem .6rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-family:JetBrains Mono,monospace;font-size:.82rem">'
-      +     '📁 ' + esc(title) + ' <span style="color:var(--text2);font-weight:400">— ' + users.length + '</span>'
+    let title;
+    if (k === '__admins__')      title = 'Администраторы';
+    else if (k === '__none__')   title = '(без учебной группы)';
+    else                         title = k;
+    const isAdminsBlock = k === '__admins__';
+    const rows = users.map((u, i) => studentRowHtml(u, viewerIsSuperAdmin, showLegacyAssign, i + 1, isAdminsBlock)).join('');
+    const summaryIcon = isAdminsBlock ? '⚙' : '📁';
+    const summaryStyle = isAdminsBlock
+      ? 'cursor:pointer;font-weight:700;padding:.4rem .6rem;background:#f6ecdc;border:1px solid #dcc79c;color:#8a5236;border-radius:6px;font-family:JetBrains Mono,monospace;font-size:.82rem'
+      : 'cursor:pointer;font-weight:700;padding:.4rem .6rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-family:JetBrains Mono,monospace;font-size:.82rem';
+    return '<details ' + (isAdminsBlock ? '' : 'open ') + 'style="margin-bottom:.6rem">'
+      +   '<summary style="' + summaryStyle + '">'
+      +     summaryIcon + ' ' + esc(title) + ' <span style="color:var(--text2);font-weight:400">— ' + users.length + '</span>'
       +   '</summary>'
       +   '<div class="card" style="margin-top:.35rem"><table>' + tableHead + '<tbody>' + rows + '</tbody></table></div>'
       + '</details>';
@@ -1253,7 +1267,7 @@ function esc(s) {
 }
 
 // Строка таблицы студента — вынесена, чтобы можно было раскладывать по папкам.
-function studentRowHtml(u, viewerIsSuperAdmin, showLegacyAssign, num) {
+function studentRowHtml(u, viewerIsSuperAdmin, showLegacyAssign, num, isAdminsBlock) {
   const isAdm = isAdmin(u.email);
   const groupOptions = Array.from({length: 5}, (_, i) => {
     const gid = 'group_' + String(i + 1).padStart(2, '0');
@@ -1306,7 +1320,9 @@ function studentRowHtml(u, viewerIsSuperAdmin, showLegacyAssign, num) {
     <td style="text-align:center"><input type="checkbox" class="bulk-cb-student" data-uid="${u.uid}" onchange="bulkUpdateStudentsCount()"></td>
     <td style="min-width:220px"><span class="row-num">${num || ''}.</span><input type="text" value="${esc(u.fio || '')}" placeholder="ФИО" id="fio-${u.uid}" onchange="saveUserField('${u.uid}','fio',this.value)" style="font-weight:600;font-size:.82rem;width:calc(100% - 2.2em);min-width:180px;box-sizing:border-box;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'Source Serif 4',serif;background:#fff;color:var(--text)"></td>
     <td style="font-size:.82rem;word-break:break-all">${esc(u.email || '—')}</td>
-    <td><input type="text" value="${esc(u.studyGroup || '')}" placeholder="Б22-505" id="sg-${u.uid}" onchange="saveUserField('${u.uid}','studyGroup',this.value)" style="font-size:.82rem;width:76px;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'JetBrains Mono',monospace;background:#fff;color:var(--text)"></td>
+    <td>${isAdminsBlock
+        ? '<span style="color:var(--text3);font-size:.78rem;font-style:italic">—</span>'
+        : `<input type="text" value="${esc(u.studyGroup || '')}" placeholder="Б22-505" id="sg-${u.uid}" onchange="saveUserField('${u.uid}','studyGroup',this.value)" style="font-size:.82rem;width:76px;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'JetBrains Mono',monospace;background:#fff;color:var(--text)">`}</td>
     <td>${workGroupsHtml}</td>
     <td style="text-align:center">${u.approved ? '<span class="badge b-pass" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', false)">✓</span>' : '<span class="badge b-fail" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', true)">✗</span>'}</td>
     <td style="text-align:center">${roleHtml}</td>
@@ -1499,7 +1515,7 @@ async function assignGroup(uid, group) {
   await loadAllData();
 }
 
-// ===== Домашки =====
+// ===== ДЗ =====
 window._hwAssignments = []; // текущий список для активного курса
 window._hwEditingAid = null;
 window._hwVariantFilesCache = {}; // idx -> FileList/Array<File>
@@ -1557,7 +1573,7 @@ function hwEscape(s) {
 function hwOpenCreateForm() {
   window._hwEditingAid = null;
   window._hwVariantFilesCache = {};
-  document.getElementById('hwFormTitle').textContent = 'Новая домашка';
+  document.getElementById('hwFormTitle').textContent = 'Новое ДЗ';
   document.getElementById('hwSubmitBtn').textContent = 'Создать';
   // Наполнить курсы
   const sel = document.getElementById('hwFormCourse');
@@ -1658,7 +1674,7 @@ async function hwSubmitForm() {
 }
 
 async function hwDelete(aid) {
-  if (!confirm('Удалить домашку и все сдачи по ней? Файлы будут стёрты из Storage.')) return;
+  if (!confirm('Удалить ДЗ и все сдачи по нему? Файлы будут удалены безвозвратно.')) return;
   const res = await CFDHomework.deleteAssignment(aid);
   if (!res.ok) { alert('Ошибка: ' + res.error); return; }
   renderHomeworkTab();
@@ -1666,7 +1682,7 @@ async function hwDelete(aid) {
 
 async function hwOpenSubmissions(aid) {
   const a = (window._hwAssignments || []).find(x => x.id === aid);
-  if (!a) { alert('Домашка не найдена'); return; }
+  if (!a) { alert('ДЗ не найдено'); return; }
   window._hwCurrentAssignment = a;
   document.getElementById('hwSubsWrap').style.display = 'flex';
   document.getElementById('hwSubsTitle').textContent = a.title;

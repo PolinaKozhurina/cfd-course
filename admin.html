@@ -16,20 +16,22 @@ body{font-family:'Source Serif 4',Georgia,serif;font-size:16px;line-height:1.6;c
 .nav-links a{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text2);text-decoration:none;padding:.3rem .55rem;border-radius:4px;transition:all .15s}
 .nav-links a:hover{background:var(--bg3);color:var(--text)}
 .nav-links a.active{background:var(--accent);color:#fff}
-.wrap{max-width:1000px;margin:0 auto;padding:1.5rem}
-h1{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:900;margin-bottom:.3rem}
+.wrap{max-width:1360px;margin:0 auto;padding:1.6rem 1.8rem}
+h1{font-family:'Playfair Display',serif;font-size:1.7rem;font-weight:700;margin-bottom:.3rem;letter-spacing:-.01em}
 .sub{color:var(--text2);font-size:.9rem;margin-bottom:1.5rem}
-.tabs{display:flex;gap:.3rem;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:.3rem}
-.tab{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.4rem .8rem;border-radius:4px 4px 0 0;cursor:pointer;color:var(--text2);background:none;border:none;transition:all .15s}
-.tab:hover{color:var(--text);background:var(--bg2)}
-.tab.active{color:#fff;background:var(--accent)}
+.tabs{display:flex;gap:.15rem;margin-bottom:1.4rem;border-bottom:1px solid var(--border);padding-bottom:0;position:sticky;top:0;background:var(--bg);z-index:10;flex-wrap:wrap}
+.tab{font-family:'JetBrains Mono',monospace;font-size:.74rem;padding:.5rem .85rem;border-radius:0;cursor:pointer;color:var(--text2);background:none;border:none;border-bottom:2px solid transparent;transition:all .12s;letter-spacing:.02em;margin-bottom:-1px}
+.tab:hover{color:var(--text);background:transparent;border-bottom-color:var(--border)}
+.tab.active{color:var(--accent);background:transparent;border-bottom-color:var(--accent);font-weight:600}
 .panel{display:none}
 .panel.active{display:block}
-.card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;margin-bottom:1rem;overflow-x:auto}
+.card{background:#fff;border:1px solid var(--border);border-radius:6px;padding:1rem 1.2rem;margin-bottom:1rem;overflow-x:auto;box-shadow:0 1px 3px var(--shadow)}
 .card h3{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;margin-bottom:.5rem}
 table{width:100%;border-collapse:collapse;font-size:.85rem}
-thead th{background:var(--bg2);text-align:left;padding:6px 10px;border:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--accent)}
-td{padding:5px 10px;border:1px solid var(--border)}
+thead th{background:transparent;text-align:left;padding:8px 10px;border:0;border-bottom:2px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+tbody tr{transition:background .1s}
+tbody tr:hover{background:var(--bg2)}
+td{padding:6px 10px;border:0;border-bottom:1px solid var(--border);vertical-align:middle}
 .badge{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:2px 6px;border-radius:3px;white-space:nowrap}
 .b-admin{background:#fde8e8;color:#c44}
 .b-student{background:#e6f1fb;color:var(--accent3)}
@@ -44,6 +46,18 @@ select:focus,input:focus{outline:none;border-color:var(--accent)}
 .btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
 .btn-primary:hover{background:#9a3d24}
 .btn-sm{padding:2px 8px;font-size:.7rem}
+
+/* Compact inline-actions в строках таблиц (без padding/border, тон текстовый). */
+.row-num{color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:.72rem;margin-right:.3rem;min-width:1.6em;display:inline-block;text-align:right}
+.row-actions .row-act{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-decoration:none;color:var(--text2);padding:0 2px;transition:color .12s}
+.row-actions .row-act:hover{text-decoration:underline}
+.row-actions .row-act-enroll{color:#1a6b5a}
+.row-actions .row-act-enroll:hover{color:#0d4a3d}
+.row-actions .row-act-verify{color:#3a5ba0}
+.row-actions .row-act-verify:hover{color:#243c73}
+.row-actions .row-act-del{color:#b44a2d}
+.row-actions .row-act-del:hover{color:#7d2f18}
+.row-actions .row-sep{color:var(--border);margin:0 .15rem;font-family:'JetBrains Mono',monospace;font-size:.7rem;user-select:none}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1.5rem}
 @media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}}
 .stat{background:var(--bg2);border-radius:6px;padding:.8rem 1rem;text-align:center}
@@ -1203,10 +1217,14 @@ function renderStudents() {
   });
   const tableHead = '<thead><tr>'
       + '<th style="width:24px;min-width:24px"><input type="checkbox" class="bulkAllGroup" title="Выбрать группу"></th>'
-      + '<th style="min-width:230px">ФИО</th><th style="min-width:200px">Email</th>'
-      + '<th style="min-width:120px">Уч. группа МИФИ</th>'
-      + '<th style="min-width:180px">Раб. группы по курсам</th>'
-      + '<th style="min-width:60px">Подтв.</th><th style="min-width:80px">Роль</th><th style="min-width:80px">Legacy</th>'
+      + '<th style="min-width:220px">ФИО</th>'
+      + '<th style="min-width:180px">Email</th>'
+      + '<th style="min-width:100px">Уч. группа МИФИ</th>'
+      + '<th style="min-width:170px">Раб. группы по курсам</th>'
+      + '<th style="min-width:52px">Подтв.</th>'
+      + '<th style="min-width:70px">Роль</th>'
+      + '<th style="min-width:70px">Legacy</th>'
+      + '<th style="min-width:130px;text-align:right">Действия</th>'
       + '</tr></thead>';
   cont.innerHTML = keys.map(k => {
     const users = byGroup[k].slice().sort((a, b) => (a.fio || a.email || '').localeCompare(b.fio || b.email || '', 'ru'));
@@ -1286,13 +1304,14 @@ function studentRowHtml(u, viewerIsSuperAdmin, showLegacyAssign, num) {
         : '<span style="color:var(--text3);font-size:.65rem">—</span>');
   return `<tr>
     <td style="text-align:center"><input type="checkbox" class="bulk-cb-student" data-uid="${u.uid}" onchange="bulkUpdateStudentsCount()"></td>
-    <td style="min-width:230px"><span style="color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:.72rem;margin-right:.3rem;min-width:1.6em;display:inline-block;text-align:right">${num || ''}.</span><input type="text" value="${esc(u.fio || '')}" placeholder="ФИО" id="fio-${u.uid}" onchange="saveUserField('${u.uid}','fio',this.value)" style="font-weight:600;font-size:.82rem;width:calc(100% - 2.2em);min-width:190px;box-sizing:border-box;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'Source Serif 4',serif;background:#fff;color:var(--text)"></td>
-    <td style="font-size:.82rem;white-space:nowrap">${esc(u.email || '—')} <button class="btn btn-sm" title="Записать на курс (approve enrollment без предварительной заявки)" onclick="adminEnrollTo('${u.uid}','${esc(u.fio || u.email || '')}')" style="padding:1px 5px;font-size:.7rem;margin-left:.2rem;color:#1a6b5a">➕</button> <button class="btn btn-sm" title="Ручная верификация email через Admin API (обход email-письма)" onclick="adminVerifyEmail('${u.uid}','${esc(u.email || '')}')" style="padding:1px 5px;font-size:.7rem">🔓</button> <button class="btn btn-sm" title="Удалить студента (Auth + users doc). Дочерние документы (enrollments, сдачи и т.п.) не чистятся автоматически." onclick="adminDeleteUser('${u.uid}','${esc(u.email || '')}','${esc(u.fio || '')}')" style="padding:1px 5px;font-size:.7rem;color:#c44">🗑</button></td>
-    <td><input type="text" value="${esc(u.studyGroup || '')}" placeholder="Б22-505" id="sg-${u.uid}" onchange="saveUserField('${u.uid}','studyGroup',this.value)" style="font-size:.82rem;width:80px;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'JetBrains Mono',monospace;background:#fff;color:var(--text)"></td>
+    <td style="min-width:220px"><span class="row-num">${num || ''}.</span><input type="text" value="${esc(u.fio || '')}" placeholder="ФИО" id="fio-${u.uid}" onchange="saveUserField('${u.uid}','fio',this.value)" style="font-weight:600;font-size:.82rem;width:calc(100% - 2.2em);min-width:180px;box-sizing:border-box;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'Source Serif 4',serif;background:#fff;color:var(--text)"></td>
+    <td style="font-size:.82rem;word-break:break-all">${esc(u.email || '—')}</td>
+    <td><input type="text" value="${esc(u.studyGroup || '')}" placeholder="Б22-505" id="sg-${u.uid}" onchange="saveUserField('${u.uid}','studyGroup',this.value)" style="font-size:.82rem;width:76px;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'JetBrains Mono',monospace;background:#fff;color:var(--text)"></td>
     <td>${workGroupsHtml}</td>
     <td style="text-align:center">${u.approved ? '<span class="badge b-pass" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', false)">✓</span>' : '<span class="badge b-fail" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', true)">✗</span>'}</td>
     <td style="text-align:center">${roleHtml}</td>
     <td>${legacyHtml}</td>
+    <td class="row-actions" style="white-space:nowrap;text-align:right"><a href="#" class="row-act row-act-enroll" title="Записать на курс без заявки" onclick="event.preventDefault();adminEnrollTo('${u.uid}','${esc(u.fio || u.email || '')}')">+ курс</a><span class="row-sep">·</span><a href="#" class="row-act row-act-verify" title="Подтвердить email вручную (обход письма)" onclick="event.preventDefault();adminVerifyEmail('${u.uid}','${esc(u.email || '')}')">verify</a><span class="row-sep">·</span><a href="#" class="row-act row-act-del" title="Удалить студента полностью (аккаунт + users doc)" onclick="event.preventDefault();adminDeleteUser('${u.uid}','${esc(u.email || '')}','${esc(u.fio || '')}')">del</a></td>
   </tr>`;
 }
 

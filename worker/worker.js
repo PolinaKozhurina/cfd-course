@@ -119,9 +119,12 @@ async function handleUploadCommon(request, env) {
     return json({ ok: false, error: "forbidden (not admin of course " + cid + ")" }, env, 403);
   }
 
-  const owner = env.GITHUB_OWNER;
-  const repo  = env.GITHUB_REPO_COMMON || env.GITHUB_REPO;
-  const branch = env.GITHUB_BRANCH_COMMON || "master";
+  // trim — на случай, если в Cloudflare env случайно попал ведущий/хвостовой
+  // пробел (GitHub API вернёт 404 на URL с пробелом, и найти это без диагностики
+  // сложно). Аналогично trim'аем и в handleUpload через ghApi ниже.
+  const owner  = String(env.GITHUB_OWNER || "").trim();
+  const repo   = String(env.GITHUB_REPO_COMMON || env.GITHUB_REPO || "").trim();
+  const branch = String(env.GITHUB_BRANCH_COMMON || "master").trim();
   if (!owner || !repo) return json({ ok: false, error: "owner/repo not configured" }, env, 500);
 
   const path = cid + "/_src/hw/" + aid + (subdir ? "/" + subdir : "") + "/" + filename;
@@ -268,8 +271,8 @@ async function verifyIdToken(token, env) {
 // ============================================================
 
 async function ghApi(method, path, body, env) {
-  const owner = env.GITHUB_OWNER;
-  const repo = env.GITHUB_REPO;
+  const owner = String(env.GITHUB_OWNER || "").trim();
+  const repo = String(env.GITHUB_REPO || "").trim();
   if (!owner || !repo) throw new Error("owner/repo not configured");
   const resp = await fetch("https://api.github.com/repos/" + owner + "/" + repo + path, {
     method: method,

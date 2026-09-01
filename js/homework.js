@@ -143,34 +143,47 @@
       } catch (e) { return { ok: false, error: e.message }; }
     },
 
-    // Удалить assignment и все связанные файлы Storage.
+    // Удалить assignment и все связанные Firestore-документы.
+    // Файлы условия теперь лежат в GitHub-репо (cfd-course/_src/hw/…),
+    // не в Firebase Storage — их удаление опционально и происходит best-effort
+    // через Worker /file DELETE, если файл действительно в приватном репо
+    // (cfd-submissions). Файлы, попавшие в открытый cfd-course, оставляем
+    // как есть — они не критичны (потом при пересоздании ДЗ путь другой aid).
     deleteAssignment: async function (aid) {
       try {
         const snap = await db.collection("assignments").doc(aid).get();
         if (!snap.exists) return { ok: false, error: "not found" };
-        const d = snap.data();
-        const paths = [];
-        (d.filesCommon || []).forEach(f => paths.push(f.path));
-        (d.variants || []).forEach(v => (v.files || []).forEach(f => paths.push(f.path)));
-        // Файлы всех сдач тоже удалим
+        // Сабмишны студентов
         const subs = await db.collection("submissions").where("assignmentId", "==", aid).get();
-        for (const s of subs.docs) {
-          (s.data().files || []).forEach(f => paths.push(f.path));
+        // Best-effort удаление файлов сдач через Worker (они в приватном
+        // cfd-submissions). Не блокируем удаление записей при ошибке.
+        if (typeof WORKER_URL !== "undefined" && WORKER_URL) {
+          try {
+            const me = auth.currentUser;
+            if (me) {
+              const token = await me.getIdToken();
+              for (const s of subs.docs) {
+                for (const f of (s.data().files || [])) {
+                  try {
+                    await fetch(WORKER_URL + "/file?path=" + encodeURIComponent(f.path), {
+                      method: "DELETE",
+                      headers: { Authorization: "Bearer " + token },
+                    });
+                  } catch (_) {}
+                }
+              }
+            }
+          } catch (_) {}
         }
-        // Удалить объекты Storage (best-effort)
-        for (const p of paths) {
-          try { await storage.ref().child(p).delete(); } catch (_) {}
-        }
-        // Удалить сабмишны
+        // Удалить документы Firestore одним батчем
         const batch = db.batch();
         subs.forEach(s => batch.delete(s.ref));
-        // Удалить оценки
         const grades = await db.collection("assignment_grades").where("assignmentId", "==", aid).get();
         grades.forEach(g => batch.delete(g.ref));
         batch.delete(db.collection("assignments").doc(aid));
         await batch.commit();
         return { ok: true };
-      } catch (e) { return { ok: false, error: e.message }; }
+      } catch (e) { return { ok: false, error: e.message || String(e) }; }
     },
 
     // Назначить вариант personal-assignment одному студенту.

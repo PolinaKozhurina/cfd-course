@@ -168,8 +168,10 @@ service cloud.firestore {
         || (isAdmin() && !isSuperAdmin() && noSuperOnlyFieldChanges())
         || isSuperAdmin();
 
-      // Удаление — только superadmin.
-      allow delete: if isSuperAdmin();
+      // Удаление — superadmin или курсовой admin (последний удаляет только
+      // студентов, не других admin: проверяем что resource не имеет isAdmin=true).
+      allow delete: if isSuperAdmin()
+                    || (isAdmin() && resource.data.get('isAdmin', false) != true);
     }
 
     // ---------- groups/{gid} ----------

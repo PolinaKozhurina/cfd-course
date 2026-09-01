@@ -4321,29 +4321,46 @@ async function adminEnrollTo(uid, label) {
 
 async function adminDeleteUser(uid, email, fio) {
   const label = fio || email || uid;
-  if (!confirm('Удалить студента «' + label + '» (' + (email || '?') + ')?\n\nЭто:\n• снесёт Firebase Auth-аккаунт (студент больше не сможет войти),\n• удалит документ users/' + uid + '.\n\nЕго заявки на курсы, сдачи ДЗ, посещаемость останутся в базе — почистишь их отдельно, если нужно.')) return;
+  if (!confirm('Удалить студента «' + label + '» (' + (email || '?') + ')?\n\nБудут стёрты: документ users/' + uid + ', все его enrollments, submissions, individual_grades, отметки посещаемости.\n\nСам Firebase Auth-аккаунт останется (удалить его без Admin SDK нельзя). Практически человек исчезнет из системы, но при желании сможет заново пройти регистрацию и попасть в чистый профиль. Если хочешь снести и аккаунт — Firebase Console → Authentication → Users → checkbox → Delete.')) return;
   if (!confirm('Точно удалить «' + label + '»? Действие необратимо.')) return;
   const me = firebase.auth().currentUser;
   if (!me) { alert('Не авторизованы'); return; }
-  if (typeof WORKER_URL === 'undefined' || !WORKER_URL) { alert('WORKER_URL не настроен'); return; }
   try {
-    const token = await me.getIdToken();
-    const resp = await fetch(WORKER_URL + '/admin-delete-user', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, targetUid: uid }),
+    const dbi = firebase.firestore();
+    // 1) Найти все дочерние документы, где фигурирует этот uid.
+    const [enrSnap, subsSnap, gradesSnap, attSnap] = await Promise.all([
+      dbi.collection('enrollments').where('uid', '==', uid).get().catch(() => null),
+      dbi.collection('submissions').where('uid', '==', uid).get().catch(() => null),
+      dbi.collection('individual_grades').get().catch(() => null),
+      dbi.collection('attendance').get().catch(() => null),
+    ]);
+    // Индивидуальные оценки — docId вида {uid}_{cid} или {uid}; отфильтруем в клиенте.
+    const gradeDocs = [];
+    if (gradesSnap) gradesSnap.forEach(d => {
+      if (d.id === uid || d.id.startsWith(uid + '_')) gradeDocs.push(d.ref);
     });
-    const data = await resp.json();
-    if (!resp.ok || !data.ok) {
-      alert('✗ Не удалось: ' + (data.error || resp.status));
-      return;
-    }
-    alert('✓ Студент удалён. Список обновится.');
-    // Перезагрузить список
-    if (typeof loadUsersAll === 'function') { await loadUsersAll(); }
+    // 2) Батч: удаляем enrollments, submissions, individual_grades, сам users doc.
+    // Также с attendance: убираем этого uid из records во всех занятиях.
+    const batch = dbi.batch();
+    if (enrSnap)  enrSnap.forEach(d => batch.delete(d.ref));
+    if (subsSnap) subsSnap.forEach(d => batch.delete(d.ref));
+    gradeDocs.forEach(r => batch.delete(r));
+    if (attSnap) attSnap.forEach(d => {
+      const data = d.data() || {};
+      if (data.records && Object.prototype.hasOwnProperty.call(data.records, uid)) {
+        const patch = {};
+        patch['records.' + uid] = firebase.firestore.FieldValue.delete();
+        batch.update(d.ref, patch);
+      }
+    });
+    batch.delete(dbi.collection('users').doc(uid));
+
+    await batch.commit();
+    alert('✓ Студент удалён из системы (Firestore).\nАккаунт в Firebase Auth остался — снести можно через Firebase Console, если нужно.');
+    if (typeof loadAllData === 'function') { await loadAllData(); }
     if (typeof renderStudents === 'function') renderStudents();
   } catch (e) {
-    alert('✗ Ошибка: ' + e.message);
+    alert('✗ Ошибка: ' + (e.message || e));
   }
 }
 

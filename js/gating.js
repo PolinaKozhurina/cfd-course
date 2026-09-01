@@ -23,6 +23,14 @@
         || (document.body && document.body.getAttribute("data-course"))
         || null;
   }
+
+  // Страница помечена как admin-only, если <html> или <body> несёт
+  // data-admin-only="true". Такие страницы (например, решения ДЗ)
+  // видны только superadmin и admin с этим курсом в managedCourses.
+  function isAdminOnlyPage() {
+    return document.documentElement.getAttribute("data-admin-only") === "true"
+        || (document.body && document.body.getAttribute("data-admin-only") === "true");
+  }
   function pageLecId() {
     const f = location.pathname.split("/").pop() || "";
     return f.replace(/\.html?$/i, "") || "index";
@@ -137,6 +145,9 @@
     } else if (access.reason === "not-enrolled") {
       msg = "<h2 style=\"font-family:Playfair Display,serif;font-size:1.8rem;font-weight:900;color:#b44a2d;margin-bottom:.5rem\">✋ Запишитесь на курс</h2>"
           + "<p style=\"color:#6b5d4f;margin-bottom:1rem\">Материалы курса открываются только записанным студентам.</p>";
+    } else if (access.reason === "admin-only") {
+      msg = "<h2 style=\"font-family:Playfair Display,serif;font-size:1.8rem;font-weight:900;color:#b44a2d;margin-bottom:.5rem\">🔒 Только для преподавателя</h2>"
+          + "<p style=\"color:#6b5d4f;margin-bottom:1rem\">Эта страница доступна только администраторам курса.</p>";
     } else if (access.reason === "not-released") {
       if (access.releasedAt) {
         const when = new Date(access.releasedAt.toMillis()).toLocaleString("ru-RU", { timeZone: "Europe/Moscow", dateStyle: "long", timeStyle: "short" }) + " МСК";
@@ -163,12 +174,15 @@
   // после проверки либо снимаем его (доступ есть), либо показываем
   // блокер (тогда маркер уже стоит и контент так и не мелькнёт).
   function preHideLectureIfNeeded() {
+    const adminOnly = isAdminOnlyPage();
     const cid = pageCid();
     const lec = pageLecId();
-    if (!cid) return false;
-    if (lec === "index") return false;
-    if (/^([a-z]+\-)?reference$/i.test(lec)) return false;
-    if (/^practice$/i.test(lec)) return false;
+    if (!adminOnly) {
+      if (!cid) return false;
+      if (lec === "index") return false;
+      if (/^([a-z]+\-)?reference$/i.test(lec)) return false;
+      if (/^practice$/i.test(lec)) return false;
+    }
     // Синхронно — до firebase, до пикселя рендера.
     const style = document.createElement("style");
     style.id = "gating-prehide";
@@ -191,6 +205,7 @@
   }
 
   async function enforceLecturePage() {
+    if (isAdminOnlyPage()) { await enforceAdminOnlyPage(); return; }
     const cid = pageCid();
     const lec = pageLecId();
     if (!cid) return; // не лекция
@@ -203,6 +218,38 @@
     const ld = document.querySelector(".gating-loader");
     if (ld) ld.remove();
     if (!access.open) showBlocker(access);
+  }
+
+  // Проверка доступа для admin-only страницы: superadmin — всегда,
+  // admin — при cid ∈ managedCourses (либо при отсутствии cid).
+  async function enforceAdminOnlyPage() {
+    await ensureFirebase();
+    const user = await currentUserPromise();
+    const supers = (typeof ADMIN_EMAILS !== "undefined")
+      ? (Array.isArray(ADMIN_EMAILS) ? ADMIN_EMAILS : [ADMIN_EMAILS]) : [];
+    const isSuper = user && supers.indexOf(user.email) !== -1;
+    let allowed = isSuper;
+    if (!allowed && user) {
+      try {
+        const u = await firebase.firestore().collection("users").doc(user.uid).get();
+        if (u.exists) {
+          const isAdmin = !!u.data().isAdmin;
+          const managed = Array.isArray(u.data().managedCourses) ? u.data().managedCourses : [];
+          const cid = pageCid();
+          if (isAdmin && (!cid || managed.indexOf(cid) !== -1)) allowed = true;
+        }
+      } catch (_) {}
+    }
+    document.documentElement.classList.remove("gating-checking");
+    const ld = document.querySelector(".gating-loader");
+    if (ld) ld.remove();
+    if (!allowed) {
+      showBlocker({ open: false, reason: user ? "admin-only" : "not-logged" });
+    } else {
+      // Явно снимаем pre-hide, если он был поставлен в самом HTML
+      // (см. <style>html[data-admin-only=true] body{visibility:hidden}</style>).
+      document.documentElement.classList.add("gating-ok");
+    }
   }
 
   // Вызвать pre-hide как можно раньше — синхронно при загрузке скрипта.

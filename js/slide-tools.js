@@ -44,6 +44,8 @@
       ".cfd-st-panel.on{display:flex}",
       ".cfd-st-panel .row{display:flex;gap:.25rem;align-items:center;justify-content:center}",
       ".cfd-st-panel .lbl{font-size:.62rem;color:#9a8d7e;text-transform:uppercase;letter-spacing:.05em;text-align:center;margin-top:.15rem}",
+      ".cfd-st-tool-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;text-align:center;padding:.2rem .5rem;border-radius:4px;background:#2c2419;color:#fff}",
+      ".cfd-st-tool-label.eraser{background:#b44a2d}",
       ".cfd-st-btn{background:#faf8f4;border:1px solid #d9cfc0;border-radius:4px;padding:.28rem .5rem;cursor:pointer;font:inherit;color:#2c2419;line-height:1}",
       ".cfd-st-btn:hover{border-color:#b44a2d;color:#b44a2d}",
       ".cfd-st-btn.on{background:#2c2419;color:#fff;border-color:#2c2419}",
@@ -132,9 +134,10 @@
     // Панель инструментов (появляется при включённом режиме рисования)
     var panel = el("div", "cfd-st-panel");
     panel.innerHTML =
+      '<div class="cfd-st-tool-label" data-current-tool>Перо</div>' +
       '<div class="row">' +
-        '<button class="cfd-st-btn" data-act="pen">✒ Перо</button>' +
-        '<button class="cfd-st-btn" data-act="eraser">Ластик</button>' +
+        '<button class="cfd-st-btn" data-act="pen" title="Перо (клавиша P)">✒ Перо</button>' +
+        '<button class="cfd-st-btn" data-act="eraser" title="Ластик — клик ещё раз, чтобы вернуть перо (клавиша E)">🩹 Ластик</button>' +
       '</div>' +
       '<div class="lbl">Цвет</div>' +
       '<div class="row" data-colors>' +
@@ -193,7 +196,9 @@
       var t = e.target;
       var act = t.getAttribute("data-act");
       if (act === "pen")       { self.tool = "pen";    self._updatePanel(); }
-      else if (act === "eraser") { self.tool = "eraser"; self._updatePanel(); }
+      // Ластик = тумблер: повторный клик возвращает перо. Так же понимаем
+      // клавишу E ниже.
+      else if (act === "eraser") { self.tool = (self.tool === "eraser") ? "pen" : "eraser"; self._updatePanel(); }
       else if (act === "clear") { self._clearCurrent(); }
       else if (act === "clear-all") { self._clearAll(); }
       var col = t.getAttribute("data-color");
@@ -205,11 +210,17 @@
     // Pointer-события на канвасе
     this._attachPointer();
 
-    // Горячая клавиша D — переключение режима
+    // Горячие клавиши: D — вкл/выкл режим рисования; P — перо; E — ластик
+    // (тумблер: если уже ластик, переключит обратно в перо).
     document.addEventListener("keydown", function (e) {
       if (/^(INPUT|TEXTAREA)$/i.test((e.target || {}).tagName)) return;
-      if (e.key === "d" || e.key === "D" || e.key === "в" || e.key === "В") {
-        e.preventDefault(); self.toggleDraw();
+      var k = e.key.toLowerCase();
+      if (k === "d" || k === "в") { e.preventDefault(); self.toggleDraw(); }
+      else if (self.draw && (k === "p" || k === "з")) { e.preventDefault(); self.tool = "pen"; self._updatePanel(); }
+      else if (self.draw && (k === "e" || k === "у")) {
+        e.preventDefault();
+        self.tool = (self.tool === "eraser") ? "pen" : "eraser";
+        self._updatePanel();
       }
     });
   };
@@ -225,6 +236,12 @@
     var szBtn = this.panel.querySelector('[data-size="' + this.size + '"]');
     if (szBtn) szBtn.classList.add("on");
     this.canvas.classList.toggle("eraser", this.tool === "eraser" && this.draw);
+    // Обновить заметный ярлык текущего инструмента
+    var lbl = this.panel.querySelector('[data-current-tool]');
+    if (lbl) {
+      lbl.textContent = (this.tool === "eraser") ? "🩹 Ластик" : "✒ Перо";
+      lbl.classList.toggle("eraser", this.tool === "eraser");
+    }
   };
 
   CFDSlideTools.prototype.toggleDraw = function () {

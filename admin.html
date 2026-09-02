@@ -753,6 +753,12 @@ async function loadAllData() {
   const sgSet = new Set();
   rawAllUsers.forEach(u => { if (u.studyGroup) sgSet.add(u.studyGroup); });
   allStudyGroups = Array.from(sgSet).sort();
+  // Полный справочник uid → user (без фильтрации по scope админа). Нужен
+  // для вкладок ДЗ/Оценки: enrollment на курс и учебная группа МИФИ
+  // ортогональны — курсовому admin показываем студента, если он записан
+  // на его курс, даже если учебная/рабочая группа вне scope.
+  window._rawAllUsersByUid = {};
+  rawAllUsers.forEach(u => { window._rawAllUsersByUid[u.uid] = u; });
 
   // Filter users: only students my admin can see
   if (_currentAdminGroups === null && _currentAdminStudyGroups === null) {
@@ -1795,8 +1801,29 @@ async function renderHwSubmissionsTable(aid) {
   window._hwSubsCache = subs;
   window._hwGradesCache = grades;
   // Список кому показывать: студенты с approved-enrollment на этот курс.
+  // Источник правды — реальные enrollments (собранные в _allEnrollments),
+  // а не отфильтрованный по scope админа allUsers. Иначе курсовой admin
+  // с непустым managedStudyGroups (или без них) не видел бы студентов из
+  // «чужих» учебных групп, хотя те записаны именно на его курс.
   const enrByUid = window._enrollmentsByUid || {};
-  const enrolled = allUsers.filter(u => !isAdmin(u.email) && enrByUid[u.uid] && enrByUid[u.uid][a.courseId] === 'approved');
+  const usersByUid = window._rawAllUsersByUid || {};
+  const enrolledUids = new Set();
+  Object.keys(enrByUid).forEach(uid => {
+    if (enrByUid[uid][a.courseId] === 'approved') enrolledUids.add(uid);
+  });
+  // Дополнительно — старый путь через allUsers, на случай если enrollment
+  // где-то потерялся, но студент числится в моей группе.
+  allUsers.forEach(u => {
+    if (isAdmin(u.email)) return;
+    if (enrByUid[u.uid] && enrByUid[u.uid][a.courseId] === 'approved') enrolledUids.add(u.uid);
+  });
+  const enrolled = [];
+  enrolledUids.forEach(uid => {
+    const u = usersByUid[uid] || allUsers.find(x => x.uid === uid);
+    if (!u) return;
+    if (isAdmin(u.email)) return;
+    enrolled.push(u);
+  });
   enrolled.sort((x, y) => (x.fio || x.email || '').localeCompare(y.fio || y.email || '', 'ru'));
 
   let submittedCnt = 0, gradedCnt = 0;
@@ -1865,11 +1892,25 @@ async function renderHwSubmissionsTable(aid) {
       + '<td><input type="text" value="'+hwEscape(cVal).replace(/"/g,'&quot;')+'" class="comment-input" id="hwC-'+aid+'-'+u.uid+'" placeholder="Комментарий" oninput="hwDebounceGrade(\''+aid+'\',\''+u.uid+'\',\''+a.courseId+'\')"></td>'
       + '</tr>';
   }).join('');
+  // Диагностика на случай пустого списка — легче понять, где рвётся.
+  let emptyRow = '<tr><td colspan="9" style="text-align:center;color:var(--text3)">Никто не записан на курс</td></tr>';
+  if (!rows) {
+    const enrCount = Object.keys(window._enrollmentsByUid || {}).length;
+    const enrApproved = Object.values(window._enrollmentsByUid || {})
+      .filter(m => m[a.courseId] === 'approved').length;
+    const managed = _currentAdminCourses === null ? 'все (super)' : (_currentAdminCourses || []).join(', ');
+    emptyRow += '<tr><td colspan="9" style="text-align:center;color:var(--text3);font-size:.72rem;font-family:\'JetBrains Mono\',monospace;padding-top:.3rem">'
+      + '🐞 диагностика: allUsers=' + allUsers.length
+      + ', enrollments-uids=' + enrCount
+      + ', approved на «' + a.courseId + '»=' + enrApproved
+      + ', мои курсы: [' + managed + ']'
+      + '</td></tr>';
+  }
   document.getElementById('hwSubsTable').innerHTML =
     '<div class="hw-subs-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -0.3rem">'
     + '<table style="width:100%;min-width:820px;border-collapse:collapse">'
     + '<thead><tr><th style="width:2em">№</th><th>ФИО</th><th>Email</th><th>Уч. группа</th><th>Вар.</th><th>Файлы</th><th>Сдано</th><th>Оценка</th><th>Комментарий</th></tr></thead>'
-    + '<tbody>' + (rows || '<tr><td colspan="9" style="text-align:center;color:var(--text3)">Никто не записан на курс</td></tr>') + '</tbody>'
+    + '<tbody>' + (rows || emptyRow) + '</tbody>'
     + '</table>'
     + '</div>';
 }

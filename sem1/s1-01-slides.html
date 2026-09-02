@@ -13,6 +13,8 @@ window.MathJax = {
 };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<!-- Инструменты слайдов: рисование (сразу) + экспорт PDF/PPTX (по клику подгрузит html2canvas / jsPDF / PptxGenJS) -->
+<script src="../js/slide-tools.js"></script>
 <style>
 :root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -1411,6 +1413,29 @@ strong{color:var(--text)}
   var h = parseInt((location.hash || '').replace('#', ''), 10);
   if (!isNaN(h) && h >= 1 && h <= slides.length) show(h - 1);
   else show(0);
+
+  // Прокинем show/индекс наружу — чтобы CFDSlideTools во время экспорта
+  // навигировал через штатный show() (с MathJax typeset и анимацией),
+  // а не только через перекл. active-класса.
+  window.__slidesShow = show;
+  window.__slidesIndex = function () { return i; };
+})();
+
+// Инструменты: рисование поверх слайдов + экспорт PDF / PPTX
+(function initSlideTools() {
+  function ready() {
+    if (!window.CFDSlideTools) return;
+    window.CFDSlideTools.init({
+      slidesSelector: '.slide',
+      activeClass:    'active',
+      hudSelector:    '.hud',
+      projectName:    'sem1-01-slides',
+      getCurrentIndex: function () { return window.__slidesIndex ? window.__slidesIndex() : 0; },
+      onGoToSlide:     function (n) { if (window.__slidesShow) window.__slidesShow(n); },
+    });
+  }
+  if (window.CFDSlideTools) ready();
+  else window.addEventListener('load', ready);
 })();
 </script>
 </body>

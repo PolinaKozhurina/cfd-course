@@ -117,8 +117,11 @@
     root.innerHTML =
       '<style>' +
       '.cfd-annot-root{position:fixed;inset:0;z-index:99999;background:#f5f2ec;font-family:"Source Serif 4",Georgia,serif;color:#1a1a1a;display:flex;flex-direction:column}' +
-      '.cfd-annot-top{display:flex;align-items:center;gap:.6rem;padding:.5rem .8rem;background:#fff;border-bottom:1px solid #d8d0c0;box-shadow:0 1px 3px rgba(0,0,0,.05);flex-wrap:wrap}' +
-      '.cfd-annot-top .title{font-family:"Playfair Display",serif;font-size:1.05rem;flex:1;min-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '.cfd-annot-top{display:flex;align-items:center;gap:.5rem;padding:.5rem .8rem;background:#fff;border-bottom:1px solid #d8d0c0;box-shadow:0 1px 3px rgba(0,0,0,.05);flex-wrap:wrap}' +
+      '.cfd-annot-who{display:flex;flex-direction:column;gap:.05rem;padding:.28rem .7rem;background:linear-gradient(180deg,#fff8dc,#f6e9b8);border:1px solid #d5b558;border-radius:6px;min-width:0;max-width:52ch}' +
+      '.cfd-annot-who .who-name{font-family:"Playfair Display",serif;font-size:1rem;font-weight:700;color:#3a2f1a;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+      '.cfd-annot-who .who-meta{font-family:"JetBrains Mono",monospace;font-size:.7rem;color:#7a6a4a;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+      '.cfd-annot-top .title{font-family:"Playfair Display",serif;font-size:.92rem;color:#5a4a2a;flex:1;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
       '.cfd-annot-top .status{font-family:"JetBrains Mono",monospace;font-size:.78rem;color:#7a6a4a}' +
       '.cfd-annot-btn{background:#fff;border:1px solid #c8bfa8;color:#3a2f1a;padding:.35rem .7rem;border-radius:5px;cursor:pointer;font-family:inherit;font-size:.88rem;display:inline-flex;align-items:center;gap:.35rem}' +
       '.cfd-annot-btn:hover{background:#fdf9f0;border-color:#8a7649}' +
@@ -149,6 +152,7 @@
       '@media (max-width:700px){.cfd-annot-tools{width:72px;padding:.3rem}.cfd-annot-tool{padding:.25rem;font-size:.62rem}.cfd-annot-tool svg{width:18px;height:18px}}' +
       '</style>' +
       '<div class="cfd-annot-top">' +
+        '<div class="cfd-annot-who" title=""><span class="who-name"></span><span class="who-meta"></span></div>' +
         '<span class="title"></span>' +
         '<span class="status"></span>' +
         '<button class="cfd-annot-btn" data-act="undo" title="Отменить (Ctrl+Z)">↶ Отмена</button>' +
@@ -202,9 +206,17 @@
     document.body.appendChild(root);
     this.root = root;
 
+    var stu = this.opts.student || {};
+    var whoName = stu.fio || stu.email || stu.uid || "—";
+    var whoMetaParts = [];
+    if (stu.studyGroup) whoMetaParts.push(stu.studyGroup);
+    if (stu.email && stu.fio) whoMetaParts.push(stu.email);
+    root.querySelector(".who-name").textContent = whoName;
+    root.querySelector(".who-meta").textContent = whoMetaParts.join(" · ");
+    root.querySelector(".cfd-annot-who").title =
+      whoName + (whoMetaParts.length ? "  (" + whoMetaParts.join(" · ") + ")" : "");
     root.querySelector(".title").textContent =
-      "Проверка · " + (this.opts.assignment.title || this.opts.assignment.id) +
-      " · " + (this.opts.student.fio || this.opts.student.email || this.opts.student.uid) +
+      "✏️ " + (this.opts.assignment.title || this.opts.assignment.id) +
       " · " + (this.opts.sourceFile.name || "");
     this.status = root.querySelector(".status");
 

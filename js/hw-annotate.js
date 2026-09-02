@@ -108,6 +108,59 @@
     if (this.status) this.status.textContent = msg || "";
   };
 
+  // ---------- Зум ----------
+
+  Annotator.prototype._applyZoom = function () {
+    if (!this.pageCanvases.length) return;
+    var z = this.zoom || 1;
+    for (var i = 0; i < this.pageCanvases.length; i++) {
+      var pc = this.pageCanvases[i];
+      pc.holder.style.width = (pc.baseW * z) + "px";
+      pc.holder.style.height = (pc.baseH * z) + "px";
+      pc.wrap.style.transform = "scale(" + z + ")";
+    }
+    var val = this.root && this.root.querySelector(".cfd-annot-zoom-val");
+    if (val) val.textContent = Math.round(z * 100) + "%";
+  };
+
+  Annotator.prototype._zoomBy = function (delta, centerClientX, centerClientY) {
+    var box = this.root && this.root.querySelector(".cfd-annot-pages");
+    if (!box) return;
+    var oldZ = this.zoom || 1;
+    var newZ = Math.max(0.25, Math.min(4, oldZ * delta));
+    if (Math.abs(newZ - oldZ) < 0.001) return;
+    // Точка зума в координатах скролла box
+    var rect = box.getBoundingClientRect();
+    var cx = (centerClientX != null) ? (centerClientX - rect.left) : rect.width / 2;
+    var cy = (centerClientY != null) ? (centerClientY - rect.top)  : rect.height / 2;
+    var sx = (box.scrollLeft + cx) / oldZ;
+    var sy = (box.scrollTop + cy) / oldZ;
+    this.zoom = newZ;
+    this._applyZoom();
+    box.scrollLeft = sx * newZ - cx;
+    box.scrollTop  = sy * newZ - cy;
+  };
+
+  Annotator.prototype._zoomFit = function () {
+    var box = this.root && this.root.querySelector(".cfd-annot-pages");
+    if (!box || !this.pageCanvases.length) return;
+    // Впис по ширине первой страницы, минус паддинги и запас на скроллбар.
+    var maxW = this.pageCanvases[0].baseW;
+    for (var i = 0; i < this.pageCanvases.length; i++) {
+      if (this.pageCanvases[i].baseW > maxW) maxW = this.pageCanvases[i].baseW;
+    }
+    var avail = box.clientWidth - 32; // padding .cfd-annot-pages 1rem×2
+    this.zoom = Math.max(0.25, Math.min(4, avail / maxW));
+    this._applyZoom();
+    box.scrollLeft = 0;
+    box.scrollTop = 0;
+  };
+
+  Annotator.prototype._zoomReset = function () {
+    this.zoom = 1;
+    this._applyZoom();
+  };
+
   // ---------- UI ----------
 
   Annotator.prototype._buildShell = function () {
@@ -145,16 +198,27 @@
       '.cfd-annot-sizes button.active{background:#3a2f1a;color:#fff;border-color:#3a2f1a}' +
       '.cfd-annot-tool-label{font-family:"JetBrains Mono",monospace;font-size:.66rem;color:#7a6a4a;text-transform:uppercase;letter-spacing:.05em;text-align:center;margin-top:.3rem}' +
       '.cfd-annot-pages{flex:1;overflow:auto;padding:1rem;background:#e6e0d0}' +
-      '.cfd-annot-page-wrap{position:relative;margin:0 auto 1.5rem;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.15);display:block}' +
+      '.cfd-annot-page-wrap{position:absolute;left:0;top:0;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.15);display:block;transform-origin:0 0;will-change:transform}' +
       '.cfd-annot-page-wrap canvas{display:block}' +
-      '.cfd-annot-ink{position:absolute;left:0;top:0;touch-action:pan-y pinch-zoom;cursor:crosshair}' +
+      '.cfd-annot-ink{position:absolute;left:0;top:0;touch-action:pan-y;cursor:crosshair}' +
       '.cfd-annot-page-num{position:absolute;top:-1.6rem;left:0;font-family:"JetBrains Mono",monospace;font-size:.78rem;color:#7a6a4a}' +
+      '.cfd-annot-zoom{display:inline-flex;align-items:center;gap:2px;background:#fdf9f0;border:1px solid #c8bfa8;border-radius:5px;padding:2px}' +
+      '.cfd-annot-zoom .cfd-annot-zoom-btn{border:none;padding:.15rem .5rem;font-size:.95rem;min-width:1.8rem;background:transparent}' +
+      '.cfd-annot-zoom .cfd-annot-zoom-btn:hover{background:#f0e6ce}' +
+      '.cfd-annot-zoom-val{font-family:"JetBrains Mono",monospace;font-size:.78rem;color:#5a4a2a;min-width:3rem;text-align:center;user-select:none}' +
+      '.cfd-annot-page-holder{margin:0 auto 1.5rem;display:block}' +
       '@media (max-width:700px){.cfd-annot-tools{width:72px;padding:.3rem}.cfd-annot-tool{padding:.25rem;font-size:.62rem}.cfd-annot-tool svg{width:18px;height:18px}}' +
       '</style>' +
       '<div class="cfd-annot-top">' +
         '<div class="cfd-annot-who" title=""><span class="who-name"></span><span class="who-meta"></span></div>' +
         '<span class="title"></span>' +
         '<span class="status"></span>' +
+        '<div class="cfd-annot-zoom" title="Масштаб (Ctrl+колесо, Ctrl± , Ctrl+0)">' +
+          '<button class="cfd-annot-btn cfd-annot-zoom-btn" data-act="zoom-out">−</button>' +
+          '<button class="cfd-annot-btn cfd-annot-zoom-btn" data-act="zoom-fit" title="Вписать по ширине">↔</button>' +
+          '<span class="cfd-annot-zoom-val">100%</span>' +
+          '<button class="cfd-annot-btn cfd-annot-zoom-btn" data-act="zoom-in">+</button>' +
+        '</div>' +
         '<button class="cfd-annot-btn" data-act="undo" title="Отменить (Ctrl+Z)">↶ Отмена</button>' +
         '<button class="cfd-annot-btn" data-act="redo" title="Повторить (Ctrl+Y)">↷ Повтор</button>' +
         '<button class="cfd-annot-btn" data-act="clear" title="Стереть все пометки на текущей странице">Очистить страницу</button>' +
@@ -229,6 +293,9 @@
     root.querySelector('[data-act="undo"]').addEventListener("click", function () { self._undo(); });
     root.querySelector('[data-act="redo"]').addEventListener("click", function () { self._redo(); });
     root.querySelector('[data-act="clear"]').addEventListener("click", function () { self._clearCurrentPage(); });
+    root.querySelector('[data-act="zoom-in"]').addEventListener("click", function () { self._zoomBy(1.15); });
+    root.querySelector('[data-act="zoom-out"]').addEventListener("click", function () { self._zoomBy(1 / 1.15); });
+    root.querySelector('[data-act="zoom-fit"]').addEventListener("click", function () { self._zoomFit(); });
 
     // Tools
     root.querySelectorAll(".cfd-annot-tool").forEach(function (btn) {
@@ -257,10 +324,36 @@
     root.focus();
     document.addEventListener("keydown", this._kb = function (e) {
       if (!self.root) return;
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); self._undo(); }
-      else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey))) { e.preventDefault(); self._redo(); }
+      var ctrl = e.ctrlKey || e.metaKey;
+      if (ctrl && e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); self._undo(); }
+      else if (ctrl && (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey))) { e.preventDefault(); self._redo(); }
+      else if (ctrl && (e.key === "=" || e.key === "+")) { e.preventDefault(); self._zoomBy(1.15); }
+      else if (ctrl && e.key === "-") { e.preventDefault(); self._zoomBy(1 / 1.15); }
+      else if (ctrl && e.key === "0") { e.preventDefault(); self._zoomReset(); }
       else if (e.key === "Escape") { /* пусть закрывает по кнопке, чтобы не терять случайно */ }
     });
+    // Ctrl + колёсико мыши = зум с центром под курсором
+    var pagesEl = root.querySelector(".cfd-annot-pages");
+    pagesEl.addEventListener("wheel", function (e) {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      var f = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+      self._zoomBy(f, e.clientX, e.clientY);
+    }, { passive: false });
+    // iOS Safari: два пальца — щипок для зума страниц
+    pagesEl.addEventListener("gesturestart", function (e) {
+      e.preventDefault();
+      self._gestureStartZoom = self.zoom || 1;
+    });
+    pagesEl.addEventListener("gesturechange", function (e) {
+      e.preventDefault();
+      if (!self._gestureStartZoom) return;
+      var target = self._gestureStartZoom * e.scale;
+      var cur = self.zoom || 1;
+      var f = target / cur;
+      self._zoomBy(f, e.clientX, e.clientY);
+    });
+    pagesEl.addEventListener("gestureend", function () { self._gestureStartZoom = null; });
   };
 
   Annotator.prototype._selectTool = function (t) {
@@ -310,6 +403,16 @@
       this._setStatus("Страница " + i + " / " + this.pdf.numPages + "…");
       var page = await this.pdf.getPage(i);
       var viewport = page.getViewport({ scale: RENDER_SCALE });
+      // Holder держит расчётный размер (умножается на zoom), wrap внутри
+      // масштабируется через CSS transform. Так скролл-панель точно
+      // отражает зум, а pointer-координаты остаются корректны:
+      // getBoundingClientRect() возвращает уже масштабированный размер,
+      // а el.width / rect.width сокращает зум обратно.
+      var holder = document.createElement("div");
+      holder.className = "cfd-annot-page-holder";
+      holder.style.position = "relative";
+      holder.style.width = viewport.width + "px";
+      holder.style.height = viewport.height + "px";
       var wrap = document.createElement("div");
       wrap.className = "cfd-annot-page-wrap";
       wrap.style.width = viewport.width + "px";
@@ -325,15 +428,20 @@
       ink.className = "cfd-annot-ink";
       ink.width = viewport.width; ink.height = viewport.height;
       wrap.appendChild(ink);
-      box.appendChild(wrap);
+      holder.appendChild(wrap);
+      box.appendChild(holder);
       await page.render({ canvasContext: base.getContext("2d"), viewport: viewport }).promise;
       this.pageCanvases.push({
-        pageIndex: i - 1,
-        pageNum: i, wrap: wrap, baseCanvas: base, inkCanvas: ink, viewport: viewport,
+        pageIndex: i - 1, pageNum: i,
+        holder: holder, wrap: wrap, baseCanvas: base, inkCanvas: ink, viewport: viewport,
+        baseW: viewport.width, baseH: viewport.height,
       });
       this._attachInkHandlers(this.pageCanvases[i - 1]);
     }
     this._setStatus("");
+    // Автовпис по ширине после начального рендера — критично для iPad/телефона,
+    // где страница A4 в 100% всегда больше экрана.
+    this._zoomFit();
   };
 
   // ---------- Ink layer: pointer events ----------

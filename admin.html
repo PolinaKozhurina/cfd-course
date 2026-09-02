@@ -607,6 +607,10 @@ if (location.search.indexOf('embedded=1') !== -1) {
 <script src="js/homework.js"></script>
 <script src="js/attendance.js"></script>
 <script src="js/gating.js"></script>
+<!-- Проверялка PDF (пометки маркером): PDF.js + jsPDF + модуль -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="js/hw-annotate.js"></script>
 <script>
 // ============================================================
 // ADMIN PANEL LOGIC
@@ -1768,8 +1772,11 @@ async function renderHwSubmissionsTable(aid) {
 
   let submittedCnt = 0, gradedCnt = 0;
   enrolled.forEach(u => { if (subs[u.uid]) submittedCnt++; if (grades[u.uid]) gradedCnt++; });
-  document.getElementById('hwSubsMeta').innerHTML +=
-    ' · Сдало <strong>' + submittedCnt + '/' + enrolled.length + '</strong>'
+  // На повторных рендерах (после hwAutoAssignVariants / hwOpenAnnotator) не
+  // приписываем блок «Сдало/Оценено» вторично — режем всё после ' · Сдало'.
+  const metaEl = document.getElementById('hwSubsMeta');
+  metaEl.innerHTML = metaEl.innerHTML.split(' · Сдало')[0]
+    + ' · Сдало <strong>' + submittedCnt + '/' + enrolled.length + '</strong>'
     + ' · Оценено <strong>' + gradedCnt + '</strong>';
 
   const variantsOpts = (a.variants || []).map((v, i) => '<option value="' + i + '">В' + (i+1) + '</option>').join('');
@@ -1778,15 +1785,29 @@ async function renderHwSubmissionsTable(aid) {
     const g = grades[u.uid] || {};
     const _num = _idx + 1;
     const filesPart = (s && s.files && s.files.length)
-      ? s.files.map(f => f.url
-          ? '<a href="'+f.url+'" target="_blank" style="color:var(--accent3);margin-right:.4rem;font-size:.78rem">📎 '+hwEscape(f.name)+'</a>'
-          : '<button onclick="hwAdminDownload(\''+encodeURIComponent(f.path)+'\',\''+hwEscape(f.name).replace(/\x27/g,"\\'")+'\')" style="background:none;border:none;color:var(--accent3);cursor:pointer;padding:0;margin-right:.4rem;font-size:.78rem;text-decoration:underline">📎 '+hwEscape(f.name)+'</button>'
-        ).join('')
+      ? s.files.map((f, fi) => {
+          const isPdf = /\.pdf$/i.test(f.name || '') || /pdf/i.test(f.contentType || '');
+          const nameEsc = hwEscape(f.name).replace(/\x27/g,"\\'");
+          const dl = f.url
+            ? '<a href="'+f.url+'" target="_blank" style="color:var(--accent3);margin-right:.25rem;font-size:.78rem">📎 '+hwEscape(f.name)+'</a>'
+            : '<button onclick="hwAdminDownload(\''+encodeURIComponent(f.path)+'\',\''+nameEsc+'\')" style="background:none;border:none;color:var(--accent3);cursor:pointer;padding:0;margin-right:.25rem;font-size:.78rem;text-decoration:underline">📎 '+hwEscape(f.name)+'</button>';
+          const annot = isPdf
+            ? ' <button onclick="hwOpenAnnotator(\''+aid+'\',\''+u.uid+'\','+fi+')" title="Проверить: пометки маркером и вернуть студенту" style="background:#fdf9f0;border:1px solid #c8bfa8;color:#5a4a2a;cursor:pointer;padding:1px 5px;margin-right:.4rem;font-size:.72rem;border-radius:3px">✏️ Проверить</button>'
+            : '';
+          return dl + annot;
+        }).join('')
+      : '';
+    const reviewedPart = (s && s.reviewedFiles && s.reviewedFiles.length)
+      ? '<div style="margin-top:.25rem;padding-top:.25rem;border-top:1px dashed var(--border);font-size:.72rem;color:var(--text2)">✓ проверено: '
+        + s.reviewedFiles.map(rf =>
+            '<button onclick="hwAdminDownload(\''+encodeURIComponent(rf.path)+'\',\''+hwEscape(rf.name).replace(/\x27/g,"\\'")+'\')" style="background:none;border:none;color:var(--accent3);cursor:pointer;padding:0;margin-right:.35rem;font-size:.72rem;text-decoration:underline">📄 '+hwEscape(rf.name)+'</button>'
+          ).join('')
+        + '</div>'
       : '';
     const linksPart = (s && s.links && s.links.length)
       ? s.links.map(l => '<a href="'+l.url+'" target="_blank" style="color:var(--accent3);margin-right:.4rem;font-size:.78rem" title="'+hwEscape(l.url)+'">🔗 '+hwEscape(l.name || l.url)+'</a>').join('')
       : '';
-    const filesHtml = (filesPart + linksPart) || '<span style="color:var(--text3);font-style:italic;font-size:.78rem">—</span>';
+    const filesHtml = ((filesPart + linksPart) || '<span style="color:var(--text3);font-style:italic;font-size:.78rem">—</span>') + reviewedPart;
     const submittedAt = s && s.updatedAt ? new Date(s.updatedAt.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) : '';
     let lateBadge = '';
     if (s && s.updatedAt && a.deadlineAt && s.updatedAt.toMillis() > a.deadlineAt.toMillis()) {
@@ -1853,6 +1874,31 @@ async function hwAdminDownload(encodedPath, name) {
   try {
     await CFDHomework.triggerDownload(decodeURIComponent(encodedPath), name);
   } catch (e) { alert('Ошибка: ' + e.message); }
+}
+
+// Открыть проверялку-оверлей на конкретной сдаче.
+function hwOpenAnnotator(aid, uid, fileIdx) {
+  const a = window._hwCurrentAssignment;
+  const subs = window._hwSubsCache || {};
+  if (!a) return;
+  const s = subs[uid];
+  if (!s || !s.files || !s.files[fileIdx]) { alert('Файл не найден'); return; }
+  const u = allUsers.find(x => x.uid === uid) || { uid: uid, fio: '', email: '' };
+  if (!window.CFDAnnotator || typeof CFDAnnotator.open !== 'function') {
+    alert('Модуль проверки не загружен — обновите страницу');
+    return;
+  }
+  CFDAnnotator.open({
+    assignment: { id: aid, courseId: a.courseId, title: a.title || aid },
+    student: { uid: u.uid, fio: u.fio || '', email: u.email || '' },
+    submission: s,
+    sourceFile: s.files[fileIdx],
+    onDone: async function () {
+      // Обновить кэш сдач и перерисовать таблицу.
+      window._hwSubsCache = await CFDHomework.listSubmissions(aid);
+      await renderHwSubmissionsTable(aid);
+    },
+  });
 }
 
 // Экспорт всех сдач в CSV (ФИО, email, ссылки через ;).

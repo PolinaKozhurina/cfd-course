@@ -557,6 +557,16 @@ td{padding:5px 10px;border:1px solid var(--border)}
           + (grade && grade.grade !== undefined ? '' : ' <button data-rmf="'+i+'" title="убрать" style="background:none;border:none;color:#c44;cursor:pointer">×</button>')
           + '</span>'
         ).join('') + '</div>' : '')
+      + ((sub && sub.reviewedFiles && sub.reviewedFiles.length)
+          ? '<div style="margin-top:.5rem;padding:.55rem .75rem;background:#eef4ff;border-left:3px solid #2563eb;border-radius:4px">'
+            + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:#2563eb;letter-spacing:.05em;text-transform:uppercase;margin-bottom:.3rem">✏️ Проверено преподавателем</div>'
+            + sub.reviewedFiles.map((rf, ri) =>
+                '<div style="margin:.2rem 0"><button data-hw-reviewed="'+ri+'" style="background:#2563eb;color:#fff;border:none;padding:.35rem .75rem;border-radius:4px;cursor:pointer;font-size:.85rem;font-family:inherit">📄 Скачать «'+hwEsc(rf.name)+'»</button>'
+                + (rf.comment ? '<div style="margin-top:.2rem;font-size:.8rem;color:var(--text2);font-style:italic">«'+hwEsc(rf.comment)+'»</div>' : '')
+                + '</div>'
+              ).join('')
+            + '</div>'
+          : '')
       + (grade && grade.comment ? '<div style="margin-top:.4rem;padding:.4rem .6rem;background:#e8f4f0;color:#1a6b5a;border-radius:4px;font-style:italic;font-size:.88rem">«' + hwEsc(grade.comment) + '»</div>' : '')
       + (canSubmit
           ? '<div style="margin-top:.5rem;padding:.5rem .7rem;background:var(--bg2);border-radius:5px">'
@@ -635,6 +645,19 @@ td{padding:5px 10px;border:1px solid var(--border)}
         const r = await CFDHomework.removeSubmissionFile(a.id, user.uid, submittedFiles[i]);
         if (!r.ok) { alert(r.error); return; }
         renderMyHomework();
+      };
+    });
+    // Скачивание проверенных преподавателем файлов
+    card.querySelectorAll('[data-hw-reviewed]').forEach(b => {
+      b.onclick = async function () {
+        const i = parseInt(b.getAttribute('data-hw-reviewed'), 10);
+        const rf = (sub && sub.reviewedFiles) ? sub.reviewedFiles[i] : null;
+        if (!rf) return;
+        const txt = b.textContent;
+        b.disabled = true; b.textContent = '⏳ скачиваю…';
+        try { await CFDHomework.triggerDownload(rf.path, rf.name); }
+        catch (e) { alert(e.message); }
+        finally { b.textContent = txt; b.disabled = false; }
       };
     });
     // Разворот/сворот встроенного iframe с условием

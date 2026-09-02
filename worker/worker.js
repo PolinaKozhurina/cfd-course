@@ -36,6 +36,9 @@ export default {
       if (url.pathname === "/upload-common" && request.method === "POST") {
         return await handleUploadCommon(request, env);
       }
+      if (url.pathname === "/upload-reviewed" && request.method === "POST") {
+        return await handleUploadReviewed(request, env);
+      }
       if (url.pathname === "/admin-verify-email" && request.method === "POST") {
         return await handleAdminVerifyEmail(request, env);
       }
@@ -172,6 +175,57 @@ async function handleUploadCommon(request, env) {
     ok: true,
     path: path,
     url: publicUrl,
+    sha: put && put.content ? put.content.sha : null,
+    name: filename,
+    size: size,
+    uploadedAt: new Date().toISOString(),
+  }, env);
+}
+
+// Admin-загрузка проверенного файла (PDF с пометками) обратно в приватный
+// репо cfd-submissions, в тот же студенческий каталог, что и сдача. Тело:
+//   { token, cid, aid, targetUid, targetFio?, filename, base64, size }
+// Путь: {cid}/{aid}/{targetUid}[_targetFio]/reviewed_{ts}_{filename}.
+// Прежняя схема authorizePath (studentDir.startsWith(uid)) уже разрешает
+// самому студенту скачать этот файл через /file — без правок правил.
+async function handleUploadReviewed(request, env) {
+  const body = await request.json();
+  const idToken = body.token || "";
+  const cid = String(body.cid || "");
+  const aid = String(body.aid || "");
+  const targetUid = String(body.targetUid || "");
+  const targetFio = sanitizeSlug(body.targetFio || "");
+  const filename = sanitizeName(body.filename || "reviewed.pdf");
+  const base64 = String(body.base64 || "");
+  const size = parseInt(body.size || 0, 10) || 0;
+  if (!cid || !aid || !targetUid || !base64) {
+    return json({ ok: false, error: "missing fields" }, env, 400);
+  }
+  if (size > 25 * 1024 * 1024) return json({ ok: false, error: "file > 25MB" }, env, 400);
+
+  const claims = await verifyIdToken(idToken, env);
+  if (!authorizeAdminForCourse(claims, cid, env)) {
+    return json({ ok: false, error: "forbidden (not admin of course " + cid + ")" }, env, 403);
+  }
+
+  const studentDir = targetUid + (targetFio ? "_" + targetFio : "");
+  const path = cid + "/" + aid + "/" + studentDir + "/reviewed_" + Date.now() + "_" + filename;
+
+  let sha = null;
+  try {
+    const cur = await ghGet("/contents/" + encodeURI(path), env);
+    if (cur && cur.sha) sha = cur.sha;
+  } catch (_) {}
+
+  const put = await ghPut("/contents/" + encodeURI(path), {
+    message: "reviewed upload: " + claims.email + " → " + filename,
+    content: base64,
+    sha: sha || undefined,
+  }, env);
+
+  return json({
+    ok: true,
+    path: path,
     sha: put && put.content ? put.content.sha : null,
     name: filename,
     size: size,

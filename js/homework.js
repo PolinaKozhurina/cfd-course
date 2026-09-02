@@ -392,6 +392,96 @@
       } catch (e) { return { ok: false, error: e.message }; }
     },
 
+    // ==== REVIEWED (проверенные преподавателем файлы) ====
+
+    // Admin: загрузить проверенный файл (обычно PDF с пометками маркером)
+    // в приватный cfd-submissions рядом со сдачей. Возвращает { path, name,
+    // size, uploadedAt } — сам путь потом сохраняется в submissions doc через
+    // addReviewedFile.
+    uploadReviewedFile: async function (aid, cid, targetUid, targetFio, file, onProgress) {
+      const me = auth.currentUser;
+      if (!me) throw new Error("Не авторизован");
+      try { await me.reload(); await me.getIdToken(true); } catch (_) {}
+      if (typeof WORKER_URL === "undefined" || !WORKER_URL) {
+        throw new Error("WORKER_URL не настроен");
+      }
+      if (file.size > 25 * 1024 * 1024) throw new Error("Файл больше 25 MB");
+      if (typeof onProgress === "function") onProgress(0.05);
+      const base64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(String(r.result).split(",")[1] || "");
+        r.onerror = () => rej(new Error("read"));
+        r.readAsDataURL(file);
+      });
+      if (typeof onProgress === "function") onProgress(0.5);
+      const token = await me.getIdToken();
+      const resp = await fetch(WORKER_URL + "/upload-reviewed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: token, cid: cid, aid: aid,
+          targetUid: targetUid, targetFio: targetFio || "",
+          filename: file.name, base64: base64, size: file.size,
+        }),
+      });
+      if (typeof onProgress === "function") onProgress(0.95);
+      const data = await resp.json();
+      if (!resp.ok || !data.ok) throw new Error(data.error || "upload-reviewed failed");
+      if (typeof onProgress === "function") onProgress(1);
+      return {
+        path: data.path,
+        name: file.name,
+        size: file.size,
+        uploadedAt: data.uploadedAt,
+        contentType: file.type || "application/pdf",
+      };
+    },
+
+    // Записать в submission поле reviewedFiles (массив, дозаписью). Одновременно
+    // проставляет reviewedAt/reviewedBy — можно потом отсортировать/показать.
+    // reviewComment — опциональная короткая приписка к проверенному файлу
+    // (кладётся в fileEntry.comment).
+    addReviewedFile: async function (aid, targetUid, fileEntry, reviewComment) {
+      const me = auth.currentUser;
+      if (!me) return { ok: false, error: "Не авторизован" };
+      const ref = db.collection("submissions").doc(subDocId(aid, targetUid));
+      const entry = Object.assign({}, fileEntry, {
+        uploadedBy: me.email,
+        comment: reviewComment || "",
+      });
+      try {
+        const snap = await ref.get();
+        if (!snap.exists) return { ok: false, error: "нет сдачи для этого студента" };
+        const cur = snap.data();
+        const reviewed = (cur.reviewedFiles || []).concat([entry]);
+        await ref.update({
+          reviewedFiles: reviewed,
+          reviewedAt: nowTs(),
+          reviewedBy: me.email,
+          updatedAt: nowTs(),
+        });
+        return { ok: true };
+      } catch (e) { return { ok: false, error: e.message }; }
+    },
+
+    // Убрать один проверенный файл (и с Worker-а, и из Firestore).
+    removeReviewedFile: async function (aid, targetUid, path) {
+      const ref = db.collection("submissions").doc(subDocId(aid, targetUid));
+      try {
+        const snap = await ref.get();
+        if (!snap.exists) return { ok: false, error: "нет сдачи" };
+        const cur = snap.data();
+        const kept = (cur.reviewedFiles || []).filter(f => f.path !== path);
+        try {
+          if (typeof WORKER_URL !== "undefined" && WORKER_URL) {
+            await this.deleteRemoteFile(path);
+          }
+        } catch (_) {}
+        await ref.update({ reviewedFiles: kept, updatedAt: nowTs() });
+        return { ok: true };
+      } catch (e) { return { ok: false, error: e.message }; }
+    },
+
     // ==== GRADES ====
 
     setGrade: async function (aid, uid, cid, grade, comment) {

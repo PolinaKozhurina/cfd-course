@@ -283,8 +283,8 @@ if (location.search.indexOf('embedded=1') !== -1) {
   </div>
 
   <!-- Модалка «сдачи и оценки» -->
-  <div id="hwSubsWrap" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.45);align-items:flex-start;justify-content:center;overflow:auto;padding:2rem 1rem">
-    <div style="background:#fff;border-radius:10px;width:1100px;max-width:98%;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2)">
+  <div id="hwSubsWrap" class="hw-subs-modal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.45);align-items:flex-start;justify-content:center;overflow:auto;padding:2rem 1rem">
+    <div class="hw-subs-card" style="background:#fff;border-radius:10px;width:1100px;max-width:98%;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2)">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.5rem">
         <h3 id="hwSubsTitle" style="margin:0">Сдачи</h3>
         <button onclick="hwCloseSubs()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text3)">×</button>
@@ -294,6 +294,17 @@ if (location.search.indexOf('embedded=1') !== -1) {
       <div id="hwSubsTable"></div>
     </div>
   </div>
+  <style>
+    /* Мобильная адаптация модалки «сдачи и оценки» — на узком экране
+       карточка растянута на весь viewport, паддинги минимальны, таблица
+       внутри скроллится горизонтально (min-width: 820px + overflow-x:auto). */
+    @media (max-width: 700px) {
+      .hw-subs-modal { padding: .5rem .3rem !important; }
+      .hw-subs-card  { padding: .7rem .6rem !important; max-width: 100% !important; border-radius: 6px !important; }
+      .hw-subs-card table { font-size: .82rem; }
+      .hw-subs-card .grade-input { width: 42px !important; }
+    }
+  </style>
 
   <!-- Форма создания/редактирования -->
   <div id="hwFormWrap" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
@@ -1855,10 +1866,12 @@ async function renderHwSubmissionsTable(aid) {
       + '</tr>';
   }).join('');
   document.getElementById('hwSubsTable').innerHTML =
-    '<table style="width:100%">'
+    '<div class="hw-subs-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -0.3rem">'
+    + '<table style="width:100%;min-width:820px;border-collapse:collapse">'
     + '<thead><tr><th style="width:2em">№</th><th>ФИО</th><th>Email</th><th>Уч. группа</th><th>Вар.</th><th>Файлы</th><th>Сдано</th><th>Оценка</th><th>Комментарий</th></tr></thead>'
     + '<tbody>' + (rows || '<tr><td colspan="9" style="text-align:center;color:var(--text3)">Никто не записан на курс</td></tr>') + '</tbody>'
-    + '</table>';
+    + '</table>'
+    + '</div>';
 }
 
 async function hwSetVariant(aid, uid, idx) {

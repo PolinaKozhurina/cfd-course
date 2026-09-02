@@ -919,6 +919,24 @@ async function loadAllData() {
     window._enrollmentsByUid[e.uid][e.courseId] = e.status;
   });
 
+  // Расширение allUsers для курсовых admin: включаем всех студентов с
+  // approved-enrollment на управляемые курсы, даже если их учебная/рабочая
+  // группа не совпала с managedStudyGroups/managedGroups. Enrollment в курс
+  // и учебная группа МИФИ ортогональны — без этого во вкладках «ДЗ » и
+  // «Оценки» курсовой admin видел «Никто не записан на курс», хотя студенты
+  // на курс записаны.
+  if (_currentAdminCourses !== null && _currentAdminCourses.length > 0) {
+    const knownUids = new Set(allUsers.map(u => u.uid));
+    const managed = new Set(_currentAdminCourses);
+    rawAllUsers.forEach(u => {
+      if (knownUids.has(u.uid) || u.isAdmin) return;
+      const enr = window._enrollmentsByUid[u.uid] || {};
+      for (const cid of managed) {
+        if (enr[cid] === 'approved') { allUsers.push(u); break; }
+      }
+    });
+  }
+
   updateStats();
   renderStudents();
   renderEnrollments();

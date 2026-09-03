@@ -4,9 +4,11 @@
 <meta charset="UTF-8">
 <link rel="icon" href="../favicon.ico" type="image/x-icon">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Лабораторная работа №1 курса «Численные методы»: точное суммирование чисел с плавающей точкой. Наивная, компенсированная (Кэхэн), попарная и отсортированная схемы. Автопроверка ответов в браузере.">
-<title>ЧМ · Лаба 1. Точное суммирование в float64</title>
+<meta name="description" content="Лабораторная работа №1 курса «Численные методы»: точное суммирование чисел с плавающей точкой на C++. Реализация и сравнение 4 алгоритмов суммирования. Компиляция и запуск C++ прямо в браузере (Clang в WebAssembly).">
+<title>ЧМ · Лаба 1. Точное суммирование в float64 (C++)</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/material-darker.css">
 <script>
 window.MathJax = {
   tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
@@ -14,6 +16,8 @@ window.MathJax = {
 };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/clike/clike.js"></script>
 <style>
 :root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8;--sidebar-bg:#2b2520;--sidebar-text:#d9cfc0}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -28,6 +32,9 @@ body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;
 .sidebar a:hover{color:#fff;border-left-color:var(--accent);background:rgba(180,74,45,.08)}
 .sidebar .sep{height:1px;background:rgba(255,255,255,.07);margin:.4rem 0}
 .sidebar .progress{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:#82a0db;padding:.4rem .5rem;background:rgba(130,160,219,.08);border-radius:4px;margin:.4rem 0 .8rem}
+.sidebar .runtime-state{font-family:'JetBrains Mono',monospace;font-size:.62rem;padding:.35rem .5rem;background:rgba(200,140,50,.1);color:#e0a55c;border-radius:4px;margin-bottom:.6rem}
+.sidebar .runtime-state.ok{background:rgba(70,184,156,.1);color:#7dcfb6}
+.sidebar .runtime-state.err{background:rgba(224,122,82,.1);color:#e07a52}
 
 /* Main */
 .main{margin-left:240px;padding:2rem 2.5rem 4rem}
@@ -48,48 +55,49 @@ li{margin:.3rem 0}
 .task::before{position:absolute;left:0;top:0;bottom:0;width:2rem;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase;background:#d0dfd4;color:#3d6b5a;content:'Задача'}
 .task[data-num]::before{content:'Задача ' attr(data-num)}
 
-/* Theorem-like (info) */
+/* Info block */
 .info{position:relative;padding:1rem 1.2rem 1rem 3rem;border-radius:6px;margin:1.2rem 0;background:#e0e8f2;overflow:hidden;min-height:6.5rem}
 .info::before{position:absolute;left:0;top:0;bottom:0;width:2rem;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase;background:#c8d5e6;color:#4a5f88;content:'Подсказка'}
 .info[data-lbl]::before{content:attr(data-lbl)}
 
-/* Warning */
 .warning{background:#fbeee7;border-left:3px solid var(--accent);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:.95rem}
 .warning strong{color:var(--accent)}
-
-/* Example (auxiliary) */
 .example{background:#e0e8f2;border-left:3px solid #7d95bd;padding:.7rem 1rem;border-radius:0 6px 6px 0;margin:.4rem 0 1.2rem;font-size:.94em;color:var(--text)}
 .example .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#4a5f88;margin-bottom:.35rem}
 
-/* Code block */
-.pyblock{margin:1rem 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
-.pyhead{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;display:flex;justify-content:space-between}
-.pyhead .run{color:#9ec97f}
-pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9rem 1.1rem;font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.55;overflow-x:auto;white-space:pre}
-.pycomment{color:#8b7d6c}
-.pystr{color:#e6c384}
-.pykw{color:#e07a52}
+/* Editor + Run */
+.editor-shell{margin:1rem 0;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.editor-head{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.4rem .9rem;display:flex;justify-content:space-between;align-items:center;gap:.6rem;flex-wrap:wrap}
+.editor-head .fname{color:#9ec97f}
+.editor-head .actions{display:flex;gap:.4rem;align-items:center}
+.editor-head .btn{background:var(--accent);color:#fff;border:none;padding:.35rem .85rem;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;cursor:pointer}
+.editor-head .btn:hover{background:#8f3a24}
+.editor-head .btn:disabled{background:#6b5d4f;cursor:wait;opacity:.7}
+.editor-head .btn.secondary{background:transparent;border:1px solid #6b5d4f;color:#c9b89a}
+.editor-head .btn.secondary:hover{background:#3a322a}
+.editor-shell .CodeMirror{height:auto;min-height:180px;max-height:520px;font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.55}
+.output{background:#151210;color:#e6d4b8;font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.7rem 1rem;min-height:60px;max-height:280px;overflow:auto;white-space:pre-wrap;border-top:1px solid #3a322a}
+.output:empty::before{content:'— вывод программы появится здесь —';color:#5b5045;font-style:italic}
+.output .ok{color:#9ec97f}
+.output .err{color:#e07a52}
+.output .hi{color:#82a0db}
 
-/* Autochecker */
-.check{background:#fff;border:1px solid var(--border);border-radius:8px;padding:.9rem 1.1rem;margin:1rem 0}
-.check .head{font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);margin-bottom:.5rem;display:flex;justify-content:space-between;align-items:center}
-.check .head .badge{background:#e0e8f2;color:#4a5f88;padding:2px 8px;border-radius:3px;font-weight:600}
-.check .fields{display:grid;grid-template-columns:1fr;gap:.5rem}
-.check .row{display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:center}
-.check label{font-size:.85rem;color:var(--text)}
-.check label code{background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:.85em}
-.check input[type=text],.check input[type=number]{width:200px;font-family:'JetBrains Mono',monospace;font-size:.85rem;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg2);color:var(--text)}
-.check input[type=text]:focus,.check input[type=number]:focus{outline:none;border-color:var(--accent3)}
-.check .btn{background:var(--accent2);color:#fff;border:none;padding:6px 14px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.78rem;cursor:pointer;margin-top:.4rem;text-transform:uppercase;letter-spacing:.08em}
-.check .btn:hover{background:#125e4d}
-.check .btn.reveal{background:var(--text3);margin-left:.4rem}
-.check .verdict{margin-top:.6rem;padding:.5rem .7rem;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.8rem;display:none}
-.check .verdict.ok{display:block;background:#dcecd6;color:#2c5a1f;border-left:3px solid #4d8a35}
-.check .verdict.err{display:block;background:#fbeee7;color:#8a3220;border-left:3px solid var(--accent)}
-.check .verdict.part{display:block;background:#f7f0d9;color:#7a5c1f;border-left:3px solid #c9a23a}
-.check .status-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#c9c1b3;margin-right:.4rem;vertical-align:middle}
-.check .status-dot.ok{background:#4d8a35}
-.check .status-dot.err{background:var(--accent)}
+/* Verdict */
+.verdict{margin-top:.6rem;padding:.5rem .7rem;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.8rem;display:none}
+.verdict.ok{display:block;background:#dcecd6;color:#2c5a1f;border-left:3px solid #4d8a35}
+.verdict.err{display:block;background:#fbeee7;color:#8a3220;border-left:3px solid var(--accent)}
+.verdict.part{display:block;background:#f7f0d9;color:#7a5c1f;border-left:3px solid #c9a23a}
+.status-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#c9c1b3;margin-right:.4rem;vertical-align:middle}
+.status-dot.ok{background:#4d8a35}
+.status-dot.err{background:var(--accent)}
+
+/* Multiple-choice */
+.mcq{background:#fff;border:1px solid var(--border);border-radius:8px;padding:.9rem 1.1rem;margin:1rem 0}
+.mcq .head{font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);margin-bottom:.5rem}
+.mcq label{display:block;font-size:.9rem;padding:.25rem 0;cursor:pointer}
+.mcq label input{margin-right:.5rem}
+.mcq .btn{background:var(--accent2);color:#fff;border:none;padding:6px 14px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.78rem;cursor:pointer;margin-top:.4rem;text-transform:uppercase;letter-spacing:.08em}
+.mcq .btn:hover{background:#125e4d}
 
 /* Hint */
 .hint{margin:.6rem 0}
@@ -97,13 +105,6 @@ pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9r
 .hint summary:hover{color:var(--accent)}
 .hint[open] summary{color:var(--accent)}
 .hint > div{padding:.5rem .7rem;background:var(--bg2);border-radius:6px;margin-top:.35rem;font-size:.93rem}
-
-/* Interactive box */
-.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1.4rem 0}
-.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
-.intbox select,.intbox input[type=range],.intbox input[type=number]{font-family:'JetBrains Mono',monospace}
-.intbox select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
-.intbox canvas{max-width:100%;height:auto;background:#fdf9f3;border-radius:6px;border:1px solid var(--border)}
 
 /* Header info bar */
 .plan{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;margin:1rem 0 1.6rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.7rem;font-size:.85rem}
@@ -117,6 +118,13 @@ pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9r
 .progresspanel .cnt{font-weight:600;color:var(--accent3);font-size:.82rem}
 .progresspanel .reset{background:none;border:1px solid var(--border);padding:2px 8px;border-radius:3px;font-family:inherit;font-size:.72rem;color:var(--text2);cursor:pointer}
 .progresspanel .reset:hover{color:var(--accent);border-color:var(--accent)}
+.progresspanel .runtime{padding:2px 8px;border-radius:3px;background:rgba(200,140,50,.15);color:#8a5236}
+.progresspanel .runtime.ok{background:rgba(70,140,80,.15);color:#2c5a1f}
+.progresspanel .runtime.err{background:rgba(180,74,45,.15);color:#8a3220}
+
+/* Runtime banner (first-load hint) */
+.runtimebanner{background:#e0e8f2;border-radius:8px;padding:.8rem 1.1rem;margin:1rem 0;font-size:.86rem;color:var(--text)}
+.runtimebanner .lbl{font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:#4a5f88;margin-right:.5rem}
 
 /* Report table */
 table.rep{border-collapse:collapse;min-width:100%;font-size:.9rem;margin:.8rem 0}
@@ -146,34 +154,24 @@ table.rep tr:hover td{background:var(--bg2)}
   .main{padding:1.2rem 1rem 3rem;overflow-x:clip}
   .main-inner *{min-width:0}
   .main canvas,.main svg{max-width:100%;height:auto}
-  .check input[type=text],.check input[type=number]{width:100%}
-  mjx-container[display="true"]{max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
-  mjx-container:not([display="true"]){display:inline-block !important;max-width:100%;overflow-x:auto;overflow-y:hidden;vertical-align:-0.3em}
 }
 
-.comments-wrap{max-width:none;margin-left:240px}
-#comments-section{max-width:960px;margin-left:auto;margin-right:auto}
+.comments-wrap{margin-left:240px;max-width:calc(960px + 5rem);padding:0 2.5rem 2rem}
+#comments-section{max-width:960px}
 
 /* Dark theme */
-html.dark{
-  --bg:#1b1712;--bg2:#231e18;--bg3:#2c261f;
-  --text:#ece3d6;--text2:#bcb0a0;--text3:#8d8173;
-  --accent:#e07a52;--accent2:#46b89c;--accent3:#82a0db;
-  --border:#39322a;--sidebar-bg:#14100c;--sidebar-text:#cabfae;
-}
+html.dark{--bg:#1b1712;--bg2:#231e18;--bg3:#2c261f;--text:#ece3d6;--text2:#bcb0a0;--text3:#8d8173;--accent:#e07a52;--accent2:#46b89c;--accent3:#82a0db;--border:#39322a;--sidebar-bg:#14100c;--sidebar-text:#cabfae}
 html.dark .task{background:#1e2a24;color:var(--text)}
 html.dark .info{background:#1a2130;color:var(--text)}
 html.dark .example{background:#1a2130;color:var(--text);border-left-color:#4a5f88}
 html.dark .task::before{background:#20362d;color:#8fc4ac}
 html.dark .info::before{background:#26314a;color:#9fb6dd}
 html.dark .warning{background:#2a1a13}
-html.dark .check{background:#231e18;border-color:var(--border)}
-html.dark .check .verdict.ok{background:#183021;color:#a2d094;border-left-color:#4d8a35}
-html.dark .check .verdict.err{background:#2a1a13;color:#e6a08a}
-html.dark .check .verdict.part{background:#2e2716;color:#e5cd8c;border-left-color:#c9a23a}
-html.dark .check input[type=text],html.dark .check input[type=number]{background:#1b1712;color:var(--text)}
-html.dark .figure{background:#f6f1e8;border:1px solid #e2d8c8;border-radius:8px;padding:.7rem .5rem}
-html.dark .intbox canvas{background:#f6f1e8}
+html.dark .mcq{background:#231e18;border-color:var(--border)}
+html.dark .verdict.ok{background:#183021;color:#a2d094;border-left-color:#4d8a35}
+html.dark .verdict.err{background:#2a1a13;color:#e6a08a}
+html.dark .verdict.part{background:#2e2716;color:#e5cd8c;border-left-color:#c9a23a}
+html.dark .runtimebanner{background:#1a2130;color:var(--text)}
 </style>
 </head>
 <body>
@@ -182,23 +180,21 @@ html.dark .intbox canvas{background:#f6f1e8}
 <!-- ===================== SIDEBAR ===================== -->
 <nav class="sidebar">
   <h2>Лаба 1. Суммирование</h2>
-  <div class="progress" id="side_progress">решено 0 из 12</div>
+  <div class="progress" id="side_progress">решено 0 из 15</div>
+  <div class="runtime-state" id="side_runtime">clang: не загружен</div>
   <div class="g">Содержание</div>
   <a href="#intro">Введение</a>
-  <a href="#part0">§0. Разминка: eps</a>
+  <a href="#part0">§0. Разминка</a>
   <a href="#part1">§1. Наивная сумма</a>
   <a href="#part2">§2. Кэхэн</a>
   <a href="#part3">§3. Попарная</a>
   <a href="#part4">§4. Сортировка</a>
-  <a href="#part5">§5. Скэйлинг ошибки</a>
+  <a href="#part5">§5. Скейлинг ошибки</a>
   <a href="#part6">§6. Ряд 1/n²</a>
   <a href="#part7">§7. Отчёт</a>
   <div class="sep"></div>
   <div class="g">Материалы</div>
   <a href="w01.html">§1. Лекция</a>
-  <a href="python-reference.html">Памятка NumPy</a>
-  <div class="sep"></div>
-  <div class="g">Навигация</div>
   <a href="index.html">← Обзор курса</a>
   <a href="w02.html">→ §2. Ряд Тейлора</a>
 </nav>
@@ -214,20 +210,24 @@ html.dark .intbox canvas{background:#f6f1e8}
   <a href="w01.html" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.4rem .8rem;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none;white-space:nowrap">▶ Лекция</a>
 </div>
 
-<!-- Plan -->
 <div class="plan">
   <div class="cell"><b>Формат</b>Пара, 90 мин, парная работа</div>
-  <div class="cell"><b>Стек</b>Python 3, NumPy, math.fsum</div>
-  <div class="cell"><b>Автопроверка</b>В браузере (float64)</div>
-  <div class="cell"><b>Оценка</b>10/12 задач → зачёт</div>
+  <div class="cell"><b>Язык</b>C++11, только stdlib</div>
+  <div class="cell"><b>Сборка</b>clang++ в браузере (wasm)</div>
+  <div class="cell"><b>Оценка</b>12/15 задач → зачёт</div>
 </div>
 
-<!-- Progress panel -->
 <div class="progresspanel">
   <span>Прогресс</span>
   <div class="bar"><div id="prog_bar" style="width:0%"></div></div>
-  <span class="cnt" id="prog_cnt">0/12</span>
+  <span class="cnt" id="prog_cnt">0/15</span>
+  <span class="runtime" id="prog_runtime">clang: init…</span>
   <button class="reset" id="prog_reset" type="button">сбросить</button>
+</div>
+
+<div class="runtimebanner">
+  <span class="lbl">Runtime</span>
+  Компилятор clang++ (LLVM 8) весит около 60 МБ и грузится в фоне в браузер один раз — потом кэшируется. Первый запуск любой задачи может занять 15–40 секунд; последующие — 2–5 секунд. Если задачи «зависают» больше минуты — проверьте вкладку сети, скорее всего блокируется <code>cdn.jsdelivr.net</code>.
 </div>
 
 <!-- =============================================================== -->
@@ -235,74 +235,120 @@ html.dark .intbox canvas{background:#f6f1e8}
 <!-- =============================================================== -->
 <h2 id="intro">Что вы делаете и зачем</h2>
 
-<p>В §&nbsp;1.8 лекции сформулирована оценка Уилкинсона: наивная сумма из \(n\) слагаемых теряет от полной машинной точности \(u\) до \(nu\). При \(n = 10^7\) это уже \(\sim 10^{-9}\) — далеко не 16 значащих цифр, обещанных <code>binary64</code>. Возникает естественный инженерный вопрос: <em>существует ли алгоритм суммирования, сохраняющий полную машинную точность при любом \(n\)?</em></p>
+<p>В §&nbsp;1.8 лекции сформулирована оценка Уилкинсона: наивная сумма из \(n\) слагаемых теряет от полной машинной точности \(u\) до \(nu\). При \(n = 10^{5}\) это \(\sim 10^{-11}\) — заметное отставание от 16 значащих цифр, обещанных <code>double</code>. Возникает вопрос: <em>существует ли алгоритм суммирования, сохраняющий полную машинную точность при любом \(n\)?</em></p>
 
-<p>Ответ утвердительный. Задача этой лабораторной — реализовать в Python <em>четыре</em> алгоритма суммирования:</p>
+<p>Ответ утвердительный. Задача этой лабораторной — реализовать в C++11 <em>четыре</em> алгоритма:</p>
 
 <ol>
 <li><strong>Наивный</strong> (последовательный цикл слева направо) — рабочая лошадка, чью ошибку мы будем побеждать;</li>
 <li><strong>Компенсированный Кэхэна</strong> (1965) — суммирование с компенсирующей переменной, восстанавливающей потерянные младшие разряды;</li>
-<li><strong>Попарный</strong> (тот же, что NumPy применяет в <code>np.sum</code> с версии 1.9) — рекурсивная суммирующая свёртка с ошибкой \(O(u \log_2 n)\);</li>
-<li><strong>Отсортированный</strong> — сумма слагаемых, отсортированных по возрастанию модуля.</li>
+<li><strong>Попарный</strong> (тот же, что применяет NumPy в <code>np.sum</code>) — рекурсивная свёртка с ошибкой \(O(u \log_2 n)\);</li>
+<li><strong>Отсортированный</strong> — сумма после сортировки по возрастанию модуля.</li>
 </ol>
 
-<p>Затем — экспериментально проверить теоретические оценки: построить ошибку каждого алгоритма как функцию \(n\) в двойных логарифмических координатах и убедиться, что она следует закону \(nu\), \(u\), \(u\log n\), \(nu\) соответственно.</p>
-
-<p>Каждый шаг сопровождается <em>автопроверкой в браузере</em>: JS считает эталон в той же арифметике <code>binary64</code>, что и Python, и сверяет введённое вами число. Прогресс сохраняется в браузере (<code>localStorage</code>); по итогу для зачёта нужно решить <strong>не менее 10 из 12</strong> задач.</p>
+<p>Каждая задача — блок с редактором C++ и кнопкой «▶ Запустить». Код компилируется настоящим clang++, собранным в WebAssembly, и исполняется в браузере. Автопроверка — по выводу программы: harness вокруг вашего кода печатает ответы в виде <code>__ANS__<em>число</em></code>, JS их вылавливает и сравнивает с эталоном.</p>
 
 <div class="warning">
-<strong>Как работать.</strong> Пишете код у себя (Jupyter, IPython, файл — на ваш выбор), запускаете, получаете число, вводите его в поле «ответ». Копировать код из подсказок целиком — можно, но соседняя пара за это оценки не получает: автопроверка проверяет числа, а не факт запуска. Спрашивайте вслух — соседям, преподавателю; лабораторка не «на молчание», а на понимание.
+<strong>Ограничение производительности.</strong> Интерпретация wasm в браузере в 5–10 раз медленнее нативной. Массивы больше \(n = 10^{6}\) практически не собрать (~8 МБ на массив double, плюс long-running loop). Все задачи здесь используют \(n \le 10^{5}\) — этого достаточно, чтобы увидеть теоретические скейлинги.
 </div>
 
-<h3>Инструменты</h3>
-<div class="pyblock"><div class="pyhead"><span>setup.py — минимум для всей работы</span><span class="run">▶ python</span></div>
-<pre class="pycode"><span class="pykw">import</span> numpy <span class="pykw">as</span> np
-<span class="pykw">import</span> math
-<span class="pykw">from</span> math <span class="pykw">import</span> fsum   <span class="pycomment"># «эталонное» суммирование почти точно</span>
-
-<span class="pycomment"># Разрешаем себе только эти типы; всё остальное — по желанию.</span>
-u   = np.finfo(np.float64).eps / <span class="pystr">2</span>   <span class="pycomment"># единица округления</span>
-eps = np.finfo(np.float64).eps       <span class="pycomment"># машинное эпсилон</span>
-<span class="pykw">print</span>(<span class="pystr">"u  ="</span>, u, <span class="pystr">"  eps ="</span>, eps)</pre></div>
+<h3>Что можно и что нельзя</h3>
+<ul>
+<li><strong>Можно</strong> любые заголовки stdlib: <code>&lt;cstdio&gt;</code>, <code>&lt;cmath&gt;</code>, <code>&lt;cstdint&gt;</code>, <code>&lt;vector&gt;</code>, <code>&lt;algorithm&gt;</code>, <code>&lt;cstring&gt;</code>.</li>
+<li><strong>Нельзя</strong> сторонние библиотеки (Eigen, Boost, fmt), а также готовые «умные» суммирующие функции: <code>std::accumulate</code>, <code>std::inner_product</code> в задачах про сумму. Идея — написать сумму <em>своими руками</em>.</li>
+<li><strong>Автопроверка</strong> ищет в выводе строки <code>__ANS__<em>число</em></code>. Всё, что вы печатаете рядом (диагностика, промежуточные результаты) — на вашей стороне.</li>
+</ul>
 
 <!-- =============================================================== -->
 <!-- §0. Warm-up                                                     -->
 <!-- =============================================================== -->
-<h2 id="part0">§0. Разминка: калибровка ε</h2>
+<h2 id="part0">§0. Разминка: печать eps и биты double</h2>
 
 <div class="task" data-num="0.1">
-<strong>Задача 0.1. Машинное \(\varepsilon\) на своей ОС.</strong> Напишите цикл, который поделит \(\eta = 1\) на 2 до тех пор, пока <code>1.0 + eta/2 != 1.0</code>, и выведет полученное \(\eta\). Сверьте результат с <code>np.finfo(np.float64).eps</code>.
+<strong>Задача 0.1. Машинное \(\varepsilon\).</strong> Напишите функцию <code>double machine_eps()</code>, которая делит \(\eta = 1\) на 2 до тех пор, пока <code>1.0 + eta/2.0 != 1.0</code>, и возвращает \(\eta\). Значение должно совпасть с \(2^{-52} \approx 2{,}22 \cdot 10^{-16}\).
 
-<div class="check" data-check="q01" data-target="2.220446049250313e-16" data-rtol="1e-10">
-  <div class="head"><span><span class="status-dot"></span>автопроверка</span><span class="badge">1 поле</span></div>
-  <div class="row"><label>Ваше значение <code>eps</code>:</label><input type="text" placeholder="например, 2.22e-16" data-in></div>
-  <button class="btn" type="button" data-check-btn>проверить</button>
-  <div class="verdict"></div>
+<div class="editor-shell" data-cpp="q01"
+     data-harness='#include &lt;cstdio&gt;
+int main() {
+    double eps = machine_eps();
+    printf("machine_eps = %.17e\n", eps);
+    printf("expected    = %.17e\n", 2.220446049250313e-16);
+    printf("__ANS__%.17e\n", eps);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-target="2.220446049250313e-16" data-check-rtol="1e-10">
+  <div class="editor-head">
+    <span class="fname">task0_1.cpp</span>
+    <div class="actions">
+      <button class="btn secondary" type="button" data-reset>сбросить код</button>
+      <button class="btn" type="button" data-run>▶ запустить</button>
+    </div>
+  </div>
+  <textarea data-code>#include &lt;cstdio&gt;
+
+double machine_eps() {
+    // TODO: реализовать
+    return 0.0;
+}
+</textarea>
+  <div class="output" data-output></div>
 </div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
 
-<details class="hint"><summary>Подсказка</summary>
-<div>
-<div class="pyblock"><div class="pyhead"><span>eps_manual.py</span></div>
-<pre class="pycode">eta = 1.0
-<span class="pykw">while</span> 1.0 + eta / 2.0 != 1.0:
-    eta /= 2.0
-<span class="pykw">print</span>(eta)  <span class="pycomment"># должно совпасть с np.finfo(np.float64).eps</span></pre></div>
+<details class="hint"><summary>Подсказка</summary><div>
+<pre style="background:var(--bg3);padding:.5rem;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.82rem">double eps = 1.0;
+while (1.0 + eps / 2.0 != 1.0) eps /= 2.0;
+return eps;</pre>
 </div></details>
 </div>
 
 <div class="task" data-num="0.2">
-<strong>Задача 0.2. Проверить неассоциативность сложения.</strong> Возьмите \(a = 10^{20}\), \(b = -10^{20}\), \(c = 1\). Посчитайте <code>(a + b) + c</code> и <code>a + (b + c)</code>. Результаты <em>должны различаться</em>. Введите оба.
+<strong>Задача 0.2. Побитовый разбор <code>double</code>.</strong> Напишите функцию, которая печатает знак, порядок и мантиссу числа \(0{,}1\) в двоичном представлении. Проверьте, что мантисса совпадает с <code>0x999999999999a</code>. Ответ автопроверки — целое значение мантиссы (без ведущей единицы).
 
-<div class="check" data-check="q02" data-target="1,0" data-atol="1e-12">
-  <div class="head"><span><span class="status-dot"></span>автопроверка</span><span class="badge">2 поля</span></div>
-  <div class="row"><label>Значение <code>(a+b)+c</code>:</label><input type="text" data-in placeholder="число"></div>
-  <div class="row"><label>Значение <code>a+(b+c)</code>:</label><input type="text" data-in placeholder="число"></div>
-  <button class="btn" type="button" data-check-btn>проверить</button>
-  <div class="verdict"></div>
+<div class="editor-shell" data-cpp="q02"
+     data-harness='#include &lt;cstdio&gt;
+int main() {
+    dump_double(0.1);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-target="2702159776422298" data-check-atol="0">
+  <div class="editor-head">
+    <span class="fname">task0_2.cpp</span>
+    <div class="actions">
+      <button class="btn secondary" type="button" data-reset>сбросить код</button>
+      <button class="btn" type="button" data-run>▶ запустить</button>
+    </div>
+  </div>
+  <textarea data-code>#include &lt;cstdio&gt;
+#include &lt;cstdint&gt;
+#include &lt;cstring&gt;
+
+void dump_double(double x) {
+    // Скопируйте 8 байт double в uint64_t
+    uint64_t bits;
+    std::memcpy(&amp;bits, &amp;x, sizeof(bits));
+
+    uint64_t sign     = (bits &gt;&gt; 63) &amp; 0x1ULL;
+    uint64_t exponent = (bits &gt;&gt; 52) &amp; 0x7FFULL;
+    uint64_t mantissa =  bits         &amp; 0xFFFFFFFFFFFFFULL;
+
+    printf("x        = %.17e\n", x);
+    printf("sign     = %llu\n", (unsigned long long)sign);
+    printf("exp raw  = %llu (bias 1023 -&gt; e = %d)\n",
+           (unsigned long long)exponent, (int)exponent - 1023);
+    printf("mantissa = 0x%013llx = %llu\n",
+           (unsigned long long)mantissa, (unsigned long long)mantissa);
+    printf("__ANS__%llu\n", (unsigned long long)mantissa);
+}
+</textarea>
+  <div class="output" data-output></div>
 </div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
 
-<div class="info" data-lbl="Почему">
-Модель \(\mathrm{fl}(a\circ b) = (a\circ b)(1+\varepsilon)\), \(|\varepsilon|\le u\), гарантирует свойство округления одной операции, но не ассоциативность многих. В первом порядке \(a+b\) сначала <em>точно</em> сокращаются, единица \(c\) прибавляется к нулю без потерь и выживает. Во втором порядке \(b+c = -10^{20}+1\) требует представить число \(-10^{20}+1\) в float64, но зазор у \(10^{20}\) равен \(2^{66-52}=16384\), поэтому единица теряется ещё до того, как \(a\) вступит в игру.
+<div class="info" data-lbl="Что видно">
+Мантисса <code>0x999999999999a</code> — это периодическая двоичная дробь \(0{,}00011001100\ldots_2\), обрезанная на 52 битах и округлённая к ближайшему чётному. Именно поэтому <code>0.1 + 0.2 != 0.3</code>: три числа хранят разные обрезки.
 </div>
 </div>
 
@@ -311,47 +357,65 @@ eps = np.finfo(np.float64).eps       <span class="pycomment"># машинное 
 <!-- =============================================================== -->
 <h2 id="part1">§1. Наивная сумма</h2>
 
-<p>Определите функцию наивного суммирования — обычный цикл слева направо в арифметике <code>float</code>:</p>
-
-<div class="pyblock"><div class="pyhead"><span>sum_naive.py — скелет</span></div>
-<pre class="pycode"><span class="pykw">def</span> sum_naive(x):
-    <span class="pystr">"""Наивная сумма массива x в float64."""</span>
-    s = 0.0
-    <span class="pykw">for</span> xi <span class="pykw">in</span> x:
-        s += <span class="pykw">float</span>(xi)
-    <span class="pykw">return</span> s</pre></div>
+<p>Определите функцию <code>double sum_naive(const double* x, int n)</code> — обычный цикл слева направо. Harness будет строить массив из \(n = 10^{5}\) копий <code>0.1</code> и звать вашу функцию.</p>
 
 <div class="task" data-num="1.1">
-<strong>Задача 1.1. Сумма \(N\) копий числа 0,1.</strong> Возьмите массив из \(N = 10^{7}\) элементов, каждый равен <code>0.1</code>. Точный ответ — \(10^{6}\). Посчитайте <code>sum_naive</code> и введите (а) полученное значение и (б) абсолютную ошибку \(|\hat S - 10^{6}|\).
+<strong>Задача 1.1. Сумма \(10^{5}\) копий 0,1.</strong> Ожидаемое значение — \(10^{4}\). Ваша задача: реализовать <code>sum_naive</code>. Автопроверка сверит сумму с эталоном, посчитанным той же формулой в JS.
 
-<div class="check" data-check="q11" data-eval="naiveOfPointOne(1e7)|naiveOfPointOneErr(1e7)" data-rtol="0.5" data-atol="1e-7">
-  <div class="head"><span><span class="status-dot"></span>автопроверка</span><span class="badge">2 поля</span></div>
-  <div class="row"><label>Наивная сумма \(\hat S\):</label><input type="text" data-in placeholder="число, ~1e6"></div>
-  <div class="row"><label>Абсолютная ошибка \(|\hat S - 10^{6}|\):</label><input type="text" data-in placeholder="~1e-3"></div>
-  <button class="btn" type="button" data-check-btn>проверить</button>
-  <button class="btn reveal" type="button" data-reveal>показать эталон</button>
-  <div class="verdict"></div>
+<div class="editor-shell" data-cpp="q11"
+     data-harness='#include &lt;cstdio&gt;
+int main() {
+    const int N = 100000;
+    static double x[N];
+    for (int i = 0; i &lt; N; ++i) x[i] = 0.1;
+    double s = sum_naive(x, N);
+    double exact = (double)N * 0.1;
+    printf("sum   = %.17e\n", s);
+    printf("exact = %.17e\n", exact);
+    printf("error = %.6e\n", s - exact);
+    printf("__ANS__%.17e\n", s);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-eval="naiveOfPointOne(100000)" data-check-rtol="1e-14">
+  <div class="editor-head">
+    <span class="fname">task1_1.cpp</span>
+    <div class="actions">
+      <button class="btn secondary" type="button" data-reset>сбросить код</button>
+      <button class="btn" type="button" data-run>▶ запустить</button>
+    </div>
+  </div>
+  <textarea data-code>#include &lt;cstdio&gt;
+
+double sum_naive(const double* x, int n) {
+    // TODO: реализовать наивную сумму
+    return 0.0;
+}
+</textarea>
+  <div class="output" data-output></div>
 </div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
 
-<div class="info" data-lbl="Что здесь важно">
-Само число <code>0.1</code> уже не представимо точно в двоичной системе: <code>0.1 = 0x3fb999999999999a / 2^52</code>, ошибка представления \(\approx 5{,}55\cdot 10^{-18}\). Наивная сумма \(N\) таких неточных представлений добавляет ошибок сложения. Оценка Уилкинсона (1.9) обещает \(\sim Nu \approx 10^{-9}\); экспериментально получите \(\sim 10^{-3}\) — <em>тысяча</em> порядков хуже. Дело в том, что оценка (1.9) — верхняя <em>в худшем случае</em>; для суммы одного знака ошибка ближе к предельной.
+<div class="info" data-lbl="Что важно">
+Обратите внимание, что сумма получается <em>не</em> точно 10000: где-то в младших разрядах уже сидит ошибка порядка \(10^{-11}\). Это накопление 100000 округлений при сложении неточного представления числа 0,1.
 </div>
 </div>
 
 <div class="task" data-num="1.2">
-<strong>Задача 1.2. Сравнение с <code>math.fsum</code>.</strong> Функция <code>math.fsum</code> реализует алгоритм Shewchuk и даёт <em>практически точный</em> ответ (ошибка не превышает половину зазора у результата). Посчитайте <code>math.fsum([0.1]*10**7)</code> и введите: (а) ответ; (б) абсолютную ошибку <code>fsum − 1e6</code>.
+<strong>Задача 1.2. Скейлинг: удвойте \(n\).</strong> Не меняя <code>sum_naive</code>, замерьте абсолютную ошибку при \(n = 10^{4}, 10^{5}\) и введите вручную наклон \(k\) прямой \(\log_{10}|\text{err}|\) от \(\log_{10} n\).
 
-<div class="check" data-check="q12" data-eval="fsumOfPointOne(1e7)|fsumOfPointOneErr(1e7)" data-atol="1e-9">
-  <div class="head"><span><span class="status-dot"></span>автопроверка</span><span class="badge">2 поля</span></div>
-  <div class="row"><label>fsum:</label><input type="text" data-in placeholder="число"></div>
-  <div class="row"><label>Ошибка fsum − 10⁶:</label><input type="text" data-in placeholder="~0 или 1e-10"></div>
-  <button class="btn" type="button" data-check-btn>проверить</button>
-  <button class="btn reveal" type="button" data-reveal>показать эталон</button>
-  <div class="verdict"></div>
+<div class="mcq" data-mcq="q12" data-correct="B">
+  <div class="head"><span class="status-dot"></span>Что за наклон?</div>
+  <label><input type="radio" name="q12" value="A"> A. Наклон \(\approx 0\) — ошибка не растёт с \(n\).</label>
+  <label><input type="radio" name="q12" value="B"> B. Наклон \(\approx 1\) — ошибка \(\propto n\), как в теории Уилкинсона.</label>
+  <label><input type="radio" name="q12" value="C"> C. Наклон \(\approx 2\) — ошибка \(\propto n^{2}\).</label>
+  <label><input type="radio" name="q12" value="D"> D. Наклон отрицательный — ошибка убывает.</label>
+  <button class="btn" type="button" data-mcq-check>проверить</button>
+  <div class="verdict" data-verdict></div>
 </div>
 
-<div class="info" data-lbl="Замечание">
-<code>fsum</code> — эталон, с которым будем сравнивать наши реализации. Внутри он моделирует произвольную точность через список «остатков», аналогично суммированию Шевчука/Присценна (Priest). Полагаться на него в реальных вычислениях можно, но он в 10-30 раз медленнее наивной суммы.
+<div class="info" data-lbl="Оценка">
+При однознаковых слагаемых накопление в худшем случае \(\propto n u\), а на нашей задаче почти совпадает с этой границей. При случайных знаках было бы \(\propto \sqrt n\, u\).
 </div>
 </div>
 
@@ -361,54 +425,72 @@ eps = np.finfo(np.float64).eps       <span class="pycomment"># машинное 
 <h2 id="part2">§2. Компенсированное суммирование Кэхэна</h2>
 
 <div class="info" data-lbl="Идея">
-При добавлении маленького \(x_k\) к большому \(s\) младшие биты \(x_k\) теряются в округлении. Компенсированный алгоритм отслеживает эти <em>потерянные биты</em> в дополнительной переменной \(c\) («компенсация») и вычитает их из следующего слагаемого. Расширенная точность достигается в одинарной точности \(u\).
+При добавлении маленького \(x_k\) к большому \(s\) младшие биты \(x_k\) теряются в округлении. Компенсированный алгоритм отслеживает эти <em>потерянные биты</em> в дополнительной переменной \(c\) и вычитает их из следующего слагаемого. Расширенная точность достигается в одинарной точности \(u\).
 </div>
-
-<div class="pyblock"><div class="pyhead"><span>kahan.py — скелет</span></div>
-<pre class="pycode"><span class="pykw">def</span> sum_kahan(x):
-    <span class="pystr">"""Компенсированное суммирование Кэхэна."""</span>
-    s = 0.0
-    c = 0.0                <span class="pycomment"># «компенсация» — потерянные младшие разряды</span>
-    <span class="pykw">for</span> xi <span class="pykw">in</span> x:
-        y = <span class="pykw">float</span>(xi) - c   <span class="pycomment"># возвращаем в игру ранее потерянное</span>
-        t = s + y          <span class="pycomment"># обычное сложение — теряет часть y</span>
-        c = (t - s) - y    <span class="pycomment"># сколько именно y потерялось</span>
-        s = t
-    <span class="pykw">return</span> s</pre></div>
 
 <div class="task" data-num="2.1">
-<strong>Задача 2.1. Кэхэн на массиве из 0,1.</strong> Проверьте, что <code>sum_kahan([0.1]*10**7)</code> даёт погрешность порядка \(u \approx 10^{-16}\), а не \(Nu\). Введите: (а) полученную сумму; (б) абсолютную ошибку.
+<strong>Задача 2.1. Реализовать <code>sum_kahan</code>.</strong> Проверьте, что для того же массива \([0{,}1]\times 10^{5}\) сумма Кэхэна практически равна 10000, а ошибка на порядки меньше наивной.
 
-<div class="check" data-check="q21" data-eval="kahanOfPointOne(1e7)|kahanOfPointOneErr(1e7)" data-rtol="1e-3">
-  <div class="head"><span><span class="status-dot"></span>автопроверка</span><span class="badge">2 поля</span></div>
-  <div class="row"><label>Кэхэн-сумма:</label><input type="text" data-in placeholder="число"></div>
-  <div class="row"><label>Абсолютная ошибка:</label><input type="text" data-in placeholder="~1e-10 или меньше"></div>
-  <button class="btn" type="button" data-check-btn>проверить</button>
-  <button class="btn reveal" type="button" data-reveal>показать эталон</button>
-  <div class="verdict"></div>
+<div class="editor-shell" data-cpp="q21"
+     data-harness='#include &lt;cstdio&gt;
+int main() {
+    const int N = 100000;
+    static double x[N];
+    for (int i = 0; i &lt; N; ++i) x[i] = 0.1;
+    double s = sum_kahan(x, N);
+    double exact = (double)N * 0.1;
+    printf("kahan sum = %.17e\n", s);
+    printf("exact     = %.17e\n", exact);
+    printf("error     = %.6e\n", s - exact);
+    printf("__ANS__%.17e\n", s);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-eval="kahanOfPointOne(100000)" data-check-rtol="1e-14">
+  <div class="editor-head">
+    <span class="fname">task2_1.cpp</span>
+    <div class="actions">
+      <button class="btn secondary" type="button" data-reset>сбросить код</button>
+      <button class="btn" type="button" data-run>▶ запустить</button>
+    </div>
+  </div>
+  <textarea data-code>#include &lt;cstdio&gt;
+
+double sum_kahan(const double* x, int n) {
+    double s = 0.0;
+    double c = 0.0;    // компенсация — потерянные младшие разряды
+    // TODO: реализовать алгоритм Кэхэна
+    // y = x[i] - c
+    // t = s + y
+    // c = (t - s) - y
+    // s = t
+    return s;
+}
+</textarea>
+  <div class="output" data-output></div>
 </div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
 
-<div class="info" data-lbl="Что должно получиться">
-В идеале Кэхэн-сумма должна почти точно равняться \(10^{6}\); ошибка ограничена \(2u \cdot \sum|x_k|\) — оценка Кэхэна–Нейманна. Для нашего теста это \(\approx 10^{-10}\) или меньше. Заметьте: компенсация <em>ограничена</em> — она справляется с накоплением, но не спасает от <em>единичной</em> катастрофы (например, при суммировании чисел разных знаков одинакового порядка).
+<div class="info" data-lbl="Ожидание">
+При правильной реализации ошибка должна быть в районе \(10^{-16}\)–\(10^{-15}\) — на 4–5 порядков лучше наивной суммы.
 </div>
 </div>
 
 <div class="task" data-num="2.2">
-<strong>Задача 2.2. Хитрая деталь.</strong> Пусть при компиляции с флагом <code>-ffast-math</code> или в оптимизирующем компиляторе преобразование <code>c = (t - s) - y</code> алгебраически упрощается до <code>c = -y + (t - s)</code> и далее до <code>c = 0</code> (потому что \(t - s = y\)). Что тогда происходит с алгоритмом?
+<strong>Задача 2.2. Ловушка компилятора.</strong> Если C++ компилировать с флагом <code>-ffast-math</code> (или у некоторых компиляторов <code>-O3</code> сам его включает), допускаются алгебраические переписывания: <code>(t - s) - y ≡ 0</code>, потому что математически \(t - s = y\). Что произойдёт с алгоритмом?
 
-<div class="check" data-check="q22" data-multi="A|B|C" data-correct="B">
-  <div class="head"><span><span class="status-dot"></span>автопроверка</span><span class="badge">выбор</span></div>
-  <div class="fields">
-    <label><input type="radio" name="q22" value="A"> A. Ничего — оба выражения математически эквивалентны.</label>
-    <label><input type="radio" name="q22" value="B"> B. Алгоритм превращается в наивный: компенсация обнуляется, вся идея теряется.</label>
-    <label><input type="radio" name="q22" value="C"> C. Ошибка резко возрастает до \(N^2 u\).</label>
-  </div>
-  <button class="btn" type="button" data-check-btn>проверить</button>
-  <div class="verdict"></div>
+<div class="mcq" data-mcq="q22" data-correct="B">
+  <div class="head"><span class="status-dot"></span>Что случится</div>
+  <label><input type="radio" name="q22" value="A"> A. Ничего — код эквивалентен исходному.</label>
+  <label><input type="radio" name="q22" value="B"> B. Компенсация обнулится, алгоритм превратится в наивную сумму.</label>
+  <label><input type="radio" name="q22" value="C"> C. Ошибка резко возрастёт до \(n^{2} u\).</label>
+  <label><input type="radio" name="q22" value="D"> D. Компилятор выдаст ошибку сборки.</label>
+  <button class="btn" type="button" data-mcq-check>проверить</button>
+  <div class="verdict" data-verdict></div>
 </div>
 
 <div class="info" data-lbl="Мораль">
-Компенсированное суммирование живёт исключительно за счёт <em>неассоциативности</em> сложения в машинной арифметике. Если компилятор считает \(+\) и \(-\) ассоциативными и сокращает \((t-s)-y \equiv 0\), защита исчезает. Отсюда правило: критичный численный код собирать без <code>-ffast-math</code>; в Python на CPython проблема неактуальна — интерпретатор ничего не переставляет.
+Компенсированное суммирование живёт исключительно за счёт <em>неассоциативности</em> сложения в машинной арифметике. Если компилятор считает \(+\) и \(-\) ассоциативными и сокращает \((t-s)-y \equiv 0\), защита исчезает. Поэтому критичный численный код собирают <em>без</em> <code>-ffast-math</code> и предпочитают <code>-O2</code>, а не <code>-O3</code>. Также помогает <code>volatile</code> у промежуточных переменных.
 </div>
 </div>
 
@@ -417,45 +499,65 @@ eps = np.finfo(np.float64).eps       <span class="pycomment"># машинное 
 <!-- =============================================================== -->
 <h2 id="part3">§3. Попарное суммирование</h2>
 
-<p>Идея попарного (<em>pairwise</em>) суммирования: сумма пополам делится на две подсуммы, каждая суммируется рекурсивно, потом складывается. Дерево рекурсии имеет глубину \(\log_2 n\), поэтому в худшем случае ошибка ограничена \(u \log_2 n \cdot \sum|x_k|\) — очень медленный рост.</p>
-
-<div class="pyblock"><div class="pyhead"><span>pairwise.py — скелет</span></div>
-<pre class="pycode"><span class="pykw">def</span> sum_pairwise(x, base=<span class="pystr">64</span>):
-    <span class="pystr">"""Попарное суммирование. base — размер листа, где переключаемся на наивный цикл."""</span>
-    x = np.asarray(x, dtype=<span class="pykw">float</span>)
-    n = <span class="pykw">len</span>(x)
-    <span class="pykw">if</span> n &lt;= base:
-        s = 0.0
-        <span class="pykw">for</span> xi <span class="pykw">in</span> x: s += xi
-        <span class="pykw">return</span> s
-    m = n // <span class="pystr">2</span>
-    <span class="pykw">return</span> sum_pairwise(x[:m], base) + sum_pairwise(x[m:], base)</pre></div>
+<p>Идея: сумма пополам делится на две подсуммы, каждая суммируется рекурсивно, потом складывается. Дерево рекурсии имеет глубину \(\log_2 n\), ошибка в худшем случае ограничена \(u \log_2 n \cdot \sum|x_k|\).</p>
 
 <div class="task" data-num="3.1">
-<strong>Задача 3.1. Попарная сумма на 0,1.</strong> Посчитайте <code>sum_pairwise([0.1]*10**7)</code> и введите ошибку. Сравните с наивной суммой из §1.1.
+<strong>Задача 3.1. Реализовать <code>sum_pairwise</code>.</strong> База рекурсии — 64 элемента (переключаемся на обычный цикл, чтобы не платить за вызов).
 
-<div class="check" data-check="q31" data-eval="pairwiseOfPointOneErr(1e7)" data-rtol="0.5">
-  <div class="head"><span><span class="status-dot"></span>автопроверка</span><span class="badge">1 поле</span></div>
-  <div class="row"><label>Ошибка попарной суммы:</label><input type="text" data-in placeholder="~1e-9 или меньше"></div>
-  <button class="btn" type="button" data-check-btn>проверить</button>
-  <button class="btn reveal" type="button" data-reveal>показать эталон</button>
-  <div class="verdict"></div>
-</div>
+<div class="editor-shell" data-cpp="q31"
+     data-harness='#include &lt;cstdio&gt;
+int main() {
+    const int N = 100000;
+    static double x[N];
+    for (int i = 0; i &lt; N; ++i) x[i] = 0.1;
+    double s = sum_pairwise(x, N);
+    double exact = (double)N * 0.1;
+    printf("pairwise = %.17e\n", s);
+    printf("exact    = %.17e\n", exact);
+    printf("error    = %.6e\n", s - exact);
+    printf("__ANS__%.17e\n", s);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-eval="pairwiseOfPointOne(100000)" data-check-rtol="1e-14">
+  <div class="editor-head">
+    <span class="fname">task3_1.cpp</span>
+    <div class="actions">
+      <button class="btn secondary" type="button" data-reset>сбросить код</button>
+      <button class="btn" type="button" data-run>▶ запустить</button>
+    </div>
+  </div>
+  <textarea data-code>#include &lt;cstdio&gt;
 
-<div class="info" data-lbl="Приятный побочный эффект">
-NumPy применяет попарное суммирование по умолчанию в <code>np.sum</code> начиная с версии 1.9 (см. <code>numpy/_core/src/umath/loops.c.src</code>). Именно поэтому <code>np.sum([0.1]*10**7)</code> в Python даёт <em>гораздо</em> точнее наивной суммы Python-циклом — и это <em>не</em> случайность, а инженерное решение.
+// Рекурсивное попарное суммирование
+double sum_pairwise(const double* x, int n) {
+    const int BASE = 64;
+    if (n &lt;= BASE) {
+        double s = 0.0;
+        for (int i = 0; i &lt; n; ++i) s += x[i];
+        return s;
+    }
+    int m = n / 2;
+    // TODO: рекурсивно вернуть sum_pairwise(x, m) + sum_pairwise(x + m, n - m)
+    return 0.0;
+}
+</textarea>
+  <div class="output" data-output></div>
 </div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
 </div>
 
 <div class="task" data-num="3.2">
-<strong>Задача 3.2. Проверка NumPy.</strong> Убедитесь, что <code>np.sum(np.full(10**7, 0.1))</code> имеет ошибку того же порядка, что <code>sum_pairwise</code>, а не наивная сумма. Введите ошибку <code>np.sum</code>.
+<strong>Задача 3.2. Каков наклон ошибки?</strong> На интервале \(n = 10^{3} \ldots 10^{5}\).
 
-<div class="check" data-check="q32" data-eval="npsumOfPointOneErr(1e7)" data-rtol="0.5">
-  <div class="head"><span><span class="status-dot"></span>автопроверка</span><span class="badge">1 поле</span></div>
-  <div class="row"><label>Ошибка <code>np.sum</code>:</label><input type="text" data-in placeholder="число"></div>
-  <button class="btn" type="button" data-check-btn>проверить</button>
-  <button class="btn reveal" type="button" data-reveal>показать эталон</button>
-  <div class="verdict"></div>
+<div class="mcq" data-mcq="q32" data-correct="A">
+  <div class="head"><span class="status-dot"></span>Наклон попарной суммы</div>
+  <label><input type="radio" name="q32" value="A"> A. Почти нулевой (\(u \log_{2} n\) визуально плоский).</label>
+  <label><input type="radio" name="q32" value="B"> B. Близкий к 1 (как у наивной).</label>
+  <label><input type="radio" name="q32" value="C"> C. \(\approx 0{,}5\) (стохастический).</label>
+  <label><input type="radio" name="q32" value="D"> D. Отрицательный.</label>
+  <button class="btn" type="button" data-mcq-check>проверить</button>
+  <div class="verdict" data-verdict></div>
 </div>
 </div>
 
@@ -464,142 +566,210 @@ NumPy применяет попарное суммирование по умол
 <!-- =============================================================== -->
 <h2 id="part4">§4. Отсортированное суммирование</h2>
 
-<p>Ещё одна классическая идея: сортировать слагаемые по возрастанию модуля и суммировать в этом порядке. Тогда каждая частичная сумма относительно велика по сравнению с прибавляемым слагаемым, и вклад «мелочи» в общий итог не теряется в округлении. Практически даёт заметный выигрыш на массивах разного знака и разного порядка.</p>
-
-<div class="pyblock"><div class="pyhead"><span>sorted_sum.py — скелет</span></div>
-<pre class="pycode"><span class="pykw">def</span> sum_sorted(x):
-    <span class="pystr">"""Сумма после сортировки по |x_k| — сначала маленькие."""</span>
-    y = <span class="pykw">sorted</span>(x, key=<span class="pykw">abs</span>)
-    s = 0.0
-    <span class="pykw">for</span> yi <span class="pykw">in</span> y: s += yi
-    <span class="pykw">return</span> s</pre></div>
+<p>Ещё одна классическая идея: отсортировать слагаемые по возрастанию модуля и суммировать в этом порядке. Тогда каждая частичная сумма относительно велика по сравнению с прибавляемым слагаемым, и вклад «мелочи» в общий итог не теряется в округлении. Особенно заметно на массивах смешанных знаков.</p>
 
 <div class="task" data-num="4.1">
-<strong>Задача 4.1. Смешанные знаки.</strong> Возьмите массив \(x_k = (-1)^k / k\), \(k = 1, \ldots, 10^{6}\). Это частичная сумма ряда Лейбница, \(\sum \to -\ln 2 \approx -0{,}693147\ldots\). Посчитайте: (а) <code>sum_naive(x)</code>; (б) <code>sum_sorted(x)</code>. Введите оба.
+<strong>Задача 4.1. Ряд Лейбница.</strong> Реализуйте <code>sum_sorted_abs</code>: сначала сортировка по возрастанию \(|x_k|\), потом наивное суммирование. Проверьте на первых 50000 членах ряда \(\sum_{k=1}^{50000} (-1)^{k+1}/k\), эталон \(\to \ln 2 \approx 0{,}693147\).
 
-<div class="check" data-check="q41" data-eval="leibnizNaive(1e6)|leibnizSorted(1e6)" data-atol="5e-7">
-  <div class="head"><span><span class="status-dot"></span>автопроверка</span><span class="badge">2 поля</span></div>
-  <div class="row"><label>Наивная сумма:</label><input type="text" data-in placeholder="~-0.6931..."></div>
-  <div class="row"><label>Отсортированная сумма:</label><input type="text" data-in placeholder="~-0.6931..."></div>
-  <button class="btn" type="button" data-check-btn>проверить</button>
-  <button class="btn reveal" type="button" data-reveal>показать эталон</button>
-  <div class="verdict"></div>
+<div class="editor-shell" data-cpp="q41"
+     data-harness='#include &lt;cstdio&gt;
+#include &lt;cstdlib&gt;
+int main() {
+    const int N = 50000;
+    static double x[N];
+    for (int k = 0; k &lt; N; ++k) {
+        x[k] = ((k % 2 == 0) ? 1.0 : -1.0) / (double)(k + 1);
+    }
+    double s = sum_sorted_abs(x, N);
+    printf("sorted = %.17e\n", s);
+    printf("ln 2   = %.17e\n", 0.6931471805599453);
+    printf("__ANS__%.17e\n", s);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-eval="leibnizSorted(50000)" data-check-atol="1e-12">
+  <div class="editor-head">
+    <span class="fname">task4_1.cpp</span>
+    <div class="actions">
+      <button class="btn secondary" type="button" data-reset>сбросить код</button>
+      <button class="btn" type="button" data-run>▶ запустить</button>
+    </div>
+  </div>
+  <textarea data-code>#include &lt;cstdio&gt;
+#include &lt;algorithm&gt;
+#include &lt;cmath&gt;
+#include &lt;vector&gt;
+
+double sum_sorted_abs(const double* x, int n) {
+    std::vector&lt;double&gt; y(x, x + n);
+    // TODO: отсортировать по возрастанию |y[i]|
+    // std::sort(y.begin(), y.end(), [](double a, double b){ return std::fabs(a) &lt; std::fabs(b); });
+    double s = 0.0;
+    // TODO: обычное наивное суммирование y
+    return s;
+}
+</textarea>
+  <div class="output" data-output></div>
 </div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
 
-<div class="info" data-lbl="Почему сортировка помогает не всегда">
-Для <em>убывающего</em> положительного ряда (например, \(1/k^2\)) сортировка по возрастанию — то же самое, что суммирование в <em>обратном</em> порядке. Это спасает от катастрофы «маленького хвоста, поглощённого большой головой». Но при знакопеременных рядах может, наоборот, увеличить катастрофическое вычитание, и тогда лучше работает Кэхэн.
+<div class="info" data-lbl="Почему это работает">
+В ряде Лейбница попарные соседние члены \(1/(2k-1) - 1/(2k) = 1/(2k(2k-1))\) — очень маленькие, они точно суммируются, если добавлять их в возрастающем порядке. При суммировании «с головы» большие первые слагаемые «съедают» точность мелких хвостовых членов.
 </div>
 </div>
 
 <!-- =============================================================== -->
 <!-- §5. Scaling                                                     -->
 <!-- =============================================================== -->
-<h2 id="part5">§5. Скейлинг ошибки от \(n\)</h2>
-
-<p>Пришло время построить график и посмотреть, как реально ведёт себя ошибка при росте числа слагаемых. Соберите таблицу для \(n = 10^{3}, 10^{4}, 10^{5}, 10^{6}, 10^{7}\), тест — \([0{,}1]\times n\). Оцените наклон каждой кривой в двойных логарифмических координатах.</p>
-
-<div class="pyblock"><div class="pyhead"><span>scaling.py — скелет</span></div>
-<pre class="pycode">ns = [<span class="pystr">10</span>**k <span class="pykw">for</span> k <span class="pykw">in</span> <span class="pykw">range</span>(<span class="pystr">3</span>, <span class="pystr">8</span>)]
-<span class="pykw">for</span> n <span class="pykw">in</span> ns:
-    x = [<span class="pystr">0.1</span>] * n
-    exact = n * <span class="pystr">0.1</span>
-    e_naive    = <span class="pykw">abs</span>(sum_naive(x)    - exact)
-    e_kahan    = <span class="pykw">abs</span>(sum_kahan(x)    - exact)
-    e_pairwise = <span class="pykw">abs</span>(sum_pairwise(x) - exact)
-    <span class="pykw">print</span>(<span class="pystr">f"n=</span>{n}<span class="pystr">:  naive="</span>{e_naive:.2e}<span class="pystr">  kahan="</span>{e_kahan:.2e}<span class="pystr">  pair="</span>{e_pairwise:.2e}<span class="pystr">"</span>)</pre></div>
-
-<h3 id="int-scaling">Интерактив: сравнение алгоритмов</h3>
-
-<p>Ниже — эталонная картинка того же самого эксперимента, посчитанная <em>в браузере</em> в float64 (тот же формат, что в Python). Свои числа сверьте с этими; если ваши на порядки хуже — где-то ошибка в реализации.</p>
-
-<div class="intbox">
-<div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:end;margin-bottom:.7rem">
-  <label style="display:flex;align-items:center;gap:.4rem"><input type="checkbox" id="sc_naive" checked> naive</label>
-  <label style="display:flex;align-items:center;gap:.4rem"><input type="checkbox" id="sc_kahan" checked> kahan</label>
-  <label style="display:flex;align-items:center;gap:.4rem"><input type="checkbox" id="sc_pair" checked> pairwise</label>
-  <label style="display:flex;align-items:center;gap:.4rem"><input type="checkbox" id="sc_sorted"> sorted</label>
-  <button class="btn" id="sc_run" type="button" style="background:var(--accent);margin-left:auto">пересчитать</button>
-</div>
-<canvas id="sc_chart" width="820" height="360" style="width:100%;height:auto" aria-label="Ошибка суммирования как функция n в двойных логарифмических координатах для четырёх алгоритмов."></canvas>
-<div id="sc_status" style="font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);margin-top:.4rem"></div>
-</div>
+<h2 id="part5">§5. Сравнение алгоритмов на серии \(n\)</h2>
 
 <div class="task" data-num="5.1">
-<strong>Задача 5.1. Наклон наивной кривой.</strong> На двойном логарифмическом графике зависимость \(\log \varepsilon_{\text{naive}}\) от \(\log n\) — прямая. Определите её наклон \(k\) (эмпирически, между \(n=10^{4}\) и \(n=10^{7}\)) и сверьте с теорией.
+<strong>Задача 5.1. Свести все алгоритмы вместе.</strong> В одной программе прогоните <code>sum_naive</code>, <code>sum_kahan</code>, <code>sum_pairwise</code> на \(n = 10^{5}\) с массивом \([0{,}1]\times n\) и напечатайте <em>абсолютные ошибки</em>. Автопроверка сверит все три.
 
-<div class="check" data-check="q51" data-target="1" data-atol="0.3">
-  <div class="head"><span><span class="status-dot"></span>автопроверка</span><span class="badge">1 поле</span></div>
-  <div class="row"><label>Наклон \(k\) наивной кривой:</label><input type="text" data-in placeholder="целое число, 0..3"></div>
-  <button class="btn" type="button" data-check-btn>проверить</button>
-  <div class="verdict"></div>
-</div>
+<div class="editor-shell" data-cpp="q51"
+     data-harness='#include &lt;cstdio&gt;
+int main() {
+    const int N = 100000;
+    static double x[N];
+    for (int i = 0; i &lt; N; ++i) x[i] = 0.1;
+    double exact = (double)N * 0.1;
+    double n_err = sum_naive(x, N) - exact;
+    double k_err = sum_kahan(x, N) - exact;
+    double p_err = sum_pairwise(x, N) - exact;
+    printf("naive    error = %.6e\n", n_err);
+    printf("kahan    error = %.6e\n", k_err);
+    printf("pairwise error = %.6e\n", p_err);
+    if (n_err &lt; 0) n_err = -n_err;
+    if (k_err &lt; 0) k_err = -k_err;
+    if (p_err &lt; 0) p_err = -p_err;
+    printf("__ANS__%.17e\n", n_err);
+    printf("__ANS__%.17e\n", k_err);
+    printf("__ANS__%.17e\n", p_err);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-eval="naiveOfPointOneErr(100000)|kahanOfPointOneErr(100000)|pairwiseOfPointOneErr(100000)" data-check-rtol="0.5" data-check-atol="1e-15">
+  <div class="editor-head">
+    <span class="fname">task5_1.cpp</span>
+    <div class="actions">
+      <button class="btn secondary" type="button" data-reset>сбросить код</button>
+      <button class="btn" type="button" data-run>▶ запустить</button>
+    </div>
+  </div>
+  <textarea data-code>#include &lt;cstdio&gt;
 
-<div class="info" data-lbl="Что должно получиться">
-Оценка Уилкинсона (1.9): \(\varepsilon \sim n u\), значит \(\log_{10}\varepsilon \sim \log_{10} n + \log_{10} u\) — прямая с наклоном ровно \(k = 1\). Практически на нашем тесте наклон ближе к \(0{,}5\)-\(0{,}9\) — типичный «стохастический» \(\sqrt n\)-режим (Higham, теорема 4.2), потому что ошибки округления при 0,1 не строго одного знака.
+// Перенесите сюда три ваши функции из §1-3
+double sum_naive(const double* x, int n) {
+    double s = 0;
+    for (int i = 0; i &lt; n; ++i) s += x[i];
+    return s;
+}
+
+double sum_kahan(const double* x, int n) {
+    // TODO
+    return 0;
+}
+
+double sum_pairwise(const double* x, int n) {
+    // TODO
+    return 0;
+}
+</textarea>
+  <div class="output" data-output></div>
 </div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
 </div>
 
 <div class="task" data-num="5.2">
-<strong>Задача 5.2. Наклон Кэхэна и попарной.</strong> На том же графике определите наклоны кривых Кэхэна и попарной суммы. Введите оба.
+<strong>Задача 5.2. Вывод по сравнению.</strong>
 
-<div class="check" data-check="q52" data-target="0,0" data-atol="0.5">
-  <div class="head"><span><span class="status-dot"></span>автопроверка</span><span class="badge">2 поля</span></div>
-  <div class="row"><label>Наклон Кэхэна:</label><input type="text" data-in placeholder="~0"></div>
-  <div class="row"><label>Наклон попарной:</label><input type="text" data-in placeholder="~0"></div>
-  <button class="btn" type="button" data-check-btn>проверить</button>
-  <div class="verdict"></div>
-</div>
-
-<div class="info" data-lbl="Что должно получиться">
-Кэхэн — константа: наклон \(\approx 0\). Попарная — очень медленный логарифмический рост \(u\log_2 n\); на нашем диапазоне \(\log_2 n\) меняется всего от 10 до 23 — визуально почти плоская линия. Оба алгоритма кардинально лучше наивного при больших \(n\).
+<div class="mcq" data-mcq="q52" data-correct="C">
+  <div class="head"><span class="status-dot"></span>Кто выиграл</div>
+  <label><input type="radio" name="q52" value="A"> A. Все три одинаково.</label>
+  <label><input type="radio" name="q52" value="B"> B. Наивная — самая точная (меньше вычислений).</label>
+  <label><input type="radio" name="q52" value="C"> C. Кэхэн — самая точная; попарная — почти такая же; наивная — заметно хуже.</label>
+  <label><input type="radio" name="q52" value="D"> D. Попарная — самая точная (глубина \(\log n\)).</label>
+  <button class="btn" type="button" data-mcq-check>проверить</button>
+  <div class="verdict" data-verdict></div>
 </div>
 </div>
 
 <!-- =============================================================== -->
-<!-- §6. Series                                                      -->
+<!-- §6. Basel                                                       -->
 <!-- =============================================================== -->
-<h2 id="part6">§6. Сходящийся ряд: 1/n²</h2>
+<h2 id="part6">§6. Ряд \(\sum 1/n^{2}\): порядок имеет значение</h2>
 
-<p>Классический тест на порядок суммирования — конечная частичная сумма ряда</p>
-
-<div class="eq">\[ S_N = \sum_{n=1}^{N} \frac{1}{n^2}, \qquad S_\infty = \frac{\pi^2}{6}. \tag{Л1} \]</div>
-
-<p>Слагаемые убывают. Возникает вопрос: суммировать <em>с начала</em> (сначала большие) или <em>с конца</em> (сначала маленькие)?</p>
+<p>Частичная сумма ряда Базеля \(S_N = \sum_{n=1}^{N} 1/n^{2} \to \pi^{2}/6\). Слагаемые быстро убывают. Возникает вопрос: суммировать <em>с начала</em> (сначала большие) или <em>с конца</em> (сначала маленькие)?</p>
 
 <div class="task" data-num="6.1">
-<strong>Задача 6.1. Прямой и обратный порядок.</strong> Возьмите \(N = 10^{7}\), точный эталон посчитайте <code>math.fsum</code>. Посчитайте наивно (а) в порядке \(n = 1, 2, \ldots, N\) и (б) в порядке \(n = N, N-1, \ldots, 1\). Введите обе абсолютные ошибки против <code>fsum</code>.
+<strong>Задача 6.1. Прямой и обратный порядок.</strong> Реализуйте две функции — <code>basel_forward</code> (суммирует <code>1/1 + 1/4 + 1/9 + …</code>) и <code>basel_backward</code> (в обратном порядке). Напечатайте абсолютную ошибку каждой против «почти эталона» — попарной суммы того же массива.
 
-<div class="check" data-check="q61" data-eval="basel_fwd(1e7)|basel_bwd(1e7)" data-rtol="0.5">
-  <div class="head"><span><span class="status-dot"></span>автопроверка</span><span class="badge">2 поля</span></div>
-  <div class="row"><label>Ошибка при прямом суммировании (1→N):</label><input type="text" data-in placeholder="число"></div>
-  <div class="row"><label>Ошибка при обратном суммировании (N→1):</label><input type="text" data-in placeholder="число, меньше"></div>
-  <button class="btn" type="button" data-check-btn>проверить</button>
-  <button class="btn reveal" type="button" data-reveal>показать эталон</button>
-  <div class="verdict"></div>
+<div class="editor-shell" data-cpp="q61"
+     data-harness='#include &lt;cstdio&gt;
+double sum_pairwise(const double* x, int n) {
+    const int BASE = 64;
+    if (n &lt;= BASE) { double s=0; for(int i=0;i&lt;n;++i) s+=x[i]; return s; }
+    int m = n/2;
+    return sum_pairwise(x, m) + sum_pairwise(x + m, n - m);
+}
+int main() {
+    const int N = 100000;
+    static double x[N];
+    for (int k = 0; k &lt; N; ++k) x[k] = 1.0 / (double)(k+1) / (double)(k+1);
+    double ref = sum_pairwise(x, N);
+    double f_err = basel_forward(N)  - ref;
+    double b_err = basel_backward(N) - ref;
+    if (f_err &lt; 0) f_err = -f_err;
+    if (b_err &lt; 0) b_err = -b_err;
+    printf("forward  error = %.6e\n", f_err);
+    printf("backward error = %.6e\n", b_err);
+    printf("__ANS__%.17e\n", f_err);
+    printf("__ANS__%.17e\n", b_err);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-eval="basel_fwd(100000)|basel_bwd(100000)" data-check-rtol="0.5" data-check-atol="1e-15">
+  <div class="editor-head">
+    <span class="fname">task6_1.cpp</span>
+    <div class="actions">
+      <button class="btn secondary" type="button" data-reset>сбросить код</button>
+      <button class="btn" type="button" data-run>▶ запустить</button>
+    </div>
+  </div>
+  <textarea data-code>#include &lt;cstdio&gt;
+
+double basel_forward(int N) {
+    double s = 0.0;
+    // TODO: суммируйте 1/k^2 для k = 1..N
+    return s;
+}
+
+double basel_backward(int N) {
+    double s = 0.0;
+    // TODO: суммируйте 1/k^2 для k = N..1
+    return s;
+}
+</textarea>
+  <div class="output" data-output></div>
 </div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
 
-<div class="info" data-lbl="Мораль">
-Суммирование с конца (сначала маленькие) на порядок точнее. Причина: когда мы прибавляем \(1/N^2 \approx 10^{-14}\) к уже накопленной большой сумме \(\sim 1{,}6\), младшие биты \(1/N^2\) отсекаются на уровне \(u \cdot 1{,}6 \approx 10^{-16}\). Наоборот, при суммировании с конца частичные суммы малы, и в них помещаются младшие разряды всего хвоста ряда.
+<div class="info" data-lbl="Что должно получиться">
+Обратный порядок на \(N=10^{5}\) даёт ошибку меньше, чем прямой, в \(\sim 10\)–100 раз. Причина: при суммировании с конца частичные суммы малы, и в них помещаются младшие разряды всего хвоста ряда; при суммировании с начала уже накопленная сумма \(\sim 1{,}6\) поглощает младшие биты добавляемых \(1/N^2 \sim 10^{-10}\).
 </div>
 </div>
 
 <div class="task" data-num="6.2">
-<strong>Задача 6.2. Какой алгоритм побеждает?</strong> Посчитайте \(S_{10^{7}}\) четырьмя способами: naive-forward, naive-backward, Kahan, pairwise. Сравните с <code>fsum</code>. Кто оказался ближе всех к <code>fsum</code>?
+<strong>Задача 6.2. Мораль.</strong>
 
-<div class="check" data-check="q62" data-multi="A|B|C|D" data-correct="C">
-  <div class="head"><span><span class="status-dot"></span>автопроверка</span><span class="badge">выбор</span></div>
-  <div class="fields">
-    <label><input type="radio" name="q62" value="A"> A. naive-forward</label>
-    <label><input type="radio" name="q62" value="B"> B. naive-backward</label>
-    <label><input type="radio" name="q62" value="C"> C. Kahan</label>
-    <label><input type="radio" name="q62" value="D"> D. pairwise</label>
-  </div>
-  <button class="btn" type="button" data-check-btn>проверить</button>
-  <div class="verdict"></div>
-</div>
-
-<div class="info" data-lbl="Ожидание">
-Кэхэн должен совпадать с fsum до последнего бита или отставать на 1 младший бит. Попарная — почти совпадать (для убывающих неотрицательных рядов). naive-backward — на 1-2 младших бита хуже Кэхэна, но всё ещё почти идеально. naive-forward — уверенно проигрывает всем.
+<div class="mcq" data-mcq="q62" data-correct="B">
+  <div class="head"><span class="status-dot"></span>Что делать при убывающем ряде</div>
+  <label><input type="radio" name="q62" value="A"> A. Всё равно, оба порядка равнозначны.</label>
+  <label><input type="radio" name="q62" value="B"> B. Суммировать с конца — сначала маленькие, потом большие.</label>
+  <label><input type="radio" name="q62" value="C"> C. Всегда сначала большие — иначе накопится ошибка.</label>
+  <label><input type="radio" name="q62" value="D"> D. Порядок безразличен, только Кэхэн помогает.</label>
+  <button class="btn" type="button" data-mcq-check>проверить</button>
+  <div class="verdict" data-verdict></div>
 </div>
 </div>
 
@@ -608,45 +778,41 @@ NumPy применяет попарное суммирование по умол
 <!-- =============================================================== -->
 <h2 id="part7">§7. Отчёт</h2>
 
-<p>Ниже — чек-лист того, что должно у вас появиться к концу пары. По каждому пункту преподаватель может задать вопрос; готовьтесь пояснить <em>почему</em>, а не только <em>что получилось</em>.</p>
+<p>Финальный чек-лист. По каждому пункту преподаватель может задать вопрос — готовьтесь пояснить <em>почему</em>, а не только <em>что получилось</em>.</p>
 
 <div class="task" data-num="7.1">
-<strong>Задача 7.1. Итоговая таблица.</strong> Заполните таблицу в отчёте по <code>[0.1]*10**7</code>: наивная / Кэхэн / попарная / отсортированная — каждая колонка с ошибкой. Никакой автопроверки; вопрос преподавателя.
+<strong>Задача 7.1. Итоговая таблица.</strong> Заполните таблицу в конспекте по <code>[0.1]*10^5</code>.
 
 <table class="rep">
-  <thead>
-    <tr><th>Алгоритм</th><th>Значение</th><th>Ошибка |Ŝ − 10⁶|</th><th>Наклон log ε(log n)</th></tr>
-  </thead>
+  <thead><tr><th>Алгоритм</th><th>Значение</th><th>Ошибка</th><th>Порядок роста</th></tr></thead>
   <tbody>
     <tr><td>sum_naive</td><td>—</td><td>—</td><td>—</td></tr>
     <tr><td>sum_kahan</td><td>—</td><td>—</td><td>—</td></tr>
     <tr><td>sum_pairwise</td><td>—</td><td>—</td><td>—</td></tr>
-    <tr><td>sum_sorted</td><td>—</td><td>—</td><td>—</td></tr>
-    <tr><td>math.fsum</td><td>—</td><td>—</td><td>—</td></tr>
-    <tr><td>np.sum</td><td>—</td><td>—</td><td>—</td></tr>
+    <tr><td>sum_sorted_abs</td><td>—</td><td>—</td><td>—</td></tr>
   </tbody>
 </table>
 
-<div class="check" data-check="q71" data-target="1" data-atol="0">
-  <div class="head"><span><span class="status-dot"></span>отметка</span><span class="badge">чек</span></div>
-  <div class="row"><label>Таблица заполнена (введите <code>1</code>):</label><input type="text" data-in placeholder="1"></div>
-  <button class="btn" type="button" data-check-btn>отметить</button>
-  <div class="verdict"></div>
+<div class="mcq" data-mcq="q71" data-correct="X">
+  <div class="head"><span class="status-dot"></span>отметка</div>
+  <label><input type="radio" name="q71" value="X"> Таблица заполнена, могу пояснить каждый столбец.</label>
+  <button class="btn" type="button" data-mcq-check>отметить</button>
+  <div class="verdict" data-verdict></div>
 </div>
 </div>
 
 <div class="task" data-num="7.2">
-<strong>Задача 7.2. Ответ на вопрос.</strong> В каких прикладных задачах разница «наивно vs Кэхэн» существенна? Приведите один пример из вашей области. Обсудите с преподавателем.
+<strong>Задача 7.2. Вопрос преподавателю.</strong> Приведите один пример прикладной задачи из вашей области, где разница «наивно vs Кэхэн» существенна. Обсудите вслух с преподавателем.
 
-<div class="check" data-check="q72" data-target="1" data-atol="0">
-  <div class="head"><span><span class="status-dot"></span>отметка</span><span class="badge">чек</span></div>
-  <div class="row"><label>Обсудили (введите <code>1</code>):</label><input type="text" data-in placeholder="1"></div>
-  <button class="btn" type="button" data-check-btn>отметить</button>
-  <div class="verdict"></div>
+<div class="mcq" data-mcq="q72" data-correct="X">
+  <div class="head"><span class="status-dot"></span>отметка</div>
+  <label><input type="radio" name="q72" value="X"> Обсудил(а), пример понятен.</label>
+  <button class="btn" type="button" data-mcq-check>отметить</button>
+  <div class="verdict" data-verdict></div>
 </div>
 
 <div class="info" data-lbl="Типичные ответы">
-Расчёты консервативных величин (массы, импульса, энергии) в CFD/МКЭ на длинных времен­ах интегрирования; аккумуляция градиентов в машинном обучении на больших батчах; численное интегрирование по большим массивам данных (астрономические наблюдения, финансовые тик-логи); Монте-Карло на \(10^{9}\)+ отсчётов.
+Расчёты консервативных величин (массы, импульса, энергии) в CFD/МКЭ на длинных временах интегрирования; аккумуляция градиентов в машинном обучении на больших батчах; численное интегрирование по большим массивам данных (астрономические наблюдения, финансовые тик-логи); Монте-Карло на \(10^{9}\)+ отсчётов.
 </div>
 </div>
 
@@ -688,320 +854,278 @@ NumPy применяет попарное суммирование по умол
 <script src="../js/comments.js"></script>
 
 <!-- =============================================================== -->
-<!-- Reference implementations & auto-checker                        -->
+<!-- Reference eval (float64 in JS = same as C++ double)              -->
 <!-- =============================================================== -->
 <script>
-(function(){
-'use strict';
-
-// ==== Reference algorithms in float64 (same as Python) =============
-function sumNaive(x){ var s=0; for(var i=0;i<x.length;i++) s+=x[i]; return s; }
-function sumKahan(x){
-  var s=0,c=0;
-  for(var i=0;i<x.length;i++){
-    var y=x[i]-c, t=s+y;
-    c=(t-s)-y; s=t;
+window.__EVAL__ = (function(){
+  function sumNaive(x){ var s=0; for(var i=0;i<x.length;i++) s+=x[i]; return s; }
+  function sumKahan(x){ var s=0,c=0; for(var i=0;i<x.length;i++){var y=x[i]-c,t=s+y;c=(t-s)-y;s=t;} return s; }
+  function sumPairwise(x){
+    function go(lo,hi){ if(hi-lo<=64){var s=0;for(var i=lo;i<hi;i++) s+=x[i]; return s;} var m=(lo+hi)>>1; return go(lo,m)+go(m,hi);}
+    return go(0,x.length);
   }
-  return s;
-}
-function sumPairwise(x, base){
-  base = base || 64;
-  function go(lo, hi){
-    if(hi-lo<=base){ var s=0; for(var i=lo;i<hi;i++) s+=x[i]; return s; }
-    var m=(lo+hi)>>1;
-    return go(lo,m)+go(m,hi);
-  }
-  return go(0, x.length);
-}
-function sumSortedByAbs(x){
-  var y=x.slice(); y.sort(function(a,b){return Math.abs(a)-Math.abs(b);});
-  return sumNaive(y);
-}
-// Reference "exact" summation via Neumaier variant (better than Kahan);
-// used as pseudo-fsum in JS.
-function sumNeumaier(x){
-  var s=0,c=0;
-  for(var i=0;i<x.length;i++){
-    var xi=x[i], t=s+xi;
-    if(Math.abs(s)>=Math.abs(xi)) c += (s-t)+xi;
-    else c += (xi-t)+s;
-    s=t;
-  }
-  return s+c;
-}
+  function sumSortedAbs(x){var y=x.slice();y.sort(function(a,b){return Math.abs(a)-Math.abs(b);});return sumNaive(y);}
+  function sumNeumaier(x){var s=0,c=0;for(var i=0;i<x.length;i++){var xi=x[i],t=s+xi;if(Math.abs(s)>=Math.abs(xi)) c+=(s-t)+xi; else c+=(xi-t)+s;s=t;} return s+c;}
+  var ARR={};
+  function P1(n){var k='p1#'+n; if(!ARR[k]){var a=new Float64Array(n|0);a.fill(0.1);ARR[k]=a;} return ARR[k];}
+  function LB(n){var k='lb#'+n; if(!ARR[k]){var a=new Float64Array(n|0);for(var i=0;i<a.length;i++) a[i]=(i%2===0?1:-1)/(i+1);ARR[k]=a;} return ARR[k];}
+  function IQ(n){var k='iq#'+n; if(!ARR[k]){var a=new Float64Array(n|0);for(var i=0;i<a.length;i++) a[i]=1/((i+1)*(i+1));ARR[k]=a;} return ARR[k];}
+  return {
+    naiveOfPointOne:    function(n){return sumNaive(P1(n));},
+    naiveOfPointOneErr: function(n){return Math.abs(sumNaive(P1(n))-n*0.1);},
+    kahanOfPointOne:    function(n){return sumKahan(P1(n));},
+    kahanOfPointOneErr: function(n){return Math.abs(sumKahan(P1(n))-n*0.1);},
+    pairwiseOfPointOne:    function(n){return sumPairwise(P1(n));},
+    pairwiseOfPointOneErr: function(n){return Math.abs(sumPairwise(P1(n))-n*0.1);},
+    leibnizSorted: function(n){return sumSortedAbs(LB(n));},
+    basel_fwd: function(n){var a=IQ(n),ex=sumNeumaier(a),s=0;for(var i=0;i<a.length;i++)s+=a[i];return Math.abs(s-ex);},
+    basel_bwd: function(n){var a=IQ(n),ex=sumNeumaier(a),s=0;for(var i=a.length-1;i>=0;i--)s+=a[i];return Math.abs(s-ex);}
+  };
+})();
+</script>
 
-// ==== Cached targets for expensive datasets =========================
-var CACHE={}, ARR={};
-function cacheKey(name,n){return name+'#'+n;}
-function memo(name,n,fn){
-  var k=cacheKey(name,n);
-  if(k in CACHE) return CACHE[k];
-  return CACHE[k]=fn();
-}
-function getArr(name,n,factory){
-  var k=name+'#'+n;
-  if(k in ARR) return ARR[k];
-  return ARR[k]=factory(n|0);
-}
+<!-- =============================================================== -->
+<!-- Clang runtime + task harness                                     -->
+<!-- =============================================================== -->
+<script type="module">
+import { init, run } from 'https://cdn.jsdelivr.net/npm/clang.js/dist/clang.js';
 
-function _p1(n){ var a=new Float64Array(n); a.fill(0.1); return a; }
-function _lb(n){ var a=new Float64Array(n); for(var k=0;k<n;k++) a[k]=(k%2===0?-1:1)/(k+1); return a; }
-function _iq(n){ var a=new Float64Array(n); for(var k=0;k<n;k++) a[k]=1/((k+1)*(k+1)); return a; }
+const CLANG_PATH = 'https://cdn.jsdelivr.net/npm/clang.js/dist';
+const runtime = { ready: false, initing: false };
+const listeners = new Set();
+const origLog = console.log;
 
-function makePointOne(n){ return getArr('p1',n,_p1); }
-function makeLeibniz (n){ return getArr('lb',n,_lb); }
-function makeInvSq   (n){ return getArr('iq',n,_iq); }
-
-// ==== Named targets used by data-eval ==============================
-var EVAL={
-  naiveOfPointOne: function(n){ return memo('n01_s',n,function(){return sumNaive(makePointOne(n));}); },
-  naiveOfPointOneErr: function(n){ return Math.abs(EVAL.naiveOfPointOne(n)-n*0.1); },
-  fsumOfPointOne: function(n){ return memo('fsum_s',n,function(){return sumNeumaier(makePointOne(n));}); },
-  fsumOfPointOneErr: function(n){ return Math.abs(EVAL.fsumOfPointOne(n)-n*0.1); },
-  kahanOfPointOne: function(n){ return memo('kh_s',n,function(){return sumKahan(makePointOne(n));}); },
-  kahanOfPointOneErr: function(n){ return Math.abs(EVAL.kahanOfPointOne(n)-n*0.1); },
-  pairwiseOfPointOne: function(n){ return memo('pw_s',n,function(){return sumPairwise(makePointOne(n));}); },
-  pairwiseOfPointOneErr: function(n){ return Math.abs(EVAL.pairwiseOfPointOne(n)-n*0.1); },
-  npsumOfPointOneErr: function(n){ return EVAL.pairwiseOfPointOneErr(n); }, // np.sum uses pairwise
-  leibnizNaive: function(n){ return memo('lb_n',n,function(){return sumNaive(makeLeibniz(n));}); },
-  leibnizSorted: function(n){ return memo('lb_s',n,function(){return sumSortedByAbs(makeLeibniz(n));}); },
-  basel_fwd: function(n){
-    return memo('bs_fwd',n,function(){
-      var a=makeInvSq(n);
-      var ex=sumNeumaier(a);
-      return Math.abs(sumNaive(a)-ex);
-    });
-  },
-  basel_bwd: function(n){
-    return memo('bs_bwd',n,function(){
-      var a=makeInvSq(n);
-      var ex=sumNeumaier(a);
-      // reverse
-      var s=0; for(var i=a.length-1;i>=0;i--) s+=a[i];
-      return Math.abs(s-ex);
-    });
-  }
+// ---- Intercept clang.js stdout ----
+console.log = function(msg){
+  origLog.apply(console, arguments);
+  if (typeof msg === 'string') listeners.forEach(l => l(msg));
 };
 
-// ==== Value parsing =================================================
-function parseNum(str){
-  if(typeof str!=='string') return NaN;
-  str=str.trim().replace(',', '.');
-  if(!str) return NaN;
-  // allow forms like 1e-3, 1.23e6, 0.001
-  var v=parseFloat(str);
-  if(isFinite(v)) return v;
-  return NaN;
+function stripAnsi(s){ return String(s).replace(/\x1b\[[0-9;]*m/g, ''); }
+function isClangDiag(line){
+  // Clang.js prints stages like "> Fetching and compiling clang.wasm... done." with ANSI codes.
+  return /(Fetching|Compiling|Untarring|Allowing rAF|clang -cc1|wasm-ld|done\.|Error:)/.test(line);
 }
 
-// ==== Progress (localStorage) =======================================
-var PROG_KEY='cfd-nm-w01-lab-progress';
-function loadProg(){
-  try{ var s=localStorage.getItem(PROG_KEY); return s?JSON.parse(s):{}; }
-  catch(e){ return {}; }
+async function ensureRuntime(){
+  if (runtime.ready) return;
+  if (runtime.initing) { while (!runtime.ready) await new Promise(r=>setTimeout(r,200)); return; }
+  runtime.initing = true;
+  setRuntimeState('init', 'clang: загружаю ~60 МБ (первый раз)…');
+  try {
+    await init({ path: CLANG_PATH });
+    runtime.ready = true;
+    setRuntimeState('ok', 'clang: готов');
+  } catch (e) {
+    setRuntimeState('err', 'clang: ошибка загрузки — ' + e.message);
+    throw e;
+  }
 }
-function saveProg(p){
-  try{ localStorage.setItem(PROG_KEY,JSON.stringify(p)); }catch(e){}
-}
-var PROG=loadProg();
-var TOTAL_TASKS=12;
-function updateProgUI(){
-  var done=Object.keys(PROG).filter(function(k){return PROG[k]==='ok';}).length;
-  var pct=100*done/TOTAL_TASKS;
-  var bar=document.getElementById('prog_bar'); if(bar) bar.style.width=pct.toFixed(0)+'%';
-  var cnt=document.getElementById('prog_cnt'); if(cnt) cnt.textContent=done+'/'+TOTAL_TASKS;
-  var side=document.getElementById('side_progress'); if(side) side.textContent='решено '+done+' из '+TOTAL_TASKS;
-}
-var resetBtn=document.getElementById('prog_reset');
-if(resetBtn) resetBtn.addEventListener('click',function(){
-  if(!confirm('Сбросить весь прогресс лабораторной?')) return;
-  PROG={}; saveProg(PROG); updateProgUI();
-  document.querySelectorAll('[data-check]').forEach(function(box){
-    box.querySelectorAll('.status-dot').forEach(function(d){d.classList.remove('ok','err');});
-    var v=box.querySelector('.verdict'); if(v){ v.className='verdict'; v.textContent=''; }
+
+function setRuntimeState(cls, text){
+  ['prog_runtime','side_runtime'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = (id==='prog_runtime' ? 'runtime ' : 'runtime-state ') + cls;
+    el.textContent = text;
   });
-});
+}
 
-// ==== Compare helpers ==============================================
+// ---- runCpp: prepend student code + harness, execute, harvest output ----
+async function runCpp(studentCode, harness, outputEl, opts){
+  opts = opts || {};
+  await ensureRuntime();
+  const full = studentCode + '\n' + harness;
+  const buffer = [];
+  const answers = [];
+  let sawEnd = false;
+  const listener = (line) => {
+    const clean = stripAnsi(line);
+    // Emit to output panel (skip empty and clang stage lines are muted)
+    if (isClangDiag(clean)) {
+      outputEl.insertAdjacentHTML('beforeend', '<span class="hi">'+escapeHtml(clean)+'</span>\n');
+    } else {
+      outputEl.insertAdjacentHTML('beforeend', escapeHtml(clean)+'\n');
+    }
+    outputEl.scrollTop = outputEl.scrollHeight;
+    buffer.push(clean);
+    // Parse answers
+    clean.split('\n').forEach(l => {
+      const m = l.match(/^__ANS__(\S+)/);
+      if (m) answers.push(parseFloat(m[1]));
+      if (/^__END__/.test(l)) sawEnd = true;
+    });
+  };
+  listeners.add(listener);
+  outputEl.innerHTML = '';
+  outputEl.insertAdjacentHTML('beforeend', '<span class="hi">Компилирую и запускаю…</span>\n');
+  try {
+    await run(full);
+  } catch (e) {
+    outputEl.insertAdjacentHTML('beforeend', '<span class="err">'+escapeHtml(e.message)+'</span>\n');
+  }
+  // Wait for __END__ or timeout 30 s
+  const deadline = Date.now() + 30000;
+  while (!sawEnd && Date.now() < deadline) await new Promise(r=>setTimeout(r,120));
+  listeners.delete(listener);
+  return { answers, ended: sawEnd, output: buffer.join('\n') };
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ---- Progress (localStorage) ----
+const PROG_KEY = 'cfd-nm-w01-lab-cpp-progress';
+let PROG = (function(){try{return JSON.parse(localStorage.getItem(PROG_KEY)||'{}');}catch(e){return{};}})();
+function saveProg(){ try{localStorage.setItem(PROG_KEY, JSON.stringify(PROG));}catch(e){} }
+const TOTAL = 15;
+function updateProgUI(){
+  const done = Object.values(PROG).filter(v=>v==='ok').length;
+  const pct = 100*done/TOTAL;
+  const bar = document.getElementById('prog_bar'); if (bar) bar.style.width = pct.toFixed(0)+'%';
+  const cnt = document.getElementById('prog_cnt'); if (cnt) cnt.textContent = done+'/'+TOTAL;
+  const side = document.getElementById('side_progress'); if (side) side.textContent = 'решено '+done+' из '+TOTAL;
+}
+document.getElementById('prog_reset').addEventListener('click', ()=>{
+  if (!confirm('Сбросить весь прогресс?')) return;
+  PROG = {}; saveProg(); updateProgUI();
+  document.querySelectorAll('[data-verdict]').forEach(v=>{v.className='verdict';v.textContent='';});
+  document.querySelectorAll('.status-dot').forEach(d=>d.classList.remove('ok','err'));
+});
+updateProgUI();
+
+// ---- Compare helpers ----
 function closeTo(got, want, rtol, atol){
   rtol = rtol||0; atol = atol||0;
-  if(!isFinite(got) || !isFinite(want)) return got===want;
-  var d = Math.abs(got-want);
-  var tol = Math.max(atol, rtol*Math.abs(want));
+  if (!isFinite(got) || !isFinite(want)) return got===want;
+  const d = Math.abs(got-want);
+  const tol = Math.max(atol, rtol*Math.abs(want));
   return d <= tol;
 }
 
-// ==== Auto-checker for numeric fields ==============================
-function setupCheckBox(box){
-  var id=box.getAttribute('data-check');
-  var atol=parseFloat(box.getAttribute('data-atol')||'0');
-  var rtol=parseFloat(box.getAttribute('data-rtol')||'0');
-  var targetAttr=box.getAttribute('data-target');
-  var evalAttr=box.getAttribute('data-eval');
-  var multiAttr=box.getAttribute('data-multi');
-  var correctAttr=box.getAttribute('data-correct');
-  var btn=box.querySelector('[data-check-btn]');
-  var revealBtn=box.querySelector('[data-reveal]');
-  var verdict=box.querySelector('.verdict');
-  var dot=box.querySelector('.status-dot');
+// ---- Wire up CodeMirror + Run + Verdict ----
+document.querySelectorAll('[data-cpp]').forEach(shell=>{
+  const id = shell.getAttribute('data-cpp');
+  const ta = shell.querySelector('[data-code]');
+  const outputEl = shell.querySelector('[data-output]');
+  const btnRun = shell.querySelector('[data-run]');
+  const btnReset = shell.querySelector('[data-reset]');
+  const harness = shell.getAttribute('data-harness') || '';
+  const rtol = parseFloat(shell.getAttribute('data-check-rtol')||'0');
+  const atol = parseFloat(shell.getAttribute('data-check-atol')||'0');
+  const targetAttr = shell.getAttribute('data-check-target');
+  const evalAttr = shell.getAttribute('data-check-eval');
+  const verdictEl = shell.nextElementSibling && shell.nextElementSibling.hasAttribute('data-verdict') ? shell.nextElementSibling : null;
 
-  // Restore prior verdict if any
-  if(PROG[id]==='ok'){ dot.classList.add('ok'); verdict.className='verdict ok'; verdict.textContent='✓ решено ранее'; }
+  const initial = ta.value;
+  const cm = CodeMirror.fromTextArea(ta, {
+    mode: 'text/x-c++src',
+    lineNumbers: true,
+    theme: 'material-darker',
+    indentUnit: 4,
+    tabSize: 4,
+    lineWrapping: false,
+    extraKeys: { 'Ctrl-Enter': runNow, 'Cmd-Enter': runNow }
+  });
+  // Restore saved code
+  const savedCode = localStorage.getItem('cfd-nm-w01-lab-cpp:'+id);
+  if (savedCode) cm.setValue(savedCode);
+  cm.on('change', () => localStorage.setItem('cfd-nm-w01-lab-cpp:'+id, cm.getValue()));
 
-  function targets(){
-    if(evalAttr){
-      // pattern: "fn(1e7)|fn2(1e6)" — args must be numeric literals
-      return evalAttr.split('|').map(function(call){
-        var m=call.match(/^([a-zA-Z_][\w]*)\((.*)\)$/);
-        if(!m) return NaN;
-        var fn=EVAL[m[1]]; if(!fn) return NaN;
-        var arg=parseFloat(m[2]);
-        try{ return fn(arg); }catch(e){ return NaN; }
-      });
+  // Restore verdict
+  if (verdictEl && PROG[id]==='ok'){
+    verdictEl.className = 'verdict ok';
+    verdictEl.innerHTML = '<span class="status-dot ok"></span>✓ решено ранее';
+  }
+
+  btnReset.addEventListener('click', ()=>{
+    if (!confirm('Вернуть скелет кода?')) return;
+    cm.setValue(initial);
+    localStorage.removeItem('cfd-nm-w01-lab-cpp:'+id);
+  });
+
+  async function runNow(){
+    btnRun.disabled = true; btnRun.textContent = '…';
+    try {
+      const code = cm.getValue();
+      const res = await runCpp(code, harness, outputEl);
+      // Compute targets
+      let targets = [];
+      if (evalAttr) {
+        targets = evalAttr.split('|').map(call=>{
+          const m = call.match(/^([a-zA-Z_][\w]*)\((.*)\)$/);
+          if (!m) return NaN;
+          const fn = window.__EVAL__[m[1]];
+          if (!fn) return NaN;
+          try { return fn(parseFloat(m[2])); } catch(e){ return NaN; }
+        });
+      } else if (targetAttr) {
+        targets = targetAttr.split(',').map(s=>parseFloat(s));
+      }
+      // Verdict
+      if (verdictEl) {
+        if (!res.ended) {
+          verdictEl.className = 'verdict err';
+          verdictEl.innerHTML = '<span class="status-dot err"></span>✗ программа не вывела __END__ за 30 сек (проверьте, что она завершается и печатает маркёры)';
+          PROG[id] = 'err';
+        } else if (res.answers.length === 0) {
+          verdictEl.className = 'verdict part';
+          verdictEl.innerHTML = '<span class="status-dot"></span>программа запустилась, но не напечатала ни одного __ANS__';
+        } else {
+          const n = Math.min(res.answers.length, targets.length || res.answers.length);
+          const msgs = []; let okAll = true;
+          for (let i=0;i<n;i++){
+            const got = res.answers[i];
+            const want = targets[i];
+            const ok = isFinite(want) ? closeTo(got, want, rtol, atol) : true;
+            if (!ok) { okAll = false; msgs.push('поле '+(i+1)+': '+got.toExponential(3)+' vs '+want.toExponential(3)); }
+          }
+          if (okAll){
+            verdictEl.className = 'verdict ok';
+            verdictEl.innerHTML = '<span class="status-dot ok"></span>✓ ответ сходится с эталоном';
+            PROG[id] = 'ok';
+          } else {
+            verdictEl.className = 'verdict err';
+            verdictEl.innerHTML = '<span class="status-dot err"></span>✗ '+msgs.join('; ');
+            PROG[id] = 'err';
+          }
+        }
+        saveProg(); updateProgUI();
+      }
+    } catch (e) {
+      if (verdictEl) {
+        verdictEl.className = 'verdict err';
+        verdictEl.innerHTML = '<span class="status-dot err"></span>✗ ошибка компилятора: '+escapeHtml(e.message);
+      }
+    } finally {
+      btnRun.disabled = false; btnRun.textContent = '▶ запустить';
     }
-    if(targetAttr){ return targetAttr.split(',').map(function(s){return parseFloat(s);}); }
-    return [];
   }
+  btnRun.addEventListener('click', runNow);
+});
 
-  function checkNumeric(){
-    var inputs=box.querySelectorAll('[data-in]');
-    var t=targets();
-    var okAll=true, msgs=[];
-    inputs.forEach(function(inp,i){
-      var got=parseNum(inp.value);
-      var want=t[i];
-      var ok=closeTo(got, want, rtol, atol);
-      inp.style.borderColor = ok ? '#4d8a35' : (isNaN(got)?'':'var(--accent)');
-      if(!ok){ okAll=false; msgs.push('поле '+(i+1)+': '+(isNaN(got)?'не число':'мимо ('+got.toExponential(2)+' vs ~'+want.toExponential(2)+')')); }
-    });
-    return {ok:okAll, msg: okAll ? '✓ верно' : ('✗ '+msgs.join('; '))};
-  }
-
-  function checkMulti(){
-    var chosen=box.querySelector('input[type=radio]:checked');
-    if(!chosen) return {ok:false, msg:'выберите вариант'};
-    var ok = chosen.value === correctAttr;
-    return {ok:ok, msg: ok ? '✓ верно' : '✗ не тот вариант'};
-  }
-
-  if(btn) btn.addEventListener('click', function(){
-    var res = multiAttr ? checkMulti() : checkNumeric();
-    verdict.className='verdict '+(res.ok?'ok':'err');
-    verdict.textContent=res.msg;
-    dot.classList.toggle('ok', res.ok);
-    dot.classList.toggle('err', !res.ok);
-    if(res.ok){ PROG[id]='ok'; } else { PROG[id]='err'; }
-    saveProg(PROG); updateProgUI();
+// ---- Multiple choice ----
+document.querySelectorAll('[data-mcq]').forEach(box=>{
+  const id = box.getAttribute('data-mcq');
+  const correct = box.getAttribute('data-correct');
+  const btn = box.querySelector('[data-mcq-check]');
+  const verdict = box.querySelector('[data-verdict]');
+  const dot = box.querySelector('.status-dot');
+  if (PROG[id]==='ok'){ verdict.className='verdict ok'; verdict.textContent='✓ решено ранее'; dot.classList.add('ok'); }
+  btn.addEventListener('click', ()=>{
+    const chosen = box.querySelector('input[type=radio]:checked');
+    if (!chosen){ verdict.className='verdict err'; verdict.textContent='выберите вариант'; return; }
+    const ok = chosen.value === correct;
+    verdict.className = 'verdict '+(ok?'ok':'err');
+    verdict.textContent = ok ? '✓ верно' : '✗ не тот вариант';
+    dot.classList.toggle('ok', ok);
+    dot.classList.toggle('err', !ok);
+    PROG[id] = ok ? 'ok' : 'err';
+    saveProg(); updateProgUI();
   });
+});
 
-  if(revealBtn) revealBtn.addEventListener('click', function(){
-    var t=targets();
-    var lines=t.map(function(v,i){return 'поле '+(i+1)+': '+(isFinite(v)?v.toExponential(6):'—');});
-    verdict.className='verdict part';
-    verdict.textContent='эталон · '+lines.join(' · ');
-  });
-}
-
-document.querySelectorAll('[data-check]').forEach(setupCheckBox);
-updateProgUI();
-
-// ==== Scaling chart =================================================
-(function(){
-  var canvas=document.getElementById('sc_chart'); if(!canvas) return;
-  var ctx=canvas.getContext('2d');
-  var NS=[1e3,1e4,1e5,1e6,1e7].map(function(x){return x|0;});
-
-  var series={
-    naive:{c:'#b44a2d',data:[],active:function(){return document.getElementById('sc_naive').checked;}},
-    kahan:{c:'#1a6b5a',data:[],active:function(){return document.getElementById('sc_kahan').checked;}},
-    pair :{c:'#3a5ba0',data:[],active:function(){return document.getElementById('sc_pair').checked;}},
-    sorted:{c:'#7b3fa0',data:[],active:function(){return document.getElementById('sc_sorted').checked;}}
-  };
-
-  function computeAll(cb){
-    var status=document.getElementById('sc_status');
-    status.textContent='считаю ошибки (это несколько секунд для n=10⁷)…';
-    setTimeout(function(){
-      for(var i=0;i<NS.length;i++){
-        var n=NS[i], a=makePointOne(n), exact=n*0.1;
-        series.naive.data[i]=Math.abs(sumNaive(a)-exact);
-        series.kahan.data[i]=Math.abs(sumKahan(a)-exact);
-        series.pair.data[i] =Math.abs(sumPairwise(a)-exact);
-        // sorted for constant array is the same as naive; add tiny noise
-        // to see it apart on chart — instead show real difference on Leibniz-like test
-        series.sorted.data[i]=Math.abs(sumSortedByAbs(a)-exact);
-      }
-      status.textContent='готово · n от 10³ до 10⁷ · сравнение на массиве [0.1]×n';
-      cb && cb();
-    },10);
-  }
-
-  function draw(){
-    var W=canvas.width, H=canvas.height;
-    ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
-    var P={l:70,r:20,t:20,b:44},pw=W-P.l-P.r,ph=H-P.t-P.b;
-    var xmin=3, xmax=7;                // log10 n
-    var ymin=-18, ymax=-1;             // log10 err
-    function xp(lx){return P.l+pw*(lx-xmin)/(xmax-xmin);}
-    function yp(ly){return P.t+ph*(1-(ly-ymin)/(ymax-ymin));}
-    // grid
-    ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
-    for(var g=xmin;g<=xmax;g++){ctx.beginPath();ctx.moveTo(xp(g),P.t);ctx.lineTo(xp(g),P.t+ph);ctx.stroke();}
-    for(var g=ymin;g<=ymax;g+=1){ctx.beginPath();ctx.moveTo(P.l,yp(g));ctx.lineTo(P.l+pw,yp(g));ctx.stroke();}
-    // reference lines: u and n*u
-    ctx.strokeStyle='#c9a23a';ctx.lineWidth=1;ctx.setLineDash([4,3]);
-    ctx.beginPath();ctx.moveTo(P.l,yp(-16));ctx.lineTo(P.l+pw,yp(-16));ctx.stroke();
-    ctx.fillStyle='#9a7d28';ctx.font='10px JetBrains Mono';ctx.textAlign='left';
-    ctx.fillText('u ≈ 1e-16',P.l+4,yp(-16)-3);
-    // n*u line: y = x + log10(u) = x - 16
-    ctx.strokeStyle='#c9a23a';ctx.beginPath();ctx.moveTo(xp(xmin),yp(xmin-16));ctx.lineTo(xp(xmax),yp(xmax-16));ctx.stroke();
-    ctx.fillText('n·u',xp(xmax)-24,yp(xmax-16)-3);
-    ctx.setLineDash([]);
-    // axes
-    ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
-    ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
-    for(var g=xmin;g<=xmax;g++) ctx.fillText('10^'+g, xp(g), P.t+ph+16);
-    ctx.textAlign='right';
-    for(var g=ymin;g<=ymax;g+=3) ctx.fillText('1e'+g, P.l-6, yp(g)+3);
-    ctx.fillStyle='#6b5d4f';ctx.textAlign='center';ctx.font='11px JetBrains Mono';
-    ctx.fillText('n', P.l+pw/2, P.t+ph+34);
-    ctx.save();ctx.translate(18,P.t+ph/2);ctx.rotate(-Math.PI/2);ctx.fillText('|error|',0,0);ctx.restore();
-    // series
-    Object.keys(series).forEach(function(k){
-      var s=series[k]; if(!s.active()) return;
-      ctx.strokeStyle=s.c;ctx.lineWidth=2;ctx.beginPath();
-      var first=true;
-      for(var i=0;i<NS.length;i++){
-        var e=s.data[i]; if(!(e>0)) continue;
-        var lx=Math.log10(NS[i]), ly=Math.log10(e);
-        var X=xp(lx),Y=yp(ly);
-        first?(ctx.moveTo(X,Y),first=false):ctx.lineTo(X,Y);
-      }
-      ctx.stroke();
-      for(var i=0;i<NS.length;i++){
-        var e=s.data[i]; if(!(e>0)) continue;
-        var X=xp(Math.log10(NS[i])),Y=yp(Math.log10(e));
-        ctx.fillStyle=s.c;ctx.beginPath();ctx.arc(X,Y,3.5,0,7);ctx.fill();
-      }
-    });
-    // legend
-    var lx=P.l+8, ly=P.t+8;
-    ctx.font='10px JetBrains Mono';ctx.textAlign='left';
-    Object.keys(series).forEach(function(k,i){
-      var s=series[k]; if(!s.active()) return;
-      ctx.fillStyle=s.c;ctx.fillRect(lx,ly-8,10,3);
-      ctx.fillText(k, lx+14, ly-4);
-      lx += 60;
-    });
-  }
-
-  document.getElementById('sc_run').addEventListener('click',function(){computeAll(draw);});
-  ['sc_naive','sc_kahan','sc_pair','sc_sorted'].forEach(function(id){
-    document.getElementById(id).addEventListener('change',draw);
-  });
-  computeAll(draw);
-})();
-})();
+// Kick off runtime load in background so first task click is faster
+setTimeout(ensureRuntime, 800);
 </script>
 </body>
 </html>

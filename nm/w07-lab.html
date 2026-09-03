@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ru" data-course="nm">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Лабораторная работа №7 курса «Численные методы»: составные квадратурные формулы (средних точек, трапеций, Симпсона), проверка порядка сходимости и метод Ромберга.">
+<title>ЧМ · Лаба 7. Ньютон-Котес и Ромберг</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/material-darker.css">
+<script>window.MathJax = {tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },options: { skipHtmlTags: ['script','noscript','style','textarea'] }};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/clike/clike.js"></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--sidebar-bg:#2b2520;--sidebar-text:#d9cfc0}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
+.sidebar{position:fixed;left:0;top:38px;bottom:0;width:240px;background:var(--sidebar-bg);color:var(--sidebar-text);padding:1.5rem 1rem;overflow-y:auto;z-index:100;border-right:3px solid var(--accent);font-size:.8rem}
+.sidebar h2{font-family:'Playfair Display',serif;font-size:.85rem;font-weight:700;color:#fff;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.03em}
+.sidebar .g{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--accent);margin:.7rem 0 .15rem;text-transform:uppercase;letter-spacing:.08em}
+.sidebar a{display:block;color:var(--sidebar-text);text-decoration:none;font-size:.76rem;line-height:1.35;padding:.15rem 0 .15rem .5rem;border-left:2px solid transparent}
+.sidebar a:hover{color:#fff;border-left-color:var(--accent);background:rgba(180,74,45,.08)}
+.sidebar .sep{height:1px;background:rgba(255,255,255,.07);margin:.4rem 0}
+.sidebar .progress{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:#82a0db;padding:.4rem .5rem;background:rgba(130,160,219,.08);border-radius:4px;margin:.4rem 0 .8rem}
+.sidebar .runtime-state{font-family:'JetBrains Mono',monospace;font-size:.62rem;padding:.35rem .5rem;background:rgba(200,140,50,.1);color:#e0a55c;border-radius:4px;margin-bottom:.6rem}
+.sidebar .runtime-state.ok{background:rgba(70,184,156,.1);color:#7dcfb6}
+.sidebar .runtime-state.err{background:rgba(224,122,82,.1);color:#e07a52}
+.main{margin-left:240px;padding:2rem 2.5rem 4rem}.main-inner{max-width:960px}
+.lecture-tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;padding:.2rem .5rem;border-radius:3px;display:inline-block;margin-bottom:.5rem;background:#e0e8f2;color:#3a5ba0}
+.lecture-num{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);margin-bottom:.3rem}
+h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;line-height:1.15;margin-bottom:1.5rem;color:var(--text)}
+h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--accent);margin:2rem 0 .8rem;padding-top:.5rem;border-top:1px solid var(--border)}
+h3{font-family:'Source Serif 4',serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:1.5rem 0 .5rem}
+p{margin-bottom:1rem;text-align:justify;hyphens:auto}
+ul,ol{margin:.5rem 0 1rem 1.5rem}li{margin:.3rem 0}
+.eq{margin:1.5rem 0;text-align:center}
+code{font-family:'JetBrains Mono',monospace;background:var(--bg2);padding:1px 5px;border-radius:3px;font-size:.9em}
+.task{position:relative;padding:1rem 1.2rem 1rem 3rem;border-radius:6px;margin:1.5rem 0;background:#e7efe8;overflow:hidden;min-height:11rem}
+.task::before{position:absolute;left:0;top:0;bottom:0;width:2rem;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase;background:#d0dfd4;color:#3d6b5a;content:'Задача'}
+.task[data-num]::before{content:'Задача ' attr(data-num)}
+.info{position:relative;padding:1rem 1.2rem 1rem 3rem;border-radius:6px;margin:1.2rem 0;background:#e0e8f2;overflow:hidden;min-height:6.5rem}
+.info::before{position:absolute;left:0;top:0;bottom:0;width:2rem;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase;background:#c8d5e6;color:#4a5f88;content:'Подсказка'}
+.info[data-lbl]::before{content:attr(data-lbl)}
+.warning{background:#fbeee7;border-left:3px solid var(--accent);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:.95rem}
+.warning strong{color:var(--accent)}
+.editor-shell{margin:1rem 0;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.editor-head{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.4rem .9rem;display:flex;justify-content:space-between;align-items:center;gap:.6rem;flex-wrap:wrap}
+.editor-head .fname{color:#9ec97f}.editor-head .actions{display:flex;gap:.4rem}
+.editor-head .btn{background:var(--accent);color:#fff;border:none;padding:.35rem .85rem;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;cursor:pointer}
+.editor-head .btn:hover{background:#8f3a24}.editor-head .btn:disabled{background:#6b5d4f;cursor:wait;opacity:.7}
+.editor-head .btn.secondary{background:transparent;border:1px solid #6b5d4f;color:#c9b89a}
+.editor-head .btn.secondary:hover{background:#3a322a}
+.editor-shell .CodeMirror{height:auto;min-height:180px;max-height:520px;font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.55}
+.output{background:#151210;color:#e6d4b8;font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.7rem 1rem;min-height:60px;max-height:280px;overflow:auto;white-space:pre-wrap;border-top:1px solid #3a322a}
+.output:empty::before{content:'— вывод программы появится здесь —';color:#5b5045;font-style:italic}
+.output .hi{color:#82a0db}.output .err{color:#e07a52}
+.verdict{margin-top:.6rem;padding:.5rem .7rem;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.8rem;display:none}
+.verdict.ok{display:block;background:#dcecd6;color:#2c5a1f;border-left:3px solid #4d8a35}
+.verdict.err{display:block;background:#fbeee7;color:#8a3220;border-left:3px solid var(--accent)}
+.verdict.part{display:block;background:#f7f0d9;color:#7a5c1f;border-left:3px solid #c9a23a}
+.status-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#c9c1b3;margin-right:.4rem;vertical-align:middle}
+.status-dot.ok{background:#4d8a35}.status-dot.err{background:var(--accent)}
+.mcq{background:#fff;border:1px solid var(--border);border-radius:8px;padding:.9rem 1.1rem;margin:1rem 0}
+.mcq .head{font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);margin-bottom:.5rem}
+.mcq label{display:block;font-size:.9rem;padding:.25rem 0;cursor:pointer}
+.mcq label input{margin-right:.5rem}
+.mcq .btn{background:var(--accent2);color:#fff;border:none;padding:6px 14px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.78rem;cursor:pointer;margin-top:.4rem;text-transform:uppercase;letter-spacing:.08em}
+.mcq .btn:hover{background:#125e4d}
+.plan{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;margin:1rem 0 1.6rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.7rem;font-size:.85rem}
+.plan .cell{border-left:3px solid var(--accent3);padding-left:.6rem}
+.plan .cell b{color:var(--accent3);font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:.15rem}
+.progresspanel{position:sticky;top:38px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:.6rem 1rem;margin:1rem 0;z-index:5;font-family:'JetBrains Mono',monospace;font-size:.78rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+.progresspanel .bar{flex:1;min-width:150px;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.progresspanel .bar > div{height:100%;background:linear-gradient(90deg,var(--accent2) 0%,var(--accent3) 100%);transition:width .3s}
+.progresspanel .cnt{font-weight:600;color:var(--accent3);font-size:.82rem}
+.progresspanel .reset{background:none;border:1px solid var(--border);padding:2px 8px;border-radius:3px;font-family:inherit;font-size:.72rem;color:var(--text2);cursor:pointer}
+.progresspanel .reset:hover{color:var(--accent);border-color:var(--accent)}
+.progresspanel .runtime{padding:2px 8px;border-radius:3px;background:rgba(200,140,50,.15);color:#8a5236}
+.progresspanel .runtime.ok{background:rgba(70,140,80,.15);color:#2c5a1f}
+.progresspanel .runtime.err{background:rgba(180,74,45,.15);color:#8a3220}
+.runtimebanner{background:#e0e8f2;border-radius:8px;padding:.8rem 1.1rem;margin:1rem 0;font-size:.86rem;color:var(--text)}
+.runtimebanner .lbl{font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:#4a5f88;margin-right:.5rem}
+.lecture-nav{display:flex;justify-content:space-between;gap:1rem;margin-top:3rem;padding-top:1.5rem;border-top:2px solid var(--border);flex-wrap:wrap}
+.lecture-nav a{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);text-decoration:none;padding:.5rem .8rem;border:1px solid var(--border);border-radius:6px;max-width:48%}
+.lecture-nav a:hover{border-color:var(--accent);background:rgba(180,74,45,.05)}
+.nav-prev{text-align:left}.nav-next{text-align:right;margin-left:auto}
+@media(max-width:1000px){.sidebar{display:none}.main{margin-left:0;padding:1.5rem}.comments-wrap{margin-left:0 !important;padding:0 1.5rem 2rem}.progresspanel{position:static}}
+@media(max-width:720px){body{font-size:16px}h1{font-size:1.55rem}h2{font-size:1.15rem}.task,.info{padding-left:2.4rem}.task::before,.info::before{width:1.7rem;font-size:.55rem}.main{padding:1.2rem 1rem 3rem;overflow-x:clip}.main-inner *{min-width:0}mjx-container[display="true"]{max-width:100%;overflow-x:auto;overflow-y:hidden}mjx-container:not([display="true"]){display:inline-block !important;max-width:100%;overflow-x:auto;overflow-y:hidden;vertical-align:-0.3em}}
+.comments-wrap{margin-left:240px;max-width:calc(960px + 5rem);padding:0 2.5rem 2rem}
+#comments-section{max-width:960px}
+html.dark{--bg:#1b1712;--bg2:#231e18;--bg3:#2c261f;--text:#ece3d6;--text2:#bcb0a0;--text3:#8d8173;--accent:#e07a52;--accent2:#46b89c;--accent3:#82a0db;--border:#39322a;--sidebar-bg:#14100c;--sidebar-text:#cabfae}
+html.dark .task{background:#1e2a24;color:var(--text)}
+html.dark .info{background:#1a2130;color:var(--text)}
+html.dark .task::before{background:#20362d;color:#8fc4ac}
+html.dark .info::before{background:#26314a;color:#9fb6dd}
+html.dark .warning{background:#2a1a13}
+html.dark .mcq{background:#231e18;border-color:var(--border)}
+html.dark .verdict.ok{background:#183021;color:#a2d094;border-left-color:#4d8a35}
+html.dark .verdict.err{background:#2a1a13;color:#e6a08a}
+html.dark .verdict.part{background:#2e2716;color:#e5cd8c;border-left-color:#c9a23a}
+html.dark .runtimebanner{background:#1a2130;color:var(--text)}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>Лаба 7. Ньютон-Котес</h2>
+  <div class="progress" id="side_progress">решено 0 из 9</div>
+  <div class="runtime-state" id="side_runtime">clang: не загружен</div>
+  <div class="g">Содержание</div>
+  <a href="#intro">Введение</a>
+  <a href="#part0">§0. Простые формулы</a>
+  <a href="#part1">§1. Составной Симпсон</a>
+  <a href="#part2">§2. Ромберг</a>
+  <a href="#part3">§3. Отчёт</a>
+  <div class="sep"></div>
+  <div class="g">Материалы</div>
+  <a href="w07.html">§7. Лекция</a>
+  <a href="w07-slides.html">▶ Слайды §7</a>
+  <a href="index.html">← Обзор курса</a>
+  <a href="w08.html">→ §8. Гаусс</a>
+</nav>
+
+<div class="main"><div class="main-inner">
+<span class="lecture-tag">Лабораторная работа</span>
+<div class="lecture-num">Лаба 7 · к §7 «Ньютон-Котес»</div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
+  <h1 style="margin:0">Составные квадратуры и метод Ромберга</h1>
+  <a href="w07.html" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.4rem .8rem;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none">▶ Лекция</a>
+</div>
+
+<div class="plan">
+  <div class="cell"><b>Формат</b>Парная работа за компьютером</div>
+  <div class="cell"><b>Язык</b>C++11, только stdlib</div>
+  <div class="cell"><b>Сборка</b>clang++ в браузере (wasm)</div>
+  <div class="cell"><b>Оценка</b>7/9 задач → зачёт</div>
+</div>
+
+<div class="progresspanel">
+  <span>Прогресс</span>
+  <div class="bar"><div id="prog_bar" style="width:0%"></div></div>
+  <span class="cnt" id="prog_cnt">0/9</span>
+  <span class="runtime" id="prog_runtime">clang: init…</span>
+  <button class="reset" id="prog_reset" type="button">сбросить</button>
+</div>
+
+<div class="runtimebanner">
+  <span class="lbl">Runtime</span>
+  Первый запуск задачи — 15–40 сек в Chromium и до 1–2 мин в Firefox. Больше — DevTools → Console.
+</div>
+
+<h2 id="intro">Что вы делаете</h2>
+
+<p>Реализуем три классических квадратуры Ньютона-Котеса — средние точки, трапеции, Симпсон — как <em>составные</em> формулы. Проверяем на \(\int_0^1 e^x dx = e - 1\), что удвоение числа отрезков уменьшает ошибку в 4 и 16 раз соответственно. Финал — метод Ромберга: за 5 итераций получить машинную точность.</p>
+
+<!-- =============================================================== -->
+<h2 id="part0">§0. Простые составные формулы</h2>
+
+<div class="task" data-num="0.1">
+<strong>Задача 0.1. Составная средних точек.</strong> Реализуйте <code>double midpoint(double (*f)(double), double a, double b, int N)</code> — сумма \(h \cdot f(x_i + h/2)\) по \(N\) подотрезкам. Тест: \(f = e^x\), \([0, 1]\), \(N = 10\); ошибка \(\sim 3 \cdot 10^{-4}\).
+
+<div class="editor-shell" data-cpp="q01"
+     data-harness='double f_exp(double x) { return std::exp(x); }
+int main() {
+    double s = midpoint(f_exp, 0.0, 1.0, 10);
+    double exact = std::exp(1.0) - 1.0;
+    double err = std::fabs(s - exact);
+    printf("midpoint = %.17g\n", s);
+    printf("exact    = %.17g\n", exact);
+    printf("|err|    = %.6g\n", err);
+    printf("__ANS__%.17g\n", s);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-target="1.7180000497474252" data-check-rtol="1e-3">
+  <div class="editor-head"><span class="fname">task0_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
+  <textarea data-code>#include &lt;cstdio&gt;
+#include &lt;cmath&gt;
+
+double midpoint(double (*f)(double), double a, double b, int N) {
+    double h = (b - a) / N;
+    double s = 0.0;
+    // TODO: сумма f(a + (i + 0.5) * h) для i = 0..N-1, умножить на h
+    return s * h;
+}
+</textarea>
+  <div class="output" data-output></div>
+</div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
+</div>
+
+<div class="task" data-num="0.2">
+<strong>Задача 0.2. Составная трапеции.</strong> Реализуйте <code>trapezoid</code> по формуле (7.9). Тест: тот же, ошибка \(\sim 1{,}4 \cdot 10^{-3}\) (в 4 раза хуже средних точек, но того же порядка \(O(h^2)\)).
+
+<div class="editor-shell" data-cpp="q02"
+     data-harness='double f_exp(double x) { return std::exp(x); }
+int main() {
+    double s = trapezoid(f_exp, 0.0, 1.0, 10);
+    double exact = std::exp(1.0) - 1.0;
+    double err = std::fabs(s - exact);
+    printf("trapezoid = %.17g\n", s);
+    printf("exact     = %.17g\n", exact);
+    printf("|err|     = %.6g\n", err);
+    printf("__ANS__%.17g\n", s);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-target="1.7197134913893108" data-check-rtol="1e-3">
+  <div class="editor-head"><span class="fname">task0_2.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
+  <textarea data-code>#include &lt;cstdio&gt;
+#include &lt;cmath&gt;
+
+double trapezoid(double (*f)(double), double a, double b, int N) {
+    double h = (b - a) / N;
+    double s = 0.5 * (f(a) + f(b));
+    // TODO: прибавить f(a + i*h) для i = 1..N-1
+    return s * h;
+}
+</textarea>
+  <div class="output" data-output></div>
+</div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
+</div>
+
+<!-- =============================================================== -->
+<h2 id="part1">§1. Составной Симпсон и порядок сходимости</h2>
+
+<div class="task" data-num="1.1">
+<strong>Задача 1.1. Составной Симпсон.</strong> Реализуйте <code>simpson</code> по формуле (7.10) при <em>чётном</em> \(N\). Тест: \(N = 10\); ошибка \(\sim 3 \cdot 10^{-7}\) — на 4 порядка лучше трапеций.
+
+<div class="editor-shell" data-cpp="q11"
+     data-harness='double f_exp(double x) { return std::exp(x); }
+int main() {
+    double s = simpson(f_exp, 0.0, 1.0, 10);
+    double exact = std::exp(1.0) - 1.0;
+    double err = std::fabs(s - exact);
+    printf("simpson = %.17g\n", s);
+    printf("exact   = %.17g\n", exact);
+    printf("|err|   = %.6g\n", err);
+    printf("__ANS__%.17g\n", s);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-target="1.7182818935276422" data-check-rtol="1e-8">
+  <div class="editor-head"><span class="fname">task1_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
+  <textarea data-code>#include &lt;cstdio&gt;
+#include &lt;cmath&gt;
+
+double simpson(double (*f)(double), double a, double b, int N) {
+    // Требуем чётное N
+    double h = (b - a) / N;
+    double s = f(a) + f(b);
+    // TODO: 4 * (сумма по нечётным i), 2 * (сумма по чётным i, кроме 0 и N)
+    return s * h / 3.0;
+}
+</textarea>
+  <div class="output" data-output></div>
+</div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
+</div>
+
+<div class="task" data-num="1.2">
+<strong>Задача 1.2. Порядок при удвоении \(N\).</strong> Замерьте ошибку Симпсона при \(N = 10\) и \(N = 20\). Введите <em>отношение</em> ошибок \(\text{err}(N=10)/\text{err}(N=20)\). Теория предсказывает \(\approx 16\).
+
+<div class="editor-shell" data-cpp="q12"
+     data-harness='double f_exp(double x) { return std::exp(x); }
+int main() {
+    double exact = std::exp(1.0) - 1.0;
+    double e10 = std::fabs(simpson(f_exp, 0.0, 1.0, 10) - exact);
+    double e20 = std::fabs(simpson(f_exp, 0.0, 1.0, 20) - exact);
+    double ratio = e10 / e20;
+    printf("err(10) = %.6g\n", e10);
+    printf("err(20) = %.6g\n", e20);
+    printf("ratio   = %.6g (expect ~16)\n", ratio);
+    printf("__ANS__%.17g\n", ratio);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-target="16" data-check-atol="4">
+  <div class="editor-head"><span class="fname">task1_2.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
+  <textarea data-code>#include &lt;cstdio&gt;
+#include &lt;cmath&gt;
+
+// Скопируйте вашу simpson сюда
+</textarea>
+  <div class="output" data-output></div>
+</div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
+</div>
+
+<div class="task" data-num="1.3">
+<strong>Задача 1.3. Вывод.</strong>
+
+<div class="mcq" data-mcq="q13" data-correct="C">
+  <div class="head"><span class="status-dot"></span>Что подтвердил эксперимент</div>
+  <label><input type="radio" name="q13" value="A"> A. Симпсон — первого порядка.</label>
+  <label><input type="radio" name="q13" value="B"> B. Симпсон — второго порядка.</label>
+  <label><input type="radio" name="q13" value="C"> C. Симпсон — четвёртого порядка (\(2^4 = 16\)).</label>
+  <label><input type="radio" name="q13" value="D"> D. Симпсон — восьмого порядка.</label>
+  <button class="btn" type="button" data-mcq-check>проверить</button>
+  <div class="verdict" data-verdict></div>
+</div>
+</div>
+
+<!-- =============================================================== -->
+<h2 id="part2">§2. Метод Ромберга</h2>
+
+<div class="info" data-lbl="Идея">
+Строим таблицу \(R[k][j]\) размера \((K+1)\times (K+1)\). Первый столбец — трапеции при \(2^k\) отрезках. Каждый следующий столбец — экстраполяция Ричардсона (7.12). В правом нижнем углу — наиболее точное приближение.
+</div>
+
+<div class="task" data-num="2.1">
+<strong>Задача 2.1. Таблица Ромберга.</strong> Реализуйте <code>double romberg(...)</code> — возвращает \(R[K][K]\) при \(K = 5\) для \(\int_0^1 e^x dx\). Ожидается ошибка \(\lesssim 10^{-15}\).
+
+<div class="editor-shell" data-cpp="q21"
+     data-harness='double f_exp(double x) { return std::exp(x); }
+int main() {
+    double v = romberg(f_exp, 0.0, 1.0, 5);
+    double exact = std::exp(1.0) - 1.0;
+    double err = std::fabs(v - exact);
+    printf("Romberg R[5][5] = %.17g\n", v);
+    printf("exact           = %.17g\n", exact);
+    printf("|err|           = %.6g\n", err);
+    printf("__ANS__%.17g\n", err);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-target="0" data-check-atol="1e-13">
+  <div class="editor-head"><span class="fname">task2_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
+  <textarea data-code>#include &lt;cstdio&gt;
+#include &lt;cmath&gt;
+
+double trapezoid(double (*f)(double), double a, double b, int N) {
+    double h = (b - a) / N;
+    double s = 0.5 * (f(a) + f(b));
+    for (int i = 1; i &lt; N; ++i) s += f(a + i * h);
+    return s * h;
+}
+
+double romberg(double (*f)(double), double a, double b, int K) {
+    double R[8][8] = {0};
+    // Первый столбец: R[k][0] = трапеции с 2^k отрезками
+    for (int k = 0; k &lt;= K; ++k) {
+        int Nk = 1 &lt;&lt; k;
+        R[k][0] = trapezoid(f, a, b, Nk);
+    }
+    // Экстраполяция: R[k][j] = (4^j * R[k][j-1] - R[k-1][j-1]) / (4^j - 1)
+    // TODO: заполнить R[k][j] для j = 1..K, k = j..K
+    return R[K][K];
+}
+</textarea>
+  <div class="output" data-output></div>
+</div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
+</div>
+
+<div class="task" data-num="2.2">
+<strong>Задача 2.2. Что делает Ромберг.</strong>
+
+<div class="mcq" data-mcq="q22" data-correct="B">
+  <div class="head"><span class="status-dot"></span>Механизм</div>
+  <label><input type="radio" name="q22" value="A"> A. Уменьшает \(N\).</label>
+  <label><input type="radio" name="q22" value="B"> B. Линейные комбинации трапеций разной кратности убивают старшие члены ошибки — поднимают порядок с 2 до 2K+2.</label>
+  <label><input type="radio" name="q22" value="C"> C. Заменяет квадратуру на автомат Гаусса.</label>
+  <label><input type="radio" name="q22" value="D"> D. Использует случайные точки.</label>
+  <button class="btn" type="button" data-mcq-check>проверить</button>
+  <div class="verdict" data-verdict></div>
+</div>
+</div>
+
+<!-- =============================================================== -->
+<h2 id="part3">§3. Отчёт</h2>
+
+<div class="task" data-num="3.1">
+<strong>Задача 3.1. Обсудите.</strong> Когда Симпсон плохо работает (негладкая функция, разрывы производной, особенности на концах)? Что тогда используют?
+
+<div class="mcq" data-mcq="q31" data-correct="X">
+  <div class="head"><span class="status-dot"></span>отметка</div>
+  <label><input type="radio" name="q31" value="X"> Обсудил(а).</label>
+  <button class="btn" type="button" data-mcq-check>отметить</button>
+  <div class="verdict" data-verdict></div>
+</div>
+
+<div class="info" data-lbl="Ответ">
+Симпсон предполагает гладкость \(f^{(4)}\). При разрыве производной порядок падает до 2. Спасают: подбор адаптивной сетки (§&nbsp;8), квадратуры Гаусса (§&nbsp;8) или замена переменной, «выводящая» особенность.
+</div>
+</div>
+
+<div class="lecture-nav">
+  <a class="nav-prev" href="w07.html">← §7. Лекция</a>
+  <a class="nav-next" href="w08.html">§8. Квадратуры Гаусса →</a>
+</div>
+
+</div></div>
+
+<div class="comments-wrap">
+<div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">
+<h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
+<div id="comments-list"><p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p></div>
+<div id="comment-form" style="display:none;margin-top:.8rem">
+<textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
+<button onclick="window._postComment()" style="margin-top:.4rem;background:#b44a2d;color:#fff;border:none;padding:6px 18px;border-radius:5px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer">Отправить</button>
+</div>
+<div id="comment-login"><p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p></div>
+</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/comments.js"></script>
+
+<script type="module">
+import { init, run } from 'https://cdn.jsdelivr.net/npm/clang.js/dist/clang.js';
+const CLANG_PATH = 'https://cdn.jsdelivr.net/npm/clang.js/dist';
+const runtime = { ready: false, initing: false };
+const listeners = new Set();
+const origLog = console.log;
+console.log = function(msg){ origLog.apply(console, arguments); if (typeof msg === 'string') listeners.forEach(l => l(msg)); };
+function stripAnsi(s){ return String(s).replace(/\x1b\[[0-9;]*m/g, ''); }
+function isClangDiag(line){ return /(Fetching|Compiling|Untarring|Allowing rAF|clang -cc1|wasm-ld|done\.|Error:)/.test(line); }
+async function ensureRuntime(){
+  if (runtime.ready) return;
+  if (runtime.initing) { while (!runtime.ready) await new Promise(r=>setTimeout(r,200)); return; }
+  runtime.initing = true;
+  setRuntimeState('init', 'clang: загружаю ~60 МБ (первый раз)…');
+  try { await init({ path: CLANG_PATH }); runtime.ready = true; setRuntimeState('ok', 'clang: готов'); }
+  catch (e) { setRuntimeState('err', 'clang: ошибка — ' + e.message); throw e; }
+}
+function setRuntimeState(cls, text){
+  ['prog_runtime','side_runtime'].forEach(id=>{
+    const el = document.getElementById(id); if (!el) return;
+    el.className = (id==='prog_runtime' ? 'runtime ' : 'runtime-state ') + cls; el.textContent = text;
+  });
+}
+async function runCpp(studentCode, harness, outputEl){
+  await ensureRuntime();
+  const full = studentCode + '\n' + harness;
+  const buffer = []; const answers = []; let sawEnd = false;
+  const listener = (line) => {
+    const clean = stripAnsi(line);
+    if (isClangDiag(clean)) outputEl.insertAdjacentHTML('beforeend', '<span class="hi">'+escapeHtml(clean)+'</span>\n');
+    else outputEl.insertAdjacentHTML('beforeend', escapeHtml(clean)+'\n');
+    outputEl.scrollTop = outputEl.scrollHeight;
+    buffer.push(clean);
+    clean.split('\n').forEach(l => { const m = l.match(/^__ANS__(\S+)/); if (m) answers.push(parseFloat(m[1])); if (/^__END__/.test(l)) sawEnd = true; });
+  };
+  listeners.add(listener);
+  outputEl.innerHTML = '';
+  outputEl.insertAdjacentHTML('beforeend', '<span class="hi">Компилирую и запускаю…</span>\n');
+  try { await run(full); } catch (e) { outputEl.insertAdjacentHTML('beforeend', '<span class="err">'+escapeHtml(e.message)+'</span>\n'); }
+  const deadline = Date.now() + 120000;
+  while (!sawEnd && Date.now() < deadline) await new Promise(r=>setTimeout(r,120));
+  listeners.delete(listener);
+  return { answers, ended: sawEnd, output: buffer.join('\n') };
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+const PROG_KEY = 'cfd-nm-w07-lab-cpp-progress';
+let PROG = (function(){try{return JSON.parse(localStorage.getItem(PROG_KEY)||'{}');}catch(e){return{};}})();
+function saveProg(){ try{localStorage.setItem(PROG_KEY, JSON.stringify(PROG));}catch(e){} }
+const TOTAL = 9;
+function updateProgUI(){
+  const done = Object.values(PROG).filter(v=>v==='ok').length;
+  const pct = 100*done/TOTAL;
+  const bar = document.getElementById('prog_bar'); if (bar) bar.style.width = pct.toFixed(0)+'%';
+  const cnt = document.getElementById('prog_cnt'); if (cnt) cnt.textContent = done+'/'+TOTAL;
+  const side = document.getElementById('side_progress'); if (side) side.textContent = 'решено '+done+' из '+TOTAL;
+}
+document.getElementById('prog_reset').addEventListener('click', ()=>{
+  if (!confirm('Сбросить прогресс?')) return;
+  PROG = {}; saveProg(); updateProgUI();
+  document.querySelectorAll('[data-verdict]').forEach(v=>{v.className='verdict';v.textContent='';});
+  document.querySelectorAll('.status-dot').forEach(d=>d.classList.remove('ok','err'));
+});
+updateProgUI();
+function closeTo(got, want, rtol, atol){ rtol = rtol||0; atol = atol||0; if (!isFinite(got) || !isFinite(want)) return got===want; const d = Math.abs(got-want); const tol = Math.max(atol, rtol*Math.abs(want)); return d <= tol; }
+document.querySelectorAll('[data-cpp]').forEach(shell=>{
+  const id = shell.getAttribute('data-cpp');
+  const ta = shell.querySelector('[data-code]');
+  const outputEl = shell.querySelector('[data-output]');
+  const btnRun = shell.querySelector('[data-run]');
+  const btnReset = shell.querySelector('[data-reset]');
+  const harness = shell.getAttribute('data-harness') || '';
+  const rtol = parseFloat(shell.getAttribute('data-check-rtol')||'0');
+  const atol = parseFloat(shell.getAttribute('data-check-atol')||'0');
+  const targetAttr = shell.getAttribute('data-check-target');
+  const evalAttr = shell.getAttribute('data-check-eval');
+  const verdictEl = shell.nextElementSibling && shell.nextElementSibling.hasAttribute('data-verdict') ? shell.nextElementSibling : null;
+  const initial = ta.value;
+  const cm = CodeMirror.fromTextArea(ta, { mode: 'text/x-c++src', lineNumbers: true, theme: 'material-darker', indentUnit: 4, tabSize: 4, lineWrapping: false, extraKeys: { 'Ctrl-Enter': runNow, 'Cmd-Enter': runNow } });
+  const savedCode = localStorage.getItem('cfd-nm-w07-lab-cpp:'+id);
+  if (savedCode) cm.setValue(savedCode);
+  cm.on('change', () => localStorage.setItem('cfd-nm-w07-lab-cpp:'+id, cm.getValue()));
+  if (verdictEl && PROG[id]==='ok'){ verdictEl.className = 'verdict ok'; verdictEl.innerHTML = '<span class="status-dot ok"></span>✓ решено ранее'; }
+  btnReset.addEventListener('click', ()=>{ if (!confirm('Вернуть скелет?')) return; cm.setValue(initial); localStorage.removeItem('cfd-nm-w07-lab-cpp:'+id); });
+  async function runNow(){
+    btnRun.disabled = true; btnRun.textContent = '…';
+    try {
+      const code = cm.getValue();
+      const res = await runCpp(code, harness, outputEl);
+      let targets = [];
+      if (evalAttr) {
+        targets = evalAttr.split('|').map(call=>{
+          const m = call.match(/^([a-zA-Z_][\w]*)\((.*)\)$/);
+          if (!m) return NaN;
+          const fn = window.__EVAL__[m[1]]; if (!fn) return NaN;
+          try { const args = m[2].trim() ? m[2].split(',').map(s=>parseFloat(s)) : []; return fn.apply(null, args); }
+          catch(e){ return NaN; }
+        });
+      } else if (targetAttr) { targets = targetAttr.split(',').map(s=>parseFloat(s)); }
+      if (verdictEl) {
+        if (!res.ended) { verdictEl.className = 'verdict err'; verdictEl.innerHTML = '<span class="status-dot err"></span>✗ программа не вывела __END__ за 2 мин'; PROG[id] = 'err'; }
+        else if (res.answers.length === 0) { verdictEl.className = 'verdict part'; verdictEl.innerHTML = '<span class="status-dot"></span>программа запустилась, но не напечатала __ANS__'; }
+        else {
+          const n = Math.min(res.answers.length, targets.length || res.answers.length);
+          const msgs = []; let okAll = true;
+          for (let i=0;i<n;i++){
+            const got = res.answers[i]; const want = targets[i];
+            const ok = isFinite(want) ? closeTo(got, want, rtol, atol) : true;
+            if (!ok) { okAll = false; msgs.push('поле '+(i+1)+': '+got.toExponential(3)+' vs '+want.toExponential(3)); }
+          }
+          if (okAll){ verdictEl.className = 'verdict ok'; verdictEl.innerHTML = '<span class="status-dot ok"></span>✓ сходится с эталоном'; PROG[id] = 'ok'; }
+          else { verdictEl.className = 'verdict err'; verdictEl.innerHTML = '<span class="status-dot err"></span>✗ '+msgs.join('; '); PROG[id] = 'err'; }
+        }
+        saveProg(); updateProgUI();
+      }
+    } catch (e) { if (verdictEl) { verdictEl.className = 'verdict err'; verdictEl.innerHTML = '<span class="status-dot err"></span>✗ ошибка: '+escapeHtml(e.message); } }
+    finally { btnRun.disabled = false; btnRun.textContent = '▶ запустить'; }
+  }
+  btnRun.addEventListener('click', runNow);
+});
+document.querySelectorAll('[data-mcq]').forEach(box=>{
+  const id = box.getAttribute('data-mcq');
+  const correct = box.getAttribute('data-correct');
+  const btn = box.querySelector('[data-mcq-check]');
+  const verdict = box.querySelector('[data-verdict]');
+  const dot = box.querySelector('.status-dot');
+  if (PROG[id]==='ok'){ verdict.className='verdict ok'; verdict.textContent='✓ решено ранее'; dot.classList.add('ok'); }
+  btn.addEventListener('click', ()=>{
+    const chosen = box.querySelector('input[type=radio]:checked');
+    if (!chosen){ verdict.className='verdict err'; verdict.textContent='выберите вариант'; return; }
+    const ok = chosen.value === correct;
+    verdict.className = 'verdict '+(ok?'ok':'err');
+    verdict.textContent = ok ? '✓ верно' : '✗ не тот вариант';
+    dot.classList.toggle('ok', ok); dot.classList.toggle('err', !ok);
+    PROG[id] = ok ? 'ok' : 'err'; saveProg(); updateProgUI();
+  });
+});
+setTimeout(ensureRuntime, 800);
+</script>
+</body>
+</html>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ru" data-course="nm">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ЧМ · §5 Слайды · МНК и ортогональные базисы</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>window.MathJax = {tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },options: { skipHtmlTags: ['script','noscript','style','textarea'] }};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<script src="../js/slide-tools.js"></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0}
+*{margin:0;padding:0;box-sizing:border-box}html,body{height:100%}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:24px;line-height:1.55;color:var(--text);background:var(--bg);overflow:hidden}
+.slide{position:fixed;inset:0;padding:0;display:none;overflow:auto}
+.slide.active{display:flex;align-items:center;justify-content:center}
+.slide-content{width:100%;max-width:min(96vw, 1600px);margin:auto;padding:1.4rem 1.6rem 2.8rem}
+.slide.active .slide-content > *{animation: slideStep .38s cubic-bezier(.22,.61,.36,1) both;animation-delay: calc(var(--i, 0) * 85ms)}
+@keyframes slideStep{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.slide.active .eq{animation: formulaIn .55s cubic-bezier(.22,.61,.36,1) both;animation-delay: calc(var(--i, 0) * 85ms);transform-origin: center}
+@keyframes formulaIn{0%{opacity:0;transform:scale(.92) translateY(4px);filter:blur(3.5px)}55%{opacity:1;transform:scale(1.02);filter:blur(0)}100%{opacity:1;transform:scale(1)}}
+.slide.active .eq::after{content:'';position:absolute;left:0;right:0;bottom:-6px;height:2px;background:linear-gradient(90deg,transparent,var(--accent) 50%,transparent);transform:scaleX(0);opacity:0;animation: formulaUnderline .55s ease-out both;animation-delay: calc(var(--i, 0) * 85ms + .35s)}
+.slide.active .eq{position:relative}
+@keyframes formulaUnderline{0%{transform:scaleX(0);opacity:0}40%{transform:scaleX(1);opacity:.7}100%{transform:scaleX(1);opacity:0}}
+.slide.title.active .slide-content > *{animation:slideStep .55s ease both;animation-delay:calc(var(--i,0) * 140ms)}
+@media (prefers-reduced-motion: reduce){.slide.active .slide-content > *, .slide.active .eq, .slide.active .eq::after{animation:none}}
+.slide-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:.6rem}
+h1{font-family:'Playfair Display',serif;font-weight:900;font-size:2.6rem;line-height:1.12;color:var(--text);margin-bottom:1rem}
+h2{font-family:'Playfair Display',serif;font-weight:700;font-size:1.8rem;color:var(--accent);margin-bottom:1.2rem;line-height:1.15}
+h3{font-family:'Source Serif 4',serif;font-weight:700;font-size:1.15rem;color:var(--text);margin:1rem 0 .5rem}
+p{margin-bottom:.9rem}ul,ol{margin:0 0 .9rem 1.6rem;line-height:1.65}li{margin-bottom:.35rem}
+em{color:var(--accent2)}strong{color:var(--text)}
+code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2);padding:1px 6px;border-radius:3px}
+.eq{margin:1.2rem 0;text-align:center;font-size:1.05em}
+.definition,.condition,.theorem{position:relative;padding:1rem 1.3rem 1rem 3.2rem;border-radius:6px;margin:1rem 0;overflow:hidden;min-height:11rem}
+.definition{background:#e7efe8}.condition{background:#f2e5d6}.theorem{background:#e0e8f2}
+.definition::before,.condition::before,.theorem::before{position:absolute;left:0;top:0;bottom:0;width:2.1rem;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase}
+.definition::before{background:#d0dfd4;color:#3d6b5a;content:'Определение'}
+.definition[data-num]::before{content:'Определение ' attr(data-num)}
+.condition::before{background:#e5d1b8;color:#8a5236;content:'Условие'}
+.condition[data-num]::before{content:'Условие ' attr(data-num)}
+.theorem::before{background:#c8d5e6;color:#4a5f88;content:'Теорема'}
+.theorem[data-num]::before{content:'Теорема ' attr(data-num)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+.callout{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;font-size:.95em;color:var(--text2)}
+.slide.title{text-align:center;background:radial-gradient(ellipse at 30% 20%,#fff 0%,var(--bg) 55%,var(--bg2) 100%)}
+.slide.title .slide-content{max-width:1000px}
+.slide.title h1{font-size:3.4rem;margin-bottom:1.5rem;max-width:900px}
+.slide.title h1 .u{color:var(--accent);border-bottom:4px solid var(--accent);padding-bottom:.15rem}
+.slide.title .sub{font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--text2);margin-bottom:1rem}
+.slide.title .course{font-size:.85rem;color:var(--text3);text-transform:uppercase;letter-spacing:.24em;margin-bottom:.6rem}
+.slide.title .badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:.35rem .85rem;border:1.5px solid var(--accent);color:var(--accent);border-radius:20px;text-transform:uppercase;margin-bottom:1.4rem}
+.hud{position:fixed;bottom:0;left:0;right:0;padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to top,rgba(250,248,244,.95),transparent);z-index:100;pointer-events:none}
+.hud > *{pointer-events:auto}
+.hud button{font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:.4rem .9rem;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text2);cursor:pointer}
+.hud button:hover{border-color:var(--accent);color:var(--accent);background:var(--bg2)}
+.hud button:disabled{opacity:.35;cursor:default}
+.hud .counter{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3)}
+.hud .center{display:flex;gap:.4rem;align-items:center}
+.hud .back{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);text-decoration:none;padding:.35rem .7rem;border:1px dashed var(--border);border-radius:4px}
+.hud .back:hover{color:var(--accent);border-color:var(--accent)}
+.progress{position:fixed;top:0;left:0;right:0;height:3px;background:var(--bg3);z-index:99}
+.progress .fill{height:100%;background:var(--accent);transition:width .2s ease;width:0%}
+@media(min-width:1600px){body{font-size:26px}h1{font-size:3rem}h2{font-size:2rem}}
+@media(max-width:900px){.slide-content{padding:1.6rem 1.2rem 3rem}h1{font-size:1.9rem}h2{font-size:1.4rem}.two-col{grid-template-columns:1fr}body{font-size:19px}}
+@media print{body{overflow:visible;background:#fff}.slide{position:relative;display:flex!important;page-break-after:always;min-height:100vh;align-items:center;justify-content:center}.hud,.progress{display:none}}
+</style>
+</head>
+<body>
+<div class="progress"><div class="fill" id="progressFill"></div></div>
+
+<section class="slide title active">
+  <div class="course">Численные методы</div>
+  <div class="badge">Занятие 5 · Блок II. Аппроксимация</div>
+  <h1>Метод наименьших квадратов и <span class="u">ортогональные базисы</span></h1>
+  <div class="sub">Нормальные уравнения · Лежандр · Чебышёв · DFT · κ²</div>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§5.1 · Постановка</div>
+  <h2>Данных больше, чем неизвестных</h2>
+  <p>В §&nbsp;3-4 через \(n+1\) точку проходил единственный полином степени \(\le n\). Сегодня — <em>переопределённая</em> задача: измерений \(m\), базисных функций \(n+1\), при \(m \gg n\).</p>
+  <div class="definition" data-num="1">
+    Найти \(c^{*}\in\mathbb{R}^{n+1}\):
+    <div class="eq">\[ c^{*} = \arg\min_c\|Ac - y\|_2^2. \tag{5.2} \]</div>
+    В непрерывном случае — минимизация \(\|f - Q_n\|_{L_2}\).
+  </div>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§5.2 · Нормальные уравнения</div>
+  <h2>Нормальные уравнения — прямой путь</h2>
+  <p>Условие \(\nabla_c \|Ac - y\|^2 = 0\) даёт квадратную систему:</p>
+  <div class="theorem" data-num="1">
+    <div class="eq">\[ A^\top A\,c^{*} = A^\top y. \tag{5.4} \]</div>
+    Матрица \(A^\top A\) симметрична; при линейно независимых столбцах \(A\) — положительно определена.
+  </div>
+  <p>Явно в непрерывном случае:</p>
+  <div class="eq">\[ \sum_{k=0}^{n}(\varphi_j,\varphi_k)\,c_k^{*} = (\varphi_j, f). \tag{5.5} \]</div>
+  <p>Матрица Грама \((\varphi_j, \varphi_k)\) — плотная. Хочется её сделать диагональной.</p>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§5.3 · Ортогональные базисы</div>
+  <h2>Ортогональный базис = диагональная матрица Грама</h2>
+  <div class="definition" data-num="2">
+    Система \(\{\varphi_k\}\) ортогональна на \([a,b]\) с весом \(w &gt; 0\):
+    <div class="eq">\[ (\varphi_j, \varphi_k)_w = \int_a^b w(x)\,\varphi_j\varphi_k\,dx = 0\ \ (j\ne k). \tag{5.6} \]</div>
+  </div>
+  <div class="theorem" data-num="2">
+    <em style="color:inherit;font-weight:600">формула проекции.</em>
+    <div class="eq">\[ c_k^{*} = \frac{(f, \varphi_k)_w}{(\varphi_k, \varphi_k)_w}. \tag{5.7} \]</div>
+    Каждый коэффициент — независимо. Добавили \(\varphi_{n+1}\) — предыдущие \(c_k\) не меняются.
+  </div>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§5.4 · Полиномы Лежандра</div>
+  <h2>Полиномы Лежандра</h2>
+  <div class="definition" data-num="3">
+    Ортогональны на \([-1, 1]\) с весом \(w \equiv 1\).
+    <div class="eq">\[ P_0 = 1,\ P_1 = x,\quad (n+1)P_{n+1} = (2n+1)xP_n - nP_{n-1}. \tag{5.8} \]</div>
+    Норма:
+    <div class="eq">\[ \int_{-1}^{1}P_j P_k\,dx = \frac{2}{2k+1}\delta_{jk}. \tag{5.9} \]</div>
+  </div>
+  <p>МНК-разложение по Лежандру:</p>
+  <div class="eq">\[ c_k = \frac{2k+1}{2}\int_{-1}^{1} f(x)P_k(x)\,dx. \tag{5.10} \]</div>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§5.5 · Чебышёв как L²</div>
+  <h2>Чебышёв — та же система, другой вес</h2>
+  <p>В §&nbsp;4 \(T_n\) появились как <em>минимаксные</em>. Оказывается, они одновременно ортогональны на \([-1, 1]\) с весом \(w = 1/\sqrt{1 - x^2}\):</p>
+  <div class="eq">\[ \int_{-1}^{1}\frac{T_j T_k}{\sqrt{1-x^2}}\,dx = \begin{cases}0, & j\ne k,\\ \pi, & j=k=0,\\ \pi/2, & j=k\ge 1.\end{cases} \tag{5.11} \]</div>
+  <p>Разложение — по (5.12). Для гладкой \(f\) — <em>экспоненциальная</em> сходимость.</p>
+  <div class="callout" style="font-size:.9em">
+    <strong>Практика.</strong> Аппаратные библиотеки \(\sin, \cos, e^x\) хранят коэффициенты чебышёвского разложения. Для \(e^x\) на \([-1, 1]\) 12 коэффициентов дают полную точность double.
+  </div>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§5.6 · Фурье</div>
+  <h2>Тригонометрическая аппроксимация</h2>
+  <div class="definition" data-num="4">
+    Для \(2\pi\)-периодической \(f\in L_2\):
+    <div class="eq">\[ f \sim \frac{a_0}{2} + \sum_{k=1}^\infty(a_k\cos kx + b_k\sin kx), \tag{5.13} \]</div>
+    <div class="eq">\[ a_k = \frac{1}{\pi}\int_{-\pi}^{\pi} f\cos kx\,dx,\ \ b_k = \frac{1}{\pi}\int_{-\pi}^{\pi} f\sin kx\,dx. \]</div>
+  </div>
+  <p>Скорость сходимости связана с гладкостью: \(f\in C^p \Rightarrow a_k, b_k = O(k^{-p})\); для аналитических — экспоненциально.</p>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§5.7 · DFT</div>
+  <h2>Дискретное преобразование Фурье</h2>
+  <div class="definition" data-num="5">
+    Для дискретизации в \(N\) точках \(x_k = 2\pi k/N\):
+    <div class="eq">\[ \hat f_j = \frac{1}{N}\sum_{k=0}^{N-1} f(x_k)\,e^{-2\pi i j k/N}. \tag{5.14} \]</div>
+  </div>
+  <p>Прямое вычисление — \(O(N^2)\). БПФ (FFT, Cooley-Tukey) — \(O(N\log N)\).</p>
+  <div class="callout" style="font-size:.9em">
+    Роль DFT: свёртка за \(O(N\log N)\), сердце спектральных методов для УрЧП, стандартный инструмент цифровой обработки сигналов.
+  </div>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§5.8 · Проблема κ²</div>
+  <h2>Нормальные уравнения возводят обусловленность в квадрат</h2>
+  <div class="theorem" data-num="3">
+    <div class="eq">\[ \kappa_2(A^\top A) = \bigl(\kappa_2(A)\bigr)^2. \tag{5.16} \]</div>
+  </div>
+  <p>Если \(\kappa_2(A) \sim 10^8\), то \(\kappa_2(A^\top A) \sim 10^{16}\) — на пределе double.</p>
+  <div class="callout" style="border-left:5px solid var(--accent);background:#fbeee7;font-size:.9em">
+    <strong>Пример:</strong> степенной базис \(\{1, x, \ldots, x^n\}\) на \([0, 1]\) даёт матрицу Гильберта, \(\kappa\) которой растёт экспоненциально.
+  </div>
+  <div class="two-col">
+    <div class="callout" style="border-left:4px solid var(--accent)"><strong>Плохо:</strong> нормальные уравнения в степенном базисе → \(\kappa^2\).</div>
+    <div class="callout" style="border-left:4px solid var(--accent2)"><strong>Хорошо:</strong> ортогональный базис — \(\kappa = 1\); QR-разложение или SVD (§&nbsp;13).</div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§5.9 · Итоги</div>
+  <h2>Что унести с занятия 5</h2>
+  <ol style="font-size:.92em">
+    <li>Задача МНК (5.2): переопределённая система решается в смысле минимума суммы квадратов.</li>
+    <li>Нормальные уравнения (5.4) — прямой путь, работает пока задача не близка к вырождению.</li>
+    <li>Ортогональный базис делает матрицу Грама диагональной; коэффициенты — по формуле проекции (5.7).</li>
+    <li>Полиномы Лежандра — на \([-1,1]\) с весом 1; Чебышёва — с весом \(1/\sqrt{1-x^2}\).</li>
+    <li>Тригонометрический базис + DFT — стандарт для периодических данных.</li>
+    <li>Опасность: \(\kappa_2(A^\top A) = \kappa_2(A)^2\). Для больших размерностей — ортогональные базисы или обратно устойчивые алгоритмы (§&nbsp;13).</li>
+  </ol>
+</section>
+
+<section class="slide">
+  <div class="slide-num">Практика</div>
+  <h2>Дальше — лаба и литература</h2>
+  <div class="two-col">
+    <div>
+      <h3 style="color:var(--accent)">▶ Лаба на C++</h3>
+      <p style="font-size:.9em">Постройте полином степени 5 для \(e^x\) на \([-1, 1]\) двумя способами — через нормальные уравнения (степенной базис) и через проекцию на Лежандра. Увидите \(\kappa^2\)-эффект уже на \(n=5\).</p>
+      <div style="margin-top:.5rem;font-family:'JetBrains Mono',monospace;font-size:.8rem"><a href="w05-lab.html" style="color:var(--accent);text-decoration:none;border:1px solid var(--accent);padding:.35rem .8rem;border-radius:5px">открыть лабу →</a></div>
+    </div>
+    <div>
+      <h3 style="color:var(--accent)">Литература</h3>
+      <ol style="font-size:.82em;line-height:1.5">
+        <li>Trefethen, Bau. Numerical Linear Algebra. — SIAM, 1997. — лекции 7, 11.</li>
+        <li>Trefethen. Approximation Theory and Practice. — SIAM, 2013.</li>
+        <li>Björck. Numerical Methods for Least Squares. — SIAM, 1996.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section class="slide title">
+  <div class="badge">Занятие 5 · итог</div>
+  <h1>Вопросы?</h1>
+  <div class="sub">Следующее занятие → §6. Численное дифференцирование</div>
+</section>
+
+<div class="hud">
+  <a href="w05.html" class="back">← к тексту</a>
+  <div class="center">
+    <button id="btnPrev" onclick="prev()">◀ назад</button>
+    <span class="counter" id="counter">1 / 13</span>
+    <button id="btnNext" onclick="next()">вперёд ▶</button>
+  </div>
+  <a href="w06.html" class="back">§6 →</a>
+</div>
+
+<script>
+(function(){
+  var slides = Array.from(document.querySelectorAll('.slide'));
+  var counter = document.getElementById('counter');
+  var fill = document.getElementById('progressFill');
+  var i = 0;
+  slides.forEach(function(s){ var wrap = document.createElement('div'); wrap.className = 'slide-content'; while (s.firstChild) wrap.appendChild(s.firstChild); s.appendChild(wrap); });
+  function show(n) {
+    slides[i].classList.remove('active');
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    var s = slides[i]; var content = s.querySelector('.slide-content') || s;
+    var animated = [];
+    Array.from(content.children).forEach(function(child){ animated.push(child); var innerEq = child.querySelectorAll('.eq'); for (var j = 0; j < innerEq.length; j++) animated.push(innerEq[j]); });
+    animated.forEach(function(el, k){ el.style.setProperty('--i', k); el.style.animation = 'none'; });
+    void s.offsetWidth;
+    animated.forEach(function(el){ el.style.animation = ''; });
+    s.classList.add('active');
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+    fill.style.width = ((i + 1) / slides.length * 100) + '%';
+    history.replaceState(null, '', '#' + (i + 1));
+    document.getElementById('btnPrev').disabled = (i === 0);
+    document.getElementById('btnNext').disabled = (i === slides.length - 1);
+    s.scrollTop = 0;
+  }
+  window.next = function(){ show(i + 1); };
+  window.prev = function(){ show(i - 1); };
+  document.addEventListener('keydown', function(e) {
+    if (/^(INPUT|TEXTAREA)$/i.test((e.target || {}).tagName)) return;
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+    else if (e.key === 'Home') { e.preventDefault(); show(0); }
+    else if (e.key === 'End')  { e.preventDefault(); show(slides.length - 1); }
+    else if (e.key === 'f' || e.key === 'F') { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); }
+  });
+  var h = parseInt((location.hash || '').replace('#', ''), 10);
+  if (!isNaN(h) && h >= 1 && h <= slides.length) show(h - 1); else show(0);
+  window.__slidesShow = show; window.__slidesIndex = function () { return i; };
+})();
+(function initSlideTools() {
+  function ready() { if (!window.CFDSlideTools) return;
+    window.CFDSlideTools.init({ slidesSelector: '.slide', activeClass: 'active', hudSelector: '.hud', projectName: 'nm-w05-slides', getCurrentIndex: function () { return window.__slidesIndex ? window.__slidesIndex() : 0; }, onGoToSlide: function (n) { if (window.__slidesShow) window.__slidesShow(n); } });
+  }
+  if (window.CFDSlideTools) ready(); else window.addEventListener('load', ready);
+})();
+</script>
+</body>
+</html>

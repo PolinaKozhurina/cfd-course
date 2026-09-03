@@ -4,10 +4,9 @@
 <meta charset="UTF-8">
 <link rel="icon" href="../favicon.ico" type="image/x-icon">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Занятие 2 курса «Численные методы»: формула Тейлора с остаточным членом в форме Лагранжа, классические разложения, ошибка усечения и big-O. Постановка задачи приближения функций, нормы и теорема Вейерштрасса. Практикум на Python.">
-<title>ЧМ · Занятие 2. Ряд Тейлора и аппроксимация</title>
+<meta name="description" content="Занятие 2 курса «Численные методы»: формула Тейлора с остаточным членом Лагранжа; классические разложения; порядок малости и ошибка усечения; постановка задачи наилучшего приближения; нормы функций и теорема Вейерштрасса.">
+<title>ЧМ · §2. Ряд Тейлора и аппроксимация функций</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/lecture.css">
 <script>
 window.MathJax = {
   tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
@@ -16,169 +15,228 @@ window.MathJax = {
 </script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
 <style>
-.tag-nummet{background:#ece9fb;color:#5b54b8}
-html.dark .tag-nummet{background:#241f3a;color:#a39bea}
-.lecture-num{color:#5b54b8}
-.phase{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#fff;background:#5b54b8;padding:.3rem .7rem;border-radius:4px;display:inline-block;margin:1.8rem 0 .4rem}
-.phase.prac{background:#1a6b5a}
-.phase.lecb{background:#3a5ba0}
-.pyblock{margin:1rem 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
-.pyhead{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;display:flex;justify-content:space-between}
-.pyhead .run{color:#9ec97f}
-pre.pycode{background:var(--code-bg);color:var(--code-text);margin:0;padding:.9rem 1.1rem;font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.6;overflow-x:auto;white-space:pre}
-.outbox{background:#f0f7f4;border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;padding:.6rem 1rem;margin:.6rem 0 1rem;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);white-space:pre-wrap}
-html.dark .outbox{background:#16241f}
-.exercise summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--accent2);margin-top:.6rem;font-weight:500}
-.exercise details{margin-top:.4rem}
-.exercise .extag{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:#5b54b8;background:#ece9fb;padding:1px 7px;border-radius:3px;margin-right:.4rem}
-html.dark .exercise .extag{background:#241f3a;color:#a39bea}
-.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0}
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8;--sidebar-bg:#2b2520;--sidebar-text:#d9cfc0}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
+.sidebar{position:fixed;left:0;top:38px;bottom:0;width:240px;background:var(--sidebar-bg);color:var(--sidebar-text);padding:1.5rem 1rem;overflow-y:auto;z-index:100;border-right:3px solid var(--accent);font-size:.8rem}
+.sidebar h2{font-family:'Playfair Display',serif;font-size:.85rem;font-weight:700;color:#fff;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.03em}
+.sidebar .g{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--accent);margin:.7rem 0 .15rem;text-transform:uppercase;letter-spacing:.08em}
+.sidebar a{display:block;color:var(--sidebar-text);text-decoration:none;font-size:.76rem;line-height:1.35;padding:.15rem 0 .15rem .5rem;border-left:2px solid transparent;transition:all .15s}
+.sidebar a:hover{color:#fff;border-left-color:var(--accent);background:rgba(180,74,45,.08)}
+.sidebar .sep{height:1px;background:rgba(255,255,255,.07);margin:.4rem 0}
+.main{margin-left:240px;padding:2rem 2.5rem 4rem}
+.main-inner{max-width:960px}
+.lecture-tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;padding:.2rem .5rem;border-radius:3px;display:inline-block;margin-bottom:.5rem;background:#ece9fb;color:#5b54b8}
+.lecture-num{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);margin-bottom:.3rem}
+h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;line-height:1.15;margin-bottom:1.5rem;color:var(--text)}
+h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--accent);margin:2rem 0 .8rem;padding-top:.5rem;border-top:1px solid var(--border)}
+h3{font-family:'Source Serif 4',serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:1.5rem 0 .5rem}
+p{margin-bottom:1rem;text-align:justify;hyphens:auto}
+ul,ol{margin:.5rem 0 1rem 1.5rem}
+li{margin:.3rem 0}
+.eq{margin:1.5rem 0;text-align:center}
+code{font-family:'JetBrains Mono',monospace;background:var(--bg2);padding:1px 5px;border-radius:3px;font-size:.9em}
+.definition,.condition,.theorem{position:relative;padding:1rem 1.2rem 1rem 3rem;border-radius:6px;margin:1.2rem 0;border:none;overflow:hidden;min-height:10.5rem}
+.definition{background:#e7efe8}
+.condition{background:#f2e5d6}
+.theorem{background:#e0e8f2}
+.definition strong,.condition strong,.theorem strong{color:var(--text)}
+.definition::before,.condition::before,.theorem::before{position:absolute;left:0;top:0;bottom:0;width:2rem;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase}
+.definition::before{background:#d0dfd4;color:#3d6b5a;content:'Определение'}
+.definition[data-num]::before{content:'Определение ' attr(data-num)}
+.condition::before{background:#e5d1b8;color:#8a5236;content:'Условие'}
+.condition[data-num]::before{content:'Условие ' attr(data-num)}
+.theorem::before{background:#c8d5e6;color:#4a5f88;content:'Теорема'}
+.theorem[data-num]::before{content:'Теорема ' attr(data-num)}
+@media(max-width:700px){.definition,.condition,.theorem{padding-left:2.4rem}.definition::before,.condition::before,.theorem::before{width:1.7rem;font-size:.55rem;letter-spacing:.16em}}
+.example{background:#e0e8f2;border-left:3px solid #7d95bd;padding:.7rem 1rem;border-radius:0 6px 6px 0;margin:.4rem 0 1.2rem;font-size:.94em;color:var(--text)}
+.example .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#4a5f88;margin-bottom:.35rem}
+.example ul{margin:.2rem 0 0 1.2rem}
+.example li{margin-bottom:.2rem}
+.remark{background:#f0f7f4;border-left:3px solid var(--accent2);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:.95rem}
+.remark strong{color:var(--accent2)}
+.warning{background:#fbeee7;border-left:3px solid var(--accent);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:.95rem}
+.warning strong{color:var(--accent)}
+.algo{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.2rem 1.5rem;margin:1.2rem 0}
+.algo ol{margin:.5rem 0 0 1.2rem;font-size:.95rem}
+.algo li{margin:.4rem 0}
+.figure{margin:1.5rem auto;text-align:center}
+.figure svg{max-width:100%;height:auto}
+.figure .caption{font-size:.82rem;color:var(--text2);margin-top:.5rem;font-style:italic}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1.4rem 0}
 .intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
-.intbox select,.intbox input[type=range]{font-family:'JetBrains Mono',monospace}
-.intbox select{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
-html.dark .intbox select{background:#1b1712;color:var(--text)}
-.kbd{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg3);padding:1px 5px;border-radius:3px}
-/* центрирование контента и выравнивание блока комментариев */
-.main-inner{margin-left:auto;margin-right:auto}
-.comments-wrap{max-width:none;margin-left:240px}
-#comments-section{max-width:960px;margin-left:auto;margin-right:auto}
-@media(max-width:1000px){.comments-wrap{margin-left:0}}
+.intbox select,.intbox input[type=range],.intbox input[type=number]{font-family:'JetBrains Mono',monospace}
+.intbox select,.intbox input[type=number]{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+.intbox canvas{max-width:100%;height:auto;background:#fdf9f3;border-radius:6px;border:1px solid var(--border)}
+.labcta{background:linear-gradient(135deg,#e0e8f2 0%,#e7efe8 100%);border-radius:8px;padding:1rem 1.2rem;margin:1.4rem 0;display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
+.labcta .badge{font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;background:#4a5f88;color:#fff;padding:.35rem .7rem;border-radius:4px;flex:0 0 auto}
+.labcta .text{flex:1;min-width:220px;font-size:.92rem;color:var(--text)}
+.labcta .go{font-family:'JetBrains Mono',monospace;font-size:.78rem;background:var(--accent);color:#fff;padding:.45rem .95rem;border-radius:5px;text-decoration:none;white-space:nowrap;transition:all .15s}
+.labcta .go:hover{background:#8f3a24;transform:translateY(-1px)}
+.lecture-nav{display:flex;justify-content:space-between;gap:1rem;margin-top:3rem;padding-top:1.5rem;border-top:2px solid var(--border);flex-wrap:wrap}
+.lecture-nav a{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);text-decoration:none;padding:.5rem .8rem;border:1px solid var(--border);border-radius:6px;transition:all .15s;max-width:48%}
+.lecture-nav a:hover{border-color:var(--accent);background:rgba(180,74,45,.05)}
+.nav-prev{text-align:left}.nav-next{text-align:right;margin-left:auto}
+@media(max-width:1000px){.sidebar{display:none}.main{margin-left:0;padding:1.5rem}.comments-wrap{margin-left:0 !important;padding:0 1.5rem 2rem}}
+@media(max-width:720px){body{font-size:16px}h1{font-size:1.55rem}h2{font-size:1.15rem}.main{padding:1.2rem 1rem 3rem;overflow-x:clip}.main-inner [style*="grid-template-columns"]{grid-template-columns:1fr !important}.main-inner *{min-width:0}.main canvas,.main svg{max-width:100%;height:auto}.eq{max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}mjx-container[display="true"]{max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}mjx-container:not([display="true"]){display:inline-block !important;max-width:100%;overflow-x:auto;overflow-y:hidden;vertical-align:-0.3em}}
+.comments-wrap{margin-left:240px;max-width:calc(960px + 5rem);padding:0 2.5rem 2rem}
+#comments-section{max-width:960px}
+html.dark{--bg:#1b1712;--bg2:#231e18;--bg3:#2c261f;--text:#ece3d6;--text2:#bcb0a0;--text3:#8d8173;--accent:#e07a52;--accent2:#46b89c;--accent3:#82a0db;--border:#39322a;--sidebar-bg:#14100c;--sidebar-text:#cabfae}
+html.dark .definition{background:#1e2a24;color:var(--text)}
+html.dark .condition{background:#2a2118;color:var(--text)}
+html.dark .theorem{background:#1a2130;color:var(--text)}
+html.dark .example{background:#1a2130;color:var(--text);border-left-color:#4a5f88}
+html.dark .example .lbl{color:#82a0db}
+html.dark .definition::before{background:#20362d;color:#8fc4ac}
+html.dark .condition::before{background:#3a2a1a;color:#d3a874}
+html.dark .theorem::before{background:#26314a;color:#9fb6dd}
+html.dark .remark{background:#152420}
+html.dark .warning{background:#2a1a13}
+html.dark .algo,html.dark .intbox{background:#231e18}
+html.dark .figure{background:#f6f1e8;border:1px solid #e2d8c8;border-radius:8px;padding:.7rem .5rem}
+html.dark .figure .caption{color:#6b5d4f}
+html.dark .intbox canvas{background:#f6f1e8}
+@media print{html,html.dark{--bg:#fff;--bg2:#f6f6f4;--bg3:#ececec;--text:#000;--text2:#333;--text3:#555;--accent:#9c3a20;--accent2:#155f50;--accent3:#2f4d8a;--border:#ccc}#cfd-nav,.sidebar,.lecture-nav,.comments-wrap,.intbox,.labcta{display:none !important}body{background:#fff;font-size:11pt;padding-top:0 !important}.main{margin-left:0 !important;padding:0 1rem !important}h1,h2,h3{break-after:avoid;page-break-after:avoid;color:#000}.figure,.theorem,.definition,.condition,.example,.remark,.warning,.algo,.eq,table{break-inside:avoid;page-break-inside:avoid}a{color:#000;text-decoration:none}}
 </style>
 </head>
 <body>
 <script src="../js/nav.js"></script>
 
 <nav class="sidebar">
-  <h2>ЧМ · Занятие 2</h2>
-  <div class="g">Лекция A</div>
+  <h2>§2. Ряд Тейлора</h2>
+  <div class="g">Содержание</div>
   <a href="#taylor">Формула Тейлора</a>
-  <a href="#series">Классические ряды</a>
-  <a href="#trunc">Ошибка усечения</a>
-  <a href="#cancel-exp">e⁻ˣ и потеря значимости</a>
-  <div class="g">Практикум</div>
-  <a href="#prac-sums">П1. Частичные суммы</a>
-  <a href="#prac-cancel">П2. Устойчивое e⁻²⁰</a>
-  <a href="#int-taylor">Интерактив: суммы Тейлора</a>
-  <div class="g">Лекция B</div>
-  <a href="#approx">Задача приближения</a>
+  <a href="#series">Классические разложения</a>
+  <a href="#trunc">Порядок малости</a>
+  <a href="#practice">Оценка остатка на практике</a>
+  <a href="#expneg">Знакопеременный ряд и потеря значимости</a>
+  <a href="#approx">Задача наилучшего приближения</a>
   <a href="#norms">Нормы функций</a>
   <a href="#weier">Теорема Вейерштрасса</a>
-  <a href="#minimax">Минимакс и МНК</a>
-  <a href="#summary">Итоги занятия</a>
+  <a href="#minmax">Минимакс и МНК</a>
+  <a href="#summary">Итоги</a>
+  <div class="sep"></div>
+  <div class="g">Практика</div>
+  <a href="w02-slides.html">▶ Слайды лекции</a>
+  <a href="w02-lab.html">▶ Лабораторная работа</a>
   <div class="sep"></div>
   <div class="g">Навигация</div>
-  <a href="index.html">← Обзор курса</a>
-  <a href="w03.html">→ Занятие 3</a>
+  <a href="w01.html">← §1. Машинная арифметика</a>
+  <a href="w03.html">→ §3. Полиномиальная интерполяция</a>
 </nav>
 
 <div class="main">
 <div class="main-inner">
-<span class="lecture-tag tag-nummet">Численные методы</span>
-<div class="lecture-num">Занятие 2 · Блок I. Основы вычислений</div>
-<h1>Ряд Тейлора и аппроксимация функций</h1>
 
-<p class="phase">Лекция A · ≤ 30 мин</p>
+<span class="lecture-tag">Численные методы</span>
+<div class="lecture-num">§2 · Блок I. Основы вычислений и аппроксимация</div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
+  <h1 style="margin:0">Ряд Тейлора и аппроксимация функций</h1>
+  <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+    <a href="w02-slides.html" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.4rem .8rem;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none;white-space:nowrap">▶ Слайды</a>
+    <a href="w02-lab.html" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.4rem .8rem;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none;white-space:nowrap">▶ Лаба</a>
+  </div>
+</div>
 
+<p>В §&nbsp;1 мы аккуратно разобрали ошибку <em>округления</em>. Сегодня — главный инструмент для второго источника, ошибки <em>усечения</em>. Почти каждый численный метод — разностные производные, квадратуры, методы интегрирования ОДУ, схемы для УрЧП — строится на замене функции отрезком её ряда Тейлора; а оценка отброшенного «хвоста» и есть оценка ошибки метода.</p>
+
+<!-- =============================================================== -->
 <h2 id="taylor">Формула Тейлора с остаточным членом</h2>
 
-<p>На прошлом занятии мы выделили три источника погрешности и подробно разобрали ошибку <em>округления</em>. Сегодня — главный инструмент для второго источника, ошибки <em>усечения</em>. Почти каждый численный метод (разностные производные, квадратуры, методы интегрирования ОДУ) строится на замене функции отрезком её ряда Тейлора, а оценка отброшенного «хвоста» и есть оценка ошибки метода.</p>
-
-<div class="theorem">
-<strong>Теорема (формула Тейлора с остатком в форме Лагранжа).</strong> Пусть \(f\) имеет \(n+1\) непрерывную производную на отрезке между \(a\) и \(x\). Тогда
+<div class="theorem" data-num="1">
+<em style="color:inherit;font-weight:600">формула Тейлора с остатком в форме Лагранжа.</em> Пусть \(f\colon[a,b]\to\mathbb{R}\) имеет \(n+1\) непрерывную производную на отрезке между точками \(x_0\) и \(x\). Тогда
 \[
-f(x) = \sum_{k=0}^{n} \frac{f^{(k)}(a)}{k!}\,(x-a)^k \;+\; R_n(x),
+f(x) \;=\; \sum_{k=0}^{n}\frac{f^{(k)}(x_0)}{k!}\,(x-x_0)^k \;+\; R_n(x),
+\tag{2.1}
 \]
 где остаточный член представим в виде
 \[
-R_n(x) = \frac{f^{(n+1)}(\xi)}{(n+1)!}\,(x-a)^{n+1},\qquad \xi \text{ между } a \text{ и } x.
-\]
-Многочлен \(P_n(x)=\sum_{k=0}^{n} f^{(k)}(a)(x-a)^k/k!\) называется <em>многочленом Тейлора</em> степени \(n\) в точке \(a\).
-</div>
-
-<p>Точка \(\xi\) существует, но неизвестна; на практике остаток оценивают сверху, заменяя \(f^{(n+1)}(\xi)\) на его максимум \(M_{n+1}=\max|f^{(n+1)}|\):</p>
-
-<div class="eq">\[
-|R_n(x)| \;\le\; \frac{M_{n+1}}{(n+1)!}\,|x-a|^{n+1}.
-\tag{2.1}
-\]</div>
-
-<div class="definition">
-<strong>Определение.</strong> При \(a=0\) формула Тейлора называется <em>формулой Маклорена</em>:
-\[
-f(x) = \sum_{k=0}^{n}\frac{f^{(k)}(0)}{k!}\,x^k + R_n(x).
-\]
-Если \(R_n(x)\to 0\) при \(n\to\infty\) на некотором множестве, частичные суммы сходятся к \(f\), и говорят, что \(f\) <em>разлагается в ряд</em> на этом множестве.
-</div>
-
-<h2 id="series">Классические разложения</h2>
-
-<p>Пять разложений в точке \(a=0\) встречаются постоянно; их полезно знать наизусть вместе с областью сходимости.</p>
-
-<div class="eq">\[
-e^{x} = \sum_{k=0}^{\infty}\frac{x^k}{k!} = 1 + x + \frac{x^2}{2!} + \frac{x^3}{3!} + \dots,
-\qquad x\in\mathbb{R}.
+R_n(x) \;=\; \frac{f^{(n+1)}(\xi)}{(n+1)!}\,(x-x_0)^{n+1},
+\qquad \xi\ \text{строго между}\ x_0\ \text{и}\ x.
 \tag{2.2}
-\]</div>
+\]
+Многочлен \(P_n(x) = \sum_{k=0}^{n} f^{(k)}(x_0)(x-x_0)^k/k!\) степени не выше \(n\) называется <em>многочленом Тейлора</em> функции \(f\) в точке \(x_0\).
+</div>
+
+<p>Точка \(\xi\) существует, но не задаётся формулой; на практике остаток оценивают сверху, заменяя \(f^{(n+1)}(\xi)\) на верхнюю грань:</p>
 
 <div class="eq">\[
-\sin x = \sum_{k=0}^{\infty}\frac{(-1)^k x^{2k+1}}{(2k+1)!},
-\qquad
-\cos x = \sum_{k=0}^{\infty}\frac{(-1)^k x^{2k}}{(2k)!},
-\qquad x\in\mathbb{R}.
+|R_n(x)| \;\le\; \frac{M_{n+1}}{(n+1)!}\,|x-x_0|^{n+1},\qquad
+M_{n+1} = \sup_{\xi\in[\min,\max]}\bigl|f^{(n+1)}(\xi)\bigr|.
 \tag{2.3}
 \]</div>
 
-<p>Для \(e^x,\ \sin x,\ \cos x\) ряд сходится на <em>всей</em> прямой: факториал в знаменателе бьёт любую степень \(|x|^{n+1}\), поэтому остаток (2.1) стремится к нулю при каждом фиксированном \(x\). Следующие три ряда сходятся лишь в круге радиуса \(1\):</p>
+<div class="definition" data-num="1">
+<em style="color:inherit;font-weight:600">формула Маклорена.</em> Формула Тейлора при \(x_0 = 0\) называется <em>формулой Маклорена</em>. Если \(R_n(x)\to 0\) при \(n\to\infty\) на некотором множестве, частичные суммы сходятся к \(f\), и говорят, что \(f\) <em>разлагается в ряд Тейлора</em> на этом множестве.
+</div>
+
+<!-- =============================================================== -->
+<h2 id="series">Пять классических разложений</h2>
+
+<p>Разложения в точке \(x_0=0\), которые встречаются на каждом шагу. Их полезно знать наизусть вместе с областью сходимости.</p>
 
 <div class="eq">\[
-\ln(1+x) = \sum_{k=1}^{\infty}\frac{(-1)^{k+1}x^k}{k} = x - \frac{x^2}{2} + \frac{x^3}{3} - \dots,
-\qquad -1 < x \le 1.
+e^{x} \;=\; \sum_{k=0}^{\infty}\frac{x^k}{k!} \;=\; 1 + x + \frac{x^2}{2!} + \frac{x^3}{3!} + \dots,
+\qquad x\in\mathbb{R}.
 \tag{2.4}
 \]</div>
 
 <div class="eq">\[
-\frac{1}{1-x} = \sum_{k=0}^{\infty} x^k = 1 + x + x^2 + \dots,
-\qquad |x| < 1.
+\sin x \;=\; \sum_{k=0}^{\infty}\frac{(-1)^k x^{2k+1}}{(2k+1)!},
+\qquad
+\cos x \;=\; \sum_{k=0}^{\infty}\frac{(-1)^k x^{2k}}{(2k)!},
+\qquad x\in\mathbb{R}.
 \tag{2.5}
 \]</div>
 
 <div class="eq">\[
-(1+x)^{\alpha} = \sum_{k=0}^{\infty}\binom{\alpha}{k}x^k,
-\qquad \binom{\alpha}{k}=\frac{\alpha(\alpha-1)\cdots(\alpha-k+1)}{k!},
-\qquad |x| < 1.
+\ln(1+x) \;=\; \sum_{k=1}^{\infty}\frac{(-1)^{k+1}x^k}{k} \;=\; x - \frac{x^2}{2} + \frac{x^3}{3} - \dots,
+\qquad -1 &lt; x \le 1.
 \tag{2.6}
 \]</div>
 
+<div class="eq">\[
+\frac{1}{1-x} \;=\; \sum_{k=0}^{\infty} x^k \;=\; 1 + x + x^2 + \dots,
+\qquad |x| &lt; 1.
+\tag{2.7}
+\]</div>
+
+<div class="eq">\[
+(1+x)^{\alpha} \;=\; \sum_{k=0}^{\infty}\binom{\alpha}{k}x^k,
+\qquad \binom{\alpha}{k}=\frac{\alpha(\alpha-1)\cdots(\alpha-k+1)}{k!},
+\qquad |x| &lt; 1.
+\tag{2.8}
+\]</div>
+
 <div class="remark">
-<strong>Радиус сходимости.</strong> Геометрический ряд (2.5) расходится при \(|x|\ge 1\) — это видно прямо: при \(|x|\ge1\) члены \(x^k\) не стремятся к нулю. У \(\ln(1+x)\) ближайшая особенность функции — в точке \(x=-1\), и именно расстояние до неё, равное \(1\), задаёт радиус. У \(e^x\) особенностей в конечной части плоскости нет, поэтому радиус бесконечен.
+<strong>Радиус сходимости.</strong> Геометрический ряд (2.7) расходится уже при \(|x|=1\) — члены \(x^k\) не стремятся к нулю. У \(\ln(1+x)\) ближайшая особенность функции — в точке \(x=-1\), и именно расстояние до неё, равное \(1\), задаёт радиус. У \(e^x\) особенностей в конечной части плоскости нет — радиус бесконечен, и факториал в знаменателе (2.4) бьёт любую степень \(|x|^{n+1}\).
 </div>
 
-<h2 id="trunc">Усечение ряда — это ошибка метода</h2>
+<!-- =============================================================== -->
+<h2 id="trunc">Порядок малости и ошибка усечения</h2>
 
-<p>Бесконечную сумму компьютер вычислить не может: ряд <em>обрывают</em> на конечном числе членов. Отброшенный хвост — это и есть <strong>ошибка усечения</strong> (truncation error), погрешность метода в чистом виде, присутствующая даже при идеальной арифметике.</p>
+<p>Компьютер не суммирует бесконечных рядов — их <em>обрывают</em> на конечном \(n\). Отброшенный хвост — это и есть <strong>ошибка усечения</strong> (truncation error): погрешность метода в чистом виде, присутствующая даже при идеальной арифметике.</p>
 
-<div class="theorem">
-<strong>Порядок малости при \(x\to 0\).</strong> Если оборвать ряд Маклорена на члене степени \(n\), то по оценке (2.1)
+<div class="theorem" data-num="2">
+<em style="color:inherit;font-weight:600">порядок малости остатка при \(x\to 0\).</em> Если оборвать ряд Маклорена на члене степени \(n\), то по оценке (2.3)
 \[
-\bigl|f(x) - P_n(x)\bigr| = |R_n(x)| \le \frac{M_{n+1}}{(n+1)!}\,|x|^{n+1} = O\!\left(x^{\,n+1}\right),\qquad x\to 0.
+\bigl|f(x) - P_n(x)\bigr| = |R_n(x)| \;\le\; \frac{M_{n+1}}{(n+1)!}\,|x|^{n+1} \;=\; O\!\left(x^{n+1}\right),\qquad x\to 0.
+\tag{2.9}
 \]
-То есть ошибка ведёт себя как первый <em>отброшенный</em> член. Каждый дополнительный член повышает порядок точности на единицу.
+То есть ошибка усечения ведёт себя как <em>первый отброшенный член</em>. Каждый дополнительный член повышает порядок точности на единицу.
 </div>
 
-<p>Например, приближение \(\sin x \approx x\) (обрыв на \(n=1\)) имеет ошибку \(O(x^3)\): при \(x=0.1\) она порядка \(10^{-3}\)/6, а при \(x=0.01\) — уже \(10^{-6}\)/6. Это правило «порядок \(=\) первый брошенный член» лежит в основе оценки точности разностных схем на следующих занятиях.</p>
+<p>Например, приближение \(\sin x \approx x\) (обрыв на \(n=1\)) имеет ошибку \(O(x^3)\): при \(x=0{,}1\) она порядка \(10^{-3}/6\), а при \(x=0{,}01\) — уже \(10^{-6}/6\). Правило «порядок точности = первый отброшенный член» — рабочий язык всей аппроксимационной теории; на нём же формулируется порядок аппроксимации разностных схем и квадратур.</p>
 
 <div class="figure">
-<svg viewBox="0 0 600 250" xmlns="http://www.w3.org/2000/svg" style="max-width:560px" role="img" aria-label="График синуса и его многочленов Тейлора степеней 1, 3, 5: с ростом степени приближение всё дольше держится у кривой синуса при удалении от нуля.">
+<svg viewBox="0 0 600 250" xmlns="http://www.w3.org/2000/svg" style="max-width:600px" role="img" aria-label="График синуса и его многочленов Тейлора степеней 1, 3, 5.">
   <line x1="40" y1="125" x2="575" y2="125" stroke="#2c2419" stroke-width="1"/>
   <line x1="307" y1="20" x2="307" y2="230" stroke="#2c2419" stroke-width="1"/>
   <text x="568" y="120" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">x</text>
-  <!-- sin x (true) -->
   <path d="M 40 199 Q 130 35 218 35 Q 280 35 307 125 Q 334 215 396 215 Q 484 215 575 51" fill="none" stroke="#2c2419" stroke-width="2.2"/>
-  <!-- P1 = x : straight line through origin -->
   <line x1="190" y1="245" x2="424" y2="5" stroke="#b44a2d" stroke-width="1.6" stroke-dasharray="5,3"/>
-  <!-- P3 -->
   <path d="M 120 245 Q 200 70 280 60 Q 307 58 334 70 Q 414 175 494 245" fill="none" stroke="#1a6b5a" stroke-width="1.6" stroke-dasharray="6,4"/>
-  <!-- P5 -->
   <path d="M 70 230 Q 150 45 230 38 Q 307 34 384 60 Q 460 100 540 5" fill="none" stroke="#3a5ba0" stroke-width="1.6" stroke-dasharray="2,3"/>
   <g font-family="JetBrains Mono,monospace" font-size="11">
     <text x="48" y="44" fill="#2c2419">sin x</text>
@@ -190,117 +248,152 @@ e^{x} = \sum_{k=0}^{\infty}\frac{x^k}{k!} = 1 + x + \frac{x^2}{2!} + \frac{x^3}{
 <div class="caption">Рис. 1. Многочлены Тейлора \(P_1,P_3,P_5\) синуса в нуле. Вблизи \(x=0\) все совпадают с \(\sin x\); чем выше степень, тем дальше от нуля приближение «держится» за кривую.</div>
 </div>
 
-<h2 id="cancel-exp">Когда ряд встречается с округлением: \(e^{-x}\)</h2>
+<!-- =============================================================== -->
+<h2 id="practice">Оценка остатка на практике</h2>
 
-<p>Сходимость ряда — свойство <em>математическое</em>; на конечной арифметике добавляется второй эффект. Рассмотрим прямое суммирование ряда (2.2) для отрицательного аргумента:</p>
+<p>Формально в (2.3) фигурирует величина \(M_{n+1}\) — верхняя грань \(|f^{(n+1)}|\) по всему отрезку между \(x_0\) и \(x\). На реальной задаче она либо известна аналитически (для \(\sin, \cos\) любая производная не превышает 1; для \(e^x\) — \(e^{\max}\)), либо оценивается сверху грубым запасом.</p>
+
+<div class="example">
+<span class="lbl">Пример</span>
+Оценим, до какого \(n\) надо суммировать ряд Тейлора \(\sin x\) в нуле, чтобы гарантировать \(|R_n|&lt;10^{-8}\) на \(|x|\le 1\). Все производные \(|f^{(n+1)}|\le 1\), значит \(M_{n+1}\le 1\), и из (2.3):
+\[ |R_n|\le \frac{1}{(n+1)!} \le 10^{-8}\ \Rightarrow\ (n+1)! \ge 10^8. \]
+Ближайший факториал — \(12! \approx 4{,}8\cdot 10^{8}\), значит \(n+1 = 12\), т. е. надо взять члены до \(x^{11}\)/\(11!\) включительно. Реально хватит и меньше (у синуса чётные производные в нуле обнуляются), но такая оценка — рабочая с запасом.
+</div>
+
+<div class="remark">
+<strong>Замечание.</strong> Для <em>знакопеременного</em> ряда с убывающими по модулю членами (например, \(\sin x\), \(\cos x\), \(\ln(1+x)\) при \(0&lt;x\le 1\)) остаток мажорируется <em>первым отброшенным членом</em>: \(|R_n|\le|t_{n+1}|\) — оценка Лейбница. Это дешевле, чем возиться с \(M_{n+1}\), и часто применяется в качестве критерия остановки суммирования.
+</div>
+
+<!-- =============================================================== -->
+<h2 id="expneg">Знакопеременный ряд и потеря значимости</h2>
+
+<p>Сходимость ряда — свойство <em>математическое</em>; при вычислении на конечной арифметике добавляется второй эффект. Рассмотрим прямое суммирование ряда (2.4) для отрицательного аргумента:</p>
 
 <div class="eq">\[
-e^{-x} = \sum_{k=0}^{\infty}\frac{(-x)^k}{k!} = 1 - x + \frac{x^2}{2} - \frac{x^3}{6} + \dots
-\tag{2.7}
+e^{-x} \;=\; \sum_{k=0}^{\infty}\frac{(-x)^k}{k!} \;=\; 1 - x + \frac{x^2}{2!} - \frac{x^3}{3!} + \dots.
+\tag{2.10}
 \]</div>
 
-<p>При \(x=20\) слагаемые сначала <em>растут</em> по модулю до огромных значений (наибольший член \(\approx 20^{20}/20! \approx 4\times10^7\)), затем убывают, а сумма всех их равна крошечному \(e^{-20}\approx 2\times10^{-9}\). Чтобы получить такой малый результат как разность чисел порядка \(10^7\), нужно, чтобы старшие разряды этих чисел взаимно уничтожились — это та самая <strong>катастрофическая потеря значимости</strong> с занятия 1, но порождённая знакопеременным рядом. Лекарство то же: переписать вычисление, например \(e^{-20}=1/e^{20}\), где все слагаемые положительны. Проверим это руками в практикуме.</p>
+<p>При \(x=20\) слагаемые сначала <em>растут</em> по модулю: наибольший член \(\approx 20^{20}/20! \approx 4\cdot 10^{7}\). Затем они убывают, а сумма всего ряда — крошечный \(e^{-20}\approx 2\cdot 10^{-9}\). Получить малый ответ как разность величин порядка \(10^{7}\) — значит потребовать взаимного уничтожения старших семи-восьми десятичных разрядов. Это <em>катастрофическая потеря значимости</em> из §&nbsp;1.7, но теперь появившаяся не в одной вычитательной операции, а в знакопеременном хвосте бесконечного ряда.</p>
 
-<!-- ===================== ПРАКТИКУМ ===================== -->
-<p class="phase prac">Практикум · Python (NumPy/SciPy) · ≈ 60 мин</p>
+<p>Лекарство знакомое: <em>переписать</em> вычисление. В данном случае — суммировать ряд для положительного \(x\), а затем взять обратную величину:</p>
 
-<p>Достаточно стандартной библиотеки, NumPy и Matplotlib. Цель — <em>увидеть</em> ошибку усечения как функцию числа членов и столкнуться с знакопеременной неустойчивостью. Справочник по инструментам — в <a href="python-reference.html">памятке Python/NumPy/SciPy</a>.</p>
+<div class="eq">\[
+e^{-x} \;=\; \frac{1}{e^{x}}.
+\tag{2.11}
+\]</div>
 
-<h3 id="prac-sums">Практикум 1. Частичные суммы и ошибка усечения</h3>
+<p>Все слагаемые в правой части (2.4) для положительного \(x\) — положительные, катастрофического вычитания нет, ошибка суммирования порядка \(u\), а деление на \(e^x\) сохраняет относительную точность. Экспериментально в лабораторной проверим оба варианта на \(x=20\) и увидим, что наивный подход даёт ошибку \(\sim 170\%\), а устойчивый — \(\sim u \approx 10^{-16}\).</p>
 
-<p>Считаем частичные суммы рядов для \(\exp\) и \(\sin\) <em>устойчиво</em>, домножая предыдущий член на отношение соседних членов (без вычисления факториалов и степеней по отдельности), и сравниваем с эталоном <code>math.exp</code>/<code>math.sin</code>.</p>
+<!-- =============================================================== -->
+<h2 id="approx">Задача наилучшего приближения</h2>
 
-<div class="pyblock"><div class="pyhead"><span>partial_sums.py</span><span class="run">▶ python</span></div>
-<pre class="pycode">import math
-import numpy as np
-import matplotlib.pyplot as plt
+<p>Формула Тейлора даёт приближение \(f\) многочленом \(P_n\), <em>оптимальное локально</em> — в окрестности точки разложения. Для «глобального» приближения на отрезке хочется другой критерий: минимизировать ошибку <em>по всему отрезку</em>, а не в одной точке.</p>
 
-def exp_partial(x, n):
-    """Сумма первых n членов ряда exp: term_k = x^k / k!."""
-    s, term = 0.0, 1.0          # член k=0 равен 1
-    for k in range(n):
-        s += term
-        term *= x / (k + 1)     # переход k -> k+1
-    return s
-
-def sin_partial(x, n):
-    """Сумма первых n членов ряда sin: знакопеременный, нечётные степени."""
-    s, term = 0.0, x            # член k=0 равен x
-    for k in range(n):
-        s += term
-        term *= -x * x / ((2*k + 2) * (2*k + 3))
-    return s
-
-x = 1.5
-ns = range(1, 13)
-err_exp = [abs(exp_partial(x, n) - math.exp(x)) for n in ns]
-err_sin = [abs(sin_partial(x, n) - math.sin(x)) for n in ns]
-
-plt.semilogy(list(ns), err_exp, 'o-', label='exp')
-plt.semilogy(list(ns), err_sin, 's-', label='sin')
-plt.xlabel('число членов n'); plt.ylabel('|ошибка усечения|')
-plt.legend(); plt.grid(True, which='both'); plt.show()</pre></div>
-
-<div class="outbox">n= 2  exp: ошибка 1.18e+00   sin: ошибка 5.62e-01
-n= 4  exp: ошибка 4.71e-02   sin: ошибка 8.95e-03
-n= 6  exp: ошибка 5.95e-04   sin: ошибка 3.84e-05
-n= 8  exp: ошибка 3.30e-06   sin: ошибка 7.97e-08
-n=10  exp: ошибка 1.10e-08   sin: ошибка 9.92e-11
-n=12  exp: ошибка 2.50e-11   sin: ошибка 7.16e-14</div>
-
-<p>На полулогарифмическом графике ошибка падает почти прямой линией — это сверхбыстрая (факториальная) сходимость. Каждый член добавляет несколько верных цифр, пока ошибка усечения не упрётся в уровень округления \(\sim u\), после чего улучшать нечего.</p>
-
-<h3 id="prac-cancel">Практикум 2. Знакопеременный ряд и устойчивое \(e^{-20}\)</h3>
-
-<div class="pyblock"><div class="pyhead"><span>exp_neg.py</span><span class="run">▶ python</span></div>
-<pre class="pycode">import math
-
-def exp_series(x, n=200):
-    """Прямое суммирование ряда exp(x) первыми n членами."""
-    s, term = 0.0, 1.0
-    for k in range(n):
-        s += term
-        term *= x / (k + 1)
-    return s
-
-x = 20.0
-naive  = exp_series(-x)          # знакопеременный ряд -> потеря значимости
-stable = 1.0 / exp_series(x)     # все члены положительны -> устойчиво
-true   = math.exp(-x)
-
-print(f"наивно  e^-20 = {naive: .6e}")
-print(f"1/e^20  e^-20 = {stable: .6e}")
-print(f"math.exp e^-20 = {true: .6e}")
-print(f"относит. ошибка наивной = {abs(naive-true)/true: .2e}")
-print(f"относит. ошибка 1/e^20  = {abs(stable-true)/true: .2e}")</pre></div>
-
-<div class="outbox">наивно  e^-20 =  5.621884e-09
-1/e^20  e^-20 =  2.061154e-09
-math.exp e^-20 =  2.061154e-09
-относит. ошибка наивной = 1.73e+00
-относит. ошибка 1/e^20  = 2.71e-16</div>
-
-<p>Наивное суммирование ошибается на <em>170 %</em>: ни одной верной цифры. Промежуточные слагаемые достигают \(\sim4\times10^7\), и при их сокращении до \(2\times10^{-9}\) теряются все 16 значащих цифр. Устойчивая формула \(1/e^{20}\) даёт ошибку порядка \(u\) — машинную точность. Мораль занятия 1 в новой обёртке: <em>избегайте вычитания близких больших величин</em>, даже если оно спрятано внутри знакопеременного ряда.</p>
-
-<div class="exercise">
-<strong><span class="extag">Задача 2.1</span>Сколько членов нужно?</strong> Напишите функцию, которая для заданных \(x\) и точности \(\tau\) возвращает наименьшее число членов ряда \(\sin x\), при котором первый отброшенный член по модулю меньше \(\tau\) (для знакопеременного ряда это гарантирует \(|R_n|&lt;\tau\)). Проверьте для \(x=1\), \(\tau=10^{-10}\) и сравните фактическую ошибку с \(\tau\).
-<details><summary>Подсказка</summary>
-Для ряда Лейбница (знакопеременного, с убывающими по модулю членами) остаток не превосходит первого отброшенного члена: \(|R_n|\le |t_{n}|\). Наращивайте член \(t_k\) тем же рекуррентным домножением, что в практикуме, и остановитесь, как только \(|t_k|&lt;\tau\). Для \(x=1,\ \tau=10^{-10}\) хватает \(n=7\) членов.</details>
+<div class="definition" data-num="2">
+<em style="color:inherit;font-weight:600">задача наилучшего приближения.</em> Пусть \(X\) — линейное нормированное пространство функций на отрезке \([a,b]\), \(V \subset X\) — конечномерное подпространство (например, многочленов степени не выше \(n\)). <em>Наилучшим приближением</em> \(f \in X\) элементом из \(V\) в норме \(\|\cdot\|_X\) называется \(g^* \in V\) такое, что
+\[
+\|f - g^*\|_X \;=\; \inf_{g \in V} \|f - g\|_X.
+\tag{2.12}
+\]
+Величина \(E_n(f) = \inf_{g \in V}\|f-g\|_X\) называется <em>погрешностью наилучшего приближения</em>.
 </div>
 
-<div class="exercise">
-<strong><span class="extag">Задача 2.2</span>Радиус сходимости численно.</strong> Для \(\ln(1+x)\) и \(1/(1-x)\) постройте \(|f(x)-P_n(x)|\) при \(n=5,10,20,40\) на сетке \(x\in[-0.99,0.99]\) и при \(x=1.1,1.5\). Покажите на графике (semilogy), что при \(|x|&lt;1\) рост \(n\) уменьшает ошибку, а при \(|x|>1\) — увеличивает: ряд расходится.
-<details><summary>Подсказка</summary>
-Частичную сумму \(1/(1-x)\) считайте как \(P_n=\sum_{k=0}^{n-1}x^k\) (член \(t_{k+1}=t_k\cdot x\)); для \(\ln(1+x)\) член \(t_{k+1}=t_k\cdot(-x)\cdot k/(k+1)\), старт \(t_1=x\). При \(x=1.5\) добавление членов <em>увеличивает</em> \(|f-P_n|\): расходимость видна как растущие вверх кривые.</details>
+<p>Ответ на вопрос «какое приближение считать лучшим» полностью определяется <em>выбором нормы</em>. Разные нормы дают разные оптимальные многочлены и разные критерии близости.</p>
+
+<!-- =============================================================== -->
+<h2 id="norms">Нормы функций</h2>
+
+<p>В курсе будут регулярно встречаться три нормы; сравнение первых двух покажет разницу между «минимаксом» и «среднеквадратичным».</p>
+
+<div class="definition" data-num="3">
+<em style="color:inherit;font-weight:600">равномерная норма \(C[a,b]\).</em>
+\[
+\|f\|_C \;=\; \max_{x\in[a,b]}|f(x)|.
+\tag{2.13}
+\]
+Величина \(\|f-g\|_C\) — <em>максимальное отклонение</em> \(g\) от \(f\) на отрезке. Минимизировать её означает «прижать» худшую точку.
 </div>
 
-<div class="exercise">
-<strong><span class="extag">Задача 2.3</span>Устойчивое \(e^{-x}\).</strong> Постройте график относительной ошибки прямого суммирования ряда (2.7) для \(e^{-x}\) при \(x=1,2,5,10,20,30\) и сравните с устойчивой формулой \(1/e^{x}\). Объясните, при каком \(x\) наивная формула теряет первую верную цифру, оценив наибольший по модулю член ряда \(\approx x^{x}/x!\) (формула Стирлинга \(x!\approx\sqrt{2\pi x}\,(x/e)^x\) даёт \(\max|t_k|\approx e^{x}/\sqrt{2\pi x}\)).
+<div class="definition" data-num="4">
+<em style="color:inherit;font-weight:600">интегральная норма \(L_2[a,b]\).</em>
+\[
+\|f\|_{L_2} \;=\; \left(\int_{a}^{b} f(x)^2\,dx\right)^{1/2}.
+\tag{2.14}
+\]
+Величина \(\|f-g\|_{L_2}^2\) — <em>интегрированный квадрат отклонения</em>. Минимизировать её означает <em>усреднённо</em> приблизиться к \(f\); отдельные пики допустимы, если они узкие.
 </div>
 
+<div class="definition" data-num="5">
+<em style="color:inherit;font-weight:600">интегральная норма \(L_1[a,b]\).</em>
+\[
+\|f\|_{L_1} \;=\; \int_{a}^{b} |f(x)|\,dx.
+\tag{2.15}
+\]
+Даёт «робастное» приближение — устойчивое к выбросам.
+</div>
+
+<div class="example">
+<span class="lbl">Пример: три нормы одного и того же</span>
+Пусть \(f(x) = 1\) при \(x\in[0, 0.99]\) и \(f(x) = 100\) при \(x\in(0.99, 1]\) — «пик» шириной \(0{,}01\). Тогда
+\(\|f\|_C = 100\), \(\|f\|_{L_1} \approx 1{,}99\), \(\|f\|_{L_2} \approx \sqrt{100} = 10\). Разница — три порядка: минимаксная норма делает пик «важным», интегральные — почти игнорируют.
+</div>
+
+<!-- =============================================================== -->
+<h2 id="weier">Теорема Вейерштрасса о плотности многочленов</h2>
+
+<p>Прежде чем считать <em>оптимальный</em> многочлен, надо убедиться, что многочлены вообще способны приблизить непрерывную функцию сколь угодно точно. Ответ — знаменитая теорема Вейерштрасса.</p>
+
+<div class="theorem" data-num="3">
+<em style="color:inherit;font-weight:600">Вейерштрасс (1885).</em> Множество алгебраических многочленов плотно в \(C[a,b]\): для любой \(f\in C[a,b]\) и любого \(\varepsilon &gt; 0\) существует многочлен \(P\) такой, что
+\[
+\|f - P\|_C \;=\; \max_{x\in[a,b]}\bigl|f(x)-P(x)\bigr| \;&lt;\; \varepsilon.
+\tag{2.16}
+\]
+Иначе: \(E_n(f)\to 0\) при \(n\to\infty\) для любой непрерывной \(f\).
+</div>
+
+<p>Теорема гарантирует <em>существование</em> сколь угодно точного приближения, но ничего не говорит о его <em>степени</em>: для «жёсткой» функции (с большими производными или медленно убывающим модулем непрерывности) степень \(n\), обеспечивающая заданную точность, может быть астрономической. В §&nbsp;3 мы увидим, что даже гладкая функция \(1/(1+25x^2)\) на равномерной интерполяционной сетке даёт <em>расходящиеся</em> в максимальной норме приближения — знаменитый <em>феномен Рунге</em>.</p>
+
+<div class="remark">
+<strong>Конструктивные доказательства.</strong> Классическое доказательство Бернштейна строит явное приближение через полиномы Бернштейна \(B_n(f;x) = \sum_{k=0}^{n}\binom{n}{k}f(k/n)x^k(1-x)^{n-k}\). Оно очень медленное (сходимость \(O(1/n)\) для гладкой \(f\)), но <em>универсально</em>. Практические аппроксимации — на порядки быстрее: приближение чебышёвскими полиномами обеспечивает \(E_n(f)\le C/n^k\) для \(f\in C^k\), что мы разберём в §&nbsp;4.
+</div>
+
+<!-- =============================================================== -->
+<h2 id="minmax">Минимакс и МНК: два способа быть лучшим</h2>
+
+<p>Задача (2.12) в двух нормах даёт два <em>разных</em> оптимальных многочлена — с разными свойствами и разной алгоритмической сложностью.</p>
+
+<div class="definition" data-num="6">
+<em style="color:inherit;font-weight:600">минимаксное приближение.</em> Многочлен \(P^*_n \in \mathcal{P}_n\) степени не выше \(n\), минимизирующий равномерную ошибку:
+\[
+P^*_n = \arg\min_{P \in \mathcal{P}_n} \|f - P\|_C.
+\tag{2.17}
+\]
+Существует и единственен для любой \(f \in C[a,b]\) (теорема Чебышёва об альтернансе); строится алгоритмом Ремеза, требующим итерационного решения нелинейной задачи.
+</div>
+
+<div class="definition" data-num="7">
+<em style="color:inherit;font-weight:600">приближение по методу наименьших квадратов.</em> Многочлен \(Q^*_n \in \mathcal{P}_n\), минимизирующий \(L_2\)-ошибку:
+\[
+Q^*_n = \arg\min_{Q \in \mathcal{P}_n} \|f - Q\|_{L_2}.
+\tag{2.18}
+\]
+Единственен для любой \(f\in L_2[a,b]\); строится решением <em>линейной</em> системы нормальных уравнений (§&nbsp;5).
+</div>
+
+<div class="condition" data-num="1">
+<em style="color:inherit;font-weight:600">выбор между минимаксом и МНК.</em>
+<ul style="margin:.4rem 0 .1rem 1.2rem">
+<li>Минимакс даёт <em>равномерную</em> оценку — гарантию точности «везде». Дороже вычислительно; чувствителен к отдельным «выбросам» функции. Стандарт в графике, обработке сигналов, аппаратной реализации библиотек \(\sin\)/\(\cos\).</li>
+<li>МНК — линейная задача, дёшево. Устойчив к точечным ошибкам данных, идеален для регрессии по зашумлённым измерениям, для проекций на ортогональные базисы (Фурье, вейвлеты, полиномы Лежандра).</li>
+</ul>
+</div>
+
+<!-- =============================================================== -->
 <h3 id="int-taylor">Интерактив: частичные суммы Тейлора</h3>
 
-<p>Слева — выбранная функция \(f\) (чёрная) и её многочлен Тейлора \(P_N\) (фиолетовый) на отрезке; справа — ошибка усечения \(|f-P_N|\) в полулогарифмическом масштабе. Двигайте слайдер \(N\). Для \(\sin x\) и \(e^x\) рост \(N\) расширяет зону совпадения <em>на всю прямую</em>. Для \(\ln(1+x)\) и \(1/(1-x)\) вне круга \(|x|&lt;1\) (отмечен красными границами) добавление членов <em>уводит</em> \(P_N\) от \(f\) — ряд расходится.</p>
+<p>Слева — выбранная функция \(f\) (чёрная) и её многочлен Тейлора \(P_N\) (фиолетовый) на отрезке; справа — ошибка усечения \(|f-P_N|\) в полулогарифмическом масштабе. Двигайте слайдер \(N\). Для \(\sin x\) и \(e^x\) рост \(N\) расширяет зону совпадения на всю прямую. Для \(\ln(1+x)\) и \(1/(1-x)\) вне интервала сходимости \(|x|&lt;1\) (отмечен красными штрихами) добавление членов <em>уводит</em> \(P_N\) от \(f\) — ряд расходится.</p>
 
 <div class="intbox">
 <div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:end;margin-bottom:.7rem">
@@ -317,36 +410,32 @@ math.exp e^-20 =  2.061154e-09
   </div>
 </div>
 <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:.6rem">
-  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">f(x) и многочлен Тейлора P_N(x)</div><canvas id="t_curve" width="440" height="300" style="width:100%;height:auto" aria-label="График функции и её многочлена Тейлора степени N на отрезке."></canvas></div>
-  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">ошибка усечения |f − P_N| (semilogy)</div><canvas id="t_err" width="440" height="300" style="width:100%;height:auto" aria-label="График ошибки усечения между функцией и её многочленом Тейлора в полулогарифмическом масштабе."></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">f(x) и многочлен Тейлора P_N(x)</div><canvas id="t_curve" width="440" height="300" style="width:100%;height:auto"></canvas></div>
+  <div style="background:#fff;border-radius:6px;padding:.4rem;border:1px solid var(--border)"><div style="text-align:center;font-size:.76rem;font-weight:600;color:#5b54b8;font-family:'JetBrains Mono',monospace">ошибка усечения |f − P_N| (semilogy)</div><canvas id="t_err" width="440" height="300" style="width:100%;height:auto"></canvas></div>
 </div>
 <div id="t_status" style="font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text2);margin-top:.5rem"></div>
 </div>
 
 <script>
 (function(){
-  // конфигурация функций: точная f, диапазон x, диапазон y, радиус сходимости R
   var CFG={
-    sin:{f:Math.sin,                       xr:[-7.5,7.5], yr:[-2.6,2.6], R:Infinity},
-    exp:{f:Math.exp,                       xr:[-3.2,3.4], yr:[-1.5,15],  R:Infinity},
+    sin:{f:Math.sin, xr:[-7.5,7.5], yr:[-2.6,2.6], R:Infinity},
+    exp:{f:Math.exp, xr:[-3.2,3.4], yr:[-1.5,15],  R:Infinity},
     ln :{f:function(x){return Math.log(1+x);}, xr:[-0.92,2.4], yr:[-3.2,1.8], R:1},
     rec:{f:function(x){return 1/(1-x);},   xr:[-2.4,0.92], yr:[-2.2,8.5], R:1}
   };
-  // частичная сумма: первые N членов ряда Маклорена
   function partial(key,x,N){
     var s=0,t,k;
     if(key==='exp'){ t=1; for(k=0;k<N;k++){ s+=t; t*=x/(k+1); } }
     else if(key==='sin'){ t=x; for(k=0;k<N;k++){ s+=t; t*=-x*x/((2*k+2)*(2*k+3)); } }
     else if(key==='ln'){ t=x; for(k=1;k<=N;k++){ s+=t; t*=-x*k/(k+1); } }
-    else { t=1; for(k=0;k<N;k++){ s+=t; t*=x; } }   // rec: геометрический
+    else { t=1; for(k=0;k<N;k++){ s+=t; t*=x; } }
     return s;
   }
-
   function frame(ctx,P,pw,ph){
     ctx.strokeStyle='#6b5d4f';ctx.lineWidth=1;ctx.beginPath();
     ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+ph);ctx.lineTo(P.l+pw,P.t+ph);ctx.stroke();
   }
-
   function drawCurve(key,N){
     var o=CFG[key];
     var c=document.getElementById('t_curve'),ctx=c.getContext('2d'),W=c.width,H=c.height;
@@ -355,22 +444,16 @@ math.exp e^-20 =  2.061154e-09
     var x0=o.xr[0],x1=o.xr[1],y0=o.yr[0],y1=o.yr[1];
     function xp(x){return P.l+pw*(x-x0)/(x1-x0);}
     function yp(y){return P.t+ph*(1-(y-y0)/(y1-y0));}
-    // сетка
     ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
     for(var g=0;g<=6;g++){var gx=P.l+pw*g/6;ctx.beginPath();ctx.moveTo(gx,P.t);ctx.lineTo(gx,P.t+ph);ctx.stroke();}
     for(var g=0;g<=5;g++){var gy=P.t+ph*g/5;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
-    // ось y=0
     if(y0<0&&y1>0){ctx.strokeStyle='#c9bda9';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.l,yp(0));ctx.lineTo(P.l+pw,yp(0));ctx.stroke();}
-    // границы круга сходимости |x|<R
     if(isFinite(o.R)){
       ctx.strokeStyle='#b44a2d';ctx.lineWidth=1.2;ctx.setLineDash([5,4]);
       [-o.R,o.R].forEach(function(xr){ if(xr>=x0&&xr<=x1){ctx.beginPath();ctx.moveTo(xp(xr),P.t);ctx.lineTo(xp(xr),P.t+ph);ctx.stroke();} });
       ctx.setLineDash([]);
-      ctx.fillStyle='#b44a2d';ctx.font='9px JetBrains Mono';ctx.textAlign='center';
-      if(o.R<=x1) ctx.fillText('x=1',xp(o.R),P.t+10);
-      if(-o.R>=x0) ctx.fillText('x=-1',xp(-o.R),P.t+10);
     }
-    var N0=160;
+    var N0=180;
     function plot(fn,style,width,dash){
       ctx.strokeStyle=style;ctx.lineWidth=width;ctx.setLineDash(dash||[]);
       ctx.beginPath();var pen=false;
@@ -382,8 +465,8 @@ math.exp e^-20 =  2.061154e-09
       }
       ctx.stroke();ctx.setLineDash([]);
     }
-    plot(o.f,'#2c2419',2.2);                                  // истинная f
-    plot(function(x){return partial(key,x,N);},'#5b54b8',2,[6,4]); // P_N
+    plot(o.f,'#2c2419',2.2);
+    plot(function(x){return partial(key,x,N);},'#5b54b8',2,[6,4]);
     frame(ctx,P,pw,ph);
     ctx.fillStyle='#6b5d4f';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
     for(var t=Math.ceil(x0);t<=Math.floor(x1);t++) ctx.fillText(t,xp(t),P.t+ph+13);
@@ -392,23 +475,20 @@ math.exp e^-20 =  2.061154e-09
     ctx.fillStyle='#2c2419';ctx.fillText('— f(x)',P.l+6,P.t+11);
     ctx.fillStyle='#5b54b8';ctx.fillText('- - P_N(x)',P.l+6,P.t+23);
   }
-
   function drawErr(key,N){
     var o=CFG[key];
     var c=document.getElementById('t_err'),ctx=c.getContext('2d'),W=c.width,H=c.height;
     ctx.fillStyle='#fdf9f3';ctx.fillRect(0,0,W,H);
     var P={l:46,r:12,t:14,b:26},pw=W-P.l-P.r,ph=H-P.t-P.b;
     var x0=o.xr[0],x1=o.xr[1];
-    var ymin=-16,ymax=2;            // log10|f-P_N|
+    var ymin=-16,ymax=2;
     function xp(x){return P.l+pw*(x-x0)/(x1-x0);}
     function yp(ly){return P.t+ph*(1-(ly-ymin)/(ymax-ymin));}
     ctx.strokeStyle='#e8e0d4';ctx.lineWidth=0.5;
     for(var g=0;g<=9;g++){var gy=P.t+ph*g/9;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+pw,gy);ctx.stroke();}
-    // линия уровня ошибки = 1 (полная потеря точности)
     ctx.strokeStyle='#b44a2d';ctx.lineWidth=1;ctx.setLineDash([4,3]);ctx.beginPath();
     ctx.moveTo(P.l,yp(0));ctx.lineTo(P.l+pw,yp(0));ctx.stroke();ctx.setLineDash([]);
-    ctx.fillStyle='#b44a2d';ctx.font='9px JetBrains Mono';ctx.textAlign='left';ctx.fillText('ошибка=1',P.l+4,yp(0)-3);
-    // границы круга сходимости
+    ctx.fillStyle='#b44a2d';ctx.font='9px JetBrains Mono';ctx.textAlign='left';ctx.fillText('|f-P|=1',P.l+4,yp(0)-3);
     if(isFinite(o.R)){
       ctx.strokeStyle='#b44a2d';ctx.lineWidth=1;ctx.setLineDash([5,4]);
       [-o.R,o.R].forEach(function(xr){ if(xr>=x0&&xr<=x1){ctx.beginPath();ctx.moveTo(xp(xr),P.t);ctx.lineTo(xp(xr),P.t+ph);ctx.stroke();} });
@@ -434,150 +514,68 @@ math.exp e^-20 =  2.061154e-09
     ctx.textAlign='right';
     for(var e=ymax;e>=ymin;e-=4) ctx.fillText('1e'+e,P.l-4,yp(e)+3);
   }
-
   function update(){
     var key=document.getElementById('t_fn').value;
     var N=+document.getElementById('t_n').value;
     document.getElementById('t_nv').textContent=N;
     drawCurve(key,N);drawErr(key,N);
     var o=CFG[key];
-    // ошибка в характерной точке: внутри круга x=0.5*R либо x=1.0
     var xs=isFinite(o.R)?0.6:1.0;
     var eIn=Math.abs(o.f(xs)-partial(key,xs,N));
     var msg='N='+N+' членов · ошибка при x='+xs+': '+eIn.toExponential(2);
     if(isFinite(o.R)){
       var xo=1.4;
       var eOut=Math.abs(o.f(xo)-partial(key,xo,N));
-      msg+=' · при x='+xo+' (вне круга): '+eOut.toExponential(2)+(eOut>1?'  ⟶ ряд расходится':'');
-    } else {
-      msg+=' · сходится на всей прямой при росте N';
+      msg += ' · вне круга при x=1.4: '+(isFinite(eOut)?eOut.toExponential(2):'∞');
     }
     document.getElementById('t_status').textContent=msg;
   }
   document.getElementById('t_fn').addEventListener('change',update);
   document.getElementById('t_n').addEventListener('input',update);
-  window.addEventListener('load',function(){ setTimeout(update,200); });
+  window.addEventListener('load',function(){ setTimeout(update,150); });
 })();
 </script>
 
-<!-- ===================== ЛЕКЦИЯ B ===================== -->
-<p class="phase lecb">Лекция B · 30 мин</p>
-
-<h2 id="approx">Задача приближения функций</h2>
-
-<p>Ряд Тейлора даёт <em>локальное</em> приближение: многочлен \(P_n\) очень точен у точки \(a\), но вдали от неё ошибка \(|x-a|^{n+1}\) растёт, а для \(\ln\) и \(1/(1-x)\) приближение и вовсе разваливается за пределами круга сходимости. На многих задачах нужно иное: один многочлен, хорошо приближающий функцию <em>на всём отрезке</em> сразу. Это общая постановка теории приближений.</p>
-
-<div class="definition">
-<strong>Задача наилучшего приближения.</strong> Даны: функция \(f\in C[a,b]\), класс приближающих функций (например, многочлены степени \(\le n\), обозначим \(\mathcal{P}_n\)) и <em>норма</em> \(\|\cdot\|\), измеряющая величину ошибки. Требуется найти \(p^\star\in\mathcal{P}_n\), минимизирующий уклонение:
-\[
-\|f-p^\star\| \;=\; \min_{p\in\mathcal{P}_n}\,\|f-p\|.
-\]
-Такой \(p^\star\) называют <em>элементом наилучшего приближения</em>. Ответ зависит и от класса, и от выбранной нормы.
+<div class="labcta">
+  <span class="badge">Лабораторная</span>
+  <div class="text">
+    <strong>Тейлоровские аппроксимации на C++.</strong> Реализуйте частичные суммы \(\sin, \cos, e^x\) через рекуррентное домножение, найдите минимальное \(n\), при котором ошибка ниже \(10^{-8}\); воспроизведите катастрофу для \(e^{-20}\) и её лечение через \(1/e^{20}\).
+  </div>
+  <a href="w02-lab.html" class="go">Открыть →</a>
 </div>
 
-<h2 id="norms">Нормы функций на отрезке</h2>
-
-<p>«Насколько одна функция близка к другой» можно мерить по-разному. Три нормы на пространстве \(C[a,b]\) встречаются чаще всего; каждая порождает свою задачу наилучшего приближения.</p>
-
-<div class="eq">\[
-\|g\|_{\infty} = \max_{a\le x\le b}|g(x)|
-\quad\text{(равномерная, чебышёвская)},
-\tag{2.8}
-\]</div>
-
-<div class="eq">\[
-\|g\|_{2} = \left(\int_a^b g(x)^2\,dx\right)^{1/2}
-\quad\text{(среднеквадратичная)},\qquad
-\|g\|_{1} = \int_a^b |g(x)|\,dx.
-\tag{2.9}
-\]</div>
-
-<p>Различие принципиально. Равномерная норма \(\|f-p\|_\infty\) контролирует <em>наибольшую</em> ошибку: «нигде на отрезке не ошибиться больше чем на \(\varepsilon\)». Норма \(\|f-p\|_2\) штрафует <em>средний квадрат</em> уклонения и прощает редкие узкие выбросы. Минимизация по \(\|\cdot\|_\infty\) ведёт к задаче <strong>минимакса</strong>, минимизация по \(\|\cdot\|_2\) — к методу <strong>наименьших квадратов</strong>.</p>
-
-<div class="figure">
-<svg viewBox="0 0 600 230" xmlns="http://www.w3.org/2000/svg" style="max-width:560px" role="img" aria-label="Иллюстрация двух норм уклонения: слева равномерная норма как максимальный вертикальный зазор между функцией и приближением, справа среднеквадратичная как площадь под квадратом разности.">
-  <!-- left: uniform norm -->
-  <text x="150" y="22" font-family="JetBrains Mono,monospace" font-size="11" fill="#5b54b8" text-anchor="middle" font-weight="600">‖f − p‖∞ : максимум зазора</text>
-  <line x1="30" y1="200" x2="280" y2="200" stroke="#2c2419" stroke-width="1"/>
-  <path d="M 40 150 Q 100 80 160 120 Q 220 160 270 90" fill="none" stroke="#2c2419" stroke-width="2"/>
-  <path d="M 40 135 Q 100 110 160 130 Q 220 150 270 115" fill="none" stroke="#3a5ba0" stroke-width="2" stroke-dasharray="6,4"/>
-  <line x1="160" y1="120" x2="160" y2="130" stroke="#b44a2d" stroke-width="0"/>
-  <!-- max gap marker near x=100 -->
-  <line x1="100" y1="80" x2="100" y2="112" stroke="#b44a2d" stroke-width="2.4"/>
-  <text x="108" y="100" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">max</text>
-  <text x="46" y="160" font-family="JetBrains Mono,monospace" font-size="10" fill="#2c2419">f</text>
-  <text x="240" y="108" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">p</text>
-  <!-- right: L2 norm -->
-  <text x="450" y="22" font-family="JetBrains Mono,monospace" font-size="11" fill="#5b54b8" text-anchor="middle" font-weight="600">‖f − p‖₂ : площадь (f−p)²</text>
-  <line x1="330" y1="200" x2="575" y2="200" stroke="#2c2419" stroke-width="1"/>
-  <path d="M 338 150 Q 400 80 458 120 Q 516 160 568 90" fill="none" stroke="#2c2419" stroke-width="2"/>
-  <path d="M 338 135 Q 400 110 458 130 Q 516 150 568 115" fill="none" stroke="#3a5ba0" stroke-width="2" stroke-dasharray="6,4"/>
-  <g stroke="#1a6b5a" stroke-width="0.8" opacity="0.5">
-    <line x1="350" y1="146" x2="350" y2="138"/><line x1="370" y1="138" x2="370" y2="123"/>
-    <line x1="400" y1="95" x2="400" y2="112"/><line x1="430" y1="105" x2="430" y2="125"/>
-    <line x1="458" y1="120" x2="458" y2="130"/><line x1="490" y1="148" x2="490" y2="140"/>
-    <line x1="520" y1="158" x2="520" y2="146"/><line x1="550" y1="105" x2="550" y2="118"/>
-  </g>
-  <text x="455" y="190" font-family="Source Serif 4,serif" font-size="10" fill="#1a6b5a" text-anchor="middle" font-style="italic">штрафуется интеграл квадрата</text>
-</svg>
-<div class="caption">Рис. 2. Две меры уклонения. Равномерная норма следит за единственным наибольшим зазором; среднеквадратичная — за интегралом квадрата разности по всему отрезку.</div>
-</div>
-
-<h2 id="weier">Теорема Вейерштрасса</h2>
-
-<p>Прежде чем искать наилучший многочлен, естественно спросить: а можно ли вообще приблизить <em>любую</em> непрерывную функцию многочленом сколь угодно точно? Ответ — да, и это фундамент всей теории.</p>
-
-<div class="theorem">
-<strong>Теорема Вейерштрасса (об аппроксимации, без доказательства).</strong> Для любой непрерывной функции \(f\in C[a,b]\) и любого \(\varepsilon>0\) найдётся многочлен \(p\) такой, что
-\[
-\|f-p\|_{\infty} = \max_{a\le x\le b}|f(x)-p(x)| < \varepsilon.
-\]
-Иными словами, множество многочленов <em>плотно</em> в \(C[a,b]\) по равномерной норме: непрерывную функцию можно приблизить многочленом равномерно с любой наперёд заданной точностью.
-</div>
-
-<div class="remark">
-<strong>Что теорема не обещает.</strong> Она гарантирует <em>существование</em> хорошего многочлена, но не говорит, какой степени он будет и как его построить. Более того, наивный путь — повышать степень интерполяционного многочлена на равномерной сетке — может приводить к <em>расходимости</em> (феномен Рунге, занятие 3). Поэтому нужны конструктивные методы: чебышёвские узлы, минимакс, наименьшие квадраты.
-</div>
-
-<h2 id="minimax">Минимакс и наименьшие квадраты: анонс</h2>
-
-<p>Выбор нормы определяет, какой именно «наилучший» многочлен мы получим, и каким методом он строится. Этим посвящены ближайшие занятия.</p>
-
-<ul>
-<li><strong>Минимакс (равномерное приближение, \(\|\cdot\|_\infty\)).</strong> Минимизируем наибольшую ошибку. Решение обладает свойством <em>чебышёвского альтернанса</em>: ошибка \(f-p^\star\) достигает максимума по модулю с чередованием знака не менее чем в \(n+2\) точках. Сюда же примыкают полиномы Чебышёва и интерполяция в их узлах (занятия 3–4).</li>
-<li><strong>Метод наименьших квадратов (\(\|\cdot\|_2\)).</strong> Минимизируем интеграл (или сумму) квадратов уклонения. Задача линейная: решение даётся системой нормальных уравнений или ортогональными многочленами (Лежандра, Чебышёва). Этому посвящено занятие 5.</li>
-</ul>
-
-<div class="remark">
-<strong>Тейлор против глобального приближения.</strong> Остаток Тейлора \(R_n\) минимизирует ошибку <em>в одной точке</em> \(a\) и её окрестности — все производные \(f\) и \(p\) там совпадают до порядка \(n\). Минимакс и МНК, наоборот, «размазывают» ошибку по всему отрезку, жертвуя точностью в центре ради контроля на краях. Поэтому для приближения на отрезке многочлен Тейлора почти всегда хуже наилучшего: например, \(\|e^x-P_n\|_\infty\) на \([-1,1]\) в разы больше минимаксного уклонения той же степени.
-</div>
-
+<!-- =============================================================== -->
 <h2 id="summary">Итоги занятия</h2>
 
 <div class="algo">
-<strong>Что нужно унести с занятия 2:</strong>
+<strong>Что нужно унести с занятия 2.</strong>
 <ol>
-<li><strong>Формула Тейлора</strong> \(f(x)=\sum_{k=0}^n f^{(k)}(a)(x-a)^k/k! + R_n\) с остатком Лагранжа \(R_n=f^{(n+1)}(\xi)(x-a)^{n+1}/(n+1)!\) — основной инструмент локального приближения.</li>
-<li>Знать наизусть разложения \(e^x,\sin x,\cos x\) (сходятся всюду) и \(\ln(1+x),\,1/(1-x),\,(1+x)^\alpha\) (радиус сходимости \(1\)).</li>
-<li><strong>Ошибка усечения</strong> = отброшенный хвост ряда. Обрыв на степени \(n\) даёт \(O(x^{n+1})\) при \(x\to0\): порядок точности равен первому брошенному члену.</li>
-<li>Знакопеременный ряд (как для \(e^{-x}\) при больших \(x\)) на конечной арифметике страдает катастрофической потерей значимости — связь с занятием 1. Лекарство: переписать (\(e^{-x}=1/e^{x}\)).</li>
-<li><strong>Задача наилучшего приближения</strong>: класс (многочлены \(\le n\)) + норма (\(\|\cdot\|_\infty,\|\cdot\|_2,\|\cdot\|_1\)). По Вейерштрассу многочлены плотны в \(C[a,b]\). Минимакс (\(\|\cdot\|_\infty\)) и МНК (\(\|\cdot\|_2\)) дают глобальное приближение — в отличие от локального Тейлора.</li>
+<li>Формула Тейлора (2.1) с остатком Лагранжа (2.2) — универсальный инструмент замены гладкой функции многочленом в окрестности точки.</li>
+<li>Пять классических разложений (\(e^x, \sin, \cos, \ln(1+x), 1/(1-x)\)) — знать наизусть с областями сходимости.</li>
+<li>Порядок ошибки усечения = <em>первый отброшенный член</em>: обрыв на \(x^n\) даёт погрешность \(O(x^{n+1})\).</li>
+<li>Для знакопеременного убывающего ряда работает оценка Лейбница \(|R_n|\le|t_{n+1}|\) — простой и надёжный критерий остановки.</li>
+<li>Знакопеременное суммирование опасно катастрофической потерей значимости; \(e^{-x}\) считают через \(1/e^{x}\).</li>
+<li>Задача наилучшего приближения (2.12) — «оптимально» зависит от выбора нормы. \(C\)-норма даёт минимакс, \(L_2\)-норма даёт МНК.</li>
+<li>Теорема Вейерштрасса: многочлены плотны в \(C[a,b]\). Скорость сходимости при этом произвольная — она регулируется степенью гладкости \(f\).</li>
 </ol>
 </div>
 
-<div class="remark">
-<strong>Классная работа.</strong> Доделать задачи 2.1–2.3. Дополнительно: численно сравнить на \([-1,1]\) ошибку \(\|e^x-P_5\|_\infty\) многочлена Тейлора степени 5 с уклонением «среднего» многочлена, полученного смещением свободного члена \(P_5\) на половину размаха ошибки. Убедиться, что простое смещение уже уменьшает равномерную ошибку — первый шаг к минимаксу.
-</div>
+<h3>Литература к §2</h3>
+<ol style="font-size:.92rem">
+<li>Süli E., Mayers D. An Introduction to Numerical Analysis. — CUP, 2003. — <em>гл. 6 (интерполяция) и обзор задач приближения.</em></li>
+<li>Trefethen L. N. Approximation Theory and Approximation Practice. — SIAM, 2013. — <em>эталон, лаконичное современное изложение.</em></li>
+<li>Cheney E. W., Light W. A Course in Approximation Theory. — AMS, 2000.</li>
+<li>Бахвалов Н. С., Жидков Н. П., Кобельков Г. М. Численные методы. — М.: БИНОМ, 2011. — <em>гл. 2 (полиномиальная аппроксимация).</em></li>
+</ol>
 
 <div class="lecture-nav">
-  <a class="nav-prev" href="w01.html">← Занятие 1. Машинная арифметика</a>
-  <a class="nav-next" href="w03.html">Занятие 3. Полиномиальная интерполяция →</a>
+  <a class="nav-prev" href="w01.html">← §1. Машинная арифметика</a>
+  <a class="nav-next" href="w03.html">§3. Полиномиальная интерполяция →</a>
 </div>
 
-</div>
-</div>
+</div><!-- /main-inner -->
+</div><!-- /main -->
 
-<!-- Comments -->
 <div class="comments-wrap">
 <div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">
 <h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>

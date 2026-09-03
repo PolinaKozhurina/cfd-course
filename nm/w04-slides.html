@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ru" data-course="nm">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ЧМ · §4 Слайды · Узлы Чебышёва и сплайны</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>window.MathJax = {tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },options: { skipHtmlTags: ['script','noscript','style','textarea'] }};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<script src="../js/slide-tools.js"></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0}
+*{margin:0;padding:0;box-sizing:border-box}html,body{height:100%}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:24px;line-height:1.55;color:var(--text);background:var(--bg);overflow:hidden}
+.slide{position:fixed;inset:0;padding:0;display:none;overflow:auto}
+.slide.active{display:flex;align-items:center;justify-content:center}
+.slide-content{width:100%;max-width:min(96vw, 1600px);margin:auto;padding:1.4rem 1.6rem 2.8rem}
+.slide.active .slide-content > *{animation: slideStep .38s cubic-bezier(.22,.61,.36,1) both;animation-delay: calc(var(--i, 0) * 85ms)}
+@keyframes slideStep{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.slide.active .eq{animation: formulaIn .55s cubic-bezier(.22,.61,.36,1) both;animation-delay: calc(var(--i, 0) * 85ms);transform-origin: center}
+@keyframes formulaIn{0%{opacity:0;transform:scale(.92) translateY(4px);filter:blur(3.5px)}55%{opacity:1;transform:scale(1.02);filter:blur(0)}100%{opacity:1;transform:scale(1)}}
+.slide.active .eq::after{content:'';position:absolute;left:0;right:0;bottom:-6px;height:2px;background:linear-gradient(90deg,transparent,var(--accent) 50%,transparent);transform:scaleX(0);opacity:0;animation: formulaUnderline .55s ease-out both;animation-delay: calc(var(--i, 0) * 85ms + .35s)}
+.slide.active .eq{position:relative}
+@keyframes formulaUnderline{0%{transform:scaleX(0);opacity:0}40%{transform:scaleX(1);opacity:.7}100%{transform:scaleX(1);opacity:0}}
+.slide.title.active .slide-content > *{animation:slideStep .55s ease both;animation-delay:calc(var(--i,0) * 140ms)}
+@media (prefers-reduced-motion: reduce){.slide.active .slide-content > *, .slide.active .eq, .slide.active .eq::after{animation:none}}
+.slide-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:.6rem}
+h1{font-family:'Playfair Display',serif;font-weight:900;font-size:2.6rem;line-height:1.12;color:var(--text);margin-bottom:1rem;letter-spacing:-.01em}
+h2{font-family:'Playfair Display',serif;font-weight:700;font-size:1.8rem;color:var(--accent);margin-bottom:1.2rem;line-height:1.15}
+h3{font-family:'Source Serif 4',serif;font-weight:700;font-size:1.15rem;color:var(--text);margin:1rem 0 .5rem}
+p{margin-bottom:.9rem}ul,ol{margin:0 0 .9rem 1.6rem;line-height:1.65}li{margin-bottom:.35rem}
+em{color:var(--accent2)}strong{color:var(--text)}
+code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2);padding:1px 6px;border-radius:3px}
+.eq{margin:1.2rem 0;text-align:center;font-size:1.05em}
+.definition,.condition,.theorem{position:relative;padding:1rem 1.3rem 1rem 3.2rem;border-radius:6px;margin:1rem 0;overflow:hidden;min-height:11rem}
+.definition{background:#e7efe8}.condition{background:#f2e5d6}.theorem{background:#e0e8f2}
+.definition strong,.condition strong,.theorem strong{color:var(--text)}
+.definition::before,.condition::before,.theorem::before{position:absolute;left:0;top:0;bottom:0;width:2.1rem;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase}
+.definition::before{background:#d0dfd4;color:#3d6b5a;content:'Определение'}
+.definition[data-num]::before{content:'Определение ' attr(data-num)}
+.condition::before{background:#e5d1b8;color:#8a5236;content:'Условие'}
+.condition[data-num]::before{content:'Условие ' attr(data-num)}
+.theorem::before{background:#c8d5e6;color:#4a5f88;content:'Теорема'}
+.theorem[data-num]::before{content:'Теорема ' attr(data-num)}
+.figure{margin:1rem auto;text-align:center;max-width:100%}
+.figure svg{max-width:100%;height:auto}
+.figure .caption{font-size:.78rem;color:var(--text2);margin-top:.4rem;font-style:italic}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+.callout{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;font-size:.95em;color:var(--text2)}
+.slide.title{text-align:center;background:radial-gradient(ellipse at 30% 20%,#fff 0%,var(--bg) 55%,var(--bg2) 100%)}
+.slide.title .slide-content{max-width:1000px}
+.slide.title h1{font-size:3.4rem;margin-bottom:1.5rem;max-width:900px}
+.slide.title h1 .u{color:var(--accent);border-bottom:4px solid var(--accent);padding-bottom:.15rem}
+.slide.title .sub{font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--text2);margin-bottom:1rem}
+.slide.title .course{font-size:.85rem;color:var(--text3);text-transform:uppercase;letter-spacing:.24em;margin-bottom:.6rem}
+.slide.title .badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:.35rem .85rem;border:1.5px solid var(--accent);color:var(--accent);border-radius:20px;text-transform:uppercase;margin-bottom:1.4rem}
+.hud{position:fixed;bottom:0;left:0;right:0;padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to top,rgba(250,248,244,.95),transparent);z-index:100;pointer-events:none}
+.hud > *{pointer-events:auto}
+.hud button{font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:.4rem .9rem;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text2);cursor:pointer}
+.hud button:hover{border-color:var(--accent);color:var(--accent);background:var(--bg2)}
+.hud button:disabled{opacity:.35;cursor:default}
+.hud .counter{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3)}
+.hud .center{display:flex;gap:.4rem;align-items:center}
+.hud .back{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);text-decoration:none;padding:.35rem .7rem;border:1px dashed var(--border);border-radius:4px}
+.hud .back:hover{color:var(--accent);border-color:var(--accent)}
+.progress{position:fixed;top:0;left:0;right:0;height:3px;background:var(--bg3);z-index:99}
+.progress .fill{height:100%;background:var(--accent);transition:width .2s ease;width:0%}
+@media(min-width:1600px){body{font-size:26px}h1{font-size:3rem}h2{font-size:2rem}}
+@media(max-width:900px){.slide-content{padding:1.6rem 1.2rem 3rem}h1{font-size:1.9rem}h2{font-size:1.4rem}.two-col{grid-template-columns:1fr}body{font-size:19px}}
+@media print{body{overflow:visible;background:#fff}.slide{position:relative;display:flex!important;page-break-after:always;min-height:100vh;align-items:center;justify-content:center}.hud,.progress{display:none}}
+</style>
+</head>
+<body>
+<div class="progress"><div class="fill" id="progressFill"></div></div>
+
+<section class="slide title active">
+  <div class="course">Численные методы</div>
+  <div class="badge">Занятие 4 · Блок II. Интерполяция</div>
+  <h1>Узлы Чебышёва и <span class="u">сплайны</span></h1>
+  <div class="sub">Два пути победить Рунге</div>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§4.1 · Развилка</div>
+  <h2>Феномен Рунге лечится двумя разными путями</h2>
+  <p>В §&nbsp;3 погрешность интерполяции (3.6) распалась на два множителя:</p>
+  <div class="eq">\[ f(x) - P_n(x) = \frac{f^{(n+1)}(\xi)}{(n+1)!}\cdot\omega_{n+1}(x). \]</div>
+  <ul>
+    <li><strong>Первый путь:</strong> оптимизировать узловой множитель \(\omega_{n+1}\) — сгустить узлы у концов отрезка (<em>чебышёвская сетка</em>).</li>
+    <li><strong>Второй путь:</strong> убить множитель \((f^{(n+1)}/(n+1)!)\) — не давать степени \(n\) расти, а склеить много кусочков низкой степени (<em>сплайн</em>).</li>
+  </ul>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§4.2 · Полиномы Чебышёва</div>
+  <h2>Полиномы Чебышёва первого рода</h2>
+  <div class="definition" data-num="1">
+    <div class="eq">\[ T_n(x) = \cos(n\arccos x),\qquad x\in[-1, 1]. \tag{4.2} \]</div>
+    Через рекуррентное соотношение:
+    <div class="eq">\[ T_0 = 1,\ T_1 = x,\ T_{n+1}(x) = 2x\,T_n(x) - T_{n-1}(x). \tag{4.3} \]</div>
+    Старший коэффициент \(T_n\) при \(n\ge 1\) равен \(2^{n-1}\).
+  </div>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§4.2 · Равноколебательность</div>
+  <h2>\(T_n\) «равномерно колеблется»</h2>
+  <div class="theorem" data-num="1">
+    На \([-1, 1]\) выполнено \(|T_n(x)|\le 1\); \(T_n\) достигает \(\pm 1\) ровно \(n+1\) раз в точках \(x_k^{*} = \cos(k\pi/n)\), меняя знак.
+  </div>
+  <div class="figure">
+    <svg viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg" style="max-width:800px">
+      <line x1="40" y1="110" x2="670" y2="110" stroke="#2c2419" stroke-width="1.2"/>
+      <line x1="40" y1="35" x2="670" y2="35" stroke="#b44a2d" stroke-width="0.8" stroke-dasharray="5,4"/>
+      <line x1="40" y1="185" x2="670" y2="185" stroke="#b44a2d" stroke-width="0.8" stroke-dasharray="5,4"/>
+      <text x="25" y="39" font-family="JetBrains Mono,monospace" font-size="12" fill="#b44a2d" text-anchor="end">+1</text>
+      <text x="25" y="189" font-family="JetBrains Mono,monospace" font-size="12" fill="#b44a2d" text-anchor="end">−1</text>
+      <polyline fill="none" stroke="#5b54b8" stroke-width="2.4" points="40,35 90,185 140,35 200,185 260,35 320,110 355,110 400,110 460,35 520,185 570,35 620,185 670,35"/>
+      <text x="90" y="24" font-family="JetBrains Mono,monospace" font-size="12" fill="#5b54b8">T_5</text>
+    </svg>
+    <div class="caption">Полином Чебышёва \(T_5\) — 6 экстремумов, все на границах \(\pm 1\).</div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§4.3 · Минимаксное свойство</div>
+  <h2>\(\widetilde T_n = 2^{1-n} T_n\) — минимаксный приведённый</h2>
+  <div class="theorem" data-num="2">
+    Среди всех <em>приведённых</em> (моника) многочленов степени \(n\) наименьшую равномерную норму на \([-1, 1]\) даёт \(\widetilde T_n\):
+    <div class="eq">\[ \min_{\substack{q\ \text{приведён}\\ \deg q = n}}\max_{[-1,1]}|q(x)| = \frac{1}{2^{n-1}}. \tag{4.5} \]</div>
+  </div>
+  <p>Именно то, что нужно для узлового множителя \(\omega_{n+1}\).</p>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§4.3 · Чебышёвские узлы</div>
+  <h2>Узлы = корни \(T_{n+1}\)</h2>
+  <div class="definition" data-num="2">
+    <div class="eq">\[ x_k = \cos\!\left(\frac{2k+1}{2(n+1)}\,\pi\right),\qquad k = 0, 1, \ldots, n. \tag{4.6} \]</div>
+    Сгущаются у концов отрезка (шаг \(\sim 1/n^2\) у краёв vs \(\sim 1/n\) в середине).
+  </div>
+  <div class="theorem" data-num="3">
+    <em style="color:inherit;font-weight:600">оценка ошибки.</em>
+    <div class="eq">\[ \|f - P_n\|_\infty \le \frac{\|f^{(n+1)}\|_\infty}{2^n\,(n+1)!}. \tag{4.7} \]</div>
+    Экспоненциальная сходимость для аналитических функций.
+  </div>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§4.3 · Практика</div>
+  <h2>Рунге разгромлен</h2>
+  <div class="two-col">
+    <div class="callout" style="border-left:4px solid var(--accent)">
+      <strong>Равномерная сетка, n=20</strong><br>
+      Максимум ошибки на \(1/(1+25x^2)\) — <strong>\(\sim 60\)</strong>.<br>
+      Экспоненциальный <em>рост</em> с ростом \(n\).
+    </div>
+    <div class="callout" style="border-left:4px solid var(--accent2)">
+      <strong>Чебышёвская сетка, n=20</strong><br>
+      Максимум ошибки на \(1/(1+25x^2)\) — <strong>\(\sim 10^{-4}\)</strong>.<br>
+      Экспоненциальное <em>убывание</em> с ростом \(n\).
+    </div>
+  </div>
+  <p style="margin-top:.8rem;color:var(--text2);font-size:.9em">Различие — 6 порядков ценой одной строчки кода: <code>x = cos((2k+1)*pi/(2(n+1)))</code>.</p>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§4.4 · Второй путь</div>
+  <h2>Кусочная линейная интерполяция</h2>
+  <div class="definition" data-num="3">
+    Функция, интерполирующая \(y_i\) в узлах \(x_0 &lt; x_1 &lt; \ldots &lt; x_n\), линейная на каждом подотрезке:
+    <div class="eq">\[ L(x) = y_i + \frac{y_{i+1}-y_i}{x_{i+1}-x_i}(x - x_i),\qquad x\in[x_i, x_{i+1}]. \]</div>
+  </div>
+  <div class="theorem" data-num="4">
+    Для \(f\in C^2\):
+    <div class="eq">\[ \|f - L\|_\infty \le \frac{h^2}{8}\|f''\|_\infty. \tag{4.9} \]</div>
+    Никакого Рунге. Шаг \(h\to 0\) — ошибка убывает как \(O(h^2)\).
+  </div>
+  <p style="font-size:.9em">Плата: \(L(x)\) — только \(C^0\); в узлах производная терпит разрыв.</p>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§4.5 · Гладкий вариант</div>
+  <h2>Кубический сплайн — \(C^2\), кусочный степени 3</h2>
+  <div class="definition" data-num="4">
+    \(S(x)\), удовлетворяющая:
+    <ol style="margin:.3rem 0 .1rem 1.2rem;font-size:.95em">
+      <li>на каждом \([x_i, x_{i+1}]\) — многочлен степени \(\le 3\);</li>
+      <li>\(S(x_i) = y_i\) (интерполяция);</li>
+      <li>\(S \in C^2[a, b]\) — гладкая до второй производной.</li>
+    </ol>
+  </div>
+  <p>Ограничений \(4n - 2\), неизвестных \(4n\). Нужны <em>два</em> краевых условия.</p>
+  <div class="condition" data-num="1">
+    <em style="color:inherit;font-weight:600">три стандартных типа.</em>
+    <ul style="margin:.3rem 0 .1rem 1.2rem;font-size:.95em">
+      <li><strong>Natural:</strong> \(S''(a) = S''(b) = 0\).</li>
+      <li><strong>Clamped:</strong> \(S'(a) = f'(a),\ S'(b) = f'(b)\).</li>
+      <li><strong>Not-a-knot:</strong> \(S'''\) непрерывна в \(x_1, x_{n-1}\) (стандарт MATLAB).</li>
+    </ul>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§4.6 · Метод построения</div>
+  <h2>Моменты + трёхдиагональная система</h2>
+  <p>Через <em>моменты</em> \(M_i = S''(x_i)\) кубик восстанавливается однозначно. Условие \(C^1\) в узле \(x_i\) даёт:</p>
+  <div class="eq">\[ h_{i-1} M_{i-1} + 2(h_{i-1}+h_i) M_i + h_i M_{i+1} = 6\!\left(\frac{y_{i+1}-y_i}{h_i} - \frac{y_i-y_{i-1}}{h_{i-1}}\right). \tag{4.10} \]</div>
+  <p>Матрица трёхдиагональная и диагонально преобладающая — метод прогонки за \(O(n)\).</p>
+  <div class="callout" style="font-size:.9em">
+    <strong>Заглядываем в §&nbsp;10:</strong> прогонка (Thomas) — стандартный алгоритм для трёхдиагональных систем; изучим отдельно.
+  </div>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§4.7 · Итоги</div>
+  <h2>Что унести с занятия 4</h2>
+  <ol style="font-size:.92em">
+    <li>Полиномы Чебышёва \(T_n\) — минимаксные среди приведённых на \([-1, 1]\).</li>
+    <li>Чебышёвские узлы (4.6) сгущаются у концов; интерполяция на них даёт экспоненциальную сходимость (4.7) для гладких функций.</li>
+    <li>Кусочная линейная интерполяция даёт \(O(h^2)\) без всякого Рунге, но не гладкая.</li>
+    <li>Кубический сплайн — гладкая \(C^2\) кусочная интерполяция степени 3.</li>
+    <li>Строится через моменты и трёхдиагональную систему (4.10), решаемую прогонкой за \(O(n)\).</li>
+  </ol>
+</section>
+
+<section class="slide">
+  <div class="slide-num">Практика</div>
+  <h2>Дальше — лаба и литература</h2>
+  <div class="two-col">
+    <div>
+      <h3 style="color:var(--accent)">▶ Лаба на C++</h3>
+      <p style="font-size:.9em">Реализуйте чебышёвские узлы, покажите падение ошибки Рунге. Постройте кубический сплайн через прогонку.</p>
+      <div style="margin-top:.5rem;font-family:'JetBrains Mono',monospace;font-size:.8rem"><a href="w04-lab.html" style="color:var(--accent);text-decoration:none;border:1px solid var(--accent);padding:.35rem .8rem;border-radius:5px">открыть лабу →</a></div>
+    </div>
+    <div>
+      <h3 style="color:var(--accent)">Литература</h3>
+      <ol style="font-size:.82em;line-height:1.5">
+        <li>Trefethen. Approximation Theory and Approximation Practice. — SIAM, 2013. — гл. 4–8.</li>
+        <li>de Boor. A Practical Guide to Splines. — Springer, 2001. — стандарт для сплайнов.</li>
+        <li>Süli, Mayers. Introduction to Numerical Analysis. — CUP, 2003.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section class="slide title">
+  <div class="badge">Занятие 4 · итог</div>
+  <h1>Вопросы?</h1>
+  <div class="sub">Следующее занятие → §5. МНК и ортогональные базисы</div>
+</section>
+
+<div class="hud">
+  <a href="w04.html" class="back">← к тексту</a>
+  <div class="center">
+    <button id="btnPrev" onclick="prev()">◀ назад</button>
+    <span class="counter" id="counter">1 / 13</span>
+    <button id="btnNext" onclick="next()">вперёд ▶</button>
+  </div>
+  <a href="w05.html" class="back">§5 →</a>
+</div>
+
+<script>
+(function(){
+  var slides = Array.from(document.querySelectorAll('.slide'));
+  var counter = document.getElementById('counter');
+  var fill = document.getElementById('progressFill');
+  var i = 0;
+  slides.forEach(function(s){ var wrap = document.createElement('div'); wrap.className = 'slide-content'; while (s.firstChild) wrap.appendChild(s.firstChild); s.appendChild(wrap); });
+  function show(n) {
+    slides[i].classList.remove('active');
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    var s = slides[i]; var content = s.querySelector('.slide-content') || s;
+    var animated = [];
+    Array.from(content.children).forEach(function(child){ animated.push(child); var innerEq = child.querySelectorAll('.eq'); for (var j = 0; j < innerEq.length; j++) animated.push(innerEq[j]); });
+    animated.forEach(function(el, k){ el.style.setProperty('--i', k); el.style.animation = 'none'; });
+    void s.offsetWidth;
+    animated.forEach(function(el){ el.style.animation = ''; });
+    s.classList.add('active');
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+    fill.style.width = ((i + 1) / slides.length * 100) + '%';
+    history.replaceState(null, '', '#' + (i + 1));
+    document.getElementById('btnPrev').disabled = (i === 0);
+    document.getElementById('btnNext').disabled = (i === slides.length - 1);
+    s.scrollTop = 0;
+  }
+  window.next = function(){ show(i + 1); };
+  window.prev = function(){ show(i - 1); };
+  document.addEventListener('keydown', function(e) {
+    if (/^(INPUT|TEXTAREA)$/i.test((e.target || {}).tagName)) return;
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+    else if (e.key === 'Home') { e.preventDefault(); show(0); }
+    else if (e.key === 'End')  { e.preventDefault(); show(slides.length - 1); }
+    else if (e.key === 'f' || e.key === 'F') { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); }
+  });
+  var h = parseInt((location.hash || '').replace('#', ''), 10);
+  if (!isNaN(h) && h >= 1 && h <= slides.length) show(h - 1); else show(0);
+  window.__slidesShow = show; window.__slidesIndex = function () { return i; };
+})();
+(function initSlideTools() {
+  function ready() { if (!window.CFDSlideTools) return;
+    window.CFDSlideTools.init({ slidesSelector: '.slide', activeClass: 'active', hudSelector: '.hud', projectName: 'nm-w04-slides', getCurrentIndex: function () { return window.__slidesIndex ? window.__slidesIndex() : 0; }, onGoToSlide: function (n) { if (window.__slidesShow) window.__slidesShow(n); } });
+  }
+  if (window.CFDSlideTools) ready(); else window.addEventListener('load', ready);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="ru" data-course="nm">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Лабораторная работа №3 курса «Численные методы»: реализация полиномиальной интерполяции в C++ через форму Лагранжа и разделённые разности, эксперимент с феноменом Рунге на равномерной сетке.">
+<title>ЧМ · Лаба 3. Полиномиальная интерполяция</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/material-darker.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/clike/clike.js"></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8;--sidebar-bg:#2b2520;--sidebar-text:#d9cfc0}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
+.sidebar{position:fixed;left:0;top:38px;bottom:0;width:240px;background:var(--sidebar-bg);color:var(--sidebar-text);padding:1.5rem 1rem;overflow-y:auto;z-index:100;border-right:3px solid var(--accent);font-size:.8rem}
+.sidebar h2{font-family:'Playfair Display',serif;font-size:.85rem;font-weight:700;color:#fff;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.03em}
+.sidebar .g{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--accent);margin:.7rem 0 .15rem;text-transform:uppercase;letter-spacing:.08em}
+.sidebar a{display:block;color:var(--sidebar-text);text-decoration:none;font-size:.76rem;line-height:1.35;padding:.15rem 0 .15rem .5rem;border-left:2px solid transparent;transition:all .15s}
+.sidebar a:hover{color:#fff;border-left-color:var(--accent);background:rgba(180,74,45,.08)}
+.sidebar .sep{height:1px;background:rgba(255,255,255,.07);margin:.4rem 0}
+.sidebar .progress{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:#82a0db;padding:.4rem .5rem;background:rgba(130,160,219,.08);border-radius:4px;margin:.4rem 0 .8rem}
+.sidebar .runtime-state{font-family:'JetBrains Mono',monospace;font-size:.62rem;padding:.35rem .5rem;background:rgba(200,140,50,.1);color:#e0a55c;border-radius:4px;margin-bottom:.6rem}
+.sidebar .runtime-state.ok{background:rgba(70,184,156,.1);color:#7dcfb6}
+.sidebar .runtime-state.err{background:rgba(224,122,82,.1);color:#e07a52}
+.main{margin-left:240px;padding:2rem 2.5rem 4rem}
+.main-inner{max-width:960px}
+.lecture-tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;padding:.2rem .5rem;border-radius:3px;display:inline-block;margin-bottom:.5rem;background:#e0e8f2;color:#3a5ba0}
+.lecture-num{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);margin-bottom:.3rem}
+h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;line-height:1.15;margin-bottom:1.5rem;color:var(--text)}
+h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--accent);margin:2rem 0 .8rem;padding-top:.5rem;border-top:1px solid var(--border)}
+h3{font-family:'Source Serif 4',serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:1.5rem 0 .5rem}
+p{margin-bottom:1rem;text-align:justify;hyphens:auto}
+ul,ol{margin:.5rem 0 1rem 1.5rem}
+li{margin:.3rem 0}
+.eq{margin:1.5rem 0;text-align:center}
+code{font-family:'JetBrains Mono',monospace;background:var(--bg2);padding:1px 5px;border-radius:3px;font-size:.9em}
+.task{position:relative;padding:1rem 1.2rem 1rem 3rem;border-radius:6px;margin:1.5rem 0;background:#e7efe8;overflow:hidden;min-height:11rem}
+.task::before{position:absolute;left:0;top:0;bottom:0;width:2rem;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase;background:#d0dfd4;color:#3d6b5a;content:'Задача'}
+.task[data-num]::before{content:'Задача ' attr(data-num)}
+.info{position:relative;padding:1rem 1.2rem 1rem 3rem;border-radius:6px;margin:1.2rem 0;background:#e0e8f2;overflow:hidden;min-height:6.5rem}
+.info::before{position:absolute;left:0;top:0;bottom:0;width:2rem;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase;background:#c8d5e6;color:#4a5f88;content:'Подсказка'}
+.info[data-lbl]::before{content:attr(data-lbl)}
+.warning{background:#fbeee7;border-left:3px solid var(--accent);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:.95rem}
+.warning strong{color:var(--accent)}
+.editor-shell{margin:1rem 0;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.editor-head{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.4rem .9rem;display:flex;justify-content:space-between;align-items:center;gap:.6rem;flex-wrap:wrap}
+.editor-head .fname{color:#9ec97f}
+.editor-head .actions{display:flex;gap:.4rem;align-items:center}
+.editor-head .btn{background:var(--accent);color:#fff;border:none;padding:.35rem .85rem;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;cursor:pointer}
+.editor-head .btn:hover{background:#8f3a24}
+.editor-head .btn:disabled{background:#6b5d4f;cursor:wait;opacity:.7}
+.editor-head .btn.secondary{background:transparent;border:1px solid #6b5d4f;color:#c9b89a}
+.editor-head .btn.secondary:hover{background:#3a322a}
+.editor-shell .CodeMirror{height:auto;min-height:180px;max-height:520px;font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.55}
+.output{background:#151210;color:#e6d4b8;font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.7rem 1rem;min-height:60px;max-height:280px;overflow:auto;white-space:pre-wrap;border-top:1px solid #3a322a}
+.output:empty::before{content:'— вывод программы появится здесь —';color:#5b5045;font-style:italic}
+.output .ok{color:#9ec97f}.output .err{color:#e07a52}.output .hi{color:#82a0db}
+.verdict{margin-top:.6rem;padding:.5rem .7rem;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.8rem;display:none}
+.verdict.ok{display:block;background:#dcecd6;color:#2c5a1f;border-left:3px solid #4d8a35}
+.verdict.err{display:block;background:#fbeee7;color:#8a3220;border-left:3px solid var(--accent)}
+.verdict.part{display:block;background:#f7f0d9;color:#7a5c1f;border-left:3px solid #c9a23a}
+.status-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#c9c1b3;margin-right:.4rem;vertical-align:middle}
+.status-dot.ok{background:#4d8a35}.status-dot.err{background:var(--accent)}
+.mcq{background:#fff;border:1px solid var(--border);border-radius:8px;padding:.9rem 1.1rem;margin:1rem 0}
+.mcq .head{font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);margin-bottom:.5rem}
+.mcq label{display:block;font-size:.9rem;padding:.25rem 0;cursor:pointer}
+.mcq label input{margin-right:.5rem}
+.mcq .btn{background:var(--accent2);color:#fff;border:none;padding:6px 14px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.78rem;cursor:pointer;margin-top:.4rem;text-transform:uppercase;letter-spacing:.08em}
+.mcq .btn:hover{background:#125e4d}
+.plan{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;margin:1rem 0 1.6rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.7rem;font-size:.85rem}
+.plan .cell{border-left:3px solid var(--accent3);padding-left:.6rem}
+.plan .cell b{color:var(--accent3);font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:.15rem}
+.progresspanel{position:sticky;top:38px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:.6rem 1rem;margin:1rem 0;z-index:5;font-family:'JetBrains Mono',monospace;font-size:.78rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+.progresspanel .bar{flex:1;min-width:150px;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.progresspanel .bar > div{height:100%;background:linear-gradient(90deg,var(--accent2) 0%,var(--accent3) 100%);transition:width .3s}
+.progresspanel .cnt{font-weight:600;color:var(--accent3);font-size:.82rem}
+.progresspanel .reset{background:none;border:1px solid var(--border);padding:2px 8px;border-radius:3px;font-family:inherit;font-size:.72rem;color:var(--text2);cursor:pointer}
+.progresspanel .reset:hover{color:var(--accent);border-color:var(--accent)}
+.progresspanel .runtime{padding:2px 8px;border-radius:3px;background:rgba(200,140,50,.15);color:#8a5236}
+.progresspanel .runtime.ok{background:rgba(70,140,80,.15);color:#2c5a1f}
+.progresspanel .runtime.err{background:rgba(180,74,45,.15);color:#8a3220}
+.runtimebanner{background:#e0e8f2;border-radius:8px;padding:.8rem 1.1rem;margin:1rem 0;font-size:.86rem;color:var(--text)}
+.runtimebanner .lbl{font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:#4a5f88;margin-right:.5rem}
+.lecture-nav{display:flex;justify-content:space-between;gap:1rem;margin-top:3rem;padding-top:1.5rem;border-top:2px solid var(--border);flex-wrap:wrap}
+.lecture-nav a{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);text-decoration:none;padding:.5rem .8rem;border:1px solid var(--border);border-radius:6px;transition:all .15s;max-width:48%}
+.lecture-nav a:hover{border-color:var(--accent);background:rgba(180,74,45,.05)}
+.nav-prev{text-align:left}.nav-next{text-align:right;margin-left:auto}
+@media(max-width:1000px){.sidebar{display:none}.main{margin-left:0;padding:1.5rem}.comments-wrap{margin-left:0 !important;padding:0 1.5rem 2rem}.progresspanel{position:static}}
+@media(max-width:720px){body{font-size:16px}h1{font-size:1.55rem}h2{font-size:1.15rem}.task,.info{padding-left:2.4rem}.task::before,.info::before{width:1.7rem;font-size:.55rem;letter-spacing:.16em}.main{padding:1.2rem 1rem 3rem;overflow-x:clip}.main-inner *{min-width:0}mjx-container[display="true"]{max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}mjx-container:not([display="true"]){display:inline-block !important;max-width:100%;overflow-x:auto;overflow-y:hidden;vertical-align:-0.3em}}
+.comments-wrap{margin-left:240px;max-width:calc(960px + 5rem);padding:0 2.5rem 2rem}
+#comments-section{max-width:960px}
+html.dark{--bg:#1b1712;--bg2:#231e18;--bg3:#2c261f;--text:#ece3d6;--text2:#bcb0a0;--text3:#8d8173;--accent:#e07a52;--accent2:#46b89c;--accent3:#82a0db;--border:#39322a;--sidebar-bg:#14100c;--sidebar-text:#cabfae}
+html.dark .task{background:#1e2a24;color:var(--text)}
+html.dark .info{background:#1a2130;color:var(--text)}
+html.dark .task::before{background:#20362d;color:#8fc4ac}
+html.dark .info::before{background:#26314a;color:#9fb6dd}
+html.dark .warning{background:#2a1a13}
+html.dark .mcq{background:#231e18;border-color:var(--border)}
+html.dark .verdict.ok{background:#183021;color:#a2d094;border-left-color:#4d8a35}
+html.dark .verdict.err{background:#2a1a13;color:#e6a08a}
+html.dark .verdict.part{background:#2e2716;color:#e5cd8c;border-left-color:#c9a23a}
+html.dark .runtimebanner{background:#1a2130;color:var(--text)}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>Лаба 3. Интерполяция</h2>
+  <div class="progress" id="side_progress">решено 0 из 10</div>
+  <div class="runtime-state" id="side_runtime">clang: не загружен</div>
+  <div class="g">Содержание</div>
+  <a href="#intro">Введение</a>
+  <a href="#part0">§0. Разминка</a>
+  <a href="#part1">§1. Форма Лагранжа</a>
+  <a href="#part2">§2. Разделённые разности</a>
+  <a href="#part3">§3. Феномен Рунге</a>
+  <a href="#part4">§4. Отчёт</a>
+  <div class="sep"></div>
+  <div class="g">Материалы</div>
+  <a href="w03.html">§3. Лекция</a>
+  <a href="w03-slides.html">▶ Слайды §3</a>
+  <a href="index.html">← Обзор курса</a>
+  <a href="w04.html">→ §4. Чебышёв и сплайны</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+
+<span class="lecture-tag">Лабораторная работа</span>
+<div class="lecture-num">Лаба 3 · к §3 «Полиномиальная интерполяция»</div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
+  <h1 style="margin:0">Полиномиальная интерполяция и феномен Рунге</h1>
+  <a href="w03.html" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.4rem .8rem;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none;white-space:nowrap">▶ Лекция</a>
+</div>
+
+<div class="plan">
+  <div class="cell"><b>Формат</b>Парная работа за компьютером</div>
+  <div class="cell"><b>Язык</b>C++11, только stdlib</div>
+  <div class="cell"><b>Сборка</b>clang++ в браузере (wasm)</div>
+  <div class="cell"><b>Оценка</b>8/10 задач → зачёт</div>
+</div>
+
+<div class="progresspanel">
+  <span>Прогресс</span>
+  <div class="bar"><div id="prog_bar" style="width:0%"></div></div>
+  <span class="cnt" id="prog_cnt">0/10</span>
+  <span class="runtime" id="prog_runtime">clang: init…</span>
+  <button class="reset" id="prog_reset" type="button">сбросить</button>
+</div>
+
+<div class="runtimebanner">
+  <span class="lbl">Runtime</span>
+  Компилятор clang++ (~60 МБ) грузится один раз, потом кэшируется. Первый запуск — 15–40 сек в Chromium и до 1–2 минут в Firefox. Если больше 2 мин — DevTools → Console.
+</div>
+
+<h2 id="intro">Что вы делаете и зачем</h2>
+
+<p>Задача — реализовать полиномиальную интерполяцию и увидеть, что <em>увеличение числа узлов не всегда улучшает приближение</em>. Мы начнём с формы Лагранжа, потом перейдём к форме Ньютона (обновляемой), а в финале воспроизведём знаменитый феномен Рунге на функции \(1/(1+25x^2)\).</p>
+
+<!-- =============================================================== -->
+<h2 id="part0">§0. Разминка: базисный многочлен Лагранжа</h2>
+
+<div class="task" data-num="0.1">
+<strong>Задача 0.1. Реализовать \(\ell_i(x)\).</strong> Напишите функцию <code>double lagrange_basis(int i, const double* xn, int n, double x)</code>, вычисляющую \(\ell_i(x) = \prod_{j\ne i} (x - x_j)/(x_i - x_j)\). Здесь <code>xn</code> — массив из <code>n+1</code> узлов, <code>n</code> — степень полинома. Тест: узлы \(x_0=0, x_1=1, x_2=2\), \(\ell_1(0{,}5) = -0{,}25\).
+
+<div class="editor-shell" data-cpp="q01"
+     data-harness='int main() {
+    double xn[3] = {0.0, 1.0, 2.0};
+    double v = lagrange_basis(1, xn, 2, 0.5);
+    printf("l_1(0.5) = %.17g\n", v);
+    printf("expect   = -0.25\n");
+    printf("__ANS__%.17g\n", v);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-target="-0.25" data-check-rtol="1e-13">
+  <div class="editor-head"><span class="fname">task0_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
+  <textarea data-code>#include &lt;cstdio&gt;
+
+double lagrange_basis(int i, const double* xn, int n, double x) {
+    double v = 1.0;
+    // TODO: перемножить (x - xn[j]) / (xn[i] - xn[j]) для j = 0..n, j != i
+    return v;
+}
+</textarea>
+  <div class="output" data-output></div>
+</div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
+</div>
+
+<!-- =============================================================== -->
+<h2 id="part1">§1. Форма Лагранжа целиком</h2>
+
+<div class="task" data-num="1.1">
+<strong>Задача 1.1. Интерполировать \(\sin\).</strong> Реализуйте <code>double lagrange_eval(const double* xn, const double* yn, int n, double x)</code> — сумма \(\sum y_i \ell_i(x)\). Используйте вашу <code>lagrange_basis</code>. Тест: 5 равномерных узлов \(x_i = i\cdot\pi/4\), \(i = 0,\ldots,4\); \(y_i = \sin(x_i)\); вычислить в \(x = \pi/2 = 1{,}5707963\ldots\) — должно совпасть с \(\sin(\pi/2) = 1\) до \(10^{-3}\) (степень 4 неточна).
+
+<div class="editor-shell" data-cpp="q11"
+     data-harness='int main() {
+    double xn[5], yn[5];
+    for (int i = 0; i &lt; 5; ++i) {
+        xn[i] = (double)i * 3.14159265358979323846 / 4.0;
+        yn[i] = std::sin(xn[i]);
+    }
+    double x = 3.14159265358979323846 / 2.0;
+    double v = lagrange_eval(xn, yn, 4, x);
+    printf("L_4(pi/2)   = %.17g\n", v);
+    printf("sin(pi/2)   = %.17g\n", std::sin(x));
+    printf("error       = %.6g\n", v - std::sin(x));
+    printf("__ANS__%.17g\n", v);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-eval="lagrangeSinPi2()" data-check-rtol="1e-13">
+  <div class="editor-head"><span class="fname">task1_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
+  <textarea data-code>#include &lt;cstdio&gt;
+#include &lt;cmath&gt;
+
+double lagrange_basis(int i, const double* xn, int n, double x) {
+    double v = 1.0;
+    for (int j = 0; j &lt;= n; ++j) if (j != i) v *= (x - xn[j]) / (xn[i] - xn[j]);
+    return v;
+}
+
+double lagrange_eval(const double* xn, const double* yn, int n, double x) {
+    double s = 0.0;
+    // TODO: sum_{i=0..n} yn[i] * l_i(x)
+    return s;
+}
+</textarea>
+  <div class="output" data-output></div>
+</div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
+</div>
+
+<div class="task" data-num="1.2">
+<strong>Задача 1.2. В узле точное совпадение.</strong> В узле интерполяции значение \(L_n(x_i)\) равно \(y_i\) <em>точно</em> (до ошибок округления). Проверьте: <code>lagrange_eval(xn, yn, 4, xn[2]) - yn[2]</code> при 5 узлах интерполяции \(\sin\) должно быть меньше \(10^{-14}\).
+
+<div class="editor-shell" data-cpp="q12"
+     data-harness='int main() {
+    double xn[5], yn[5];
+    for (int i = 0; i &lt; 5; ++i) {
+        xn[i] = (double)i * 3.14159265358979323846 / 4.0;
+        yn[i] = std::sin(xn[i]);
+    }
+    double v = lagrange_eval(xn, yn, 4, xn[2]);
+    double err = v - yn[2];
+    if (err &lt; 0) err = -err;
+    printf("L_4(x_2)          = %.17g\n", v);
+    printf("y_2 = sin(x_2)    = %.17g\n", yn[2]);
+    printf("|L_4(x_2) - y_2|  = %.6g\n", err);
+    printf("__ANS__%.17g\n", err);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-target="0" data-check-atol="1e-14">
+  <div class="editor-head"><span class="fname">task1_2.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
+  <textarea data-code>#include &lt;cstdio&gt;
+#include &lt;cmath&gt;
+
+// Скопируйте lagrange_basis и lagrange_eval из §1.1
+</textarea>
+  <div class="output" data-output></div>
+</div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
+</div>
+
+<!-- =============================================================== -->
+<h2 id="part2">§2. Разделённые разности и форма Ньютона</h2>
+
+<div class="task" data-num="2.1">
+<strong>Задача 2.1. Таблица разделённых разностей.</strong> Реализуйте <code>void divdiff_table(const double* xn, const double* yn, int n, double* out)</code>, которая записывает в массив <code>out[0..n]</code> коэффициенты верхней диагонали таблицы: \(f[x_0]\), \(f[x_0,x_1]\), …, \(f[x_0,\ldots,x_n]\). Тест: узлы \(0,1,2,3\), значения \(0,1,4,9\) (это \(y = x^2\)); ожидаемая диагональ \([0, 1, 1, 0]\).
+
+<div class="editor-shell" data-cpp="q21"
+     data-harness='int main() {
+    double xn[4] = {0, 1, 2, 3};
+    double yn[4] = {0, 1, 4, 9};
+    double out[4];
+    divdiff_table(xn, yn, 3, out);
+    printf("diag = [%.17g, %.17g, %.17g, %.17g]\n", out[0], out[1], out[2], out[3]);
+    printf("expect [0, 1, 1, 0]\n");
+    printf("__ANS__%.17g\n", out[0]);
+    printf("__ANS__%.17g\n", out[1]);
+    printf("__ANS__%.17g\n", out[2]);
+    printf("__ANS__%.17g\n", out[3]);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-target="0,1,1,0" data-check-atol="1e-14">
+  <div class="editor-head"><span class="fname">task2_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
+  <textarea data-code>#include &lt;cstdio&gt;
+
+void divdiff_table(const double* xn, const double* yn, int n, double* out) {
+    // Работаем на месте: сначала копируем yn в out, потом обновляем "in place"
+    double t[16];
+    for (int i = 0; i &lt;= n; ++i) t[i] = yn[i];
+    out[0] = t[0];
+    // TODO: для k = 1..n
+    //   для i = n вниз до k:
+    //     t[i] = (t[i] - t[i-1]) / (xn[i] - xn[i-k])
+    //   out[k] = t[k]
+}
+</textarea>
+  <div class="output" data-output></div>
+</div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
+</div>
+
+<div class="task" data-num="2.2">
+<strong>Задача 2.2. Пик разделённой разности.</strong> Разделённая разность \(k\)-го порядка равна \(f^{(k)}(\eta)/k!\) в некоторой средней точке \(\eta\). Для \(y = x^2\) вторая разность должна быть \(2/2! = 1\), третья и старше — 0. Совпало у вас?
+
+<div class="mcq" data-mcq="q22" data-correct="A">
+  <div class="head"><span class="status-dot"></span>Ответ</div>
+  <label><input type="radio" name="q22" value="A"> A. Да — на многочлене степени \(n\) разности порядка \(&gt; n\) равны нулю.</label>
+  <label><input type="radio" name="q22" value="B"> B. Нет — все разности случайны.</label>
+  <label><input type="radio" name="q22" value="C"> C. Совпадение только при равномерных узлах.</label>
+  <button class="btn" type="button" data-mcq-check>проверить</button>
+  <div class="verdict" data-verdict></div>
+</div>
+</div>
+
+<!-- =============================================================== -->
+<h2 id="part3">§3. Феномен Рунге</h2>
+
+<p>Классический тест: интерполируем \(f(x) = 1/(1+25x^2)\) на \([-1, 1]\) полиномом степени \(n\), взяв <em>равномерные</em> узлы. Замеряем максимум ошибки на плотной сетке (например, 1001 точка).</p>
+
+<div class="task" data-num="3.1">
+<strong>Задача 3.1. Рунге при \(n = 10\).</strong> Реализуйте всё вместе: сгенерируйте узлы \(x_i = -1 + 2i/n\) при \(n = 10\), значения \(y_i = f(x_i)\), постройте <code>lagrange_eval</code> и замерьте \(\max\bigl|f(x) - L_n(x)\bigr|\) на 1001 равномерной пробной точке в \([-1, 1]\). Автопроверка сверит с эталоном.
+
+<div class="editor-shell" data-cpp="q31"
+     data-harness='double f_runge(double x) { return 1.0 / (1.0 + 25.0 * x * x); }
+int main() {
+    const int n = 10;
+    double xn[n+1], yn[n+1];
+    for (int i = 0; i &lt;= n; ++i) {
+        xn[i] = -1.0 + 2.0 * (double)i / (double)n;
+        yn[i] = f_runge(xn[i]);
+    }
+    // 1001 пробная точка
+    double max_err = 0.0;
+    for (int k = 0; k &lt; 1001; ++k) {
+        double x = -1.0 + 2.0 * (double)k / 1000.0;
+        double e = f_runge(x) - lagrange_eval(xn, yn, n, x);
+        if (e &lt; 0) e = -e;
+        if (e &gt; max_err) max_err = e;
+    }
+    printf("Runge L_10, max error = %.6g\n", max_err);
+    printf("__ANS__%.17g\n", max_err);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-eval="rungeMaxErr(10)" data-check-rtol="1e-10">
+  <div class="editor-head"><span class="fname">task3_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
+  <textarea data-code>#include &lt;cstdio&gt;
+#include &lt;cmath&gt;
+
+double lagrange_basis(int i, const double* xn, int n, double x) {
+    double v = 1.0;
+    for (int j = 0; j &lt;= n; ++j) if (j != i) v *= (x - xn[j]) / (xn[i] - xn[j]);
+    return v;
+}
+
+double lagrange_eval(const double* xn, const double* yn, int n, double x) {
+    double s = 0.0;
+    for (int i = 0; i &lt;= n; ++i) s += yn[i] * lagrange_basis(i, xn, n, x);
+    return s;
+}
+</textarea>
+  <div class="output" data-output></div>
+</div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
+
+<div class="info" data-lbl="Что ожидать">
+При \(n=10\) максимум ошибки \(\approx 1{,}9\) — уже больше самой функции \(f\), которая не превосходит 1. Полиномиальная интерполяция на равномерной сетке катастрофически проигрывает у концов отрезка.
+</div>
+</div>
+
+<div class="task" data-num="3.2">
+<strong>Задача 3.2. Рост степени \(n\).</strong> Увеличиваем степень до \(n = 20\). Замерьте максимум ошибки.
+
+<div class="editor-shell" data-cpp="q32"
+     data-harness='double f_runge(double x) { return 1.0 / (1.0 + 25.0 * x * x); }
+int main() {
+    const int n = 20;
+    static double xn[100], yn[100];
+    for (int i = 0; i &lt;= n; ++i) {
+        xn[i] = -1.0 + 2.0 * (double)i / (double)n;
+        yn[i] = f_runge(xn[i]);
+    }
+    double max_err = 0.0;
+    for (int k = 0; k &lt; 1001; ++k) {
+        double x = -1.0 + 2.0 * (double)k / 1000.0;
+        double e = f_runge(x) - lagrange_eval(xn, yn, n, x);
+        if (e &lt; 0) e = -e;
+        if (e &gt; max_err) max_err = e;
+    }
+    printf("Runge L_20, max error = %.6g\n", max_err);
+    printf("__ANS__%.17g\n", max_err);
+    printf("__END__\n");
+    return 0;
+}'
+     data-check-eval="rungeMaxErr(20)" data-check-rtol="1e-9">
+  <div class="editor-head"><span class="fname">task3_2.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
+  <textarea data-code>#include &lt;cstdio&gt;
+#include &lt;cmath&gt;
+
+double lagrange_basis(int i, const double* xn, int n, double x) {
+    double v = 1.0;
+    for (int j = 0; j &lt;= n; ++j) if (j != i) v *= (x - xn[j]) / (xn[i] - xn[j]);
+    return v;
+}
+
+double lagrange_eval(const double* xn, const double* yn, int n, double x) {
+    double s = 0.0;
+    for (int i = 0; i &lt;= n; ++i) s += yn[i] * lagrange_basis(i, xn, n, x);
+    return s;
+}
+</textarea>
+  <div class="output" data-output></div>
+</div>
+<div class="verdict" data-verdict><span class="status-dot"></span></div>
+</div>
+
+<div class="task" data-num="3.3">
+<strong>Задача 3.3. Мораль.</strong>
+
+<div class="mcq" data-mcq="q33" data-correct="C">
+  <div class="head"><span class="status-dot"></span>Что показал эксперимент</div>
+  <label><input type="radio" name="q33" value="A"> A. С ростом \(n\) ошибка монотонно уменьшается.</label>
+  <label><input type="radio" name="q33" value="B"> B. Ошибка примерно постоянна.</label>
+  <label><input type="radio" name="q33" value="C"> C. Ошибка на равномерной сетке экспоненциально <em>растёт</em> у концов.</label>
+  <label><input type="radio" name="q33" value="D"> D. Ошибка зависит только от округления.</label>
+  <button class="btn" type="button" data-mcq-check>проверить</button>
+  <div class="verdict" data-verdict></div>
+</div>
+
+<div class="info" data-lbl="Что дальше">
+В §&nbsp;4 разберём, как это лечится — узлы Чебышёва вместо равномерных подавляют Рунге. Спойлер: при \(n=20\) чебышёвских узлов ошибка \(\sim 10^{-4}\), а не \(\sim 60\).
+</div>
+</div>
+
+<!-- =============================================================== -->
+<h2 id="part4">§4. Отчёт</h2>
+
+<div class="task" data-num="4.1">
+<strong>Задача 4.1. Свой вывод.</strong> Сравните три задачи, где интерполяция важна: (а) построение таблицы значений функции, (б) реконструкция изображения по нескольким пикселям, (в) интерполяция расчётной сетки в CFD. Где Рунге страшнее всего?
+
+<div class="mcq" data-mcq="q41" data-correct="X">
+  <div class="head"><span class="status-dot"></span>отметка</div>
+  <label><input type="radio" name="q41" value="X"> Обсудил(а) с преподавателем.</label>
+  <button class="btn" type="button" data-mcq-check>отметить</button>
+  <div class="verdict" data-verdict></div>
+</div>
+</div>
+
+<h3>Что унести с лабы</h3>
+<ol>
+<li>Интерполяционный полином существует и единственен через \(n+1\) точек.</li>
+<li>Форма Лагранжа удобна для анализа, форма Ньютона — для вычислений и обновлений.</li>
+<li>Точный проход через узлы гарантирован до округления \(\sim u\).</li>
+<li>Феномен Рунге показывает: полиномиальная интерполяция на равномерной сетке принципиально ограничена. Лечится сменой узлов (Чебышёв, §&nbsp;4) или сменой базиса (сплайны, §&nbsp;4).</li>
+</ol>
+
+<div class="lecture-nav">
+  <a class="nav-prev" href="w03.html">← §3. Лекция</a>
+  <a class="nav-next" href="w04.html">§4. Чебышёв и сплайны →</a>
+</div>
+
+</div>
+</div>
+
+<div class="comments-wrap">
+<div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">
+<h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
+<div id="comments-list"><p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p></div>
+<div id="comment-form" style="display:none;margin-top:.8rem">
+<textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
+<button onclick="window._postComment()" style="margin-top:.4rem;background:#b44a2d;color:#fff;border:none;padding:6px 18px;border-radius:5px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer">Отправить</button>
+</div>
+<div id="comment-login"><p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p></div>
+</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/comments.js"></script>
+
+<script>
+window.__EVAL__ = (function(){
+  function lagrangeEval(xn, yn, n, x){
+    var s = 0;
+    for (var i = 0; i <= n; ++i){
+      var v = 1;
+      for (var j = 0; j <= n; ++j) if (j!==i) v *= (x - xn[j]) / (xn[i] - xn[j]);
+      s += yn[i]*v;
+    }
+    return s;
+  }
+  var CACHE = {};
+  function fRunge(x){ return 1/(1+25*x*x); }
+  return {
+    lagrangeSinPi2: function(){
+      var xn=[], yn=[];
+      for (var i=0;i<5;++i){ xn[i]=i*Math.PI/4; yn[i]=Math.sin(xn[i]); }
+      return lagrangeEval(xn, yn, 4, Math.PI/2);
+    },
+    rungeMaxErr: function(n){
+      var key='r'+n;
+      if (CACHE[key]!==undefined) return CACHE[key];
+      var xn=[], yn=[];
+      for (var i=0;i<=n;++i){ xn[i]=-1+2*i/n; yn[i]=fRunge(xn[i]); }
+      var maxE=0;
+      for (var k=0;k<1001;++k){
+        var x=-1+2*k/1000;
+        var e=Math.abs(fRunge(x)-lagrangeEval(xn,yn,n,x));
+        if (e>maxE) maxE=e;
+      }
+      return CACHE[key]=maxE;
+    }
+  };
+})();
+</script>
+
+<script type="module">
+import { init, run } from 'https://cdn.jsdelivr.net/npm/clang.js/dist/clang.js';
+const CLANG_PATH = 'https://cdn.jsdelivr.net/npm/clang.js/dist';
+const runtime = { ready: false, initing: false };
+const listeners = new Set();
+const origLog = console.log;
+console.log = function(msg){ origLog.apply(console, arguments); if (typeof msg === 'string') listeners.forEach(l => l(msg)); };
+function stripAnsi(s){ return String(s).replace(/\x1b\[[0-9;]*m/g, ''); }
+function isClangDiag(line){ return /(Fetching|Compiling|Untarring|Allowing rAF|clang -cc1|wasm-ld|done\.|Error:)/.test(line); }
+async function ensureRuntime(){
+  if (runtime.ready) return;
+  if (runtime.initing) { while (!runtime.ready) await new Promise(r=>setTimeout(r,200)); return; }
+  runtime.initing = true;
+  setRuntimeState('init', 'clang: загружаю ~60 МБ (первый раз)…');
+  try { await init({ path: CLANG_PATH }); runtime.ready = true; setRuntimeState('ok', 'clang: готов'); }
+  catch (e) { setRuntimeState('err', 'clang: ошибка — ' + e.message); throw e; }
+}
+function setRuntimeState(cls, text){
+  ['prog_runtime','side_runtime'].forEach(id=>{
+    const el = document.getElementById(id); if (!el) return;
+    el.className = (id==='prog_runtime' ? 'runtime ' : 'runtime-state ') + cls; el.textContent = text;
+  });
+}
+async function runCpp(studentCode, harness, outputEl){
+  await ensureRuntime();
+  const full = studentCode + '\n' + harness;
+  const buffer = []; const answers = []; let sawEnd = false;
+  const listener = (line) => {
+    const clean = stripAnsi(line);
+    if (isClangDiag(clean)) outputEl.insertAdjacentHTML('beforeend', '<span class="hi">'+escapeHtml(clean)+'</span>\n');
+    else outputEl.insertAdjacentHTML('beforeend', escapeHtml(clean)+'\n');
+    outputEl.scrollTop = outputEl.scrollHeight;
+    buffer.push(clean);
+    clean.split('\n').forEach(l => {
+      const m = l.match(/^__ANS__(\S+)/); if (m) answers.push(parseFloat(m[1]));
+      if (/^__END__/.test(l)) sawEnd = true;
+    });
+  };
+  listeners.add(listener);
+  outputEl.innerHTML = '';
+  outputEl.insertAdjacentHTML('beforeend', '<span class="hi">Компилирую и запускаю…</span>\n');
+  try { await run(full); } catch (e) { outputEl.insertAdjacentHTML('beforeend', '<span class="err">'+escapeHtml(e.message)+'</span>\n'); }
+  const deadline = Date.now() + 120000;
+  while (!sawEnd && Date.now() < deadline) await new Promise(r=>setTimeout(r,120));
+  listeners.delete(listener);
+  return { answers, ended: sawEnd, output: buffer.join('\n') };
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+const PROG_KEY = 'cfd-nm-w03-lab-cpp-progress';
+let PROG = (function(){try{return JSON.parse(localStorage.getItem(PROG_KEY)||'{}');}catch(e){return{};}})();
+function saveProg(){ try{localStorage.setItem(PROG_KEY, JSON.stringify(PROG));}catch(e){} }
+const TOTAL = 10;
+function updateProgUI(){
+  const done = Object.values(PROG).filter(v=>v==='ok').length;
+  const pct = 100*done/TOTAL;
+  const bar = document.getElementById('prog_bar'); if (bar) bar.style.width = pct.toFixed(0)+'%';
+  const cnt = document.getElementById('prog_cnt'); if (cnt) cnt.textContent = done+'/'+TOTAL;
+  const side = document.getElementById('side_progress'); if (side) side.textContent = 'решено '+done+' из '+TOTAL;
+}
+document.getElementById('prog_reset').addEventListener('click', ()=>{
+  if (!confirm('Сбросить весь прогресс?')) return;
+  PROG = {}; saveProg(); updateProgUI();
+  document.querySelectorAll('[data-verdict]').forEach(v=>{v.className='verdict';v.textContent='';});
+  document.querySelectorAll('.status-dot').forEach(d=>d.classList.remove('ok','err'));
+});
+updateProgUI();
+function closeTo(got, want, rtol, atol){
+  rtol = rtol||0; atol = atol||0;
+  if (!isFinite(got) || !isFinite(want)) return got===want;
+  const d = Math.abs(got-want); const tol = Math.max(atol, rtol*Math.abs(want));
+  return d <= tol;
+}
+document.querySelectorAll('[data-cpp]').forEach(shell=>{
+  const id = shell.getAttribute('data-cpp');
+  const ta = shell.querySelector('[data-code]');
+  const outputEl = shell.querySelector('[data-output]');
+  const btnRun = shell.querySelector('[data-run]');
+  const btnReset = shell.querySelector('[data-reset]');
+  const harness = shell.getAttribute('data-harness') || '';
+  const rtol = parseFloat(shell.getAttribute('data-check-rtol')||'0');
+  const atol = parseFloat(shell.getAttribute('data-check-atol')||'0');
+  const targetAttr = shell.getAttribute('data-check-target');
+  const evalAttr = shell.getAttribute('data-check-eval');
+  const verdictEl = shell.nextElementSibling && shell.nextElementSibling.hasAttribute('data-verdict') ? shell.nextElementSibling : null;
+  const initial = ta.value;
+  const cm = CodeMirror.fromTextArea(ta, {
+    mode: 'text/x-c++src', lineNumbers: true, theme: 'material-darker',
+    indentUnit: 4, tabSize: 4, lineWrapping: false,
+    extraKeys: { 'Ctrl-Enter': runNow, 'Cmd-Enter': runNow }
+  });
+  const savedCode = localStorage.getItem('cfd-nm-w03-lab-cpp:'+id);
+  if (savedCode) cm.setValue(savedCode);
+  cm.on('change', () => localStorage.setItem('cfd-nm-w03-lab-cpp:'+id, cm.getValue()));
+  if (verdictEl && PROG[id]==='ok'){ verdictEl.className = 'verdict ok'; verdictEl.innerHTML = '<span class="status-dot ok"></span>✓ решено ранее'; }
+  btnReset.addEventListener('click', ()=>{ if (!confirm('Вернуть скелет?')) return; cm.setValue(initial); localStorage.removeItem('cfd-nm-w03-lab-cpp:'+id); });
+  async function runNow(){
+    btnRun.disabled = true; btnRun.textContent = '…';
+    try {
+      const code = cm.getValue();
+      const res = await runCpp(code, harness, outputEl);
+      let targets = [];
+      if (evalAttr) {
+        targets = evalAttr.split('|').map(call=>{
+          const m = call.match(/^([a-zA-Z_][\w]*)\((.*)\)$/);
+          if (!m) return NaN;
+          const fn = window.__EVAL__[m[1]]; if (!fn) return NaN;
+          try { const args = m[2].trim() ? m[2].split(',').map(s=>parseFloat(s)) : []; return fn.apply(null, args); }
+          catch(e){ return NaN; }
+        });
+      } else if (targetAttr) { targets = targetAttr.split(',').map(s=>parseFloat(s)); }
+      if (verdictEl) {
+        if (!res.ended) { verdictEl.className = 'verdict err'; verdictEl.innerHTML = '<span class="status-dot err"></span>✗ программа не вывела __END__ за 2 мин (в Firefox первая загрузка бывает долгой — подождите и запустите ещё раз)'; PROG[id] = 'err'; }
+        else if (res.answers.length === 0) { verdictEl.className = 'verdict part'; verdictEl.innerHTML = '<span class="status-dot"></span>программа запустилась, но не напечатала __ANS__'; }
+        else {
+          const n = Math.min(res.answers.length, targets.length || res.answers.length);
+          const msgs = []; let okAll = true;
+          for (let i=0;i<n;i++){
+            const got = res.answers[i]; const want = targets[i];
+            const ok = isFinite(want) ? closeTo(got, want, rtol, atol) : true;
+            if (!ok) { okAll = false; msgs.push('поле '+(i+1)+': '+got.toExponential(3)+' vs '+want.toExponential(3)); }
+          }
+          if (okAll){ verdictEl.className = 'verdict ok'; verdictEl.innerHTML = '<span class="status-dot ok"></span>✓ сходится с эталоном'; PROG[id] = 'ok'; }
+          else { verdictEl.className = 'verdict err'; verdictEl.innerHTML = '<span class="status-dot err"></span>✗ '+msgs.join('; '); PROG[id] = 'err'; }
+        }
+        saveProg(); updateProgUI();
+      }
+    } catch (e) {
+      if (verdictEl) { verdictEl.className = 'verdict err'; verdictEl.innerHTML = '<span class="status-dot err"></span>✗ ошибка: '+escapeHtml(e.message); }
+    } finally { btnRun.disabled = false; btnRun.textContent = '▶ запустить'; }
+  }
+  btnRun.addEventListener('click', runNow);
+});
+document.querySelectorAll('[data-mcq]').forEach(box=>{
+  const id = box.getAttribute('data-mcq');
+  const correct = box.getAttribute('data-correct');
+  const btn = box.querySelector('[data-mcq-check]');
+  const verdict = box.querySelector('[data-verdict]');
+  const dot = box.querySelector('.status-dot');
+  if (PROG[id]==='ok'){ verdict.className='verdict ok'; verdict.textContent='✓ решено ранее'; dot.classList.add('ok'); }
+  btn.addEventListener('click', ()=>{
+    const chosen = box.querySelector('input[type=radio]:checked');
+    if (!chosen){ verdict.className='verdict err'; verdict.textContent='выберите вариант'; return; }
+    const ok = chosen.value === correct;
+    verdict.className = 'verdict '+(ok?'ok':'err');
+    verdict.textContent = ok ? '✓ верно' : '✗ не тот вариант';
+    dot.classList.toggle('ok', ok); dot.classList.toggle('err', !ok);
+    PROG[id] = ok ? 'ok' : 'err'; saveProg(); updateProgUI();
+  });
+});
+setTimeout(ensureRuntime, 800);
+</script>
+</body>
+</html>

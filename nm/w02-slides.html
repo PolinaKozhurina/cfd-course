@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ru" data-course="nm">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ЧМ · §2 Слайды · Ряд Тейлора и аппроксимация функций</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<script src="../js/slide-tools.js"></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:24px;line-height:1.55;color:var(--text);background:var(--bg);overflow:hidden}
+.slide{position:fixed;inset:0;padding:0;display:none;overflow:auto}
+.slide.active{display:flex;align-items:center;justify-content:center}
+.slide-content{width:100%;max-width:min(96vw, 1600px);margin:auto;padding:1.4rem 1.6rem 2.8rem;box-sizing:border-box}
+.slide.active .slide-content > *{animation: slideStep .38s cubic-bezier(.22,.61,.36,1) both;animation-delay: calc(var(--i, 0) * 85ms)}
+@keyframes slideStep{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.slide.active .eq{animation: formulaIn .55s cubic-bezier(.22,.61,.36,1) both;animation-delay: calc(var(--i, 0) * 85ms);transform-origin: center}
+@keyframes formulaIn{0%{opacity:0;transform:scale(.92) translateY(4px);filter:blur(3.5px)}55%{opacity:1;transform:scale(1.02);filter:blur(0)}100%{opacity:1;transform:scale(1)}}
+.slide.active .eq::after{content:'';position:absolute;left:0;right:0;bottom:-6px;height:2px;background:linear-gradient(90deg,transparent,var(--accent) 50%,transparent);transform:scaleX(0);opacity:0;animation: formulaUnderline .55s ease-out both;animation-delay: calc(var(--i, 0) * 85ms + .35s)}
+.slide.active .eq{position:relative}
+@keyframes formulaUnderline{0%{transform:scaleX(0);opacity:0}40%{transform:scaleX(1);opacity:.7}100%{transform:scaleX(1);opacity:0}}
+.slide.title.active .slide-content > *{animation:slideStep .55s ease both;animation-delay:calc(var(--i,0) * 140ms)}
+@media (prefers-reduced-motion: reduce){.slide.active .slide-content > *, .slide.active .eq, .slide.active .eq::after{animation:none}}
+.slide-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:.6rem}
+h1{font-family:'Playfair Display',serif;font-weight:900;font-size:2.6rem;line-height:1.12;color:var(--text);margin-bottom:1rem;letter-spacing:-.01em}
+h2{font-family:'Playfair Display',serif;font-weight:700;font-size:1.8rem;color:var(--accent);margin-bottom:1.2rem;line-height:1.15}
+h3{font-family:'Source Serif 4',serif;font-weight:700;font-size:1.15rem;color:var(--text);margin:1rem 0 .5rem}
+p{margin-bottom:.9rem}
+ul,ol{margin:0 0 .9rem 1.6rem;line-height:1.65}
+li{margin-bottom:.35rem}
+em{color:var(--accent2)}
+strong{color:var(--text)}
+code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2);padding:1px 6px;border-radius:3px}
+.eq{margin:1.2rem 0;text-align:center;font-size:1.05em}
+.definition,.condition,.theorem{position:relative;padding:1rem 1.3rem 1rem 3.2rem;border-radius:6px;margin:1rem 0;border:none;overflow:hidden;min-height:11rem}
+.definition{background:#e7efe8}
+.condition{background:#f2e5d6}
+.theorem{background:#e0e8f2}
+.definition strong,.condition strong,.theorem strong{color:var(--text)}
+.definition::before,.condition::before,.theorem::before{position:absolute;left:0;top:0;bottom:0;width:2.1rem;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase}
+.definition::before{background:#d0dfd4;color:#3d6b5a;content:'Определение'}
+.definition[data-num]::before{content:'Определение ' attr(data-num)}
+.condition::before{background:#e5d1b8;color:#8a5236;content:'Условие'}
+.condition[data-num]::before{content:'Условие ' attr(data-num)}
+.theorem::before{background:#c8d5e6;color:#4a5f88;content:'Теорема'}
+.theorem[data-num]::before{content:'Теорема ' attr(data-num)}
+.example{background:#e0e8f2;border-left:3px solid #7d95bd;padding:.8rem 1.1rem;border-radius:0 6px 6px 0;margin:.5rem 0 .8rem;font-size:.9em;color:var(--text)}
+.example .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#4a5f88;margin-bottom:.35rem}
+.example ul{margin:.15rem 0 0 1.1rem;font-size:.94em}
+@media(max-width:900px){.definition,.condition,.theorem{padding-left:2.6rem}.definition::before,.condition::before,.theorem::before{width:1.8rem;font-size:.56rem;letter-spacing:.18em}}
+.figure{margin:1rem auto;text-align:center;max-width:100%}
+.figure svg{max-width:100%;height:auto}
+.figure .caption{font-size:.78rem;color:var(--text2);margin-top:.4rem;font-style:italic}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+.callout{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;font-size:.95em;color:var(--text2)}
+.tiles{display:grid;grid-template-columns:1fr;gap:.5rem;margin:1rem 0}
+.tile{background:#fff;border:1px solid var(--border);border-radius:6px;padding:.6rem .9rem;display:grid;grid-template-columns:180px 260px 1fr;align-items:center;gap:1rem}
+.tile .h{font-family:'JetBrains Mono',monospace;font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
+.tile .t{font-family:'Playfair Display',serif;font-weight:700;font-size:1.02rem;color:var(--text);line-height:1.2}
+.tile .d{font-size:.86rem;color:var(--text2);line-height:1.35}
+@media(max-width:900px){.tile{grid-template-columns:1fr;gap:.15rem}}
+.slide.title{text-align:center;background:radial-gradient(ellipse at 30% 20%,#fff 0%,var(--bg) 55%,var(--bg2) 100%)}
+.slide.title .slide-content{max-width:1000px}
+.slide.title h1{font-size:3.4rem;margin-bottom:1.5rem;max-width:900px}
+.slide.title h1 .u{color:var(--accent);border-bottom:4px solid var(--accent);padding-bottom:.15rem}
+.slide.title .sub{font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--text2);margin-bottom:1rem;letter-spacing:.05em}
+.slide.title .course{font-size:.85rem;color:var(--text3);text-transform:uppercase;letter-spacing:.24em;margin-bottom:.6rem}
+.slide.title .badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:.35rem .85rem;border:1.5px solid var(--accent);color:var(--accent);border-radius:20px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:1.4rem}
+.hud{position:fixed;bottom:0;left:0;right:0;padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to top,rgba(250,248,244,.95),transparent);z-index:100;pointer-events:none}
+.hud > *{pointer-events:auto}
+.hud button{font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:.4rem .9rem;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text2);cursor:pointer;transition:all .12s}
+.hud button:hover{border-color:var(--accent);color:var(--accent);background:var(--bg2)}
+.hud button:disabled{opacity:.35;cursor:default}
+.hud .counter{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);letter-spacing:.06em}
+.hud .center{display:flex;gap:.4rem;align-items:center}
+.hud .back{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);text-decoration:none;padding:.35rem .7rem;border:1px dashed var(--border);border-radius:4px}
+.hud .back:hover{color:var(--accent);border-color:var(--accent)}
+.progress{position:fixed;top:0;left:0;right:0;height:3px;background:var(--bg3);z-index:99}
+.progress .fill{height:100%;background:var(--accent);transition:width .2s ease;width:0%}
+@media(min-width:1600px){body{font-size:26px}h1{font-size:3rem}h2{font-size:2rem}}
+@media(max-width:900px){.slide-content{padding:1.6rem 1.2rem 3rem}h1{font-size:1.9rem}h2{font-size:1.4rem}.two-col{grid-template-columns:1fr}body{font-size:19px}}
+@media print{body{overflow:visible;background:#fff}.slide{position:relative;display:flex!important;page-break-after:always;min-height:100vh;align-items:center;justify-content:center}.hud,.progress{display:none}}
+</style>
+</head>
+<body>
+
+<div class="progress"><div class="fill" id="progressFill"></div></div>
+
+<!-- 1: Титульный -->
+<section class="slide title active">
+  <div class="course">Численные методы</div>
+  <div class="badge">Занятие 2 · Блок I. Основы вычислений</div>
+  <h1>Ряд Тейлора и <span class="u">аппроксимация функций</span></h1>
+  <div class="sub">Формула Лагранжа · Пять разложений · Задача наилучшего приближения</div>
+</section>
+
+<!-- 2: Мотивация -->
+<section class="slide">
+  <div class="slide-num">§2.1 · Зачем это нужно</div>
+  <h2>Тейлор — язык ошибки метода</h2>
+  <p>В §&nbsp;1 мы разобрали ошибку <em>округления</em>. Сегодня — главный инструмент для второго источника, ошибки <em>усечения</em>.</p>
+  <p>Почти каждый численный метод — разностные производные, квадратуры, схемы для УрЧП — строится на замене функции отрезком её ряда Тейлора. Оценка отброшенного «хвоста» и есть оценка ошибки метода.</p>
+  <div class="callout">
+    <strong>Правило вечера:</strong> порядок точности численного метода = степень первого отброшенного члена ряда Тейлора. Всё занятие крутится вокруг этого утверждения.
+  </div>
+</section>
+
+<!-- 3: Формула Тейлора -->
+<section class="slide">
+  <div class="slide-num">§2.2 · Формула Тейлора с остатком</div>
+  <h2>Формула Тейлора с остаточным членом Лагранжа</h2>
+  <div class="theorem" data-num="1">
+    Пусть \(f\) имеет \(n+1\) непрерывную производную между \(x_0\) и \(x\). Тогда
+    <div class="eq">\[ f(x) \;=\; \sum_{k=0}^{n}\frac{f^{(k)}(x_0)}{k!}\,(x-x_0)^k \;+\; R_n(x), \tag{2.1} \]</div>
+    где остаточный член в форме Лагранжа
+    <div class="eq">\[ R_n(x) = \frac{f^{(n+1)}(\xi)}{(n+1)!}\,(x-x_0)^{n+1},\qquad \xi\ \text{строго между}\ x_0\ \text{и}\ x. \tag{2.2} \]</div>
+    Многочлен \(P_n(x)\) степени \(\le n\) — <em>многочлен Тейлора</em>.
+  </div>
+</section>
+
+<!-- 4: Оценка остатка -->
+<section class="slide">
+  <div class="slide-num">§2.2 · Оценка сверху</div>
+  <h2>Оценка остатка на практике</h2>
+  <p>Точка \(\xi\) в (2.2) существует, но не задаётся формулой. На практике заменяют \(f^{(n+1)}(\xi)\) на его верхнюю грань.</p>
+  <div class="eq">\[ |R_n(x)| \;\le\; \frac{M_{n+1}}{(n+1)!}\,|x-x_0|^{n+1},\qquad M_{n+1} = \sup\bigl|f^{(n+1)}\bigr|. \tag{2.3} \]</div>
+  <div class="example">
+    <span class="lbl">Пример: сколько членов для \(\sin\)?</span>
+    Чтобы \(|R_n|&lt;10^{-8}\) на \(|x|\le 1\): все \(|f^{(n+1)}|\le 1\), значит \((n+1)!\ge 10^{8}\); ближайший — \(12! \approx 4{,}8\cdot 10^{8}\). Итого \(n = 11\), т. е. до члена \(x^{11}/11!\) включительно.
+  </div>
+</section>
+
+<!-- 5: Пять разложений -->
+<section class="slide">
+  <div class="slide-num">§2.3 · Классические разложения</div>
+  <h2>Пять разложений, которые надо знать наизусть</h2>
+  <div style="display:grid;grid-template-columns:1fr;gap:.5rem;font-size:.94em">
+    <div class="callout">\(\displaystyle e^{x} = \sum_{k=0}^{\infty}\frac{x^k}{k!},\qquad x\in\mathbb{R}\) &emsp;<em style="color:var(--text2);font-style:italic">— радиус \(\infty\)</em></div>
+    <div class="callout">\(\displaystyle \sin x = \sum_{k=0}^{\infty}\frac{(-1)^k x^{2k+1}}{(2k+1)!},\quad \cos x = \sum_{k=0}^{\infty}\frac{(-1)^k x^{2k}}{(2k)!},\ \ x\in\mathbb{R}\) &emsp;<em style="color:var(--text2);font-style:italic">— радиус \(\infty\)</em></div>
+    <div class="callout">\(\displaystyle \ln(1+x) = \sum_{k=1}^{\infty}\frac{(-1)^{k+1}x^k}{k},\qquad -1&lt;x\le 1\) &emsp;<em style="color:var(--text2);font-style:italic">— радиус 1</em></div>
+    <div class="callout">\(\displaystyle \frac{1}{1-x} = \sum_{k=0}^{\infty}x^{k},\qquad |x|&lt;1\) &emsp;<em style="color:var(--text2);font-style:italic">— радиус 1</em></div>
+    <div class="callout">\(\displaystyle (1+x)^{\alpha} = \sum_{k=0}^{\infty}\binom{\alpha}{k}x^{k},\qquad |x|&lt;1\) &emsp;<em style="color:var(--text2);font-style:italic">— радиус 1</em></div>
+  </div>
+</section>
+
+<!-- 6: Порядок точности -->
+<section class="slide">
+  <div class="slide-num">§2.4 · Порядок точности</div>
+  <h2>Порядок точности = первый отброшенный член</h2>
+  <div class="theorem" data-num="2">
+    Если оборвать ряд Маклорена на члене степени \(n\), то из (2.3)
+    <div class="eq">\[ \bigl|f(x) - P_n(x)\bigr| \;\le\; \frac{M_{n+1}}{(n+1)!}\,|x|^{n+1} \;=\; O\!\left(x^{n+1}\right),\qquad x\to 0. \tag{2.4} \]</div>
+  </div>
+  <p>Каждый дополнительный член повышает порядок точности на единицу.</p>
+  <div class="example">
+    <span class="lbl">\(\sin x \approx x\) (обрыв на \(n=1\)) даёт ошибку \(O(x^3)\):</span>
+    <ul>
+      <li>при \(x=0{,}1\): ошибка порядка \(10^{-3}/6 \approx 1{,}7\cdot 10^{-4}\);</li>
+      <li>при \(x=0{,}01\): ошибка \(10^{-6}/6 \approx 1{,}7\cdot 10^{-7}\);</li>
+      <li>шаг \(\times\ 1/10\) уменьшает ошибку в \(1000\) раз \(\Leftrightarrow\) порядок 3.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 7: График -->
+<section class="slide">
+  <div class="slide-num">§2.4 · Иллюстрация</div>
+  <h2>\(P_1, P_3, P_5\) синуса — «прилипают» дольше</h2>
+  <div class="figure">
+    <svg viewBox="0 0 800 320" xmlns="http://www.w3.org/2000/svg" style="max-width:800px">
+      <line x1="40" y1="160" x2="775" y2="160" stroke="#2c2419" stroke-width="1.2"/>
+      <line x1="407" y1="30" x2="407" y2="290" stroke="#2c2419" stroke-width="1.2"/>
+      <text x="770" y="152" font-family="JetBrains Mono,monospace" font-size="12" fill="#6b5d4f">x</text>
+      <path d="M 40 250 Q 200 40 280 40 Q 360 40 407 160 Q 454 285 534 285 Q 615 285 775 60" fill="none" stroke="#2c2419" stroke-width="2.6"/>
+      <line x1="260" y1="320" x2="554" y2="0" stroke="#b44a2d" stroke-width="1.8" stroke-dasharray="6,4"/>
+      <path d="M 150 320 Q 260 80 360 66 Q 407 62 454 78 Q 550 220 660 320" fill="none" stroke="#1a6b5a" stroke-width="1.8" stroke-dasharray="6,4"/>
+      <path d="M 80 300 Q 200 40 300 32 Q 407 28 500 60 Q 590 100 700 0" fill="none" stroke="#3a5ba0" stroke-width="1.8" stroke-dasharray="3,4"/>
+      <g font-family="JetBrains Mono,monospace" font-size="13">
+        <text x="48" y="56" fill="#2c2419">sin x</text>
+        <text x="560" y="16" fill="#b44a2d">P₁ = x</text>
+        <text x="150" y="80" fill="#1a6b5a">P₃</text>
+        <text x="660" y="20" fill="#3a5ba0">P₅</text>
+      </g>
+    </svg>
+    <div class="caption">Чем выше степень многочлена Тейлора, тем шире область, где он «неотличим» от \(\sin x\).</div>
+  </div>
+</section>
+
+<!-- 8: Оценка Лейбница -->
+<section class="slide">
+  <div class="slide-num">§2.4 · Оценка Лейбница</div>
+  <h2>Для знакопеременных рядов — критерий остановки</h2>
+  <div class="condition" data-num="1">
+    <em style="color:inherit;font-weight:600">оценка Лейбница.</em> Если члены знакопеременного ряда убывают по модулю (\(\sin x, \cos x, \ln(1+x)\) при \(0&lt;x\le 1\), \((1+x)^\alpha\) при некоторых \(\alpha\)), то остаток мажорируется <em>первым отброшенным членом</em>:
+    <div class="eq">\[ |R_n| \;\le\; |t_{n+1}|. \tag{2.5} \]</div>
+  </div>
+  <p><strong>Практический критерий остановки:</strong> суммируйте, пока модуль очередного члена не станет меньше требуемой точности \(\tau\). Тогда \(|R|&lt;\tau\) — гарантированно.</p>
+  <div class="callout" style="font-size:.9em">
+    В лабе реализуем автоматическую остановку для \(\sin\): при \(x=1\), \(\tau=10^{-10}\) нужно всего <em>7 членов</em>.
+  </div>
+</section>
+
+<!-- 9: Катастрофа e^{-20} -->
+<section class="slide">
+  <div class="slide-num">§2.5 · Круг замыкается</div>
+  <h2>Знакопеременный ряд и потеря значимости: \(e^{-20}\)</h2>
+  <div class="eq">\[ e^{-x} \;=\; 1 - x + \frac{x^2}{2!} - \frac{x^3}{3!} + \dots \tag{2.6} \]</div>
+  <p>При \(x = 20\) слагаемые сначала <em>растут</em> по модулю: наибольший — около \(20^{20}/20! \approx 4\cdot 10^{7}\).</p>
+  <p>Затем убывают. Их сумма — \(e^{-20} \approx 2\cdot 10^{-9}\).</p>
+  <div class="callout" style="border-left:5px solid var(--accent);background:#fbeee7">
+    <strong>Что это значит:</strong> результат — маленькое число, а промежуточные — большие. Разность старших \(10^{7}\) должна дать \(10^{-9}\) — старшие 7–8 десятичных разрядов должны взаимно уничтожиться. Это <em>катастрофа значимости</em> из §&nbsp;1.7, но растворённая в знакопеременном ряде.
+  </div>
+</section>
+
+<!-- 10: Лечение -->
+<section class="slide">
+  <div class="slide-num">§2.5 · Лечение</div>
+  <h2>\(e^{-x}\) через \(1/e^{x}\)</h2>
+  <div class="eq">\[ e^{-x} \;=\; \frac{1}{e^{x}}. \tag{2.7} \]</div>
+  <p>В правой части — ряд для положительного \(x\), где все слагаемые положительны. Катастрофического вычитания <em>нет</em>. Ошибка суммирования порядка \(u\); деление сохраняет относительную точность.</p>
+  <div class="two-col">
+    <div class="callout" style="border-left:4px solid var(--accent)">
+      <strong>Наивно \(e^{-20}\):</strong><br>
+      результат \(\approx 5{,}6 \cdot 10^{-9}\)<br>
+      относительная ошибка <strong>170 %</strong> — <em>ни одной верной цифры</em>
+    </div>
+    <div class="callout" style="border-left:4px solid var(--accent2)">
+      <strong>Через \(1/e^{20}\):</strong><br>
+      результат \(\approx 2{,}06\cdot 10^{-9}\)<br>
+      относительная ошибка \(\sim 10^{-16}\) — <em>машинная точность</em>
+    </div>
+  </div>
+</section>
+
+<!-- 11: Задача наилучшего приближения -->
+<section class="slide">
+  <div class="slide-num">§2.6 · Постановка</div>
+  <h2>Задача наилучшего приближения</h2>
+  <p>Формула Тейлора даёт <em>локально оптимальное</em> приближение — вблизи точки разложения. Часто нужна <em>глобальная</em> оптимальность на отрезке.</p>
+  <div class="definition" data-num="2">
+    Пусть \(X\) — нормированное пространство функций на \([a,b]\), \(V\subset X\) — конечномерное подпространство (например, \(\mathcal{P}_n\)). <em>Наилучшее приближение</em> \(f\) элементом из \(V\) в норме \(\|\cdot\|_X\) — это \(g^* \in V\) такое, что
+    <div class="eq">\[ \|f - g^*\|_X \;=\; \inf_{g \in V}\|f - g\|_X. \tag{2.8} \]</div>
+    Величина \(E_n(f) = \inf\|f-g\|_X\) — <em>погрешность наилучшего приближения</em>.
+  </div>
+  <p>Ответ на «какое приближение считать лучшим» полностью зависит от <em>выбора нормы</em>.</p>
+</section>
+
+<!-- 12: Три нормы -->
+<section class="slide">
+  <div class="slide-num">§2.7 · Нормы функций</div>
+  <h2>Три нормы — три критерия близости</h2>
+  <div class="tiles">
+    <div class="tile">
+      <div class="h">Равномерная</div>
+      <div class="t">\(\|f\|_C = \max\limits_{x\in[a,b]}|f(x)|\)</div>
+      <div class="d">«Минимаксная»: интересна худшая точка. Минимизировать её — «прижать» самый большой промах.</div>
+    </div>
+    <div class="tile">
+      <div class="h">L₂ (энергия)</div>
+      <div class="t">\(\|f\|_{L_2} = \bigl(\int f^2\,dx\bigr)^{1/2}\)</div>
+      <div class="d">Среднеквадратичная. Отдельные пики допустимы, если они узкие. Естественна для регрессии.</div>
+    </div>
+    <div class="tile">
+      <div class="h">L₁ (робастная)</div>
+      <div class="t">\(\|f\|_{L_1} = \int|f|\,dx\)</div>
+      <div class="d">Устойчива к выбросам. Стандарт в обработке данных с шумом.</div>
+    </div>
+  </div>
+  <div class="example" style="margin-top:.6rem">
+    <span class="lbl">Пример: пик</span>
+    Пусть \(f = 1\) на \([0, 0{,}99]\) и \(f = 100\) на \((0{,}99, 1]\). Тогда \(\|f\|_C = 100\), \(\|f\|_{L_1} \approx 1{,}99\), \(\|f\|_{L_2} \approx 10\). Разница — три порядка.
+  </div>
+</section>
+
+<!-- 13: Вейерштрасс -->
+<section class="slide">
+  <div class="slide-num">§2.8 · Плотность многочленов</div>
+  <h2>Теорема Вейерштрасса (1885)</h2>
+  <div class="theorem" data-num="3">
+    Множество алгебраических многочленов плотно в \(C[a,b]\): для любой \(f\in C[a,b]\) и любого \(\varepsilon &gt; 0\) существует многочлен \(P\) такой, что
+    <div class="eq">\[ \|f - P\|_C \;=\; \max_{x\in[a,b]}\bigl|f(x)-P(x)\bigr| \;&lt;\; \varepsilon. \tag{2.9} \]</div>
+  </div>
+  <p>Значит, \(E_n(f) \to 0\) при \(n\to\infty\) для любой непрерывной \(f\).</p>
+  <div class="callout" style="font-size:.9em">
+    <strong>Но скорость может быть любой.</strong> Гладкая \(f\in C^k\) на чебышёвских узлах даёт \(E_n \le C/n^k\); а негладкая функция и разложение Тейлора вокруг «плохой» точки могут <em>расходиться</em>. Пример — <em>феномен Рунге</em>, который мы увидим в §&nbsp;3.
+  </div>
+</section>
+
+<!-- 14: Минимакс vs МНК -->
+<section class="slide">
+  <div class="slide-num">§2.9 · Два способа быть лучшим</div>
+  <h2>Минимакс vs МНК: два разных «оптимума»</h2>
+  <div class="two-col">
+    <div class="definition" data-num="3">
+      <em style="color:inherit;font-weight:600">минимакс.</em> \(P^*_n\), минимизирующий \(\|f-P\|_C\).
+      <div class="eq">\[ P^*_n = \arg\min_{P\in\mathcal{P}_n}\|f-P\|_C. \]</div>
+      Существует, единственен (Чебышёв). Строится алгоритмом Ремеза (нелинейно, итерационно). Стандарт для аппаратных \(\sin/\cos\).
+    </div>
+    <div class="definition" data-num="4">
+      <em style="color:inherit;font-weight:600">МНК.</em> \(Q^*_n\), минимизирующий \(\|f-Q\|_{L_2}\).
+      <div class="eq">\[ Q^*_n = \arg\min_{Q\in\mathcal{P}_n}\|f-Q\|_{L_2}. \]</div>
+      Линейная задача — нормальные уравнения. Дёшево. Устойчив к точечным ошибкам. Идеален для регрессии и разложения по ортогональным базисам. Разберём в §&nbsp;5.
+    </div>
+  </div>
+</section>
+
+<!-- 15: Итоги -->
+<section class="slide">
+  <div class="slide-num">§2.10 · Итоги</div>
+  <h2>Что унести с занятия 2</h2>
+  <ol style="font-size:.92em">
+    <li>Формула Тейлора (2.1) с остатком Лагранжа (2.2) — универсальный инструмент замены гладкой \(f\) многочленом в окрестности точки.</li>
+    <li>Пять классических разложений с областями сходимости — <em>наизусть</em>.</li>
+    <li>Порядок ошибки усечения = первый отброшенный член. Обрыв на \(x^n\) даёт \(O(x^{n+1})\).</li>
+    <li>Знакопеременный убывающий ряд: критерий остановки Лейбница \(|R_n|\le|t_{n+1}|\).</li>
+    <li>\(e^{-x}\) при больших \(x\) считают через \(1/e^{x}\) — иначе катастрофа значимости.</li>
+    <li>Задача наилучшего приближения (2.8) зависит от выбора нормы: \(C\to\) минимакс, \(L_2\to\) МНК.</li>
+    <li>Вейерштрасс: многочлены плотны в \(C[a,b]\); скорость сходимости регулируется гладкостью \(f\).</li>
+  </ol>
+</section>
+
+<!-- 16: Лаба + литература -->
+<section class="slide">
+  <div class="slide-num">Практика и источники</div>
+  <h2>Дальше — лаба и литература</h2>
+  <div class="two-col">
+    <div>
+      <h3 style="color:var(--accent)">▶ Лаба на C++</h3>
+      <p style="font-size:.9em">Реализуйте частичные суммы \(\sin, e^x\) через рекуррентное домножение, найдите минимальное \(n\) для заданной точности, воспроизведите катастрофу для \(e^{-20}\) и её лечение через \(1/e^{20}\).</p>
+      <div style="margin-top:.5rem;font-family:'JetBrains Mono',monospace;font-size:.8rem"><a href="w02-lab.html" style="color:var(--accent);text-decoration:none;border:1px solid var(--accent);padding:.35rem .8rem;border-radius:5px">открыть лабу →</a></div>
+    </div>
+    <div>
+      <h3 style="color:var(--accent)">Литература к §2</h3>
+      <ol style="font-size:.82em;line-height:1.5">
+        <li>Süli E., Mayers D. An Introduction to Numerical Analysis. — CUP, 2003.</li>
+        <li>Trefethen L. N. Approximation Theory and Approximation Practice. — SIAM, 2013.</li>
+        <li>Cheney E. W., Light W. A Course in Approximation Theory. — AMS, 2000.</li>
+        <li>Бахвалов, Жидков, Кобельков. Численные методы. — гл. 2.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- 17: Финальный -->
+<section class="slide title">
+  <div class="badge">Занятие 2 · итог</div>
+  <h1>Вопросы?</h1>
+  <div class="sub">Следующее занятие → §3. Полиномиальная интерполяция</div>
+  <div style="margin-top:1.4rem;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3)">
+    <span style="margin:0 .8rem">← / →&nbsp;&nbsp;навигация</span>
+    <span style="margin:0 .8rem">F&nbsp;&nbsp;fullscreen</span>
+    <span style="margin:0 .8rem">Home / End</span>
+  </div>
+</section>
+
+<div class="hud">
+  <a href="w02.html" class="back" title="К тексту лекции">← к тексту</a>
+  <div class="center">
+    <button id="btnPrev" onclick="prev()">◀ назад</button>
+    <span class="counter" id="counter">1 / 17</span>
+    <button id="btnNext" onclick="next()">вперёд ▶</button>
+  </div>
+  <a href="w03.html" class="back" title="Следующая лекция">§3 →</a>
+</div>
+
+<script>
+(function(){
+  var slides = Array.from(document.querySelectorAll('.slide'));
+  var counter = document.getElementById('counter');
+  var fill = document.getElementById('progressFill');
+  var i = 0;
+  slides.forEach(function(s){
+    var wrap = document.createElement('div');
+    wrap.className = 'slide-content';
+    while (s.firstChild) wrap.appendChild(s.firstChild);
+    s.appendChild(wrap);
+  });
+  function show(n) {
+    slides[i].classList.remove('active');
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    var s = slides[i];
+    var content = s.querySelector('.slide-content') || s;
+    var animated = [];
+    Array.from(content.children).forEach(function(child){
+      animated.push(child);
+      var innerEq = child.querySelectorAll('.eq');
+      for (var j = 0; j < innerEq.length; j++) animated.push(innerEq[j]);
+    });
+    animated.forEach(function(el, k){ el.style.setProperty('--i', k); el.style.animation = 'none'; });
+    void s.offsetWidth;
+    animated.forEach(function(el){ el.style.animation = ''; });
+    s.classList.add('active');
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+    fill.style.width = ((i + 1) / slides.length * 100) + '%';
+    history.replaceState(null, '', '#' + (i + 1));
+    document.getElementById('btnPrev').disabled = (i === 0);
+    document.getElementById('btnNext').disabled = (i === slides.length - 1);
+    s.scrollTop = 0;
+  }
+  window.next = function(){ show(i + 1); };
+  window.prev = function(){ show(i - 1); };
+  document.addEventListener('keydown', function(e) {
+    if (/^(INPUT|TEXTAREA)$/i.test((e.target || {}).tagName)) return;
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+    else if (e.key === 'Home') { e.preventDefault(); show(0); }
+    else if (e.key === 'End')  { e.preventDefault(); show(slides.length - 1); }
+    else if (e.key === 'f' || e.key === 'F') {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+    }
+  });
+  var h = parseInt((location.hash || '').replace('#', ''), 10);
+  if (!isNaN(h) && h >= 1 && h <= slides.length) show(h - 1);
+  else show(0);
+  window.__slidesShow = show;
+  window.__slidesIndex = function () { return i; };
+})();
+(function initSlideTools() {
+  function ready() {
+    if (!window.CFDSlideTools) return;
+    window.CFDSlideTools.init({
+      slidesSelector: '.slide', activeClass: 'active', hudSelector: '.hud',
+      projectName: 'nm-w02-slides',
+      getCurrentIndex: function () { return window.__slidesIndex ? window.__slidesIndex() : 0; },
+      onGoToSlide: function (n) { if (window.__slidesShow) window.__slidesShow(n); },
+    });
+  }
+  if (window.CFDSlideTools) ready();
+  else window.addEventListener('load', ready);
+})();
+</script>
+</body>
+</html>

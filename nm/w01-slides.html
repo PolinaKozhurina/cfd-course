@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="ru" data-course="nm">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ЧМ · §1 Слайды · Машинная арифметика и анализ ошибок</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<script src="../js/slide-tools.js"></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:24px;line-height:1.55;color:var(--text);background:var(--bg);overflow:hidden}
+
+.slide{position:fixed;inset:0;padding:0;display:none;overflow:auto}
+.slide.active{display:flex;align-items:center;justify-content:center}
+.slide-content{width:100%;max-width:min(96vw, 1600px);margin:auto;padding:1.4rem 1.6rem 2.8rem;box-sizing:border-box}
+
+.slide.active .slide-content > *{
+  animation: slideStep .38s cubic-bezier(.22,.61,.36,1) both;
+  animation-delay: calc(var(--i, 0) * 85ms);
+}
+@keyframes slideStep{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.slide.active .eq{
+  animation: formulaIn .55s cubic-bezier(.22,.61,.36,1) both;
+  animation-delay: calc(var(--i, 0) * 85ms);
+  transform-origin: center;
+}
+@keyframes formulaIn{
+  0%{opacity:0;transform:scale(.92) translateY(4px);filter:blur(3.5px)}
+  55%{opacity:1;transform:scale(1.02);filter:blur(0)}
+  100%{opacity:1;transform:scale(1)}
+}
+.slide.active .eq::after{
+  content:'';position:absolute;left:0;right:0;bottom:-6px;height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent) 50%,transparent);
+  transform:scaleX(0);opacity:0;
+  animation: formulaUnderline .55s ease-out both;
+  animation-delay: calc(var(--i, 0) * 85ms + .35s);
+}
+.slide.active .eq{position:relative}
+@keyframes formulaUnderline{0%{transform:scaleX(0);opacity:0}40%{transform:scaleX(1);opacity:.7}100%{transform:scaleX(1);opacity:0}}
+.slide.title.active .slide-content > *{animation:slideStep .55s ease both;animation-delay:calc(var(--i,0) * 140ms)}
+@media (prefers-reduced-motion: reduce){.slide.active .slide-content > *, .slide.active .eq, .slide.active .eq::after{animation:none}}
+
+.slide-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:.6rem}
+h1{font-family:'Playfair Display',serif;font-weight:900;font-size:2.6rem;line-height:1.12;color:var(--text);margin-bottom:1rem;letter-spacing:-.01em}
+h2{font-family:'Playfair Display',serif;font-weight:700;font-size:1.8rem;color:var(--accent);margin-bottom:1.2rem;line-height:1.15}
+h3{font-family:'Source Serif 4',serif;font-weight:700;font-size:1.15rem;color:var(--text);margin:1rem 0 .5rem}
+p{margin-bottom:.9rem}
+ul,ol{margin:0 0 .9rem 1.6rem;line-height:1.65}
+li{margin-bottom:.35rem}
+em{color:var(--accent2)}
+strong{color:var(--text)}
+code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2);padding:1px 6px;border-radius:3px}
+.eq{margin:1.2rem 0;text-align:center;font-size:1.05em}
+
+.definition,.condition,.theorem{position:relative;padding:1rem 1.3rem 1rem 3.2rem;border-radius:6px;margin:1rem 0;border:none;overflow:hidden;min-height:11rem}
+.definition{background:#e7efe8}
+.condition{background:#f2e5d6}
+.theorem{background:#e0e8f2}
+.definition strong,.condition strong,.theorem strong{color:var(--text)}
+.definition::before,.condition::before,.theorem::before{
+  position:absolute;left:0;top:0;bottom:0;width:2.1rem;
+  display:flex;align-items:center;justify-content:center;
+  writing-mode:vertical-rl;transform:rotate(180deg);
+  font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:500;
+  letter-spacing:.22em;text-transform:uppercase;
+}
+.definition::before{background:#d0dfd4;color:#3d6b5a;content:'Определение'}
+.definition[data-num]::before{content:'Определение ' attr(data-num)}
+.condition::before{background:#e5d1b8;color:#8a5236;content:'Условие'}
+.condition[data-num]::before{content:'Условие ' attr(data-num)}
+.theorem::before{background:#c8d5e6;color:#4a5f88;content:'Теорема'}
+.theorem[data-num]::before{content:'Теорема ' attr(data-num)}
+
+.example{background:#e0e8f2;border-left:3px solid #7d95bd;padding:.8rem 1.1rem;border-radius:0 6px 6px 0;margin:.5rem 0 .8rem;font-size:.9em;color:var(--text)}
+.example .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#4a5f88;margin-bottom:.35rem}
+.example ul{margin:.15rem 0 0 1.1rem;font-size:.94em}
+.example li{margin-bottom:.15rem}
+@media(max-width:900px){
+  .definition,.condition,.theorem{padding-left:2.6rem}
+  .definition::before,.condition::before,.theorem::before{width:1.8rem;font-size:.56rem;letter-spacing:.18em}
+}
+.figure{margin:1rem auto;text-align:center;max-width:100%}
+.figure svg{max-width:100%;height:auto}
+.figure .caption{font-size:.78rem;color:var(--text2);margin-top:.4rem;font-style:italic}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.4rem;align-items:start}
+.callout{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;font-size:.95em;color:var(--text2)}
+
+.flow{display:grid;grid-template-columns:1fr;gap:.55rem;margin:1rem 0}
+.flow .step{position:relative;background:#fff;border:1.5px solid var(--border);border-left:5px solid var(--accent);border-radius:8px;padding:.7rem 1rem .7rem 1.2rem;box-shadow:0 2px 8px rgba(44,36,25,.04)}
+.flow .step .n{position:absolute;left:-14px;top:-12px;background:var(--accent);color:#fff;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;padding:.15rem .45rem;border-radius:3px;letter-spacing:.03em}
+.flow .step .title{font-family:'Playfair Display',serif;font-weight:700;font-size:1.05rem;color:var(--text);margin-bottom:.15rem}
+.flow .step .body{font-size:.9rem;color:var(--text2);line-height:1.45}
+.flow .step ul{margin:.25rem 0 0 1.1rem;font-size:.86rem;color:var(--text2)}
+.flow .arrow{text-align:center;color:var(--accent);font-size:1.4rem;line-height:.7;font-weight:700;user-select:none}
+@media(max-width:900px){.flow .step{padding:.55rem .8rem .55rem 1rem}.flow .step .title{font-size:.95rem}}
+
+.tiles{display:grid;grid-template-columns:1fr;gap:.5rem;margin:1rem 0}
+.tile{background:#fff;border:1px solid var(--border);border-radius:6px;padding:.6rem .9rem;display:grid;grid-template-columns:160px 200px 1fr;align-items:center;gap:1rem}
+.tile .h{font-family:'JetBrains Mono',monospace;font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
+.tile .t{font-family:'Playfair Display',serif;font-weight:700;font-size:1.02rem;color:var(--text);line-height:1.2}
+.tile .d{font-size:.86rem;color:var(--text2);line-height:1.35}
+.tile.hi{background:#f8efe1}
+.tile.hi .t{color:var(--accent)}
+.tile.hi .h{color:var(--accent)}
+@media(max-width:900px){.tile{grid-template-columns:1fr;gap:.15rem}}
+
+/* Специфика ЧМ */
+.disaster{background:#fbeee7;border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:.7rem 1rem;margin:.4rem 0;display:grid;grid-template-columns:150px 1fr;gap:.9rem;align-items:baseline}
+.disaster .yr{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent);letter-spacing:.1em}
+.disaster .h{font-family:'Playfair Display',serif;font-weight:700;font-size:1.05rem;color:var(--text)}
+.disaster .b{font-size:.88rem;color:var(--text2);margin-top:.2rem}
+.warning{background:#fbeee7;border-left:3px solid var(--accent);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:.6rem 0;font-size:.95em}
+.warning strong{color:var(--accent)}
+
+.slide.title{text-align:center;background:radial-gradient(ellipse at 30% 20%,#fff 0%,var(--bg) 55%,var(--bg2) 100%)}
+.slide.title .slide-content{max-width:1000px}
+.slide.title h1{font-size:3.4rem;margin-bottom:1.5rem;max-width:900px}
+.slide.title h1 .u{color:var(--accent);border-bottom:4px solid var(--accent);padding-bottom:.15rem}
+.slide.title .sub{font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--text2);margin-bottom:1rem;letter-spacing:.05em}
+.slide.title .course{font-size:.85rem;color:var(--text3);text-transform:uppercase;letter-spacing:.24em;margin-bottom:.6rem}
+.slide.title .badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:.35rem .85rem;border:1.5px solid var(--accent);color:var(--accent);border-radius:20px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:1.4rem}
+
+.hud{position:fixed;bottom:0;left:0;right:0;padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to top,rgba(250,248,244,.95),transparent);z-index:100;pointer-events:none}
+.hud > *{pointer-events:auto}
+.hud button{font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:.4rem .9rem;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text2);cursor:pointer;transition:all .12s}
+.hud button:hover{border-color:var(--accent);color:var(--accent);background:var(--bg2)}
+.hud button:disabled{opacity:.35;cursor:default}
+.hud .counter{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);letter-spacing:.06em}
+.hud .center{display:flex;gap:.4rem;align-items:center}
+.hud .back{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);text-decoration:none;padding:.35rem .7rem;border:1px dashed var(--border);border-radius:4px}
+.hud .back:hover{color:var(--accent);border-color:var(--accent)}
+
+.progress{position:fixed;top:0;left:0;right:0;height:3px;background:var(--bg3);z-index:99}
+.progress .fill{height:100%;background:var(--accent);transition:width .2s ease;width:0%}
+
+@media(min-width:1600px){body{font-size:26px}h1{font-size:3rem}h2{font-size:2rem}}
+@media(max-width:900px){.slide-content{padding:1.6rem 1.2rem 3rem}h1{font-size:1.9rem}h2{font-size:1.4rem}.two-col,.three-col{grid-template-columns:1fr}body{font-size:19px}}
+
+@media print{
+  body{overflow:visible;background:#fff}
+  .slide{position:relative;display:flex!important;page-break-after:always;min-height:100vh;align-items:center;justify-content:center}
+  .hud,.progress{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="progress"><div class="fill" id="progressFill"></div></div>
+
+<!-- ============================================================
+     Слайды §1 — Машинная арифметика и анализ ошибок
+     ============================================================ -->
+
+<!-- 1: Титульный -->
+<section class="slide title active">
+  <div class="course">Численные методы</div>
+  <div class="badge">Занятие 1 · Блок I. Основы вычислений</div>
+  <h1>Машинная арифметика и <span class="u">анализ ошибок</span></h1>
+  <div class="sub">IEEE 754 · машинное ε · обусловленность vs устойчивость</div>
+</section>
+
+<!-- 2: Что такое численный метод -->
+<section class="slide">
+  <div class="slide-num">§1.1 · Задача вычислительной математики</div>
+  <h2>Что такое численный метод</h2>
+  <p style="font-size:.96em">Большинство задач анализа — интеграл, корень уравнения, значение функции, решение системы, дифференциальная задача — не имеют замкнутого ответа в элементарных функциях либо требуют выполнения <em>бесконечного</em> процесса. Компьютер оперирует только конечными последовательностями арифметических операций.</p>
+  <div class="definition" data-num="1">
+    <em style="color:inherit;font-weight:600">численный метод.</em> Алгоритм, ставящий в соответствие входным данным \(F\) приближённое решение \(\tilde u\) задачи \(Au = F\) за <em>конечное</em> число элементарных арифметических операций и обращений к таблицам стандартных функций.
+  </div>
+  <div class="example">
+    <span class="lbl">Примеры численных методов</span>
+    <ul>
+      <li>вычисление \(\ln(1+x)\) через отрезок ряда Тейлора длины \(N\);</li>
+      <li>вычисление \(\int_a^b f(x)\,dx\) по формуле трапеций на \(N\) узлах;</li>
+      <li>решение \(f(x)=0\) методом Ньютона с остановкой при \(|f(x_k)|&lt;\varepsilon\);</li>
+      <li>решение \(Ax=b\) методом Гаусса с выбором главного элемента;</li>
+      <li>явная разностная схема «уголок» для \(u_t + a u_x = 0\).</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 3: Катастрофы -->
+<section class="slide">
+  <div class="slide-num">§1.1 · Зачем это важно</div>
+  <h2>Реальные катастрофы машинной арифметики</h2>
+  <div class="disaster">
+    <div><div class="yr">25 фев 1991</div></div>
+    <div><div class="h">ЗРК Patriot, Дахран</div>
+    <div class="b">Время в системе хранилось как целое число десятых долей секунды и умножалось на приближение \(0{,}1 \approx 209715/2^{21}\) в 24-битной арифметике. За 100 часов работы гейт слежения промахнулся мимо ракеты Scud на \(\sim 0{,}34\) с — ракета попала в казарму, погибли 28 солдат.</div></div>
+  </div>
+  <div class="disaster">
+    <div><div class="yr">04 июн 1996</div></div>
+    <div><div class="h">Ariane 5, Куру (Гвиана)</div>
+    <div class="b">При преобразовании 64-битного числа с плавающей точкой в 16-битное целое произошло переполнение. Ракета отклонилась от курса и была подорвана системой самоуничтожения на 37-й секунде полёта. Убыток $370 млн.</div></div>
+  </div>
+  <div class="disaster">
+    <div><div class="yr">1982–1983</div></div>
+    <div><div class="h">Vancouver Stock Exchange</div>
+    <div class="b">Индекс усекался (а не округлялся) после каждой сделки. За 22 месяца накопленная ошибка составила \(\approx 574\) пункта из \(\approx 1000\); после пересчёта индекс подскочил с 524 до 1098.</div></div>
+  </div>
+</section>
+
+<!-- 4: Три источника ошибок -->
+<section class="slide">
+  <div class="slide-num">§1.2 · Источники ошибок</div>
+  <h2>Три независимых источника погрешности</h2>
+  <div class="flow">
+    <div class="step"><span class="n">1</span>
+      <div class="title">Ошибки в данных</div>
+      <div class="body">Неточность значений на входе — измерения, ранее вычисленные величины, табличные константы. От алгоритма не зависят, но <em>усиливаются</em> им в соответствии с обусловленностью задачи.</div>
+    </div>
+    <div class="arrow">▼</div>
+    <div class="step" style="border-left-color:var(--accent2)"><span class="n" style="background:var(--accent2)">2</span>
+      <div class="title">Ошибки метода (усечения)</div>
+      <div class="body">Замена бесконечного процесса конечным: обрыв ряда, замена производной разностью, выход из итерации по критерию. Существовали бы и при идеальной арифметике. Тема глав о рядах, квадратурах, схемах.</div>
+    </div>
+    <div class="arrow">▼</div>
+    <div class="step" style="border-left-color:var(--accent3)"><span class="n" style="background:var(--accent3)">3</span>
+      <div class="title">Ошибки округления</div>
+      <div class="body">Вещественные числа хранятся в конечном наборе битов; каждая арифметическая операция даёт результат, который заново округляется до представимого. Возникают в каждой операции и накапливаются весь расчёт. <strong>Сегодняшняя тема.</strong></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5: Абсолютная и относительная погрешность -->
+<section class="slide">
+  <div class="slide-num">§1.2 · Погрешности</div>
+  <h2>Абсолютная и относительная погрешность</h2>
+  <div class="definition" data-num="2">
+    <em style="color:inherit;font-weight:600">погрешность приближения.</em> Пусть \(\tilde a\) — приближение точного значения \(a\in\mathbb{R}\). Тогда
+    <div class="eq">\[
+    \Delta = |\tilde a - a|, \qquad
+    \delta = \frac{|\tilde a - a|}{|a|}\ \ (a\neq 0)
+    \tag{1.1--1.2}
+    \]</div>
+    называются <em>абсолютной</em> и <em>относительной</em> погрешностью соответственно.
+  </div>
+  <div class="callout" style="font-size:.9em">
+    Относительная погрешность безразмерна и удобно связана с числом верных значащих цифр десятичной записи: \(\delta \approx 10^{-k}\) означает, что в \(\tilde a\) верны примерно \(k\) первых цифр. В машинной арифметике мы естественно контролируем именно её.
+  </div>
+</section>
+
+<!-- 6: Числа с плавающей точкой — определение -->
+<section class="slide">
+  <div class="slide-num">§1.3 · Множество ℱ</div>
+  <h2>Числа с плавающей точкой</h2>
+  <p style="font-size:.94em">Вещественное число хранится в нормализованной форме — двоичный аналог экспоненциальной записи:</p>
+  <div class="eq">\[ x \;=\; (-1)^s \cdot (1.b_1 b_2 \ldots b_{p-1})_2 \cdot 2^{e}, \qquad e_{\min} \le e \le e_{\max}. \tag{1.3} \]</div>
+  <div class="definition" data-num="3">
+    <em style="color:inherit;font-weight:600">множество чисел с плавающей точкой.</em> \(\mathbb{F} \subset \mathbb{R}\) — конечное подмножество, содержащее ноль, все числа вида (1.3) с \(b_i\in\{0,1\}\), \(e\in[e_{\min},e_{\max}]\), а также специальные значения \(\pm\infty\) и <code>NaN</code> («не число»).
+  </div>
+  <ul style="font-size:.86em;margin-top:.4rem">
+    <li>\(\mathbb{F}\) <em>конечно</em>: \(2\cdot 2^{p-1}\cdot(e_{\max}-e_{\min}+1)\) значений;</li>
+    <li>\(\mathbb{F}\) распределено на оси <em>неравномерно</em>: плотность постоянна в <em>относительном</em>, не в абсолютном смысле.</li>
+  </ul>
+</section>
+
+<!-- 7: Ось с числами -->
+<section class="slide">
+  <div class="slide-num">§1.3 · Распределение ℱ на оси</div>
+  <h2>Числа с плавающей точкой на оси — сгущаются у нуля</h2>
+  <div class="figure">
+    <svg viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" style="max-width:780px">
+      <line x1="30" y1="110" x2="675" y2="110" stroke="#2c2419" stroke-width="1.4"/>
+      <g stroke="#5b54b8" stroke-width="1.6">
+        <line x1="60" y1="100" x2="60" y2="120"/><line x1="71" y1="100" x2="71" y2="120"/><line x1="82" y1="100" x2="82" y2="120"/><line x1="93" y1="100" x2="93" y2="120"/><line x1="104" y1="100" x2="104" y2="120"/><line x1="115" y1="100" x2="115" y2="120"/>
+        <line x1="140" y1="98" x2="140" y2="122"/><line x1="165" y1="98" x2="165" y2="122"/><line x1="190" y1="98" x2="190" y2="122"/><line x1="215" y1="98" x2="215" y2="122"/><line x1="240" y1="98" x2="240" y2="122"/>
+        <line x1="275" y1="94" x2="275" y2="126"/><line x1="325" y1="94" x2="325" y2="126"/><line x1="375" y1="94" x2="375" y2="126"/><line x1="425" y1="94" x2="425" y2="126"/>
+        <line x1="475" y1="90" x2="475" y2="130"/><line x1="575" y1="90" x2="575" y2="130"/>
+      </g>
+      <g font-family="JetBrains Mono,monospace" font-size="13" fill="#6b5d4f" text-anchor="middle">
+        <text x="60" y="150">¼</text>
+        <text x="140" y="150">½</text>
+        <text x="275" y="150">1</text>
+        <text x="475" y="150">2</text>
+        <text x="575" y="150">3</text>
+      </g>
+      <g font-family="Source Serif 4,serif" font-size="12" fill="#3d6b5a" font-style="italic">
+        <text x="90" y="70" text-anchor="middle">шаг = 2⁻⁽ᵖ⁻¹⁾·¼</text>
+        <text x="190" y="70" text-anchor="middle">шаг = 2⁻⁽ᵖ⁻¹⁾·½</text>
+        <text x="350" y="70" text-anchor="middle">шаг = 2⁻⁽ᵖ⁻¹⁾</text>
+        <text x="525" y="70" text-anchor="middle">шаг = 2⁻⁽ᵖ⁻¹⁾·2</text>
+      </g>
+      <text x="350" y="178" font-family="Source Serif 4,serif" font-size="13" fill="#6b5d4f" text-anchor="middle" font-style="italic">При переходе через каждую степень двойки шаг удваивается.</text>
+    </svg>
+    <div class="caption">Плотность \(\mathbb{F}\) постоянна не абсолютно, а <em>относительно</em>: относительный зазор \(\approx 2^{-(p-1)}\) — это и есть машинное \(\varepsilon\).</div>
+  </div>
+</section>
+
+<!-- 8: IEEE 754 форматы -->
+<section class="slide">
+  <div class="slide-num">§1.4 · IEEE 754</div>
+  <h2>Стандартные форматы IEEE 754</h2>
+  <div class="figure">
+    <svg viewBox="0 0 700 170" xmlns="http://www.w3.org/2000/svg" style="max-width:780px">
+      <text x="350" y="18" font-family="JetBrains Mono,monospace" font-size="13" fill="#2c2419" text-anchor="middle" font-weight="600">binary64 · double (64 бита)</text>
+      <rect x="40" y="30" width="42" height="44" fill="#b44a2d" fill-opacity=".16" stroke="#b44a2d" stroke-width="1.4"/>
+      <rect x="82" y="30" width="160" height="44" fill="#3a5ba0" fill-opacity=".14" stroke="#3a5ba0" stroke-width="1.4"/>
+      <rect x="242" y="30" width="420" height="44" fill="#1a6b5a" fill-opacity=".12" stroke="#1a6b5a" stroke-width="1.4"/>
+      <text x="61" y="58" font-family="JetBrains Mono,monospace" font-size="13" fill="#b44a2d" text-anchor="middle" font-weight="600">s</text>
+      <text x="162" y="58" font-family="JetBrains Mono,monospace" font-size="13" fill="#3a5ba0" text-anchor="middle" font-weight="600">порядок e (11 битов)</text>
+      <text x="452" y="58" font-family="JetBrains Mono,monospace" font-size="13" fill="#1a6b5a" text-anchor="middle" font-weight="600">мантисса — дробная часть, 52 бита</text>
+      <text x="61" y="94" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">знак</text>
+      <text x="162" y="94" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">bias = 1023</text>
+      <text x="452" y="94" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">+ 1 неявная единица ⇒ 53 значащих бита</text>
+
+      <text x="350" y="130" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419" text-anchor="middle" font-weight="600">binary32 · float (32 бита)</text>
+      <rect x="220" y="142" width="22" height="22" fill="#b44a2d" fill-opacity=".16" stroke="#b44a2d" stroke-width="1"/>
+      <rect x="242" y="142" width="80" height="22" fill="#3a5ba0" fill-opacity=".14" stroke="#3a5ba0" stroke-width="1"/>
+      <rect x="322" y="142" width="160" height="22" fill="#1a6b5a" fill-opacity=".12" stroke="#1a6b5a" stroke-width="1"/>
+      <text x="231" y="157" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d" text-anchor="middle">s</text>
+      <text x="282" y="157" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0" text-anchor="middle">e (8)</text>
+      <text x="402" y="157" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a" text-anchor="middle">мантисса (23)</text>
+    </svg>
+  </div>
+  <div class="two-col" style="margin-top:.6rem">
+    <div class="callout" style="font-size:.9em">
+      <strong>binary64 (double)</strong>
+      <ul style="font-size:.95em;margin-top:.3rem">
+        <li>\(p = 53\), \(u = 2^{-53} \approx 1{,}11\cdot 10^{-16}\)</li>
+        <li>диапазон: \(\pm 1{,}8\cdot 10^{308}\)</li>
+        <li>≈ 16 десятичных цифр</li>
+        <li>Python <code>float</code>, NumPy <code>float64</code></li>
+      </ul>
+    </div>
+    <div class="callout" style="font-size:.9em">
+      <strong>binary32 (float)</strong>
+      <ul style="font-size:.95em;margin-top:.3rem">
+        <li>\(p = 24\), \(u = 2^{-24} \approx 5{,}96\cdot 10^{-8}\)</li>
+        <li>диапазон: \(\pm 3{,}4\cdot 10^{38}\)</li>
+        <li>≈ 7 десятичных цифр</li>
+        <li>графика, GPU, ML</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 9: Модель округления -->
+<section class="slide">
+  <div class="slide-num">§1.5 · Модель fl(·)</div>
+  <h2>Модель округления</h2>
+  <p style="font-size:.94em">Для описания того, как \(\mathbb{R}\) отображается в \(\mathbb{F}\), вводится оператор округления \(\mathrm{fl}\colon \mathbb{R}\to \mathbb{F}\). По умолчанию — <em>округление к ближайшему с округлением половин к чётной мантиссе</em>.</p>
+  <div class="theorem" data-num="1">
+    <em style="color:inherit;font-weight:600">модель округления.</em> Для любого \(x\in\mathbb{R}\) в нормализованном диапазоне:
+    <div class="eq">\[ \mathrm{fl}(x) = x\,(1+\varepsilon),\qquad |\varepsilon|\le u = 2^{-p}, \tag{1.4} \]</div>
+    а для каждой из четырёх основных арифметических операций \(\circ\in\{+,-,\times,/\}\):
+    <div class="eq">\[ \mathrm{fl}(a\circ b) = (a\circ b)\,(1+\varepsilon'), \qquad |\varepsilon'|\le u. \tag{1.5} \]</div>
+  </div>
+  <p style="font-size:.86em;color:var(--text2)">Стандарт IEEE 754 гарантирует такое «корректно округлённое» поведение для \(+,-,\times,/,\sqrt{\ }\). Для тригонометрии и экспоненты — с ошибкой в несколько \(u\).</p>
+</section>
+
+<!-- 10: eps vs u -->
+<section class="slide">
+  <div class="slide-num">§1.6 · Машинное ε и единица округления</div>
+  <h2>Не путать: \(\varepsilon_{\text{м}}\) и \(u\)</h2>
+  <div class="two-col">
+    <div class="definition" data-num="4">
+      <em style="color:inherit;font-weight:600">машинное \(\varepsilon\).</em> Расстояние от единицы до следующего представимого числа:
+      <div class="eq">\[ \varepsilon_{\text{м}} = 2^{-(p-1)}. \tag{1.6} \]</div>
+      Для binary64: \(\varepsilon_{\text{м}} = 2^{-52} \approx 2{,}22\cdot 10^{-16}\).
+    </div>
+    <div class="definition" data-num="5">
+      <em style="color:inherit;font-weight:600">единица округления.</em> Верхняя граница относительной ошибки одной операции:
+      <div class="eq">\[ u = 2^{-p}. \]</div>
+      Для binary64: \(u = 2^{-53} \approx 1{,}11\cdot 10^{-16}\).
+    </div>
+  </div>
+  <div class="warning">
+    <strong>Важно.</strong> \(\varepsilon_{\text{м}} = 2u\). В NumPy <code>np.finfo(np.float64).eps</code> — это <em>машинное \(\varepsilon\)</em>, для оценок ошибок из (1.4)–(1.5) берут <code>eps/2</code>.
+  </div>
+</section>
+
+<!-- 11: Катастрофическая потеря значимости -->
+<section class="slide">
+  <div class="slide-num">§1.7 · Потеря значимости</div>
+  <h2>Катастрофическое вычитание близких чисел</h2>
+  <p style="font-size:.94em">Пусть \(\tilde a = a(1+\alpha)\), \(\tilde b = b(1+\beta)\), \(|\alpha|,|\beta|\le u\). Разность:</p>
+  <div class="eq">\[ \tilde a - \tilde b = (a-b) + (a\alpha - b\beta). \tag{1.7} \]</div>
+  <p style="font-size:.94em">Относительная погрешность разности:</p>
+  <div class="eq">\[ \frac{|(\tilde a - \tilde b) - (a - b)|}{|a-b|} \;\le\; \underbrace{\frac{|a|+|b|}{|a-b|}}_{\kappa_-(a,b)}\cdot u. \tag{1.8} \]</div>
+  <div class="example">
+    <span class="lbl">Иллюстрация</span>
+    Пусть \(a = 1{,}23456789\), \(b = 1{,}23456700\) — с 9 верными цифрами. Тогда \(a-b = 0{,}00000089\) — из девяти верных цифр осталось <strong>две</strong>. Само вычитание точно; беда — в сокращении старших разрядов, за которым обнажаются младшие «мусорные».
+  </div>
+</section>
+
+<!-- 12: Как лечить — три примера -->
+<section class="slide">
+  <div class="slide-num">§1.7 · Лечение — переписать формулу</div>
+  <h2>Алгебраическое переписывание против катастрофы</h2>
+  <div class="three-col">
+    <div class="callout">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);letter-spacing:.08em">1 − cos x при x → 0</div>
+      <div class="eq" style="font-size:.9em">\[ \frac{1-\cos x}{x^2} = \frac{1}{2}\!\left(\frac{\sin(x/2)}{x/2}\right)^{\!2} \]</div>
+      <div style="font-size:.85em;color:var(--text2)">Синус близких чисел не вычитает — точность сохраняется до 16 цифр даже при \(x=10^{-8}\).</div>
+    </div>
+    <div class="callout">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);letter-spacing:.08em">e^x − 1 при x → 0</div>
+      <div class="eq" style="font-size:.9em">\[ \frac{e^x-1}{x}\ \ \Rightarrow\ \ \frac{\mathrm{expm1}(x)}{x} \]</div>
+      <div style="font-size:.85em;color:var(--text2)">Библиотечная <code>expm1</code> считает числитель без потери значимости; есть в <code>&lt;cmath&gt;</code>, NumPy, всех современных стандартах.</div>
+    </div>
+    <div class="callout">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);letter-spacing:.08em">корни x² + bx + c = 0 при b² ≫ 4c</div>
+      <div class="eq" style="font-size:.9em">\[ x_1 = \frac{-b - \operatorname{sign}(b)\sqrt{b^2 - 4c}}{2},\ \ x_2 = \frac{c}{x_1} \]</div>
+      <div style="font-size:.85em;color:var(--text2)">Формула Виета для малого корня — вместо «школьного» \((-b+\sqrt{\ldots})/2\).</div>
+    </div>
+  </div>
+  <div class="callout" style="margin-top:.8rem;font-size:.86em">
+    <strong>Общее правило.</strong> Верных цифр в разности \(a-b\) остаётся столько, на сколько порядков она меньше самих аргументов. Множитель \((|a|+|b|)/|a-b|\) — <em>число обусловленности вычитания</em>.
+  </div>
+</section>
+
+<!-- 13: Накопление ошибок — теорема Уилкинсона -->
+<section class="slide">
+  <div class="slide-num">§1.8 · Накопление ошибок в сумме</div>
+  <h2>Наивная сумма: оценка Уилкинсона</h2>
+  <p style="font-size:.94em">Пусть \(S = \sum_{k=1}^{n} x_k\) вычисляется наивным циклом \(\hat S_k = \mathrm{fl}(\hat S_{k-1} + x_k)\). Тогда:</p>
+  <div class="theorem" data-num="2">
+    <em style="color:inherit;font-weight:600">оценка Уилкинсона для наивного суммирования.</em>
+    <div class="eq">\[ |\hat S_n - S| \;\le\; \gamma_{n-1}\sum_{k=1}^{n}|x_k|,\qquad \gamma_m = \frac{mu}{1-mu} \approx mu. \tag{1.9} \]</div>
+  </div>
+  <p style="font-size:.9em">При \(n = 10^{7}\) это \(\sim 10^{-9}\) — <em>далеко не</em> 16 машинных цифр. Оценка (1.9) — верхняя; для смешанных знаков ошибка растёт лишь как \(\sqrt n\, u\).</p>
+  <div class="callout" style="font-size:.88em">
+    <strong>Есть ли алгоритм с постоянной точностью \(O(u)\) при любом \(n\)?</strong> Да: <em>компенсированное</em> Кэхэна (1965), <em>попарное</em> суммирование, <em>отсортированное</em> — предмет лабораторной работы к этой лекции.
+  </div>
+</section>
+
+<!-- 14: Обусловленность задачи -->
+<section class="slide">
+  <div class="slide-num">§1.9 · Обусловленность</div>
+  <h2>Обусловленность задачи: чувствительность к возмущению входа</h2>
+  <div class="definition" data-num="6">
+    <em style="color:inherit;font-weight:600">число обусловленности.</em> Для \(y=f(x)\), \(f\colon X\to Y\) между нормированными пространствами:
+    <div class="eq">\[
+    \kappa(x) \;=\; \lim_{\delta\to+0}\,\sup_{\|\Delta x\|\le\delta\|x\|}\;
+    \frac{\|f(x+\Delta x)-f(x)\|/\|f(x)\|}{\|\Delta x\|/\|x\|}. \tag{1.10}
+    \]</div>
+  </div>
+  <p style="font-size:.9em">Задача <em>хорошо обусловлена</em> в точке \(x\), если \(\kappa(x)\) — порядка единиц; <em>плохо</em> — если \(\kappa \gg 1\).</p>
+  <div class="callout" style="font-size:.9em">
+    <strong>Ключевая мысль.</strong> Обусловленность — свойство <em>задачи в точке</em>, не программы. Никакой алгоритм не вычислит плохо обусловленную задачу точнее, чем \(\kappa\cdot u\). Ухудшить — можно, улучшить — нет.
+  </div>
+</section>
+
+<!-- 15: κ для скалярной функции -->
+<section class="slide">
+  <div class="slide-num">§1.9 · Скалярный случай</div>
+  <h2>Число обусловленности гладкой скалярной функции</h2>
+  <div class="eq">\[ \kappa(x) \;=\; \left|\frac{x\,f'(x)}{f(x)}\right|. \tag{1.11} \]</div>
+  <div class="two-col">
+    <div>
+      <ul style="font-size:.94em">
+        <li>\(f(x) = \sqrt{x}\): \(\kappa \equiv 1/2\) — везде отлично;</li>
+        <li>\(f(x) = x^n\): \(\kappa \equiv n\) — умеренно;</li>
+        <li>\(f(x) = e^x\): \(\kappa = |x|\) — при больших \(|x|\) плохо;</li>
+        <li>\(f(x) = \ln x\): \(\kappa = 1/|\ln x|\) — взрыв у \(x=1\);</li>
+        <li>\(f(x) = 1/(1-x)\): \(\kappa = |x/(1-x)|\) — полюс в \(x=1\);</li>
+        <li>вычитание \(f(a,b) = a - b\) при \(a\approx b\): \(\kappa\) велико.</li>
+      </ul>
+    </div>
+    <div class="figure">
+      <svg viewBox="0 0 380 280" xmlns="http://www.w3.org/2000/svg" style="max-width:380px">
+        <defs><marker id="ark" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2c2419"/></marker></defs>
+        <line x1="40" y1="240" x2="360" y2="240" stroke="#2c2419" stroke-width="1.4" marker-end="url(#ark)"/>
+        <line x1="40" y1="240" x2="40" y2="30" stroke="#2c2419" stroke-width="1.4" marker-end="url(#ark)"/>
+        <text x="368" y="256" font-family="Source Serif 4,serif" font-style="italic" font-size="13" fill="#2c2419">x</text>
+        <text x="20" y="26" font-family="Source Serif 4,serif" font-style="italic" font-size="13" fill="#2c2419">κ(x)</text>
+        <line x1="40" y1="130" x2="360" y2="130" stroke="#b44a2d" stroke-width="1" stroke-dasharray="4,3"/>
+        <text x="342" y="126" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">κ=10</text>
+        <path d="M 60 220 Q 130 218, 200 215 Q 250 210, 275 180 Q 295 130, 320 70" fill="none" stroke="#5b54b8" stroke-width="2.4"/>
+        <text x="120" y="212" font-family="JetBrains Mono,monospace" font-size="10" fill="#5b54b8">1/(1−x)</text>
+        <text x="230" y="55" font-family="JetBrains Mono,monospace" font-size="10" fill="#5b54b8" text-anchor="end">взрыв у x=1</text>
+        <line x1="300" y1="30" x2="300" y2="240" stroke="#8a5236" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="305" y="42" font-family="JetBrains Mono,monospace" font-size="10" fill="#8a5236">x = 1</text>
+      </svg>
+      <div class="caption">Красная штриховая линия \(\kappa = 10\) — условная граница «плохо обусловлено».</div>
+    </div>
+  </div>
+</section>
+
+<!-- 16: Устойчивость алгоритма -->
+<section class="slide">
+  <div class="slide-num">§1.10 · Устойчивость</div>
+  <h2>Устойчивость алгоритма — свойство способа вычисления</h2>
+  <p style="font-size:.94em">Одну и ту же \(f\) можно считать по разным формулам: наивной и алгебраически переписанной; методом Гаусса без выбора главного элемента и с ним; через нормальные уравнения или через QR. <em>Задача одна, алгоритмы разные.</em></p>
+  <div class="definition" data-num="7">
+    <em style="color:inherit;font-weight:600">обратно устойчивый алгоритм.</em> \(\tilde f\), вычисляющий \(f\), называется <em>обратно устойчивым</em> (backward stable), если результат есть <em>точное</em> решение задачи для <em>слегка возмущённого</em> входа:
+    <div class="eq">\[ \tilde f(x) = f(\tilde x)\ \ \text{для некоторого } \tilde x\ \text{с}\ \frac{\|\tilde x - x\|}{\|x\|} = O(u). \tag{1.12} \]</div>
+  </div>
+  <p style="font-size:.86em;color:var(--text2)">«Мы решили точно почти ту задачу, что хотели». Метод Гаусса с выбором главного элемента, QR-разложение, Холецкий, вычисление скалярного произведения — <em>обратно устойчивы</em>.</p>
+</section>
+
+<!-- 17: Прямая и обратная ошибка -->
+<section class="slide">
+  <div class="slide-num">§1.11 · Прямая и обратная ошибка</div>
+  <h2>Диаграмма: прямая vs обратная ошибка</h2>
+  <div class="two-col" style="grid-template-columns:1fr 1.1fr">
+    <div>
+      <p style="font-size:.9em"><strong>Прямая ошибка</strong> — \(\|\tilde y - y\|/\|y\|\): насколько ответ отличается от истинного. Это то, что нас интересует.</p>
+      <p style="font-size:.9em"><strong>Обратная ошибка</strong> — минимальное возмущение входа \(\|\tilde x - x\|/\|x\|\), при котором \(\tilde y = f(\tilde x)\) точно. Отвечает на вопрос: «для какой задачи наш ответ точен».</p>
+    </div>
+    <div class="figure">
+      <svg viewBox="0 0 480 240" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+        <defs><marker id="aw2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2c2419"/></marker></defs>
+        <circle cx="80" cy="70" r="5" fill="#2c2419"/>
+        <text x="66" y="64" font-family="JetBrains Mono,monospace" font-size="13" fill="#2c2419">x</text>
+        <circle cx="80" cy="170" r="5" fill="#b44a2d"/>
+        <text x="50" y="175" font-family="JetBrains Mono,monospace" font-size="13" fill="#b44a2d">x̃</text>
+        <circle cx="410" cy="70" r="5" fill="#2c2419"/>
+        <text x="420" y="64" font-family="JetBrains Mono,monospace" font-size="13" fill="#2c2419">y = f(x)</text>
+        <circle cx="410" cy="170" r="5" fill="#3a5ba0"/>
+        <text x="420" y="175" font-family="JetBrains Mono,monospace" font-size="13" fill="#3a5ba0">ỹ = f̃(x)</text>
+        <line x1="88" y1="70" x2="402" y2="70" stroke="#2c2419" stroke-width="1.4" marker-end="url(#aw2)"/>
+        <text x="245" y="60" font-family="Source Serif 4,serif" font-size="12" fill="#6b5d4f" text-anchor="middle" font-style="italic">точная задача f</text>
+        <line x1="88" y1="78" x2="402" y2="162" stroke="#3a5ba0" stroke-width="1.4" stroke-dasharray="5,3" marker-end="url(#aw2)"/>
+        <text x="260" y="135" font-family="Source Serif 4,serif" font-size="12" fill="#3a5ba0" text-anchor="middle" font-style="italic">алгоритм f̃</text>
+        <line x1="88" y1="168" x2="402" y2="172" stroke="#b44a2d" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#aw2)"/>
+        <text x="245" y="192" font-family="Source Serif 4,serif" font-size="11" fill="#b44a2d" text-anchor="middle" font-style="italic">f от возмущённого входа</text>
+        <line x1="80" y1="80" x2="80" y2="160" stroke="#b44a2d" stroke-width="1"/>
+        <text x="14" y="120" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">обратная</text>
+        <text x="14" y="132" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">ошибка</text>
+        <line x1="410" y1="80" x2="410" y2="160" stroke="#3a5ba0" stroke-width="1"/>
+        <text x="438" y="120" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">прямая</text>
+        <text x="438" y="132" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">ошибка</text>
+        <text x="240" y="222" font-family="Source Serif 4,serif" font-size="13" fill="#2c2419" text-anchor="middle" font-weight="600">прямая ≲ κ × обратная</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- 18: Главное правило -->
+<section class="slide">
+  <div class="slide-num">§1.11 · Главное правило</div>
+  <h2>Главное правило вычислительной математики</h2>
+  <div class="theorem" data-num="3">
+    <em style="color:inherit;font-weight:600">κ × backward error.</em> Для любого алгоритма:
+    <div class="eq">\[
+    \underbrace{\dfrac{\|\tilde y - y\|}{\|y\|}}_{\text{прямая}}
+    \;\lesssim\;
+    \kappa(x)\cdot \underbrace{\dfrac{\|\tilde x - x\|}{\|x\|}}_{\text{обратная}}. \tag{1.13}
+    \]</div>
+    Для обратно устойчивого алгоритма (обратная \(=O(u)\)) прямая ошибка ограничена \(\kappa(x)\cdot u\).
+  </div>
+  <p style="font-size:.92em">Правило (1.13) — универсальный <em>диагностический критерий</em>. Плохой результат означает одно из двух: либо велико \(\kappa\) (переформулировать задачу), либо велика обратная ошибка (переписать алгоритм).</p>
+</section>
+
+<!-- 19: Диагностический алгоритм -->
+<section class="slide">
+  <div class="slide-num">§1.11 · Диагностика</div>
+  <h2>Диагностика плохого численного результата</h2>
+  <div class="flow">
+    <div class="step"><span class="n">Шаг 1</span>
+      <div class="title">Оцените \(\kappa(x)\) задачи в вашей точке</div>
+      <div class="body">Для скалярной функции — по формуле \(|xf'/f|\); для СЛАУ — <code>numpy.linalg.cond(A)</code>; для собственных задач — по разбросу спектра.</div>
+    </div>
+    <div class="arrow">▼</div>
+    <div class="step" style="border-left-color:var(--accent2)"><span class="n" style="background:var(--accent2)">Шаг 2A</span>
+      <div class="title">Если \(\kappa\) велико — <em>меняйте постановку</em></div>
+      <div class="body">Алгоритм тут не поможет. Смените базис, регуляризируйте, переформулируйте в двойственных переменных.</div>
+    </div>
+    <div class="arrow">▼</div>
+    <div class="step" style="border-left-color:var(--accent3)"><span class="n" style="background:var(--accent3)">Шаг 2B</span>
+      <div class="title">Если \(\kappa\) мало — <em>виноват алгоритм</em></div>
+      <div class="body">Устраните катастрофическое вычитание (переписав формулу), примените QR вместо нормальных уравнений, добавьте компенсированное суммирование.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 20: Итоги -->
+<section class="slide">
+  <div class="slide-num">§1.12 · Итоги</div>
+  <h2>Итоги: что унести с занятия 1</h2>
+  <ol style="font-size:.92em;line-height:1.6">
+    <li>\(\mathbb{F}\) конечно и неравномерно; относительная точность задаётся \(u = 2^{-p}\); для binary64 \(u \approx 10^{-16}\).</li>
+    <li>Модель округления: \(\mathrm{fl}(a\circ b) = (a\circ b)(1+\varepsilon)\), \(|\varepsilon|\le u\). Различайте \(u\) и \(\varepsilon_{\text{м}} = 2u\).</li>
+    <li>Опасна не отдельная операция, а <em>вычитание близких чисел</em>: погрешность разности растёт в \((|a|+|b|)/|a-b|\) раз.</li>
+    <li>Наивное суммирование \(n\) слагаемых имеет ошибку \(O(nu)\) (Уилкинсон). Кэхэн даёт \(O(u)\), попарное — \(O(u\log n)\).</li>
+    <li>Обусловленность \(\kappa\) — свойство <em>задачи в точке</em>; для скалярной функции \(\kappa = |xf'/f|\).</li>
+    <li>Устойчивость — свойство <em>алгоритма</em>; золотой стандарт — <em>обратная</em> устойчивость.</li>
+    <li>Главное правило: <em>прямая \(\lesssim\) κ · обратная</em>. Диагностируйте: велик \(\kappa\) (менять постановку) или велика обратная ошибка (переписать формулу).</li>
+  </ol>
+</section>
+
+<!-- 21: К лабе + литература -->
+<section class="slide">
+  <div class="slide-num">Практика и источники</div>
+  <h2>Дальше — лаба и литература</h2>
+  <div class="two-col">
+    <div>
+      <h3 style="color:var(--accent)">▶ Лаба на паре</h3>
+      <p style="font-size:.9em">Соберите §&nbsp;1.5–1.8 руками: реализуйте четыре алгоритма суммирования в C++11, проверьте оценку Уилкинсона на серии \(n\), сравните с эталоном. Компиляция и запуск — прямо в браузере (Clang в WebAssembly), автопроверка ответа.</p>
+      <div style="margin-top:.5rem;font-family:'JetBrains Mono',monospace;font-size:.8rem"><a href="w01-lab.html" style="color:var(--accent);text-decoration:none;border:1px solid var(--accent);padding:.35rem .8rem;border-radius:5px">открыть лабу →</a></div>
+    </div>
+    <div>
+      <h3 style="color:var(--accent)">Литература к §1</h3>
+      <ol style="font-size:.82em;line-height:1.5">
+        <li>Goldberg D. <em>What Every Computer Scientist Should Know About Floating-Point Arithmetic.</em> — ACM Comput. Surv., 1991.</li>
+        <li>Higham N. J. <em>Accuracy and Stability of Numerical Algorithms.</em> — 2nd ed., SIAM, 2002. Гл. 2 (округление), гл. 4 (суммирование).</li>
+        <li>Trefethen L. N., Bau D. <em>Numerical Linear Algebra.</em> — SIAM, 1997. Лекции 12–15.</li>
+        <li>Бахвалов Н. С., Жидков Н. П., Кобельков Г. М. <em>Численные методы.</em> — М.: БИНОМ, 2011. Гл. 1–2.</li>
+        <li>IEEE Std 754-2019 — первоисточник.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- 22: Финальный -->
+<section class="slide title">
+  <div class="badge">Занятие 1 · итог</div>
+  <h1>Вопросы?</h1>
+  <div class="sub">Следующее занятие → §2. Ряд Тейлора и аппроксимация функций</div>
+  <div style="margin-top:1.4rem;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3)">
+    <span style="margin:0 .8rem">← / →&nbsp;&nbsp;навигация</span>
+    <span style="margin:0 .8rem">F&nbsp;&nbsp;fullscreen</span>
+    <span style="margin:0 .8rem">Home / End</span>
+  </div>
+</section>
+
+<!-- HUD -->
+<div class="hud">
+  <a href="w01.html" class="back" title="К тексту лекции">← к тексту</a>
+  <div class="center">
+    <button id="btnPrev" onclick="prev()">◀ назад</button>
+    <span class="counter" id="counter">1 / 22</span>
+    <button id="btnNext" onclick="next()">вперёд ▶</button>
+  </div>
+  <a href="w02.html" class="back" title="Следующая лекция">§2 →</a>
+</div>
+
+<script>
+(function(){
+  var slides = Array.from(document.querySelectorAll('.slide'));
+  var counter = document.getElementById('counter');
+  var fill = document.getElementById('progressFill');
+  var i = 0;
+  slides.forEach(function(s){
+    var wrap = document.createElement('div');
+    wrap.className = 'slide-content';
+    while (s.firstChild) wrap.appendChild(s.firstChild);
+    s.appendChild(wrap);
+  });
+  function show(n) {
+    slides[i].classList.remove('active');
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    var s = slides[i];
+    var content = s.querySelector('.slide-content') || s;
+    var animated = [];
+    Array.from(content.children).forEach(function(child){
+      animated.push(child);
+      var innerEq = child.querySelectorAll('.eq');
+      for (var j = 0; j < innerEq.length; j++) animated.push(innerEq[j]);
+    });
+    animated.forEach(function(el, k){
+      el.style.setProperty('--i', k);
+      el.style.animation = 'none';
+    });
+    void s.offsetWidth;
+    animated.forEach(function(el){ el.style.animation = ''; });
+    s.classList.add('active');
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+    fill.style.width = ((i + 1) / slides.length * 100) + '%';
+    history.replaceState(null, '', '#' + (i + 1));
+    document.getElementById('btnPrev').disabled = (i === 0);
+    document.getElementById('btnNext').disabled = (i === slides.length - 1);
+    s.scrollTop = 0;
+  }
+  window.next = function(){ show(i + 1); };
+  window.prev = function(){ show(i - 1); };
+  document.addEventListener('keydown', function(e) {
+    if (/^(INPUT|TEXTAREA)$/i.test((e.target || {}).tagName)) return;
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+    else if (e.key === 'Home') { e.preventDefault(); show(0); }
+    else if (e.key === 'End')  { e.preventDefault(); show(slides.length - 1); }
+    else if (e.key === 'f' || e.key === 'F') {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+    }
+  });
+  var h = parseInt((location.hash || '').replace('#', ''), 10);
+  if (!isNaN(h) && h >= 1 && h <= slides.length) show(h - 1);
+  else show(0);
+  window.__slidesShow = show;
+  window.__slidesIndex = function () { return i; };
+})();
+
+(function initSlideTools() {
+  function ready() {
+    if (!window.CFDSlideTools) return;
+    window.CFDSlideTools.init({
+      slidesSelector: '.slide',
+      activeClass:    'active',
+      hudSelector:    '.hud',
+      projectName:    'nm-w01-slides',
+      getCurrentIndex: function () { return window.__slidesIndex ? window.__slidesIndex() : 0; },
+      onGoToSlide:     function (n) { if (window.__slidesShow) window.__slidesShow(n); },
+    });
+  }
+  if (window.CFDSlideTools) ready();
+  else window.addEventListener('load', ready);
+})();
+</script>
+</body>
+</html>

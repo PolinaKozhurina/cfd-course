@@ -74,6 +74,38 @@
         return { ok: true };
       } catch (e) { return { ok: false, error: e.message }; }
     },
+    // Открыть/закрыть несколько лаб одним батчем (текущая + предыдущие).
+    openSessions: async function (cid, labIds, allowedUids, extra) {
+      const me = auth.currentUser; if (!me) return { ok: false, error: "Не авторизован" };
+      try {
+        const batch = db.batch();
+        labIds.forEach(lab => batch.set(db.collection("lab_sessions").doc(sid(cid, lab)), Object.assign({
+          courseId: cid, labId: lab, open: true,
+          allowedUids: Array.from(new Set(allowedUids || [])),
+          openedAt: nowTs(), openedBy: me.email, closedAt: null, updatedAt: nowTs(),
+        }, extra || {}), { merge: true }));
+        await batch.commit();
+        return { ok: true, n: labIds.length };
+      } catch (e) { return { ok: false, error: e.message }; }
+    },
+    closeSessions: async function (cid, labIds) {
+      const me = auth.currentUser; if (!me) return { ok: false, error: "Не авторизован" };
+      try {
+        const batch = db.batch();
+        labIds.forEach(lab => batch.set(db.collection("lab_sessions").doc(sid(cid, lab)), {
+          courseId: cid, labId: lab, open: false, closedAt: nowTs(), closedBy: me.email, updatedAt: nowTs(),
+        }, { merge: true }));
+        await batch.commit();
+        return { ok: true, n: labIds.length };
+      } catch (e) { return { ok: false, error: e.message }; }
+    },
+    // Все сеансы курса: { labId: session }.
+    listSessions: async function (cid) {
+      const out = {};
+      try { const s = await db.collection("lab_sessions").where("courseId", "==", cid).get(); s.forEach(d => { out[d.data().labId] = d.data(); }); }
+      catch (e) {}
+      return out;
+    },
     closeSession: async function (cid, lab) {
       const me = auth.currentUser; if (!me) return { ok: false, error: "Не авторизован" };
       try {

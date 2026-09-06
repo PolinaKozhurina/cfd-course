@@ -4394,10 +4394,31 @@ function labsRenderSession(cid, lab, sess, attList) {
     + '<label style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3)">Занятие:</label>'
     + '<select id="labAtt" style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;max-width:420px">' + (opts || '<option value="">— нет занятий по курсу —</option>') + '</select>'
     + '<button class="btn btn-primary" onclick="labsOpenForPresent()">▶ Открыть для отмеченных</button>'
-    + '<button class="btn" onclick="labsClose()" ' + (open ? '' : 'disabled') + '>■ Закрыть</button>'
+    + '<label style="font-size:.78rem;color:var(--text2);display:flex;align-items:center;gap:.3rem"><input type="checkbox" id="labWithPrev" ' + (window._labWithPrev === false ? '' : 'checked') + ' onchange="window._labWithPrev=this.checked"> и все предыдущие лабы</label>'
+    + '<button class="btn" onclick="labsClose()">■ Закрыть</button>'
     + '<span id="labStatusMsg" style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text3)"></span>'
     + '</div>'
-    + (noToday ? '<div style="margin-top:.5rem;display:flex;gap:.5rem;align-items:center">' + noToday + '</div>' : '');
+    + (noToday ? '<div style="margin-top:.5rem;display:flex;gap:.5rem;align-items:center">' + noToday + '</div>' : '')
+    + '<div id="labOpenList" style="margin-top:.5rem;font-size:.78rem;color:var(--text2)"></div>';
+  labsRenderOpenList(cid);
+}
+
+// Какие лабы курса сейчас открыты (для строки под кнопками).
+async function labsRenderOpenList(cid) {
+  const el = document.getElementById('labOpenList'); if (!el) return;
+  const sessions = await CFDLabs.listSessions(cid);
+  const openLabs = CFDLabs.labsOf(cid).filter(l => sessions[l.id] && sessions[l.id].open);
+  el.innerHTML = openLabs.length
+    ? 'Сейчас открыты: ' + openLabs.map(l => '<strong>' + escapeHtml(l.id) + '</strong> (' + ((sessions[l.id].allowedUids || []).length) + ' студ.)').join(', ')
+    : 'Сейчас ни одна лаба курса не открыта.';
+}
+
+// Текущая лаба + все предыдущие по реестру (если включён чекбокс).
+function labsTargetIds(cid, lab) {
+  const ids = CFDLabs.labsOf(cid).map(l => l.id);
+  const i = ids.indexOf(lab);
+  const withPrev = document.getElementById('labWithPrev') ? document.getElementById('labWithPrev').checked : true;
+  return (withPrev && i > 0) ? ids.slice(0, i + 1) : [lab];
 }
 
 // Перейти на вкладку «Посещаемость» и открыть форму нового занятия с текущим курсом.
@@ -4421,16 +4442,25 @@ async function labsOpenForPresent() {
   const present = Object.keys(a.records || {}).filter(uid => a.records[uid] === 'present');
   if (!present.length) { alert('В этом занятии никто не отмечен присутствующим.'); return; }
   if (!(await CFDLabs.hasKey(cid, lab))) { alert('Сначала задайте ключ шифрования лабы (поле ниже).'); return; }
+  // Текущая + предыдущие; лабы без ключа пропускаем с предупреждением.
+  const targets = labsTargetIds(cid, lab);
+  const withKey = [], noKey = [];
+  for (const id of targets) (await CFDLabs.hasKey(cid, id) ? withKey : noKey).push(id);
   msg.textContent = 'открываем…';
-  const r = await CFDLabs.openSession(cid, lab, present, { attendanceId: aid, title: (a.title || '') + ' · ' + (a.studyGroup || '') });
-  msg.textContent = r.ok ? '✓ открыто для ' + present.length + ' студ.' : '✗ ' + r.error;
+  const r = await CFDLabs.openSessions(cid, withKey, present, { attendanceId: aid, title: (a.title || '') + ' · ' + (a.studyGroup || '') });
+  msg.textContent = r.ok
+    ? '✓ открыто для ' + present.length + ' студ.: ' + withKey.join(', ') + (noKey.length ? ' · без ключа, пропущены: ' + noKey.join(', ') : '')
+    : '✗ ' + r.error;
+  labsRenderOpenList(cid);
 }
 
 async function labsClose() {
   const cid = document.getElementById('labCourse').value, lab = document.getElementById('labId').value;
-  if (!confirm('Закрыть лабу для всех? Прогресс студентов сохранён.')) return;
-  const r = await CFDLabs.closeSession(cid, lab);
-  const msg = document.getElementById('labStatusMsg'); if (msg) msg.textContent = r.ok ? '✓ закрыто' : '✗ ' + r.error;
+  const targets = labsTargetIds(cid, lab);
+  if (!confirm('Закрыть для всех: ' + targets.join(', ') + '? Прогресс студентов сохранён.')) return;
+  const r = await CFDLabs.closeSessions(cid, targets);
+  const msg = document.getElementById('labStatusMsg'); if (msg) msg.textContent = r.ok ? '✓ закрыто: ' + targets.join(', ') : '✗ ' + r.error;
+  labsRenderOpenList(cid);
 }
 
 async function labsRenderKey(cid, lab) {

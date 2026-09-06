@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-course="nm">
+<html lang="ru" data-course="nm" data-lab="w04">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" href="../favicon.ico" type="image/x-icon">
@@ -109,7 +109,7 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
 
 <nav class="sidebar">
   <h2>Лаба 4. Чебышёв, сплайны</h2>
-  <div class="progress" id="side_progress">решено 0 из 10</div>
+  <div class="progress" id="side_progress">решено 0 из 9</div>
   <div class="runtime-state" id="side_runtime">clang: не загружен</div>
   <div class="g">Содержание</div>
   <a href="#intro">Введение</a>
@@ -117,7 +117,6 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
   <a href="#part1">§1. Чебышёвская сетка</a>
   <a href="#part2">§2. Кусочная линейная</a>
   <a href="#part3">§3. Кубический сплайн</a>
-  <a href="#part4">§4. Отчёт</a>
   <div class="sep"></div>
   <div class="g">Материалы</div>
   <a href="w04.html">§4. Лекция</a>
@@ -138,13 +137,13 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
   <div class="cell"><b>Формат</b>Парная работа за компьютером</div>
   <div class="cell"><b>Язык</b>C++11, только stdlib</div>
   <div class="cell"><b>Сборка</b>clang++ в браузере (wasm)</div>
-  <div class="cell"><b>Оценка</b>8/10 задач → зачёт</div>
+  <div class="cell"><b>Оценка</b>7/9 задач → зачёт</div>
 </div>
 
 <div class="progresspanel">
   <span>Прогресс</span>
   <div class="bar"><div id="prog_bar" style="width:0%"></div></div>
-  <span class="cnt" id="prog_cnt">0/10</span>
+  <span class="cnt" id="prog_cnt">0/9</span>
   <span class="runtime" id="prog_runtime">clang: init…</span>
   <button class="reset" id="prog_reset" type="button">сбросить</button>
 </div>
@@ -154,329 +153,9 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
   Компилятор clang++ (~60 МБ) грузится один раз и кэшируется. Первый запуск — 15–40 сек в Chromium и до 1–2 минут в Firefox. Если больше 2 мин — DevTools → Console.
 </div>
 
-<h2 id="intro">Что вы делаете</h2>
-
-<p>В прошлой лабе полиномиальная интерполяция на равномерной сетке Рунге дала ошибку \(\sim 60\). Сегодня добиваем Рунге <em>двумя</em> путями: (1) сгущение узлов у концов отрезка через чебышёвскую сетку, (2) замена одного полинома высокой степени на много полиномов низкой (сплайн).</p>
-
-<!-- =============================================================== -->
-<h2 id="part0">§0. Полиномы Чебышёва</h2>
-
-<div class="task" data-num="0.1">
-<strong>Задача 0.1. \(T_n(x)\) через рекуррентное соотношение.</strong> Реализуйте <code>double cheb_T(int n, double x)</code> — вычисление \(T_n(x)\) по формуле \(T_{k+1} = 2x T_k - T_{k-1}\), \(T_0 = 1, T_1 = x\). Тест: \(T_5(0{,}5) = 0{,}5\).
-
-<div class="editor-shell" data-cpp="q01"
-     data-harness='int main() {
-    double v = cheb_T(5, 0.5);
-    printf("T_5(0.5) = %.17g\n", v);
-    printf("expect   = 0.5\n");
-    printf("__ANS__%.17g\n", v);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="0.5" data-check-rtol="1e-14">
-  <div class="editor-head"><span class="fname">task0_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-
-double cheb_T(int n, double x) {
-    if (n == 0) return 1.0;
-    if (n == 1) return x;
-    double a = 1.0, b = x, c;
-    // TODO: цикл k = 2..n: c = 2*x*b - a; a = b; b = c;
-    return b;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part1">§1. Чебышёвская сетка против Рунге</h2>
-
-<div class="info" data-lbl="Формула">
-Чебышёвские узлы на \([-1, 1]\): \(x_k = \cos\bigl((2k+1)\pi/(2(n+1))\bigr)\), \(k = 0, \ldots, n\).
-</div>
-
-<div class="task" data-num="1.1">
-<strong>Задача 1.1. Сгенерировать сетку.</strong> Реализуйте <code>void cheb_nodes(int n, double* xn)</code>, заполняющую массив <code>xn[0..n]</code> чебышёвскими узлами. Тест: при \(n=4\) вывести все 5 узлов; сумма всех \(x_k\) должна быть 0 (симметрия).
-
-<div class="editor-shell" data-cpp="q11"
-     data-harness='int main() {
-    const int n = 4;
-    double xn[5];
-    cheb_nodes(n, xn);
-    double sum = 0;
-    for (int i = 0; i &lt;= n; ++i) { printf("x_%d = %.17g\n", i, xn[i]); sum += xn[i]; }
-    printf("sum = %.6g\n", sum);
-    printf("__ANS__%.17g\n", sum);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="0" data-check-atol="1e-14">
-  <div class="editor-head"><span class="fname">task1_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-const double PI = 3.14159265358979323846;
-
-void cheb_nodes(int n, double* xn) {
-    // TODO: xn[k] = cos((2k+1) * PI / (2*(n+1)))
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="1.2">
-<strong>Задача 1.2. Рунге на чебышёвской сетке при \(n = 20\).</strong> Возьмите функцию \(f = 1/(1+25x^2)\), \(n = 20\) чебышёвских узлов, интерполируйте через <code>lagrange_eval</code> (из §3), замерьте \(\max|f - L_n|\) на 1001 равномерной пробной точке в \([-1, 1]\).
-
-<div class="editor-shell" data-cpp="q12"
-     data-harness='double f_runge(double x) { return 1.0 / (1.0 + 25.0 * x * x); }
-int main() {
-    const int n = 20;
-    static double xn[100], yn[100];
-    cheb_nodes(n, xn);
-    for (int i = 0; i &lt;= n; ++i) yn[i] = f_runge(xn[i]);
-    double max_err = 0.0;
-    for (int k = 0; k &lt; 1001; ++k) {
-        double x = -1.0 + 2.0 * (double)k / 1000.0;
-        double e = f_runge(x) - lagrange_eval(xn, yn, n, x);
-        if (e &lt; 0) e = -e;
-        if (e &gt; max_err) max_err = e;
-    }
-    printf("Cheb L_20 max error = %.6g\n", max_err);
-    printf("__ANS__%.17g\n", max_err);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="chebRungeMaxErr(20)" data-check-rtol="1e-8">
-  <div class="editor-head"><span class="fname">task1_2.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-const double PI = 3.14159265358979323846;
-
-void cheb_nodes(int n, double* xn) {
-    for (int k = 0; k &lt;= n; ++k) xn[k] = cos((2.0*k + 1.0) * PI / (2.0*(n+1)));
-}
-
-double lagrange_eval(const double* xn, const double* yn, int n, double x) {
-    double s = 0.0;
-    for (int i = 0; i &lt;= n; ++i) {
-        double v = 1.0;
-        for (int j = 0; j &lt;= n; ++j) if (j != i) v *= (x - xn[j]) / (xn[i] - xn[j]);
-        s += yn[i] * v;
-    }
-    return s;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-
-<div class="info" data-lbl="Что должно быть">
-На чебышёвских узлах ошибка при \(n=20\) для функции Рунге \(\sim 10^{-4}\) — почти на 6 порядков лучше, чем на равномерной сетке из прошлой лабы.
-</div>
-</div>
-
-<div class="task" data-num="1.3">
-<strong>Задача 1.3. Вывод.</strong>
-
-<div class="mcq" data-mcq="q13" data-correct="C">
-  <div class="head"><span class="status-dot"></span>Что случилось с Рунге</div>
-  <label><input type="radio" name="q13" value="A"> A. Ошибка осталась \(\sim 60\).</label>
-  <label><input type="radio" name="q13" value="B"> B. Ошибка чуть меньше, но всё ещё \(&gt; 1\).</label>
-  <label><input type="radio" name="q13" value="C"> C. Ошибка упала на несколько порядков — Рунге исчез.</label>
-  <label><input type="radio" name="q13" value="D"> D. Ошибка стала \(0\) точно.</label>
-  <button class="btn" type="button" data-mcq-check>проверить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part2">§2. Кусочная линейная интерполяция</h2>
-
-<div class="task" data-num="2.1">
-<strong>Задача 2.1. Линейная интерполяция на плотной сетке.</strong> Реализуйте <code>double linear_interp(const double* xn, const double* yn, int n, double x)</code> — кусочно-линейное значение в точке \(x\). Найдите отрезок \([x_i, x_{i+1}]\), содержащий \(x\), и посчитайте линейную интерполяцию. Тест: 101 равномерный узел на \([-1, 1]\), функция Рунге; замерьте \(\max\bigl|f(x) - L(x)\bigr|\) на 1001 пробной точке.
-
-<div class="editor-shell" data-cpp="q21"
-     data-harness='double f_runge(double x) { return 1.0 / (1.0 + 25.0 * x * x); }
-int main() {
-    const int n = 100;   // 101 узлов
-    static double xn[101], yn[101];
-    for (int i = 0; i &lt;= n; ++i) { xn[i] = -1.0 + 2.0*i/n; yn[i] = f_runge(xn[i]); }
-    double max_err = 0.0;
-    for (int k = 0; k &lt; 1001; ++k) {
-        double x = -1.0 + 2.0*k/1000.0;
-        double e = f_runge(x) - linear_interp(xn, yn, n, x);
-        if (e &lt; 0) e = -e;
-        if (e &gt; max_err) max_err = e;
-    }
-    printf("Piecewise linear (h=0.02) max error = %.6g\n", max_err);
-    printf("__ANS__%.17g\n", max_err);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="linearRungeMaxErr(100)" data-check-rtol="1e-8">
-  <div class="editor-head"><span class="fname">task2_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-
-double linear_interp(const double* xn, const double* yn, int n, double x) {
-    // Ищем i такое, что xn[i] &lt;= x &lt;= xn[i+1]
-    int i = 0;
-    while (i &lt; n - 1 &amp;&amp; x &gt; xn[i+1]) ++i;
-    // TODO: линейная интерполяция yn[i] + (yn[i+1]-yn[i])*(x-xn[i])/(xn[i+1]-xn[i])
-    return 0.0;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="2.2">
-<strong>Задача 2.2. Порядок сходимости \(O(h^2)\).</strong> Повторите §2.1 при \(n = 200\) (шаг вдвое меньше). Ожидается ошибка в 4 раза меньше.
-
-<div class="editor-shell" data-cpp="q22"
-     data-harness='double f_runge(double x) { return 1.0 / (1.0 + 25.0 * x * x); }
-int main() {
-    const int n = 200;
-    static double xn[201], yn[201];
-    for (int i = 0; i &lt;= n; ++i) { xn[i] = -1.0 + 2.0*i/n; yn[i] = f_runge(xn[i]); }
-    double max_err = 0.0;
-    for (int k = 0; k &lt; 1001; ++k) {
-        double x = -1.0 + 2.0*k/1000.0;
-        double e = f_runge(x) - linear_interp(xn, yn, n, x);
-        if (e &lt; 0) e = -e;
-        if (e &gt; max_err) max_err = e;
-    }
-    printf("Piecewise linear (h=0.01) max error = %.6g\n", max_err);
-    printf("__ANS__%.17g\n", max_err);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="linearRungeMaxErr(200)" data-check-rtol="1e-8">
-  <div class="editor-head"><span class="fname">task2_2.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-
-double linear_interp(const double* xn, const double* yn, int n, double x) {
-    int i = 0;
-    while (i &lt; n - 1 &amp;&amp; x &gt; xn[i+1]) ++i;
-    return yn[i] + (yn[i+1]-yn[i]) * (x - xn[i]) / (xn[i+1] - xn[i]);
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="2.3">
-<strong>Задача 2.3. Порядок.</strong> Ошибка при удвоении числа узлов…
-
-<div class="mcq" data-mcq="q23" data-correct="C">
-  <div class="head"><span class="status-dot"></span>Наблюдаемый порядок</div>
-  <label><input type="radio" name="q23" value="A"> A. Осталась той же.</label>
-  <label><input type="radio" name="q23" value="B"> B. Уменьшилась вдвое \(O(h)\).</label>
-  <label><input type="radio" name="q23" value="C"> C. Уменьшилась в 4 раза \(O(h^2)\).</label>
-  <label><input type="radio" name="q23" value="D"> D. Уменьшилась в 8 раз \(O(h^3)\).</label>
-  <button class="btn" type="button" data-mcq-check>проверить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part3">§3. Кубический сплайн через прогонку</h2>
-
-<div class="info" data-lbl="Алгоритм">
-Natural сплайн: моменты \(M_0 = M_n = 0\); внутренние \(M_1, \ldots, M_{n-1}\) находятся из трёхдиагональной системы (4.10). Метод прогонки — прямой ход (elimination), обратный ход (back substitution).
-</div>
-
-<div class="task" data-num="3.1">
-<strong>Задача 3.1. Прогонка для natural сплайна.</strong> Постройте сплайн для \(\sin(x)\) на равномерной сетке \(x_i = i\cdot \pi/4, i = 0, \ldots, 4\). Замерьте значение сплайна в \(x = \pi/8\); должно быть близко к \(\sin(\pi/8) \approx 0{,}3827\).
-
-<div class="editor-shell" data-cpp="q31"
-     data-harness='int main() {
-    const int n = 4;
-    double PI = 3.14159265358979323846;
-    double xn[5], yn[5];
-    for (int i = 0; i &lt;= n; ++i) { xn[i] = i * PI / 4.0; yn[i] = sin(xn[i]); }
-    double M[5];
-    natural_spline_moments(xn, yn, n, M);
-    // Вычисляем сплайн в точке x = PI/8
-    double x = PI/8.0;
-    double v = spline_eval(xn, yn, M, n, x);
-    printf("S(pi/8)   = %.17g\n", v);
-    printf("sin(pi/8) = %.17g\n", sin(x));
-    printf("__ANS__%.17g\n", v);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="naturalSplineSinPi8()" data-check-rtol="1e-10">
-  <div class="editor-head"><span class="fname">task3_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-// Находит моменты M[0..n] natural сплайна методом прогонки
-void natural_spline_moments(const double* xn, const double* yn, int n, double* M) {
-    // M[0] = M[n] = 0 (natural)
-    M[0] = 0.0; M[n] = 0.0;
-    if (n &lt; 2) return;
-
-    double h[16], d[16], a[16], b[16], c[16];   // предполагаем n &lt; 16
-    for (int i = 0; i &lt; n; ++i) h[i] = xn[i+1] - xn[i];
-
-    // Уравнение для i = 1..n-1: h[i-1]*M[i-1] + 2*(h[i-1]+h[i])*M[i] + h[i]*M[i+1] = 6*(...)
-    // Прогонка на (n-1) уравнений с неизвестными M[1..n-1]
-    // TODO: заполнить a[i]=h[i-1], b[i]=2*(h[i-1]+h[i]), c[i]=h[i]
-    //       d[i] = 6 * ((yn[i+1]-yn[i])/h[i] - (yn[i]-yn[i-1])/h[i-1])
-    // Прямой ход: c[1] /= b[1]; d[1] /= b[1];
-    //             for i = 2..n-1: t = b[i] - a[i]*c[i-1]; c[i] /= t; d[i] = (d[i] - a[i]*d[i-1]) / t;
-    // Обратный: M[n-1] = d[n-1]; for i = n-2..1: M[i] = d[i] - c[i]*M[i+1]
-}
-
-double spline_eval(const double* xn, const double* yn, const double* M, int n, double x) {
-    int i = 0;
-    while (i &lt; n - 1 &amp;&amp; x &gt; xn[i+1]) ++i;
-    double h = xn[i+1] - xn[i];
-    double A = (xn[i+1] - x) / h;
-    double B = (x - xn[i]) / h;
-    // S(x) = A*yn[i] + B*yn[i+1] + ((A*A*A - A)*M[i] + (B*B*B - B)*M[i+1]) * h*h / 6
-    return A*yn[i] + B*yn[i+1] + ((A*A*A - A)*M[i] + (B*B*B - B)*M[i+1]) * h*h / 6.0;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="3.2">
-<strong>Задача 3.2. Плюсы сплайна vs Рунге.</strong>
-
-<div class="mcq" data-mcq="q32" data-correct="B">
-  <div class="head"><span class="status-dot"></span>Главный плюс сплайна</div>
-  <label><input type="radio" name="q32" value="A"> A. Он полностью повторяет функцию.</label>
-  <label><input type="radio" name="q32" value="B"> B. Гладкий (\(C^2\)) и без Рунге; ошибка \(O(h^4)\) для гладких функций.</label>
-  <label><input type="radio" name="q32" value="C"> C. Быстрее чебышёвской сетки.</label>
-  <label><input type="radio" name="q32" value="D"> D. Не требует ни одного узла.</label>
-  <button class="btn" type="button" data-mcq-check>проверить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part4">§4. Отчёт</h2>
-
-<div class="task" data-num="4.1">
-<strong>Задача 4.1. Сравнение.</strong> Обсудите с преподавателем: когда лучше чебышёвские узлы, когда сплайн, когда полиномиальная интерполяция вообще неуместна.
-
-<div class="mcq" data-mcq="q41" data-correct="X">
-  <div class="head"><span class="status-dot"></span>отметка</div>
-  <label><input type="radio" name="q41" value="X"> Обсудил(а).</label>
-  <button class="btn" type="button" data-mcq-check>отметить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-</div>
+<!-- Задания лабораторной зашифрованы: nm/w04-lab.enc.json (см. tools/lab_encrypt.py, js/labs.js).
+     Расшифровываются в браузере после того, как преподаватель откроет сеанс для отмеченных. -->
+<div id="lab-body"></div>
 
 <div class="lecture-nav">
   <a class="nav-prev" href="w04.html">← §4. Лекция</a>
@@ -504,71 +183,7 @@ double spline_eval(const double* xn, const double* yn, const double* M, int n, d
 <script src="../js/auth.js"></script>
 <script src="../js/comments.js"></script>
 
-<script>
-window.__EVAL__ = (function(){
-  var PI = Math.PI;
-  function lagrangeEval(xn, yn, n, x){
-    var s = 0;
-    for (var i = 0; i <= n; ++i){
-      var v = 1;
-      for (var j = 0; j <= n; ++j) if (j!==i) v *= (x - xn[j]) / (xn[i] - xn[j]);
-      s += yn[i]*v;
-    }
-    return s;
-  }
-  function fRunge(x){ return 1/(1+25*x*x); }
-  var CACHE = {};
-  return {
-    chebRungeMaxErr: function(n){
-      var key = 'ch'+n; if (CACHE[key] !== undefined) return CACHE[key];
-      var xn=[], yn=[];
-      for (var k=0;k<=n;++k){ xn[k]=Math.cos((2*k+1)*PI/(2*(n+1))); yn[k]=fRunge(xn[k]); }
-      var maxE=0;
-      for (var s=0;s<1001;++s){
-        var x=-1+2*s/1000;
-        var e = Math.abs(fRunge(x) - lagrangeEval(xn,yn,n,x));
-        if (e > maxE) maxE = e;
-      }
-      return CACHE[key] = maxE;
-    },
-    linearRungeMaxErr: function(n){
-      var key = 'ln'+n; if (CACHE[key] !== undefined) return CACHE[key];
-      var xn=[], yn=[];
-      for (var i=0;i<=n;++i){ xn[i]=-1+2*i/n; yn[i]=fRunge(xn[i]); }
-      var maxE=0;
-      for (var s=0;s<1001;++s){
-        var x=-1+2*s/1000;
-        var idx=0; while (idx < n-1 && x > xn[idx+1]) ++idx;
-        var v = yn[idx] + (yn[idx+1]-yn[idx])*(x-xn[idx])/(xn[idx+1]-xn[idx]);
-        var e = Math.abs(fRunge(x) - v);
-        if (e > maxE) maxE = e;
-      }
-      return CACHE[key] = maxE;
-    },
-    naturalSplineSinPi8: function(){
-      var n = 4, xn=[], yn=[];
-      for (var i=0;i<=n;++i){ xn[i] = i*PI/4; yn[i] = Math.sin(xn[i]); }
-      var h=[], a=[], b=[], c=[], d=[], M=new Array(n+1).fill(0);
-      for (var i=0;i<n;++i) h[i] = xn[i+1] - xn[i];
-      // Уравнения i=1..n-1
-      for (var i=1;i<n;++i){
-        a[i] = h[i-1]; b[i] = 2*(h[i-1]+h[i]); c[i] = h[i];
-        d[i] = 6*((yn[i+1]-yn[i])/h[i] - (yn[i]-yn[i-1])/h[i-1]);
-      }
-      c[1] /= b[1]; d[1] /= b[1];
-      for (var i=2;i<n;++i){ var t=b[i]-a[i]*c[i-1]; c[i] /= t; d[i] = (d[i]-a[i]*d[i-1])/t; }
-      M[n-1] = d[n-1];
-      for (var i=n-2;i>=1;--i) M[i] = d[i] - c[i]*M[i+1];
-      // Evaluate at PI/8
-      var x = PI/8, idx=0;
-      while (idx < n-1 && x > xn[idx+1]) ++idx;
-      var hh = xn[idx+1] - xn[idx];
-      var A = (xn[idx+1] - x)/hh, B = (x - xn[idx])/hh;
-      return A*yn[idx] + B*yn[idx+1] + ((A*A*A - A)*M[idx] + (B*B*B - B)*M[idx+1]) * hh*hh/6;
-    }
-  };
-})();
-</script>
+<!-- __EVAL__ (эталонные функции автопроверки) — внутри зашифрованного тела -->
 
 <script type="module">
 import { init, run } from 'https://cdn.jsdelivr.net/npm/clang.js/dist/clang.js';
@@ -617,8 +232,33 @@ async function runCpp(studentCode, harness, outputEl){
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 const PROG_KEY = 'cfd-nm-w04-lab-cpp-progress';
 let PROG = (function(){try{return JSON.parse(localStorage.getItem(PROG_KEY)||'{}');}catch(e){return{};}})();
-function saveProg(){ try{localStorage.setItem(PROG_KEY, JSON.stringify(PROG));}catch(e){} }
-const TOTAL = 10;
+function saveProg(){ try{localStorage.setItem(PROG_KEY, JSON.stringify(PROG));}catch(e){} scheduleRemoteSave(); }
+// ---- Синхронизация с Firestore (lab_progress/{uid}_nm_w04) через CFDLabs ----
+const LAB_CID = 'nm', LAB_ID = 'w04';
+let _rsTimer = null;
+function collectCode(){
+  const code = {};
+  document.querySelectorAll('[data-cpp]').forEach(sh => {
+    const id = sh.getAttribute('data-cpp');
+    const v = localStorage.getItem('cfd-nm-w04-lab-cpp:' + id);
+    if (v != null) code[id] = v;
+  });
+  return code;
+}
+function remoteSaveNow(){
+  if (!window.__labUser || !window.CFDLabs) return;
+  const done = Object.values(PROG).filter(v => v === 'ok').length;
+  return CFDLabs.saveProgress(window.__labUser.uid, LAB_CID, LAB_ID, { tasks: PROG, code: collectCode(), done: done, total: TOTAL });
+}
+function scheduleRemoteSave(){
+  if (!window.__labUser) return;
+  clearTimeout(_rsTimer);
+  _rsTimer = setTimeout(remoteSaveNow, 1500);
+}
+window.__labFlush = function(){ clearTimeout(_rsTimer); return remoteSaveNow(); };
+window.addEventListener('beforeunload', function(){ if (_rsTimer) { clearTimeout(_rsTimer); remoteSaveNow(); } });
+const TOTAL = 9;
+delete PROG.q41; // задача-обсуждение удалена
 function updateProgUI(){
   const done = Object.values(PROG).filter(v=>v==='ok').length;
   const pct = 100*done/TOTAL;
@@ -634,6 +274,7 @@ document.getElementById('prog_reset').addEventListener('click', ()=>{
 });
 updateProgUI();
 function closeTo(got, want, rtol, atol){ rtol = rtol||0; atol = atol||0; if (!isFinite(got) || !isFinite(want)) return got===want; const d = Math.abs(got-want); const tol = Math.max(atol, rtol*Math.abs(want)); return d <= tol; }
+function initTasks(){
 document.querySelectorAll('[data-cpp]').forEach(shell=>{
   const id = shell.getAttribute('data-cpp');
   const ta = shell.querySelector('[data-code]');
@@ -648,9 +289,12 @@ document.querySelectorAll('[data-cpp]').forEach(shell=>{
   const verdictEl = shell.nextElementSibling && shell.nextElementSibling.hasAttribute('data-verdict') ? shell.nextElementSibling : null;
   const initial = ta.value;
   const cm = CodeMirror.fromTextArea(ta, { mode: 'text/x-c++src', lineNumbers: true, theme: 'material-darker', indentUnit: 4, tabSize: 4, lineWrapping: false, extraKeys: { 'Ctrl-Enter': runNow, 'Cmd-Enter': runNow } });
+  // Код нужно набирать самостоятельно: буфер обмена и перетаскивание в редакторе отключены.
+  ['paste', 'copy', 'cut', 'drop', 'dragstart'].forEach(ev => cm.on(ev, (_cm, e) => { e.preventDefault(); e.stopPropagation(); }));
+  cm.getWrapperElement().addEventListener('contextmenu', e => e.preventDefault());
   const savedCode = localStorage.getItem('cfd-nm-w04-lab-cpp:'+id);
   if (savedCode) cm.setValue(savedCode);
-  cm.on('change', () => localStorage.setItem('cfd-nm-w04-lab-cpp:'+id, cm.getValue()));
+  cm.on('change', () => { localStorage.setItem('cfd-nm-w04-lab-cpp:'+id, cm.getValue()); scheduleRemoteSave(); });
   if (verdictEl && PROG[id]==='ok'){ verdictEl.className = 'verdict ok'; verdictEl.innerHTML = '<span class="status-dot ok"></span>✓ решено ранее'; }
   btnReset.addEventListener('click', ()=>{ if (!confirm('Вернуть скелет?')) return; cm.setValue(initial); localStorage.removeItem('cfd-nm-w04-lab-cpp:'+id); });
   async function runNow(){
@@ -706,7 +350,40 @@ document.querySelectorAll('[data-mcq]').forEach(box=>{
     PROG[id] = ok ? 'ok' : 'err'; saveProg(); updateProgUI();
   });
 });
-setTimeout(ensureRuntime, 800);
+} // initTasks
+
+// Вызывается из CFDLabs.mountLab после расшифровки и вставки заданий.
+window.__labInit = function(remote, user){
+  window.__labUser = user || null;
+  if (remote) {
+    if (remote.tasks && typeof remote.tasks === 'object') {
+      PROG = Object.assign({}, remote.tasks);
+      try { localStorage.setItem(PROG_KEY, JSON.stringify(PROG)); } catch(e) {}
+    }
+    if (remote.code && typeof remote.code === 'object') {
+      for (const k in remote.code) { try { localStorage.setItem('cfd-nm-w04-lab-cpp:' + k, remote.code[k]); } catch(e) {} }
+    }
+  }
+  initTasks();
+  updateProgUI();
+  setTimeout(ensureRuntime, 800);
+};
+</script>
+
+<script src="../js/labs.js"></script>
+<script>
+(function(){
+  function go(){
+    if (!window.CFDLabs || !window.__labInit) { setTimeout(go, 100); return; }
+    CFDLabs.mountLab({
+      cid: 'nm', lab: 'w04', encUrl: 'w04-lab.enc.json',
+      mount: document.getElementById('lab-body'),
+      onReady: function(remote, user){ window.__labInit(remote, user); },
+      onClosed: function(){ if (window.__labFlush) window.__labFlush(); window.__labUser = null; },
+    });
+  }
+  go();
+})();
 </script>
 </body>
 </html>

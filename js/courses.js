@@ -26,5 +26,11 @@ window.CFD_COURSES.forEach(function(c){ window.CFD_COURSE_BY_ID[c.id] = c; });
 window.CFD_LABS = {
   nm: [
     { id: 'w01', title: 'Лаба 1 · Точное суммирование и катастрофа вычитания', href: 'nm/w01-lab.html', total: 18 },
+    { id: 'w02', title: 'Лаба 2 · Ряды Тейлора: точность, сходимость, знакопеременность', href: 'nm/w02-lab.html', total: 11 },
+    { id: 'w03', title: 'Лаба 3 · Полиномиальная интерполяция и феномен Рунге', href: 'nm/w03-lab.html', total: 9 },
+    { id: 'w04', title: 'Лаба 4 · Чебышёвские узлы и кубический сплайн', href: 'nm/w04-lab.html', total: 9 },
+    { id: 'w05', title: 'Лаба 5 · Аппроксимация eˣ методом наименьших квадратов', href: 'nm/w05-lab.html', total: 9 },
+    { id: 'w06', title: 'Лаба 6 · V-образная кривая ошибки и оптимальный шаг', href: 'nm/w06-lab.html', total: 8 },
+    { id: 'w07', title: 'Лаба 7 · Составные квадратуры и метод Ромберга', href: 'nm/w07-lab.html', total: 8 },
   ],
 };

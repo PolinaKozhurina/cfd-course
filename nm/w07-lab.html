@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-course="nm">
+<html lang="ru" data-course="nm" data-lab="w07">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" href="../favicon.ico" type="image/x-icon">
@@ -108,14 +108,13 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
 
 <nav class="sidebar">
   <h2>Лаба 7. Ньютон-Котес</h2>
-  <div class="progress" id="side_progress">решено 0 из 9</div>
+  <div class="progress" id="side_progress">решено 0 из 8</div>
   <div class="runtime-state" id="side_runtime">clang: не загружен</div>
   <div class="g">Содержание</div>
   <a href="#intro">Введение</a>
   <a href="#part0">§0. Простые формулы</a>
   <a href="#part1">§1. Составной Симпсон</a>
   <a href="#part2">§2. Ромберг</a>
-  <a href="#part3">§3. Отчёт</a>
   <div class="sep"></div>
   <div class="g">Материалы</div>
   <a href="w07.html">§7. Лекция</a>
@@ -136,13 +135,13 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
   <div class="cell"><b>Формат</b>Парная работа за компьютером</div>
   <div class="cell"><b>Язык</b>C++11, только stdlib</div>
   <div class="cell"><b>Сборка</b>clang++ в браузере (wasm)</div>
-  <div class="cell"><b>Оценка</b>7/9 задач → зачёт</div>
+  <div class="cell"><b>Оценка</b>6/8 задач → зачёт</div>
 </div>
 
 <div class="progresspanel">
   <span>Прогресс</span>
   <div class="bar"><div id="prog_bar" style="width:0%"></div></div>
-  <span class="cnt" id="prog_cnt">0/9</span>
+  <span class="cnt" id="prog_cnt">0/8</span>
   <span class="runtime" id="prog_runtime">clang: init…</span>
   <button class="reset" id="prog_reset" type="button">сбросить</button>
 </div>
@@ -152,242 +151,9 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
   Первый запуск задачи — 15–40 сек в Chromium и до 1–2 мин в Firefox. Больше — DevTools → Console.
 </div>
 
-<h2 id="intro">Что вы делаете</h2>
-
-<p>Реализуем три классических квадратуры Ньютона-Котеса — средние точки, трапеции, Симпсон — как <em>составные</em> формулы. Проверяем на \(\int_0^1 e^x dx = e - 1\), что удвоение числа отрезков уменьшает ошибку в 4 и 16 раз соответственно. Финал — метод Ромберга: за 5 итераций получить машинную точность.</p>
-
-<!-- =============================================================== -->
-<h2 id="part0">§0. Простые составные формулы</h2>
-
-<div class="task" data-num="0.1">
-<strong>Задача 0.1. Составная средних точек.</strong> Реализуйте <code>double midpoint(double (*f)(double), double a, double b, int N)</code> — сумма \(h \cdot f(x_i + h/2)\) по \(N\) подотрезкам. Тест: \(f = e^x\), \([0, 1]\), \(N = 10\); ошибка \(\sim 3 \cdot 10^{-4}\).
-
-<div class="editor-shell" data-cpp="q01"
-     data-harness='double f_exp(double x) { return std::exp(x); }
-int main() {
-    double s = midpoint(f_exp, 0.0, 1.0, 10);
-    double exact = std::exp(1.0) - 1.0;
-    double err = std::fabs(s - exact);
-    printf("midpoint = %.17g\n", s);
-    printf("exact    = %.17g\n", exact);
-    printf("|err|    = %.6g\n", err);
-    printf("__ANS__%.17g\n", s);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="1.7180000497474252" data-check-rtol="1e-3">
-  <div class="editor-head"><span class="fname">task0_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double midpoint(double (*f)(double), double a, double b, int N) {
-    double h = (b - a) / N;
-    double s = 0.0;
-    // TODO: сумма f(a + (i + 0.5) * h) для i = 0..N-1, умножить на h
-    return s * h;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="0.2">
-<strong>Задача 0.2. Составная трапеции.</strong> Реализуйте <code>trapezoid</code> по формуле (7.9). Тест: тот же, ошибка \(\sim 1{,}4 \cdot 10^{-3}\) (в 4 раза хуже средних точек, но того же порядка \(O(h^2)\)).
-
-<div class="editor-shell" data-cpp="q02"
-     data-harness='double f_exp(double x) { return std::exp(x); }
-int main() {
-    double s = trapezoid(f_exp, 0.0, 1.0, 10);
-    double exact = std::exp(1.0) - 1.0;
-    double err = std::fabs(s - exact);
-    printf("trapezoid = %.17g\n", s);
-    printf("exact     = %.17g\n", exact);
-    printf("|err|     = %.6g\n", err);
-    printf("__ANS__%.17g\n", s);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="1.7197134913893108" data-check-rtol="1e-3">
-  <div class="editor-head"><span class="fname">task0_2.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double trapezoid(double (*f)(double), double a, double b, int N) {
-    double h = (b - a) / N;
-    double s = 0.5 * (f(a) + f(b));
-    // TODO: прибавить f(a + i*h) для i = 1..N-1
-    return s * h;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part1">§1. Составной Симпсон и порядок сходимости</h2>
-
-<div class="task" data-num="1.1">
-<strong>Задача 1.1. Составной Симпсон.</strong> Реализуйте <code>simpson</code> по формуле (7.10) при <em>чётном</em> \(N\). Тест: \(N = 10\); ошибка \(\sim 3 \cdot 10^{-7}\) — на 4 порядка лучше трапеций.
-
-<div class="editor-shell" data-cpp="q11"
-     data-harness='double f_exp(double x) { return std::exp(x); }
-int main() {
-    double s = simpson(f_exp, 0.0, 1.0, 10);
-    double exact = std::exp(1.0) - 1.0;
-    double err = std::fabs(s - exact);
-    printf("simpson = %.17g\n", s);
-    printf("exact   = %.17g\n", exact);
-    printf("|err|   = %.6g\n", err);
-    printf("__ANS__%.17g\n", s);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="1.7182818935276422" data-check-rtol="1e-8">
-  <div class="editor-head"><span class="fname">task1_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double simpson(double (*f)(double), double a, double b, int N) {
-    // Требуем чётное N
-    double h = (b - a) / N;
-    double s = f(a) + f(b);
-    // TODO: 4 * (сумма по нечётным i), 2 * (сумма по чётным i, кроме 0 и N)
-    return s * h / 3.0;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="1.2">
-<strong>Задача 1.2. Порядок при удвоении \(N\).</strong> Замерьте ошибку Симпсона при \(N = 10\) и \(N = 20\). Введите <em>отношение</em> ошибок \(\text{err}(N=10)/\text{err}(N=20)\). Теория предсказывает \(\approx 16\).
-
-<div class="editor-shell" data-cpp="q12"
-     data-harness='double f_exp(double x) { return std::exp(x); }
-int main() {
-    double exact = std::exp(1.0) - 1.0;
-    double e10 = std::fabs(simpson(f_exp, 0.0, 1.0, 10) - exact);
-    double e20 = std::fabs(simpson(f_exp, 0.0, 1.0, 20) - exact);
-    double ratio = e10 / e20;
-    printf("err(10) = %.6g\n", e10);
-    printf("err(20) = %.6g\n", e20);
-    printf("ratio   = %.6g (expect ~16)\n", ratio);
-    printf("__ANS__%.17g\n", ratio);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="16" data-check-atol="4">
-  <div class="editor-head"><span class="fname">task1_2.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-// Скопируйте вашу simpson сюда
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="1.3">
-<strong>Задача 1.3. Вывод.</strong>
-
-<div class="mcq" data-mcq="q13" data-correct="C">
-  <div class="head"><span class="status-dot"></span>Что подтвердил эксперимент</div>
-  <label><input type="radio" name="q13" value="A"> A. Симпсон — первого порядка.</label>
-  <label><input type="radio" name="q13" value="B"> B. Симпсон — второго порядка.</label>
-  <label><input type="radio" name="q13" value="C"> C. Симпсон — четвёртого порядка (\(2^4 = 16\)).</label>
-  <label><input type="radio" name="q13" value="D"> D. Симпсон — восьмого порядка.</label>
-  <button class="btn" type="button" data-mcq-check>проверить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part2">§2. Метод Ромберга</h2>
-
-<div class="info" data-lbl="Идея">
-Строим таблицу \(R[k][j]\) размера \((K+1)\times (K+1)\). Первый столбец — трапеции при \(2^k\) отрезках. Каждый следующий столбец — экстраполяция Ричардсона (7.12). В правом нижнем углу — наиболее точное приближение.
-</div>
-
-<div class="task" data-num="2.1">
-<strong>Задача 2.1. Таблица Ромберга.</strong> Реализуйте <code>double romberg(...)</code> — возвращает \(R[K][K]\) при \(K = 5\) для \(\int_0^1 e^x dx\). Ожидается ошибка \(\lesssim 10^{-15}\).
-
-<div class="editor-shell" data-cpp="q21"
-     data-harness='double f_exp(double x) { return std::exp(x); }
-int main() {
-    double v = romberg(f_exp, 0.0, 1.0, 5);
-    double exact = std::exp(1.0) - 1.0;
-    double err = std::fabs(v - exact);
-    printf("Romberg R[5][5] = %.17g\n", v);
-    printf("exact           = %.17g\n", exact);
-    printf("|err|           = %.6g\n", err);
-    printf("__ANS__%.17g\n", err);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="0" data-check-atol="1e-13">
-  <div class="editor-head"><span class="fname">task2_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double trapezoid(double (*f)(double), double a, double b, int N) {
-    double h = (b - a) / N;
-    double s = 0.5 * (f(a) + f(b));
-    for (int i = 1; i &lt; N; ++i) s += f(a + i * h);
-    return s * h;
-}
-
-double romberg(double (*f)(double), double a, double b, int K) {
-    double R[8][8] = {0};
-    // Первый столбец: R[k][0] = трапеции с 2^k отрезками
-    for (int k = 0; k &lt;= K; ++k) {
-        int Nk = 1 &lt;&lt; k;
-        R[k][0] = trapezoid(f, a, b, Nk);
-    }
-    // Экстраполяция: R[k][j] = (4^j * R[k][j-1] - R[k-1][j-1]) / (4^j - 1)
-    // TODO: заполнить R[k][j] для j = 1..K, k = j..K
-    return R[K][K];
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="2.2">
-<strong>Задача 2.2. Что делает Ромберг.</strong>
-
-<div class="mcq" data-mcq="q22" data-correct="B">
-  <div class="head"><span class="status-dot"></span>Механизм</div>
-  <label><input type="radio" name="q22" value="A"> A. Уменьшает \(N\).</label>
-  <label><input type="radio" name="q22" value="B"> B. Линейные комбинации трапеций разной кратности убивают старшие члены ошибки — поднимают порядок с 2 до 2K+2.</label>
-  <label><input type="radio" name="q22" value="C"> C. Заменяет квадратуру на автомат Гаусса.</label>
-  <label><input type="radio" name="q22" value="D"> D. Использует случайные точки.</label>
-  <button class="btn" type="button" data-mcq-check>проверить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part3">§3. Отчёт</h2>
-
-<div class="task" data-num="3.1">
-<strong>Задача 3.1. Обсудите.</strong> Когда Симпсон плохо работает (негладкая функция, разрывы производной, особенности на концах)? Что тогда используют?
-
-<div class="mcq" data-mcq="q31" data-correct="X">
-  <div class="head"><span class="status-dot"></span>отметка</div>
-  <label><input type="radio" name="q31" value="X"> Обсудил(а).</label>
-  <button class="btn" type="button" data-mcq-check>отметить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-
-<div class="info" data-lbl="Ответ">
-Симпсон предполагает гладкость \(f^{(4)}\). При разрыве производной порядок падает до 2. Спасают: подбор адаптивной сетки (§&nbsp;8), квадратуры Гаусса (§&nbsp;8) или замена переменной, «выводящая» особенность.
-</div>
-</div>
+<!-- Задания лабораторной зашифрованы: nm/w07-lab.enc.json (см. tools/lab_encrypt.py, js/labs.js).
+     Расшифровываются в браузере после того, как преподаватель откроет сеанс для отмеченных. -->
+<div id="lab-body"></div>
 
 <div class="lecture-nav">
   <a class="nav-prev" href="w07.html">← §7. Лекция</a>
@@ -462,8 +228,33 @@ async function runCpp(studentCode, harness, outputEl){
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 const PROG_KEY = 'cfd-nm-w07-lab-cpp-progress';
 let PROG = (function(){try{return JSON.parse(localStorage.getItem(PROG_KEY)||'{}');}catch(e){return{};}})();
-function saveProg(){ try{localStorage.setItem(PROG_KEY, JSON.stringify(PROG));}catch(e){} }
-const TOTAL = 9;
+function saveProg(){ try{localStorage.setItem(PROG_KEY, JSON.stringify(PROG));}catch(e){} scheduleRemoteSave(); }
+// ---- Синхронизация с Firestore (lab_progress/{uid}_nm_w07) через CFDLabs ----
+const LAB_CID = 'nm', LAB_ID = 'w07';
+let _rsTimer = null;
+function collectCode(){
+  const code = {};
+  document.querySelectorAll('[data-cpp]').forEach(sh => {
+    const id = sh.getAttribute('data-cpp');
+    const v = localStorage.getItem('cfd-nm-w07-lab-cpp:' + id);
+    if (v != null) code[id] = v;
+  });
+  return code;
+}
+function remoteSaveNow(){
+  if (!window.__labUser || !window.CFDLabs) return;
+  const done = Object.values(PROG).filter(v => v === 'ok').length;
+  return CFDLabs.saveProgress(window.__labUser.uid, LAB_CID, LAB_ID, { tasks: PROG, code: collectCode(), done: done, total: TOTAL });
+}
+function scheduleRemoteSave(){
+  if (!window.__labUser) return;
+  clearTimeout(_rsTimer);
+  _rsTimer = setTimeout(remoteSaveNow, 1500);
+}
+window.__labFlush = function(){ clearTimeout(_rsTimer); return remoteSaveNow(); };
+window.addEventListener('beforeunload', function(){ if (_rsTimer) { clearTimeout(_rsTimer); remoteSaveNow(); } });
+const TOTAL = 8;
+delete PROG.q31; // задача-обсуждение удалена
 function updateProgUI(){
   const done = Object.values(PROG).filter(v=>v==='ok').length;
   const pct = 100*done/TOTAL;
@@ -479,6 +270,7 @@ document.getElementById('prog_reset').addEventListener('click', ()=>{
 });
 updateProgUI();
 function closeTo(got, want, rtol, atol){ rtol = rtol||0; atol = atol||0; if (!isFinite(got) || !isFinite(want)) return got===want; const d = Math.abs(got-want); const tol = Math.max(atol, rtol*Math.abs(want)); return d <= tol; }
+function initTasks(){
 document.querySelectorAll('[data-cpp]').forEach(shell=>{
   const id = shell.getAttribute('data-cpp');
   const ta = shell.querySelector('[data-code]');
@@ -493,9 +285,12 @@ document.querySelectorAll('[data-cpp]').forEach(shell=>{
   const verdictEl = shell.nextElementSibling && shell.nextElementSibling.hasAttribute('data-verdict') ? shell.nextElementSibling : null;
   const initial = ta.value;
   const cm = CodeMirror.fromTextArea(ta, { mode: 'text/x-c++src', lineNumbers: true, theme: 'material-darker', indentUnit: 4, tabSize: 4, lineWrapping: false, extraKeys: { 'Ctrl-Enter': runNow, 'Cmd-Enter': runNow } });
+  // Код нужно набирать самостоятельно: буфер обмена и перетаскивание в редакторе отключены.
+  ['paste', 'copy', 'cut', 'drop', 'dragstart'].forEach(ev => cm.on(ev, (_cm, e) => { e.preventDefault(); e.stopPropagation(); }));
+  cm.getWrapperElement().addEventListener('contextmenu', e => e.preventDefault());
   const savedCode = localStorage.getItem('cfd-nm-w07-lab-cpp:'+id);
   if (savedCode) cm.setValue(savedCode);
-  cm.on('change', () => localStorage.setItem('cfd-nm-w07-lab-cpp:'+id, cm.getValue()));
+  cm.on('change', () => { localStorage.setItem('cfd-nm-w07-lab-cpp:'+id, cm.getValue()); scheduleRemoteSave(); });
   if (verdictEl && PROG[id]==='ok'){ verdictEl.className = 'verdict ok'; verdictEl.innerHTML = '<span class="status-dot ok"></span>✓ решено ранее'; }
   btnReset.addEventListener('click', ()=>{ if (!confirm('Вернуть скелет?')) return; cm.setValue(initial); localStorage.removeItem('cfd-nm-w07-lab-cpp:'+id); });
   async function runNow(){
@@ -551,7 +346,40 @@ document.querySelectorAll('[data-mcq]').forEach(box=>{
     PROG[id] = ok ? 'ok' : 'err'; saveProg(); updateProgUI();
   });
 });
-setTimeout(ensureRuntime, 800);
+} // initTasks
+
+// Вызывается из CFDLabs.mountLab после расшифровки и вставки заданий.
+window.__labInit = function(remote, user){
+  window.__labUser = user || null;
+  if (remote) {
+    if (remote.tasks && typeof remote.tasks === 'object') {
+      PROG = Object.assign({}, remote.tasks);
+      try { localStorage.setItem(PROG_KEY, JSON.stringify(PROG)); } catch(e) {}
+    }
+    if (remote.code && typeof remote.code === 'object') {
+      for (const k in remote.code) { try { localStorage.setItem('cfd-nm-w07-lab-cpp:' + k, remote.code[k]); } catch(e) {} }
+    }
+  }
+  initTasks();
+  updateProgUI();
+  setTimeout(ensureRuntime, 800);
+};
+</script>
+
+<script src="../js/labs.js"></script>
+<script>
+(function(){
+  function go(){
+    if (!window.CFDLabs || !window.__labInit) { setTimeout(go, 100); return; }
+    CFDLabs.mountLab({
+      cid: 'nm', lab: 'w07', encUrl: 'w07-lab.enc.json',
+      mount: document.getElementById('lab-body'),
+      onReady: function(remote, user){ window.__labInit(remote, user); },
+      onClosed: function(){ if (window.__labFlush) window.__labFlush(); window.__labUser = null; },
+    });
+  }
+  go();
+})();
 </script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-course="nm">
+<html lang="ru" data-course="nm" data-lab="w02">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" href="../favicon.ico" type="image/x-icon">
@@ -124,7 +124,7 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
 
 <nav class="sidebar">
   <h2>Лаба 2. Ряды Тейлора</h2>
-  <div class="progress" id="side_progress">решено 0 из 12</div>
+  <div class="progress" id="side_progress">решено 0 из 11</div>
   <div class="runtime-state" id="side_runtime">clang: не загружен</div>
   <div class="g">Содержание</div>
   <a href="#intro">Введение</a>
@@ -134,7 +134,6 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
   <a href="#part3">§3. Катастрофа e^{−x}</a>
   <a href="#part4">§4. Радиус сходимости</a>
   <a href="#part5">§5. Горнер</a>
-  <a href="#part6">§6. Отчёт</a>
   <div class="sep"></div>
   <div class="g">Материалы</div>
   <a href="w02.html">§2. Лекция</a>
@@ -157,13 +156,13 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
   <div class="cell"><b>Формат</b>Парная работа за компьютером</div>
   <div class="cell"><b>Язык</b>C++11, только stdlib</div>
   <div class="cell"><b>Сборка</b>clang++ в браузере (wasm)</div>
-  <div class="cell"><b>Оценка</b>10/12 задач → зачёт</div>
+  <div class="cell"><b>Оценка</b>9/11 задач → зачёт</div>
 </div>
 
 <div class="progresspanel">
   <span>Прогресс</span>
   <div class="bar"><div id="prog_bar" style="width:0%"></div></div>
-  <span class="cnt" id="prog_cnt">0/12</span>
+  <span class="cnt" id="prog_cnt">0/11</span>
   <span class="runtime" id="prog_runtime">clang: init…</span>
   <button class="reset" id="prog_reset" type="button">сбросить</button>
 </div>
@@ -173,435 +172,9 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
   Компилятор clang++ (~60 МБ) грузится один раз и кэшируется в браузере. Первый запуск — 15–40 сек в Chromium и до 1–2 минут в Firefox. Последующие — 2–5 сек. Если больше 2 минут — DevTools → Console, ищите красную ошибку про jsDelivr / Worker.
 </div>
 
-<h2 id="intro">Что вы делаете и зачем</h2>
-
-<p>В §&nbsp;2 введены формула Тейлора и оценка остатка. Здесь мы её проверяем на практике: реализуем частичные суммы \(\sin, \cos, e^x\) через рекуррентное домножение (не через факториалы и степени по отдельности — это принципиально), измеряем ошибку усечения при разных \(n\), сравниваем с эталоном и убеждаемся, что реальная ошибка ведёт себя как первый отброшенный член. Затем — воспроизводим катастрофическую потерю значимости при знакопеременном ряде для \(e^{-20}\) и убеждаемся, что \(1/e^{20}\) её лечит.</p>
-
-<p>Как и в лабе 1, harness вокруг вашего кода печатает ответы вида <code>__ANS__<em>число</em></code> и завершается маркёром <code>__END__</code>. JS-часть страницы сверяет с эталоном, посчитанным той же арифметикой double.</p>
-
-<h3>Правила</h3>
-<ul>
-<li><strong>Можно</strong>: <code>&lt;cstdio&gt;</code>, <code>&lt;cmath&gt;</code>. <em>Нельзя</em> использовать библиотечные <code>std::sin</code>, <code>std::exp</code>, <code>std::log</code> в реализации ваших рядов — иначе смысл упражнения теряется. В harness мы их вызываем как эталон.</li>
-<li>Все ряды считайте <em>рекуррентно</em>: следующий член получается умножением предыдущего на константу, зависящую от \(x\) и индекса.</li>
-</ul>
-
-<!-- =============================================================== -->
-<h2 id="part0">§0. Разминка: реализовать sin через ряд</h2>
-
-<div class="task" data-num="0.1">
-<strong>Задача 0.1. sin(x) через ряд.</strong> Реализуйте <code>double sin_taylor(double x, int n)</code> — сумму первых \(n\) членов ряда \(\sin x = x - x^3/3! + x^5/5! - \ldots\). Не используйте факториалы напрямую и не считайте степени независимо — только рекуррентное домножение члена на \(-x^2/((2k)(2k+1))\). Тест: \(x=1\), \(n=15\), ответ должен совпасть со <code>std::sin(1)</code> до \(10^{-15}\).
-
-<div class="editor-shell" data-cpp="q01"
-     data-harness='int main() {
-    double x = 1.0;
-    int n = 15;
-    double s = sin_taylor(x, n);
-    printf("sin_taylor(1, 15) = %.17g\n", s);
-    printf("std::sin(1)        = %.17g\n", std::sin(1.0));
-    printf("__ANS__%.17g\n", s);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="sinTaylor(1.0,15)" data-check-rtol="1e-13">
-  <div class="editor-head">
-    <span class="fname">task0_1.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double sin_taylor(double x, int n) {
-    // TODO: рекуррентное суммирование
-    // Стартовый член k=0: t = x, сумма s = x
-    // Переход k -&gt; k+1: t *= -x*x / ((2k+2)*(2k+3))
-    double s = 0.0;
-    return s;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="0.2">
-<strong>Задача 0.2. exp(x) через ряд.</strong> Реализуйте <code>double exp_taylor(double x, int n)</code> — сумму первых \(n\) членов ряда \(e^x = \sum x^k/k!\). Рекуррентное домножение: \(t_{k+1} = t_k \cdot x/(k+1)\). Тест: \(x=1\), \(n=20\), ответ — около \(e\).
-
-<div class="editor-shell" data-cpp="q02"
-     data-harness='int main() {
-    double x = 1.0;
-    int n = 20;
-    double s = exp_taylor(x, n);
-    printf("exp_taylor(1, 20) = %.17g\n", s);
-    printf("std::exp(1)        = %.17g\n", std::exp(1.0));
-    printf("__ANS__%.17g\n", s);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="expTaylor(1.0,20)" data-check-rtol="1e-14">
-  <div class="editor-head">
-    <span class="fname">task0_2.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double exp_taylor(double x, int n) {
-    double s = 0.0;
-    double t = 1.0;   // член k=0
-    // TODO: цикл по k, добавить t к s, обновить t *= x/(k+1)
-    return s;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part1">§1. Порядок точности «первый отброшенный член»</h2>
-
-<div class="task" data-num="1.1">
-<strong>Задача 1.1. Ошибка обрыва sin на n=3.</strong> Возьмите \(x = 0{,}1\) и посчитайте \(\sin_{\text{taylor}}(0{,}1, 3) - \sin(0{,}1)\). Теория говорит, что ошибка \(\approx x^7/7! = 0{,}1^7/5040 \approx 2\cdot 10^{-11}\). Подтвердите экспериментально. Автопроверка сверит модуль ошибки.
-
-<div class="editor-shell" data-cpp="q11"
-     data-harness='int main() {
-    double x = 0.1;
-    int n = 3;
-    double err = sin_taylor(x, n) - std::sin(x);
-    if (err &lt; 0) err = -err;
-    printf("x = %.3g, n = %d\n", x, n);
-    printf("|err| = %.17g\n", err);
-    printf("__ANS__%.17g\n", err);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="sinTaylorAbsErr(0.1,3)" data-check-rtol="0.5" data-check-atol="1e-16">
-  <div class="editor-head">
-    <span class="fname">task1_1.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-// Скопируйте sin_taylor из §0.1
-double sin_taylor(double x, int n) {
-    double s = 0.0;
-    return s;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="1.2">
-<strong>Задача 1.2. Что говорит теория.</strong> Оборвав ряд \(\sin\) на члене \(x^{2k-1}\), какой порядок ошибки при \(x\to 0\)?
-
-<div class="mcq" data-mcq="q12" data-correct="B">
-  <div class="head"><span class="status-dot"></span>Ответ</div>
-  <label><input type="radio" name="q12" value="A"> A. \(O(x^{2k-1})\) — того же порядка, что последний член.</label>
-  <label><input type="radio" name="q12" value="B"> B. \(O(x^{2k+1})\) — первого отброшенного члена.</label>
-  <label><input type="radio" name="q12" value="C"> C. \(O(x^{2k})\) — среднее геометрическое.</label>
-  <label><input type="radio" name="q12" value="D"> D. Не зависит от \(x\).</label>
-  <button class="btn" type="button" data-mcq-check>проверить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part2">§2. Критерий остановки Лейбница</h2>
-
-<div class="info" data-lbl="Идея">
-Для знакопеременного ряда с убывающими по модулю членами (\(\sin x\) при \(|x|&lt;\sqrt{6}\), \(\cos x\), \(\ln(1+x)\) при \(0&lt;x\le 1\)) остаток мажорируется первым отброшенным членом. Значит критерий остановки: <em>суммируйте до тех пор, пока не встретите член, меньший заданной точности \(\tau\)</em>.
-</div>
-
-<div class="task" data-num="2.1">
-<strong>Задача 2.1. Автоматическая остановка.</strong> Реализуйте <code>double sin_stop(double x, double tau, int&amp; n_used)</code> — суммирует ряд \(\sin\), пока <code>|t| &gt;= tau</code>, и возвращает результат вместе с числом использованных членов через ссылку <code>n_used</code>. Тест: \(x=1\), \(\tau = 10^{-10}\).
-
-<div class="editor-shell" data-cpp="q21"
-     data-harness='int main() {
-    int n_used = 0;
-    double x = 1.0, tau = 1e-10;
-    double s = sin_stop(x, tau, n_used);
-    printf("sin_stop(1, 1e-10) = %.17g,  n = %d\n", s, n_used);
-    printf("std::sin(1)         = %.17g\n", std::sin(1.0));
-    // Печатаем n_used и |ошибку|
-    double err = s - std::sin(x);
-    if (err &lt; 0) err = -err;
-    printf("__ANS__%d\n", n_used);
-    printf("__ANS__%.17g\n", err);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="7,1e-14" data-check-rtol="0" data-check-atol="1e-9">
-  <div class="editor-head">
-    <span class="fname">task2_1.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double sin_stop(double x, double tau, int&amp; n_used) {
-    double s = 0.0;
-    double t = x;    // член k=0
-    int k = 0;
-    // TODO: пока |t| &gt;= tau, добавляй t к s, обнови t для следующего k
-    // Не забудь записать в n_used число выполненных итераций
-    n_used = k;
-    return s;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-
-<div class="info" data-lbl="Ожидание">
-Для \(x=1, \tau=10^{-10}\) нужно 7 членов: \(x^{13}/13! \approx 1{,}6 \cdot 10^{-10}\) — первый член, который меньше \(\tau\). После него ошибка гарантированно меньше \(\tau\).
-</div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part3">§3. Катастрофа знакопеременного ряда: \(e^{-20}\)</h2>
-
-<p>Наивное прямое суммирование ряда \(e^{-x}\) для больших \(x\) даёт <em>катастрофу</em>: слагаемые сначала растут до огромных значений, потом убывают, а сумма — крошечная. При этом старшие разряды промежуточных величин теряются в округлении.</p>
-
-<div class="task" data-num="3.1">
-<strong>Задача 3.1. Наивное \(e^{-20}\).</strong> Реализуйте <code>double exp_neg_naive(double x, int n)</code> — прямое суммирование ряда \(\sum (-x)^k/k!\) до \(n\) членов. Прогоните для \(x=20\), \(n=200\). Автопроверка сверит с эталоном (тот же наивный алгоритм в JS).
-
-<div class="editor-shell" data-cpp="q31"
-     data-harness='int main() {
-    double x = 20.0;
-    int n = 200;
-    double s = exp_neg_naive(x, n);
-    printf("exp_neg_naive(20, 200) = %.17g\n", s);
-    printf("std::exp(-20)           = %.17g\n", std::exp(-20.0));
-    printf("__ANS__%.17g\n", s);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="expNegNaive(20.0,200)" data-check-rtol="0.1">
-  <div class="editor-head">
-    <span class="fname">task3_1.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double exp_neg_naive(double x, int n) {
-    double s = 0.0;
-    double t = 1.0;   // член k=0
-    // TODO: цикл, аналогичный exp_taylor, но с домножением на -x/(k+1)
-    return s;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="3.2">
-<strong>Задача 3.2. Устойчивое \(e^{-20}\).</strong> Реализуйте <code>double exp_neg_stable(double x, int n)</code>: суммирует ряд \(e^{x}\) для положительного аргумента, потом возвращает \(1/e^x\). Все слагаемые положительны — катастрофического вычитания нет.
-
-<div class="editor-shell" data-cpp="q32"
-     data-harness='int main() {
-    double x = 20.0;
-    int n = 200;
-    double s = exp_neg_stable(x, n);
-    printf("exp_neg_stable(20, 200) = %.17g\n", s);
-    printf("std::exp(-20)            = %.17g\n", std::exp(-20.0));
-    // Относительная ошибка против std::exp
-    double rel = (s - std::exp(-20.0)) / std::exp(-20.0);
-    if (rel &lt; 0) rel = -rel;
-    printf("rel error                = %.6g\n", rel);
-    printf("__ANS__%.17g\n", s);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="expNegStable(20.0,200)" data-check-rtol="1e-14">
-  <div class="editor-head">
-    <span class="fname">task3_2.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double exp_taylor(double x, int n) {
-    double s = 0.0, t = 1.0;
-    for (int k = 0; k &lt; n; ++k) { s += t; t *= x / (k + 1); }
-    return s;
-}
-
-double exp_neg_stable(double x, int n) {
-    // TODO: 1.0 / exp_taylor(x, n)
-    return 0.0;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="3.3">
-<strong>Задача 3.3. Почему наивная формула проваливается?</strong>
-
-<div class="mcq" data-mcq="q33" data-correct="B">
-  <div class="head"><span class="status-dot"></span>Причина</div>
-  <label><input type="radio" name="q33" value="A"> A. Ряд \(e^{-x}\) расходится при \(x=20\).</label>
-  <label><input type="radio" name="q33" value="B"> B. Знакопеременные слагаемые достигают \(\sim 10^{7}\), а сумма — \(10^{-9}\); старшие разряды сокращаются, теряются все верные цифры.</label>
-  <label><input type="radio" name="q33" value="C"> C. Переполнение double при вычислении \(x^{k}\).</label>
-  <label><input type="radio" name="q33" value="D"> D. Ошибка компилятора.</label>
-  <button class="btn" type="button" data-mcq-check>проверить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part4">§4. Радиус сходимости \(\ln(1+x)\)</h2>
-
-<div class="task" data-num="4.1">
-<strong>Задача 4.1. Ряд ln(1+x) внутри радиуса.</strong> Реализуйте <code>double ln1p_series(double x, int n)</code> для \(\ln(1+x) = x - x^2/2 + x^3/3 - \ldots\). Тест: \(x = 0{,}5\), \(n = 60\). При \(|x|&lt;1\) ряд сходится, ошибка мала.
-
-<div class="editor-shell" data-cpp="q41"
-     data-harness='int main() {
-    double x = 0.5;
-    int n = 60;
-    double s = ln1p_series(x, n);
-    printf("ln1p_series(0.5, 60) = %.17g\n", s);
-    printf("std::log(1.5)         = %.17g\n", std::log(1.5));
-    printf("__ANS__%.17g\n", s);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="ln1pSeries(0.5,60)" data-check-rtol="1e-13">
-  <div class="editor-head">
-    <span class="fname">task4_1.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double ln1p_series(double x, int n) {
-    double s = 0.0;
-    double t = x;   // член k=1
-    // TODO: цикл k=1..n, добавь t к s, обнови t = t * (-x) * k / (k+1)
-    return s;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="4.2">
-<strong>Задача 4.2. Что будет при x = 1.5?</strong>
-
-<div class="mcq" data-mcq="q42" data-correct="C">
-  <div class="head"><span class="status-dot"></span>Ответ</div>
-  <label><input type="radio" name="q42" value="A"> A. Ошибка порядка \(u\).</label>
-  <label><input type="radio" name="q42" value="B"> B. Сходится медленно, но правильно.</label>
-  <label><input type="radio" name="q42" value="C"> C. Ряд расходится — увеличение \(n\) уводит сумму дальше от истинного значения.</label>
-  <label><input type="radio" name="q42" value="D"> D. Компилятор откажется.</label>
-  <button class="btn" type="button" data-mcq-check>проверить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-
-<div class="info" data-lbl="Замечание">
-Радиус сходимости ряда \(\ln(1+x)\) равен 1: при \(|x|\ge 1\) члены не стремятся к нулю (растут по модулю как \(|x|^k/k\)), и частичные суммы расходятся. На практике для больших аргументов используют идентичность \(\ln(1+x) = 2\,\mathrm{atanh}\bigl(x/(2+x)\bigr)\), где \(\mathrm{atanh}\)-ряд имеет намного больший радиус.
-</div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part5">§5. Схема Горнера</h2>
-
-<div class="info" data-lbl="Идея">
-Многочлен \(P_n(x) = a_0 + a_1 x + a_2 x^2 + \ldots + a_n x^n\) можно вычислить по схеме Горнера: \(P_n = a_0 + x(a_1 + x(a_2 + x(\ldots + x a_n)))\). Это <em>n</em> умножений и <em>n</em> сложений вместо \(2n\) умножений при наивной трактовке. Плюс — точнее, потому что нет отдельного вычисления степеней.
-</div>
-
-<div class="task" data-num="5.1">
-<strong>Задача 5.1. sin через Горнер.</strong> Соберите 8-членную аппроксимацию \(\sin x \approx x - x^3/3! + x^5/5! - x^7/7! + \ldots\) сначала в виде массива коэффициентов \(a_k\) (нулевые для чётных степеней, знакопеременные для нечётных), а затем вычислите её значение в \(x = 0{,}5\) по схеме Горнера. Ответ сверьте с \(\sin(0{,}5)\).
-
-<div class="editor-shell" data-cpp="q51"
-     data-harness='int main() {
-    double val = sin_horner_at_0_5();
-    printf("sin(0.5) через Горнера = %.17g\n", val);
-    printf("std::sin(0.5)          = %.17g\n", std::sin(0.5));
-    printf("__ANS__%.17g\n", val);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="sinHorner05()" data-check-rtol="1e-14">
-  <div class="editor-head">
-    <span class="fname">task5_1.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double horner(const double* a, int deg, double x) {
-    double y = a[deg];
-    for (int k = deg - 1; k &gt;= 0; --k) y = y * x + a[k];
-    return y;
-}
-
-double sin_horner_at_0_5() {
-    // Первые 8 членов ряда sin: коэффициенты при x^0..x^15
-    double a[16] = {0};
-    // TODO: заполните a[1]=1, a[3]=-1/6, a[5]=1/120, a[7]=-1/5040,
-    //       a[9]=1/362880, a[11]=-1/39916800, a[13]=1/6227020800, a[15]=-1/1307674368000
-    return horner(a, 15, 0.5);
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part6">§6. Отчёт</h2>
-
-<div class="task" data-num="6.1">
-<strong>Задача 6.1. Обсуждение с преподавателем.</strong> Расскажите: почему \(\sin\) через ряд Тейлора хорош для маленьких \(|x|\), но плох для больших? Как реальные библиотечные <code>std::sin</code> сводят задачу к малому диапазону (подсказка: приведение аргумента к \([-\pi/4, \pi/4]\))?
-
-<div class="mcq" data-mcq="q61" data-correct="X">
-  <div class="head"><span class="status-dot"></span>отметка</div>
-  <label><input type="radio" name="q61" value="X"> Обсудили с преподавателем, могу пояснить.</label>
-  <button class="btn" type="button" data-mcq-check>отметить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-</div>
-
-<h3>Что унести с лабы</h3>
-<ol>
-<li>Все ряды считают <em>рекуррентно</em>: каждый следующий член — предыдущий, умноженный на константу. Ни степеней, ни факториалов «в лоб» — они переполняются и накапливают ошибку.</li>
-<li>Порядок ошибки усечения = степень первого отброшенного члена. Правило работает и локально (\(x\to 0\)), и глобально (при заданной точности).</li>
-<li>Знакопеременный ряд с убывающими членами сам подсказывает критерий остановки: \(|R_n|\le|t_{n+1}|\).</li>
-<li>\(e^{-x}\) для больших \(x\) считают через \(1/e^x\); знакопеременное суммирование — катастрофа значимости из §&nbsp;1.7 в новой обёртке.</li>
-<li>Схема Горнера — стандартный способ подсчёта многочлена; помимо экономии операций, она устойчивее наивного суммирования \(\sum a_k x^k\).</li>
-</ol>
+<!-- Задания лабораторной зашифрованы: nm/w02-lab.enc.json (см. tools/lab_encrypt.py, js/labs.js).
+     Расшифровываются в браузере после того, как преподаватель откроет сеанс для отмеченных. -->
+<div id="lab-body"></div>
 
 <div class="lecture-nav">
   <a class="nav-prev" href="w02.html">← §2. Лекция</a>
@@ -633,30 +206,7 @@ double sin_horner_at_0_5() {
 <!-- =============================================================== -->
 <!-- Reference eval (JS float64 = C++ double)                        -->
 <!-- =============================================================== -->
-<script>
-window.__EVAL__ = (function(){
-  function sinTaylor(x,n){var s=0,t=x;for(var k=0;k<n;k++){s+=t;t*=-x*x/((2*k+2)*(2*k+3));}return s;}
-  function expTaylor(x,n){var s=0,t=1;for(var k=0;k<n;k++){s+=t;t*=x/(k+1);}return s;}
-  function ln1pSeries(x,n){var s=0,t=x;for(var k=1;k<=n;k++){s+=t;t*=-x*k/(k+1);}return s;}
-  function sinHorner05(){
-    var a=new Array(16).fill(0);
-    a[1]=1;a[3]=-1/6;a[5]=1/120;a[7]=-1/5040;
-    a[9]=1/362880;a[11]=-1/39916800;a[13]=1/6227020800;a[15]=-1/1307674368000;
-    var y=a[15];
-    for(var k=14;k>=0;k--) y=y*0.5+a[k];
-    return y;
-  }
-  return {
-    sinTaylor: function(x,n){return sinTaylor(x,n);},
-    sinTaylorAbsErr: function(x,n){return Math.abs(sinTaylor(x,n)-Math.sin(x));},
-    expTaylor: function(x,n){return expTaylor(x,n);},
-    ln1pSeries: function(x,n){return ln1pSeries(x,n);},
-    expNegNaive: function(x,n){var s=0,t=1;for(var k=0;k<n;k++){s+=t;t*=-x/(k+1);}return s;},
-    expNegStable: function(x,n){return 1/expTaylor(x,n);},
-    sinHorner05: sinHorner05
-  };
-})();
-</script>
+<!-- __EVAL__ (эталонные функции автопроверки) — внутри зашифрованного тела -->
 
 <!-- =============================================================== -->
 <!-- Clang runtime + task harness                                     -->
@@ -738,8 +288,33 @@ function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;',
 
 const PROG_KEY = 'cfd-nm-w02-lab-cpp-progress';
 let PROG = (function(){try{return JSON.parse(localStorage.getItem(PROG_KEY)||'{}');}catch(e){return{};}})();
-function saveProg(){ try{localStorage.setItem(PROG_KEY, JSON.stringify(PROG));}catch(e){} }
-const TOTAL = 12;
+function saveProg(){ try{localStorage.setItem(PROG_KEY, JSON.stringify(PROG));}catch(e){} scheduleRemoteSave(); }
+// ---- Синхронизация с Firestore (lab_progress/{uid}_nm_w02) через CFDLabs ----
+const LAB_CID = 'nm', LAB_ID = 'w02';
+let _rsTimer = null;
+function collectCode(){
+  const code = {};
+  document.querySelectorAll('[data-cpp]').forEach(sh => {
+    const id = sh.getAttribute('data-cpp');
+    const v = localStorage.getItem('cfd-nm-w02-lab-cpp:' + id);
+    if (v != null) code[id] = v;
+  });
+  return code;
+}
+function remoteSaveNow(){
+  if (!window.__labUser || !window.CFDLabs) return;
+  const done = Object.values(PROG).filter(v => v === 'ok').length;
+  return CFDLabs.saveProgress(window.__labUser.uid, LAB_CID, LAB_ID, { tasks: PROG, code: collectCode(), done: done, total: TOTAL });
+}
+function scheduleRemoteSave(){
+  if (!window.__labUser) return;
+  clearTimeout(_rsTimer);
+  _rsTimer = setTimeout(remoteSaveNow, 1500);
+}
+window.__labFlush = function(){ clearTimeout(_rsTimer); return remoteSaveNow(); };
+window.addEventListener('beforeunload', function(){ if (_rsTimer) { clearTimeout(_rsTimer); remoteSaveNow(); } });
+const TOTAL = 11;
+delete PROG.q61; // задача-обсуждение удалена
 function updateProgUI(){
   const done = Object.values(PROG).filter(v=>v==='ok').length;
   const pct = 100*done/TOTAL;
@@ -763,6 +338,7 @@ function closeTo(got, want, rtol, atol){
   return d <= tol;
 }
 
+function initTasks(){
 document.querySelectorAll('[data-cpp]').forEach(shell=>{
   const id = shell.getAttribute('data-cpp');
   const ta = shell.querySelector('[data-code]');
@@ -782,9 +358,12 @@ document.querySelectorAll('[data-cpp]').forEach(shell=>{
     indentUnit: 4, tabSize: 4, lineWrapping: false,
     extraKeys: { 'Ctrl-Enter': runNow, 'Cmd-Enter': runNow }
   });
+  // Код нужно набирать самостоятельно: буфер обмена и перетаскивание в редакторе отключены.
+  ['paste', 'copy', 'cut', 'drop', 'dragstart'].forEach(ev => cm.on(ev, (_cm, e) => { e.preventDefault(); e.stopPropagation(); }));
+  cm.getWrapperElement().addEventListener('contextmenu', e => e.preventDefault());
   const savedCode = localStorage.getItem('cfd-nm-w02-lab-cpp:'+id);
   if (savedCode) cm.setValue(savedCode);
-  cm.on('change', () => localStorage.setItem('cfd-nm-w02-lab-cpp:'+id, cm.getValue()));
+  cm.on('change', () => { localStorage.setItem('cfd-nm-w02-lab-cpp:'+id, cm.getValue()); scheduleRemoteSave(); });
 
   if (verdictEl && PROG[id]==='ok'){
     verdictEl.className = 'verdict ok';
@@ -877,8 +456,40 @@ document.querySelectorAll('[data-mcq]').forEach(box=>{
     saveProg(); updateProgUI();
   });
 });
+} // initTasks
 
-setTimeout(ensureRuntime, 800);
+// Вызывается из CFDLabs.mountLab после расшифровки и вставки заданий.
+window.__labInit = function(remote, user){
+  window.__labUser = user || null;
+  if (remote) {
+    if (remote.tasks && typeof remote.tasks === 'object') {
+      PROG = Object.assign({}, remote.tasks);
+      try { localStorage.setItem(PROG_KEY, JSON.stringify(PROG)); } catch(e) {}
+    }
+    if (remote.code && typeof remote.code === 'object') {
+      for (const k in remote.code) { try { localStorage.setItem('cfd-nm-w02-lab-cpp:' + k, remote.code[k]); } catch(e) {} }
+    }
+  }
+  initTasks();
+  updateProgUI();
+  setTimeout(ensureRuntime, 800);
+};
+</script>
+
+<script src="../js/labs.js"></script>
+<script>
+(function(){
+  function go(){
+    if (!window.CFDLabs || !window.__labInit) { setTimeout(go, 100); return; }
+    CFDLabs.mountLab({
+      cid: 'nm', lab: 'w02', encUrl: 'w02-lab.enc.json',
+      mount: document.getElementById('lab-body'),
+      onReady: function(remote, user){ window.__labInit(remote, user); },
+      onClosed: function(){ if (window.__labFlush) window.__labFlush(); window.__labUser = null; },
+    });
+  }
+  go();
+})();
 </script>
 </body>
 </html>

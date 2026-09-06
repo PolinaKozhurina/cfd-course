@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-course="nm">
+<html lang="ru" data-course="nm" data-lab="w06">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" href="../favicon.ico" type="image/x-icon">
@@ -108,14 +108,13 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
 
 <nav class="sidebar">
   <h2>Лаба 6. Дифференцирование</h2>
-  <div class="progress" id="side_progress">решено 0 из 9</div>
+  <div class="progress" id="side_progress">решено 0 из 8</div>
   <div class="runtime-state" id="side_runtime">clang: не загружен</div>
   <div class="g">Содержание</div>
   <a href="#intro">Введение</a>
   <a href="#part0">§0. Правая и центральная</a>
   <a href="#part1">§1. Оптимальный шаг</a>
   <a href="#part2">§2. Ричардсон</a>
-  <a href="#part3">§3. Отчёт</a>
   <div class="sep"></div>
   <div class="g">Материалы</div>
   <a href="w06.html">§6. Лекция</a>
@@ -136,13 +135,13 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
   <div class="cell"><b>Формат</b>Парная работа за компьютером</div>
   <div class="cell"><b>Язык</b>C++11, только stdlib</div>
   <div class="cell"><b>Сборка</b>clang++ в браузере (wasm)</div>
-  <div class="cell"><b>Оценка</b>7/9 задач → зачёт</div>
+  <div class="cell"><b>Оценка</b>6/8 задач → зачёт</div>
 </div>
 
 <div class="progresspanel">
   <span>Прогресс</span>
   <div class="bar"><div id="prog_bar" style="width:0%"></div></div>
-  <span class="cnt" id="prog_cnt">0/9</span>
+  <span class="cnt" id="prog_cnt">0/8</span>
   <span class="runtime" id="prog_runtime">clang: init…</span>
   <button class="reset" id="prog_reset" type="button">сбросить</button>
 </div>
@@ -152,234 +151,9 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
   Компилятор clang++ (~60 МБ) грузится один раз, потом кэшируется. Chromium 15–40 сек, Firefox до 1–2 мин. Проблема — DevTools → Console.
 </div>
 
-<h2 id="intro">Что вы делаете</h2>
-
-<p>Задача — увидеть <em>V-образную</em> зависимость ошибки численной производной от шага \(h\) в log-log-масштабе. В §&nbsp;6 показано, что \(E(h) \approx h^p \cdot M_{p+1}/p! + u\cdot|f|/h\): слева шум округления, справа усечение. Найдём эмпирически \(h_{\text{opt}}\) для правой и центральной разностей на \(f = \sin x\) в точке \(x = 1\); ответ сверим с формулой (6.13). Затем — как экстраполяция Ричардсона повышает порядок с 2 до 4.</p>
-
-<!-- =============================================================== -->
-<h2 id="part0">§0. Правая и центральная разности</h2>
-
-<div class="task" data-num="0.1">
-<strong>Задача 0.1. Правая разность \(\sin'(1)\).</strong> Реализуйте <code>double diff_fwd(double (*f)(double), double x, double h)</code>. Тест: \(f = \sin\), \(x = 1\), \(h = 10^{-4}\). Ошибка \(|\text{diff} - \cos 1|\) должна быть \(\approx 4{,}2 \cdot 10^{-5}\).
-
-<div class="editor-shell" data-cpp="q01"
-     data-harness='double f_sin(double x) { return std::sin(x); }
-int main() {
-    double h = 1e-4;
-    double d = diff_fwd(f_sin, 1.0, h);
-    double err = d - std::cos(1.0);
-    if (err &lt; 0) err = -err;
-    printf("diff_fwd = %.17g\n", d);
-    printf("cos(1)   = %.17g\n", std::cos(1.0));
-    printf("|err|    = %.6g\n", err);
-    printf("__ANS__%.17g\n", err);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="fwdSinErr(1.0,1e-4)" data-check-rtol="0.1">
-  <div class="editor-head"><span class="fname">task0_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double diff_fwd(double (*f)(double), double x, double h) {
-    // TODO: (f(x + h) - f(x)) / h
-    return 0.0;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="0.2">
-<strong>Задача 0.2. Центральная разность.</strong> Реализуйте <code>diff_ctr</code>. Тот же тест: \(h = 10^{-4}\). Ошибка должна быть \(\approx 1{,}4 \cdot 10^{-9}\) — на 4 порядка лучше.
-
-<div class="editor-shell" data-cpp="q02"
-     data-harness='double f_sin(double x) { return std::sin(x); }
-int main() {
-    double h = 1e-4;
-    double d = diff_ctr(f_sin, 1.0, h);
-    double err = d - std::cos(1.0);
-    if (err &lt; 0) err = -err;
-    printf("diff_ctr = %.17g\n", d);
-    printf("|err|    = %.6g\n", err);
-    printf("__ANS__%.17g\n", err);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="ctrSinErr(1.0,1e-4)" data-check-rtol="0.1">
-  <div class="editor-head"><span class="fname">task0_2.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double diff_ctr(double (*f)(double), double x, double h) {
-    // TODO: (f(x + h) - f(x - h)) / (2 * h)
-    return 0.0;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part1">§1. Оптимальный шаг эмпирически</h2>
-
-<div class="task" data-num="1.1">
-<strong>Задача 1.1. V-образная кривая: центральная разность.</strong> Прогоните <code>diff_ctr</code> для \(h = 10^{-1}, 10^{-2}, \ldots, 10^{-15}\), запишите ошибку. Найдите \(h_{\text{opt}}\) — тот шаг, при котором ошибка минимальна. Введите десятичный логарифм \(h_{\text{opt}}\) (например, если \(h_{\text{opt}} = 10^{-5}\), введите -5).
-
-<div class="editor-shell" data-cpp="q11"
-     data-harness='double f_sin(double x) { return std::sin(x); }
-int main() {
-    int best_k = 0;
-    double best_err = 1e300;
-    for (int k = 1; k &lt;= 15; ++k) {
-        double h = std::pow(10.0, -k);
-        double d = diff_ctr(f_sin, 1.0, h);
-        double e = std::fabs(d - std::cos(1.0));
-        printf("h = 1e-%d,  err = %.6g\n", k, e);
-        if (e &lt; best_err) { best_err = e; best_k = k; }
-    }
-    printf("\nhopt: k = -%d (h = 1e-%d), err = %.6g\n", best_k, best_k, best_err);
-    printf("__ANS__%d\n", -best_k);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="-5" data-check-atol="1">
-  <div class="editor-head"><span class="fname">task1_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double diff_ctr(double (*f)(double), double x, double h) {
-    return (f(x + h) - f(x - h)) / (2 * h);
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-
-<div class="info" data-lbl="Ожидание">
-Формула (6.13) для центральной даёт \(h_{\text{opt}} \sim u^{1/3} \approx 4{,}8 \cdot 10^{-6}\), т. е. \(\log_{10} h_{\text{opt}} \approx -5{,}3\). На нашей грубой сетке \(k = 5\) или \(k = 6\) выигрывают в зависимости от округления констант.
-</div>
-</div>
-
-<div class="task" data-num="1.2">
-<strong>Задача 1.2. Наклоны в log-log.</strong> На вашем графике ошибки:
-
-<div class="mcq" data-mcq="q12" data-correct="C">
-  <div class="head"><span class="status-dot"></span>Наклоны левой и правой ветвей V-кривой</div>
-  <label><input type="radio" name="q12" value="A"> A. Обе положительные.</label>
-  <label><input type="radio" name="q12" value="B"> B. Обе отрицательные.</label>
-  <label><input type="radio" name="q12" value="C"> C. Слева +1 (наклон \(u/h\)), справа −2 (наклон \(h^2\) для центральной).</label>
-  <label><input type="radio" name="q12" value="D"> D. Слева −2, справа +1.</label>
-  <button class="btn" type="button" data-mcq-check>проверить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-
-<div class="info" data-lbl="Пояснение">
-В log-log-координатах \(\log|E| = \log(h^2/6) = 2\log h + \text{const}\) — прямая с наклоном +2 (при увеличении \(\log h\)); \(\log|E| = \log(u/h) = -\log h + \text{const}\) — прямая с наклоном -1. Или: слева (маленькое h) кривая идёт вниз-влево с наклоном 2 (это округление), справа — наверх с наклоном 2.
-</div>
-</div>
-
-<div class="task" data-num="1.3">
-<strong>Задача 1.3. Правая разность — какой \(h_{\text{opt}}\)?</strong> Теоретически \(\sim \sqrt{u} \approx 10^{-8}\). Прогоните <code>diff_fwd</code> для \(h = 10^{-1}, \ldots, 10^{-15}\), найдите \(\log_{10} h_{\text{opt}}\).
-
-<div class="editor-shell" data-cpp="q13"
-     data-harness='double f_sin(double x) { return std::sin(x); }
-int main() {
-    int best_k = 0;
-    double best_err = 1e300;
-    for (int k = 1; k &lt;= 15; ++k) {
-        double h = std::pow(10.0, -k);
-        double d = diff_fwd(f_sin, 1.0, h);
-        double e = std::fabs(d - std::cos(1.0));
-        if (e &lt; best_err) { best_err = e; best_k = k; }
-    }
-    printf("hopt: k = -%d (h = 1e-%d), err = %.6g\n", best_k, best_k, best_err);
-    printf("__ANS__%d\n", -best_k);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="-8" data-check-atol="1">
-  <div class="editor-head"><span class="fname">task1_3.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double diff_fwd(double (*f)(double), double x, double h) {
-    return (f(x + h) - f(x)) / h;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part2">§2. Экстраполяция Ричардсона</h2>
-
-<div class="info" data-lbl="Формула">
-Для центральной разности \(D_h = f' + c_1 h^2 + c_2 h^4 + \ldots\). Комбинация \(R_h = (4 D_{h/2} - D_h)/3\) даёт \(R_h = f' + O(h^4)\).
-</div>
-
-<div class="task" data-num="2.1">
-<strong>Задача 2.1. Ричардсон повышает порядок.</strong> Возьмите \(h = 10^{-2}\), \(h/2 = 5\cdot 10^{-3}\). Посчитайте \(R_h\) для \(\sin\) в \(x = 1\). Ошибка должна быть \(\sim 10^{-13}\) вместо \(\sim 10^{-5}\).
-
-<div class="editor-shell" data-cpp="q21"
-     data-harness='double f_sin(double x) { return std::sin(x); }
-int main() {
-    double h = 1e-2;
-    double D_h = diff_ctr(f_sin, 1.0, h);
-    double D_h2 = diff_ctr(f_sin, 1.0, h/2);
-    double R = (4.0 * D_h2 - D_h) / 3.0;
-    double err_ctr = std::fabs(D_h - std::cos(1.0));
-    double err_R   = std::fabs(R   - std::cos(1.0));
-    printf("|err(central, h=1e-2)| = %.6g\n", err_ctr);
-    printf("|err(Richardson)|       = %.6g\n", err_R);
-    printf("__ANS__%.17g\n", err_R);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="richardsonSinErr(1.0)" data-check-rtol="0.5" data-check-atol="1e-15">
-  <div class="editor-head"><span class="fname">task2_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double diff_ctr(double (*f)(double), double x, double h) {
-    return (f(x + h) - f(x - h)) / (2 * h);
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="2.2">
-<strong>Задача 2.2. Смысл Ричардсона.</strong>
-
-<div class="mcq" data-mcq="q22" data-correct="B">
-  <div class="head"><span class="status-dot"></span>Что происходит</div>
-  <label><input type="radio" name="q22" value="A"> A. Уменьшается округление.</label>
-  <label><input type="radio" name="q22" value="B"> B. Линейная комбинация двух шагов исключает главный член ошибки \(c_1 h^2\), оставляя \(O(h^4)\).</label>
-  <label><input type="radio" name="q22" value="C"> C. Ричардсон работает только для сплайнов.</label>
-  <label><input type="radio" name="q22" value="D"> D. Ошибка обнуляется.</label>
-  <button class="btn" type="button" data-mcq-check>проверить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part3">§3. Отчёт</h2>
-
-<div class="task" data-num="3.1">
-<strong>Задача 3.1. Обсудите.</strong> Где на практике встречается численное дифференцирование? Автоматическое дифференцирование (autodiff) vs разностное — плюсы и минусы.
-
-<div class="mcq" data-mcq="q31" data-correct="X">
-  <div class="head"><span class="status-dot"></span>отметка</div>
-  <label><input type="radio" name="q31" value="X"> Обсудил(а).</label>
-  <button class="btn" type="button" data-mcq-check>отметить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-</div>
+<!-- Задания лабораторной зашифрованы: nm/w06-lab.enc.json (см. tools/lab_encrypt.py, js/labs.js).
+     Расшифровываются в браузере после того, как преподаватель откроет сеанс для отмеченных. -->
+<div id="lab-body"></div>
 
 <div class="lecture-nav">
   <a class="nav-prev" href="w06.html">← §6. Лекция</a>
@@ -407,21 +181,7 @@ double diff_ctr(double (*f)(double), double x, double h) {
 <script src="../js/auth.js"></script>
 <script src="../js/comments.js"></script>
 
-<script>
-window.__EVAL__ = (function(){
-  return {
-    fwdSinErr: function(x, h){ return Math.abs((Math.sin(x+h) - Math.sin(x))/h - Math.cos(x)); },
-    ctrSinErr: function(x, h){ return Math.abs((Math.sin(x+h) - Math.sin(x-h))/(2*h) - Math.cos(x)); },
-    richardsonSinErr: function(x){
-      var h = 1e-2;
-      var Dh  = (Math.sin(x+h)   - Math.sin(x-h))  / (2*h);
-      var Dh2 = (Math.sin(x+h/2) - Math.sin(x-h/2))/ h;
-      var R = (4*Dh2 - Dh) / 3;
-      return Math.abs(R - Math.cos(x));
-    }
-  };
-})();
-</script>
+<!-- __EVAL__ (эталонные функции автопроверки) — внутри зашифрованного тела -->
 
 <script type="module">
 import { init, run } from 'https://cdn.jsdelivr.net/npm/clang.js/dist/clang.js';
@@ -470,8 +230,33 @@ async function runCpp(studentCode, harness, outputEl){
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 const PROG_KEY = 'cfd-nm-w06-lab-cpp-progress';
 let PROG = (function(){try{return JSON.parse(localStorage.getItem(PROG_KEY)||'{}');}catch(e){return{};}})();
-function saveProg(){ try{localStorage.setItem(PROG_KEY, JSON.stringify(PROG));}catch(e){} }
-const TOTAL = 9;
+function saveProg(){ try{localStorage.setItem(PROG_KEY, JSON.stringify(PROG));}catch(e){} scheduleRemoteSave(); }
+// ---- Синхронизация с Firestore (lab_progress/{uid}_nm_w06) через CFDLabs ----
+const LAB_CID = 'nm', LAB_ID = 'w06';
+let _rsTimer = null;
+function collectCode(){
+  const code = {};
+  document.querySelectorAll('[data-cpp]').forEach(sh => {
+    const id = sh.getAttribute('data-cpp');
+    const v = localStorage.getItem('cfd-nm-w06-lab-cpp:' + id);
+    if (v != null) code[id] = v;
+  });
+  return code;
+}
+function remoteSaveNow(){
+  if (!window.__labUser || !window.CFDLabs) return;
+  const done = Object.values(PROG).filter(v => v === 'ok').length;
+  return CFDLabs.saveProgress(window.__labUser.uid, LAB_CID, LAB_ID, { tasks: PROG, code: collectCode(), done: done, total: TOTAL });
+}
+function scheduleRemoteSave(){
+  if (!window.__labUser) return;
+  clearTimeout(_rsTimer);
+  _rsTimer = setTimeout(remoteSaveNow, 1500);
+}
+window.__labFlush = function(){ clearTimeout(_rsTimer); return remoteSaveNow(); };
+window.addEventListener('beforeunload', function(){ if (_rsTimer) { clearTimeout(_rsTimer); remoteSaveNow(); } });
+const TOTAL = 8;
+delete PROG.q31; // задача-обсуждение удалена
 function updateProgUI(){
   const done = Object.values(PROG).filter(v=>v==='ok').length;
   const pct = 100*done/TOTAL;
@@ -487,6 +272,7 @@ document.getElementById('prog_reset').addEventListener('click', ()=>{
 });
 updateProgUI();
 function closeTo(got, want, rtol, atol){ rtol = rtol||0; atol = atol||0; if (!isFinite(got) || !isFinite(want)) return got===want; const d = Math.abs(got-want); const tol = Math.max(atol, rtol*Math.abs(want)); return d <= tol; }
+function initTasks(){
 document.querySelectorAll('[data-cpp]').forEach(shell=>{
   const id = shell.getAttribute('data-cpp');
   const ta = shell.querySelector('[data-code]');
@@ -501,9 +287,12 @@ document.querySelectorAll('[data-cpp]').forEach(shell=>{
   const verdictEl = shell.nextElementSibling && shell.nextElementSibling.hasAttribute('data-verdict') ? shell.nextElementSibling : null;
   const initial = ta.value;
   const cm = CodeMirror.fromTextArea(ta, { mode: 'text/x-c++src', lineNumbers: true, theme: 'material-darker', indentUnit: 4, tabSize: 4, lineWrapping: false, extraKeys: { 'Ctrl-Enter': runNow, 'Cmd-Enter': runNow } });
+  // Код нужно набирать самостоятельно: буфер обмена и перетаскивание в редакторе отключены.
+  ['paste', 'copy', 'cut', 'drop', 'dragstart'].forEach(ev => cm.on(ev, (_cm, e) => { e.preventDefault(); e.stopPropagation(); }));
+  cm.getWrapperElement().addEventListener('contextmenu', e => e.preventDefault());
   const savedCode = localStorage.getItem('cfd-nm-w06-lab-cpp:'+id);
   if (savedCode) cm.setValue(savedCode);
-  cm.on('change', () => localStorage.setItem('cfd-nm-w06-lab-cpp:'+id, cm.getValue()));
+  cm.on('change', () => { localStorage.setItem('cfd-nm-w06-lab-cpp:'+id, cm.getValue()); scheduleRemoteSave(); });
   if (verdictEl && PROG[id]==='ok'){ verdictEl.className = 'verdict ok'; verdictEl.innerHTML = '<span class="status-dot ok"></span>✓ решено ранее'; }
   btnReset.addEventListener('click', ()=>{ if (!confirm('Вернуть скелет?')) return; cm.setValue(initial); localStorage.removeItem('cfd-nm-w06-lab-cpp:'+id); });
   async function runNow(){
@@ -559,7 +348,40 @@ document.querySelectorAll('[data-mcq]').forEach(box=>{
     PROG[id] = ok ? 'ok' : 'err'; saveProg(); updateProgUI();
   });
 });
-setTimeout(ensureRuntime, 800);
+} // initTasks
+
+// Вызывается из CFDLabs.mountLab после расшифровки и вставки заданий.
+window.__labInit = function(remote, user){
+  window.__labUser = user || null;
+  if (remote) {
+    if (remote.tasks && typeof remote.tasks === 'object') {
+      PROG = Object.assign({}, remote.tasks);
+      try { localStorage.setItem(PROG_KEY, JSON.stringify(PROG)); } catch(e) {}
+    }
+    if (remote.code && typeof remote.code === 'object') {
+      for (const k in remote.code) { try { localStorage.setItem('cfd-nm-w06-lab-cpp:' + k, remote.code[k]); } catch(e) {} }
+    }
+  }
+  initTasks();
+  updateProgUI();
+  setTimeout(ensureRuntime, 800);
+};
+</script>
+
+<script src="../js/labs.js"></script>
+<script>
+(function(){
+  function go(){
+    if (!window.CFDLabs || !window.__labInit) { setTimeout(go, 100); return; }
+    CFDLabs.mountLab({
+      cid: 'nm', lab: 'w06', encUrl: 'w06-lab.enc.json',
+      mount: document.getElementById('lab-body'),
+      onReady: function(remote, user){ window.__labInit(remote, user); },
+      onClosed: function(){ if (window.__labFlush) window.__labFlush(); window.__labUser = null; },
+    });
+  }
+  go();
+})();
 </script>
 </body>
 </html>

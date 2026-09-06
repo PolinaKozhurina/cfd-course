@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-course="nm">
+<html lang="ru" data-course="nm" data-lab="w05">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" href="../favicon.ico" type="image/x-icon">
@@ -108,7 +108,7 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
 
 <nav class="sidebar">
   <h2>Лаба 5. МНК</h2>
-  <div class="progress" id="side_progress">решено 0 из 10</div>
+  <div class="progress" id="side_progress">решено 0 из 9</div>
   <div class="runtime-state" id="side_runtime">clang: не загружен</div>
   <div class="g">Содержание</div>
   <a href="#intro">Введение</a>
@@ -116,7 +116,6 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
   <a href="#part1">§1. Полиномы Лежандра</a>
   <a href="#part2">§2. МНК через Лежандра</a>
   <a href="#part3">§3. Нормальные уравнения</a>
-  <a href="#part4">§4. Отчёт</a>
   <div class="sep"></div>
   <div class="g">Материалы</div>
   <a href="w05.html">§5. Лекция</a>
@@ -137,13 +136,13 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
   <div class="cell"><b>Формат</b>Парная работа за компьютером</div>
   <div class="cell"><b>Язык</b>C++11, только stdlib</div>
   <div class="cell"><b>Сборка</b>clang++ в браузере (wasm)</div>
-  <div class="cell"><b>Оценка</b>8/10 задач → зачёт</div>
+  <div class="cell"><b>Оценка</b>7/9 задач → зачёт</div>
 </div>
 
 <div class="progresspanel">
   <span>Прогресс</span>
   <div class="bar"><div id="prog_bar" style="width:0%"></div></div>
-  <span class="cnt" id="prog_cnt">0/10</span>
+  <span class="cnt" id="prog_cnt">0/9</span>
   <span class="runtime" id="prog_runtime">clang: init…</span>
   <button class="reset" id="prog_reset" type="button">сбросить</button>
 </div>
@@ -153,345 +152,9 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
   Компилятор clang++ (~60 МБ) грузится один раз и кэшируется. Первый запуск — 15–40 сек в Chromium и до 1–2 минут в Firefox. Если больше 2 мин — DevTools → Console.
 </div>
 
-<h2 id="intro">Что вы делаете</h2>
-
-<p>Задача — приблизить \(f(x) = e^x\) на \([-1, 1]\) многочленом 5-й степени двумя способами: (а) через нормальные уравнения в степенном базисе \(\{1, x, x^2, \ldots, x^5\}\); (б) через проекцию на ортогональный базис Лежандра. Второй способ даст те же коэффициенты, но <em>принципиально устойчивее</em> — увидим уже на скромной размерности 6.</p>
-
-<!-- =============================================================== -->
-<h2 id="part0">§0. Разминка: скалярное произведение на \([-1, 1]\)</h2>
-
-<div class="task" data-num="0.1">
-<strong>Задача 0.1. Интеграл через трапеции.</strong> Реализуйте <code>double inner_prod(double (*f)(double), double (*g)(double), int N)</code> — приблизительное значение \((f, g) = \int_{-1}^{1} f(x)g(x)\,dx\) через составную формулу трапеций на \(N+1\) равномерных узлах. Тест: \(f = g \equiv 1\), результат должен быть 2.
-
-<div class="editor-shell" data-cpp="q01"
-     data-harness='double f_one(double x) { return 1.0; }
-int main() {
-    double v = inner_prod(f_one, f_one, 2000);
-    printf("(1, 1) = %.17g (expect 2)\n", v);
-    printf("__ANS__%.17g\n", v);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="2" data-check-rtol="1e-10">
-  <div class="editor-head"><span class="fname">task0_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double inner_prod(double (*f)(double), double (*g)(double), int N) {
-    double h = 2.0 / N;
-    double s = 0.0;
-    // TODO: составная трапеция
-    //   s = (fg(-1) + fg(1))/2
-    //   плюс сумма fg(-1 + i*h) для i = 1..N-1
-    //   вернуть s * h
-    return s;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part1">§1. Полиномы Лежандра</h2>
-
-<div class="task" data-num="1.1">
-<strong>Задача 1.1. \(P_n(x)\) через рекуррентное соотношение.</strong> Реализуйте \(P_n\) по формуле \((n+1)P_{n+1} = (2n+1)xP_n - nP_{n-1}\), \(P_0 = 1\), \(P_1 = x\). Тест: \(P_5(0{,}5) = 0{,}08984375\).
-
-<div class="editor-shell" data-cpp="q11"
-     data-harness='int main() {
-    double v = legendre(5, 0.5);
-    printf("P_5(0.5) = %.17g (expect 0.08984375)\n", v);
-    printf("__ANS__%.17g\n", v);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="0.08984375" data-check-rtol="1e-14">
-  <div class="editor-head"><span class="fname">task1_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-
-double legendre(int n, double x) {
-    if (n == 0) return 1.0;
-    if (n == 1) return x;
-    double a = 1.0, b = x;
-    // TODO: для k = 1..n-1:
-    //   c = ((2k+1)*x*b - k*a) / (k+1);
-    //   a = b; b = c;
-    return b;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="1.2">
-<strong>Задача 1.2. Ортогональность Лежандра.</strong> Проверьте (5.6) экспериментально: посчитайте \((P_2, P_3) = \int_{-1}^{1} P_2(x)P_3(x)\,dx\) через <code>inner_prod</code> на \(N = 2000\) узлах. Должно быть \(\approx 0\).
-
-<div class="editor-shell" data-cpp="q12"
-     data-harness='double f_p2(double x) { return legendre(2, x); }
-double f_p3(double x) { return legendre(3, x); }
-int main() {
-    double v = inner_prod(f_p2, f_p3, 2000);
-    printf("(P_2, P_3) = %.17g (expect ~0)\n", v);
-    printf("__ANS__%.17g\n", v);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="0" data-check-atol="1e-13">
-  <div class="editor-head"><span class="fname">task1_2.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double legendre(int n, double x) {
-    if (n == 0) return 1.0;
-    if (n == 1) return x;
-    double a = 1.0, b = x, c;
-    for (int k = 1; k &lt; n; ++k) {
-        c = ((2.0*k + 1.0)*x*b - k*a) / (k + 1.0);
-        a = b; b = c;
-    }
-    return b;
-}
-
-double inner_prod(double (*f)(double), double (*g)(double), int N) {
-    double h = 2.0/N, s = 0.5*(f(-1)*g(-1) + f(1)*g(1));
-    for (int i = 1; i &lt; N; ++i) { double x = -1 + i*h; s += f(x)*g(x); }
-    return s * h;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part2">§2. МНК через ортогональный базис Лежандра</h2>
-
-<div class="info" data-lbl="Формула">
-Для непрерывной МНК-задачи оптимальный полином \(Q_n(x) = \sum_{k=0}^n c_k P_k(x)\), где \(c_k = \frac{2k+1}{2}\int_{-1}^{1} f(x) P_k(x)\,dx\). Каждый коэффициент считается независимо — прямая проекция.
-</div>
-
-<div class="task" data-num="2.1">
-<strong>Задача 2.1. Коэффициенты Лежандра для \(e^x\).</strong> Посчитайте \(c_0, c_1, \ldots, c_5\) — коэффициенты разложения \(e^x\) на \([-1, 1]\) по Лежандру. Тест: \(c_0 = \sinh(1) \approx 1{,}17520\), \(c_1 = 3/e \approx 1{,}10364\). Введите \(c_0\).
-
-<div class="editor-shell" data-cpp="q21"
-     data-harness='double f_exp(double x) { return std::exp(x); }
-// f * P_k как отдельная функция для inner_prod
-int _K_ = 0;
-double f_exp_pk(double x) { return f_exp(x) * legendre(_K_, x); }
-int main() {
-    for (int k = 0; k &lt;= 5; ++k) {
-        _K_ = k;
-        double ck = (2.0*k + 1.0) / 2.0 * inner_prod(f_exp, f_exp_pk, 2000);
-        printf("c_%d = %.17g\n", k, ck);
-        if (k == 0) printf("__ANS__%.17g\n", ck);
-    }
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="1.1752011936438014" data-check-rtol="1e-10">
-  <div class="editor-head"><span class="fname">task2_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double legendre(int n, double x) {
-    if (n == 0) return 1.0;
-    if (n == 1) return x;
-    double a = 1.0, b = x, c;
-    for (int k = 1; k &lt; n; ++k) { c = ((2.0*k + 1.0)*x*b - k*a)/(k+1.0); a = b; b = c; }
-    return b;
-}
-
-// inner_prod (составная трапеция)
-double inner_prod(double (*f)(double), double (*g)(double), int N) {
-    double h = 2.0/N, s = 0.5*(f(-1)*g(-1) + f(1)*g(1));
-    for (int i = 1; i &lt; N; ++i) { double x = -1 + i*h; s += f(x)*g(x); }
-    return s * h;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="2.2">
-<strong>Задача 2.2. Максимум ошибки.</strong> Собрав \(Q_5(x) = \sum_{k=0}^5 c_k P_k(x)\), замерьте \(\max_{[-1,1]}|e^x - Q_5(x)|\) на 1001 точке. Должно быть \(\sim 10^{-5}\).
-
-<div class="editor-shell" data-cpp="q22"
-     data-harness='double f_exp(double x) { return std::exp(x); }
-int _K_ = 0;
-double f_exp_pk(double x) { return f_exp(x) * legendre(_K_, x); }
-int main() {
-    double c[6];
-    for (int k = 0; k &lt;= 5; ++k) { _K_ = k; c[k] = (2.0*k+1.0)/2.0 * inner_prod(f_exp, f_exp_pk, 2000); }
-    double max_err = 0;
-    for (int i = 0; i &lt; 1001; ++i) {
-        double x = -1 + 2.0*i/1000.0;
-        double Q = 0;
-        for (int k = 0; k &lt;= 5; ++k) Q += c[k] * legendre(k, x);
-        double e = std::exp(x) - Q;
-        if (e &lt; 0) e = -e;
-        if (e &gt; max_err) max_err = e;
-    }
-    printf("max |e^x - Q_5| = %.6g\n", max_err);
-    printf("__ANS__%.17g\n", max_err);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="legendreExpMaxErr()" data-check-rtol="0.2">
-  <div class="editor-head"><span class="fname">task2_2.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double legendre(int n, double x) {
-    if (n == 0) return 1.0;
-    if (n == 1) return x;
-    double a = 1.0, b = x, c;
-    for (int k = 1; k &lt; n; ++k) { c = ((2.0*k + 1.0)*x*b - k*a)/(k+1.0); a = b; b = c; }
-    return b;
-}
-
-double inner_prod(double (*f)(double), double (*g)(double), int N) {
-    double h = 2.0/N, s = 0.5*(f(-1)*g(-1) + f(1)*g(1));
-    for (int i = 1; i &lt; N; ++i) { double x = -1 + i*h; s += f(x)*g(x); }
-    return s * h;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part3">§3. Нормальные уравнения — эффект \(\kappa^2\)</h2>
-
-<div class="info" data-lbl="Идея">
-Тот же полином, но через степенной базис \(\{1, x, x^2, \ldots, x^5\}\). Матрица Грама \(G_{jk} = (x^j, x^k) = \int_{-1}^1 x^{j+k}\,dx\) — она <em>плотная</em> и хуже обусловлена: \(\kappa(G) \sim 10^5\)-\(10^6\) уже при \(n = 5\).
-</div>
-
-<div class="task" data-num="3.1">
-<strong>Задача 3.1. Собрать матрицу Грама степенного базиса.</strong> Реализуйте \(G_{jk} = \int_{-1}^{1} x^{j+k}\,dx = \frac{1 - (-1)^{j+k+1}}{j+k+1}\) (2 если \(j+k\) чётное, 0 если нечётное — но проще прямо посчитать через степень). Проверьте \(G_{00} = 2\), \(G_{01} = 0\), \(G_{02} = 2/3\).
-
-<div class="editor-shell" data-cpp="q31"
-     data-harness='int main() {
-    printf("G[0][0] = %.17g\n", gram_pow(0, 0));
-    printf("G[0][1] = %.17g\n", gram_pow(0, 1));
-    printf("G[0][2] = %.17g\n", gram_pow(0, 2));
-    printf("__ANS__%.17g\n", gram_pow(0, 0));
-    printf("__ANS__%.17g\n", gram_pow(0, 1));
-    printf("__ANS__%.17g\n", gram_pow(0, 2));
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="2,0,0.6666666666666666" data-check-rtol="1e-14">
-  <div class="editor-head"><span class="fname">task3_1.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-
-// (x^j, x^k) = int_{-1}^1 x^(j+k) dx = 2/(j+k+1) при j+k чётном; 0 иначе
-double gram_pow(int j, int k) {
-    int s = j + k;
-    // TODO: если s нечётное — вернуть 0
-    //       иначе — вернуть 2.0 / (s + 1)
-    return 0.0;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="3.2">
-<strong>Задача 3.2. Решить нормальные уравнения методом Гаусса.</strong> Постройте \(G\) размера \(6\times 6\) и правую часть \(r_j = \int_{-1}^{1} e^x x^j\,dx\) (посчитайте её тем же <code>inner_prod</code>). Решите \(G c = r\) методом Гаусса без выбора главного элемента. Выведите \(c_0\).
-
-<div class="editor-shell" data-cpp="q32"
-     data-harness='double f_exp(double x) { return std::exp(x); }
-int _K_ = 0;
-double f_exp_pow(double x) { double p = 1.0; for (int k = 0; k &lt; _K_; ++k) p *= x; return f_exp(x) * p; }
-int main() {
-    double G[6][6], r[6], c[6];
-    for (int j = 0; j &lt; 6; ++j) {
-        for (int k = 0; k &lt; 6; ++k) G[j][k] = gram_pow(j, k);
-        _K_ = j;
-        r[j] = inner_prod(f_exp, f_exp_pow, 2000);
-    }
-    gauss_solve(G, r, c);
-    printf("c_0 = %.17g (степенной базис)\n", c[0]);
-    printf("__ANS__%.17g\n", c[0]);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="1.1752011936438014" data-check-rtol="1e-3">
-  <div class="editor-head"><span class="fname">task3_2.cpp</span><div class="actions"><button class="btn secondary" type="button" data-reset>сбросить</button><button class="btn" type="button" data-run>▶ запустить</button></div></div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double inner_prod(double (*f)(double), double (*g)(double), int N) {
-    double h = 2.0/N, s = 0.5*(f(-1)*g(-1) + f(1)*g(1));
-    for (int i = 1; i &lt; N; ++i) { double x = -1 + i*h; s += f(x)*g(x); }
-    return s * h;
-}
-
-double gram_pow(int j, int k) {
-    int s = j + k;
-    if (s % 2 != 0) return 0.0;
-    return 2.0 / (s + 1);
-}
-
-// Гаусс без выбора главного: A[6][6] * x = b[6]
-void gauss_solve(double A[6][6], double b[6], double x[6]) {
-    // Прямой ход: превращаем в верхнетреугольную
-    for (int k = 0; k &lt; 6; ++k) {
-        for (int i = k+1; i &lt; 6; ++i) {
-            double f = A[i][k] / A[k][k];
-            for (int j = k; j &lt; 6; ++j) A[i][j] -= f * A[k][j];
-            b[i] -= f * b[k];
-        }
-    }
-    // Обратный ход
-    for (int i = 5; i &gt;= 0; --i) {
-        double s = b[i];
-        for (int j = i+1; j &lt; 6; ++j) s -= A[i][j] * x[j];
-        x[i] = s / A[i][i];
-    }
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-
-<div class="info" data-lbl="Что ожидать">
-Полином \(Q_5\) через степенной базис получится <em>тот же самый</em> математически, но коэффициенты \(c_k\) — совершенно другие числа. Ожидается, что \(c_0 \approx \sinh(1)\) в первом приближении, но с ошибкой ~10⁻³ из-за κ² матрицы Грама. При Лежандре ошибка была ~10⁻¹⁴.
-</div>
-</div>
-
-<div class="task" data-num="3.3">
-<strong>Задача 3.3. Мораль.</strong>
-
-<div class="mcq" data-mcq="q33" data-correct="B">
-  <div class="head"><span class="status-dot"></span>Почему Лежандр точнее</div>
-  <label><input type="radio" name="q33" value="A"> A. Формула Лежандра точнее математически.</label>
-  <label><input type="radio" name="q33" value="B"> B. Матрица Грама ортогонального базиса диагональна, κ = 1; для степенного базиса κ растёт быстро с размерностью, а нормальные уравнения имеют κ².</label>
-  <label><input type="radio" name="q33" value="C"> C. Полиномы Лежандра всегда лучше на \([-1, 1]\).</label>
-  <label><input type="radio" name="q33" value="D"> D. Разные ответы — норма.</label>
-  <button class="btn" type="button" data-mcq-check>проверить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="part4">§4. Отчёт</h2>
-
-<div class="task" data-num="4.1">
-<strong>Задача 4.1. Обсудите.</strong> Где на практике встречается МНК: регрессия физических данных, обработка сигналов, машинное обучение, аппроксимация функций в библиотеках. Как обходят проблему κ²?
-
-<div class="mcq" data-mcq="q41" data-correct="X">
-  <div class="head"><span class="status-dot"></span>отметка</div>
-  <label><input type="radio" name="q41" value="X"> Обсудил(а).</label>
-  <button class="btn" type="button" data-mcq-check>отметить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-</div>
+<!-- Задания лабораторной зашифрованы: nm/w05-lab.enc.json (см. tools/lab_encrypt.py, js/labs.js).
+     Расшифровываются в браузере после того, как преподаватель откроет сеанс для отмеченных. -->
+<div id="lab-body"></div>
 
 <div class="lecture-nav">
   <a class="nav-prev" href="w05.html">← §5. Лекция</a>
@@ -519,37 +182,7 @@ void gauss_solve(double A[6][6], double b[6], double x[6]) {
 <script src="../js/auth.js"></script>
 <script src="../js/comments.js"></script>
 
-<script>
-window.__EVAL__ = (function(){
-  function legendre(n, x){
-    if (n===0) return 1;
-    if (n===1) return x;
-    var a=1, b=x, c;
-    for (var k=1;k<n;++k){ c = ((2*k+1)*x*b - k*a)/(k+1); a=b; b=c; }
-    return b;
-  }
-  function innerProd(f, g, N){
-    var h = 2/N, s = 0.5*(f(-1)*g(-1) + f(1)*g(1));
-    for (var i=1;i<N;++i){ var x = -1 + i*h; s += f(x)*g(x); }
-    return s*h;
-  }
-  function legendreExpMaxErr(){
-    var c=[];
-    for (var k=0;k<=5;++k){
-      c[k] = (2*k+1)/2 * innerProd(function(x){return Math.exp(x);}, (function(kk){return function(x){return Math.exp(x)*legendre(kk,x);};})(k), 2000);
-    }
-    var maxE=0;
-    for (var i=0;i<1001;++i){
-      var x = -1 + 2*i/1000;
-      var Q = 0; for (var k=0;k<=5;++k) Q += c[k]*legendre(k, x);
-      var e = Math.abs(Math.exp(x) - Q);
-      if (e>maxE) maxE=e;
-    }
-    return maxE;
-  }
-  return { legendreExpMaxErr: legendreExpMaxErr };
-})();
-</script>
+<!-- __EVAL__ (эталонные функции автопроверки) — внутри зашифрованного тела -->
 
 <script type="module">
 import { init, run } from 'https://cdn.jsdelivr.net/npm/clang.js/dist/clang.js';
@@ -598,8 +231,33 @@ async function runCpp(studentCode, harness, outputEl){
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 const PROG_KEY = 'cfd-nm-w05-lab-cpp-progress';
 let PROG = (function(){try{return JSON.parse(localStorage.getItem(PROG_KEY)||'{}');}catch(e){return{};}})();
-function saveProg(){ try{localStorage.setItem(PROG_KEY, JSON.stringify(PROG));}catch(e){} }
-const TOTAL = 10;
+function saveProg(){ try{localStorage.setItem(PROG_KEY, JSON.stringify(PROG));}catch(e){} scheduleRemoteSave(); }
+// ---- Синхронизация с Firestore (lab_progress/{uid}_nm_w05) через CFDLabs ----
+const LAB_CID = 'nm', LAB_ID = 'w05';
+let _rsTimer = null;
+function collectCode(){
+  const code = {};
+  document.querySelectorAll('[data-cpp]').forEach(sh => {
+    const id = sh.getAttribute('data-cpp');
+    const v = localStorage.getItem('cfd-nm-w05-lab-cpp:' + id);
+    if (v != null) code[id] = v;
+  });
+  return code;
+}
+function remoteSaveNow(){
+  if (!window.__labUser || !window.CFDLabs) return;
+  const done = Object.values(PROG).filter(v => v === 'ok').length;
+  return CFDLabs.saveProgress(window.__labUser.uid, LAB_CID, LAB_ID, { tasks: PROG, code: collectCode(), done: done, total: TOTAL });
+}
+function scheduleRemoteSave(){
+  if (!window.__labUser) return;
+  clearTimeout(_rsTimer);
+  _rsTimer = setTimeout(remoteSaveNow, 1500);
+}
+window.__labFlush = function(){ clearTimeout(_rsTimer); return remoteSaveNow(); };
+window.addEventListener('beforeunload', function(){ if (_rsTimer) { clearTimeout(_rsTimer); remoteSaveNow(); } });
+const TOTAL = 9;
+delete PROG.q41; // задача-обсуждение удалена
 function updateProgUI(){
   const done = Object.values(PROG).filter(v=>v==='ok').length;
   const pct = 100*done/TOTAL;
@@ -615,6 +273,7 @@ document.getElementById('prog_reset').addEventListener('click', ()=>{
 });
 updateProgUI();
 function closeTo(got, want, rtol, atol){ rtol = rtol||0; atol = atol||0; if (!isFinite(got) || !isFinite(want)) return got===want; const d = Math.abs(got-want); const tol = Math.max(atol, rtol*Math.abs(want)); return d <= tol; }
+function initTasks(){
 document.querySelectorAll('[data-cpp]').forEach(shell=>{
   const id = shell.getAttribute('data-cpp');
   const ta = shell.querySelector('[data-code]');
@@ -629,9 +288,12 @@ document.querySelectorAll('[data-cpp]').forEach(shell=>{
   const verdictEl = shell.nextElementSibling && shell.nextElementSibling.hasAttribute('data-verdict') ? shell.nextElementSibling : null;
   const initial = ta.value;
   const cm = CodeMirror.fromTextArea(ta, { mode: 'text/x-c++src', lineNumbers: true, theme: 'material-darker', indentUnit: 4, tabSize: 4, lineWrapping: false, extraKeys: { 'Ctrl-Enter': runNow, 'Cmd-Enter': runNow } });
+  // Код нужно набирать самостоятельно: буфер обмена и перетаскивание в редакторе отключены.
+  ['paste', 'copy', 'cut', 'drop', 'dragstart'].forEach(ev => cm.on(ev, (_cm, e) => { e.preventDefault(); e.stopPropagation(); }));
+  cm.getWrapperElement().addEventListener('contextmenu', e => e.preventDefault());
   const savedCode = localStorage.getItem('cfd-nm-w05-lab-cpp:'+id);
   if (savedCode) cm.setValue(savedCode);
-  cm.on('change', () => localStorage.setItem('cfd-nm-w05-lab-cpp:'+id, cm.getValue()));
+  cm.on('change', () => { localStorage.setItem('cfd-nm-w05-lab-cpp:'+id, cm.getValue()); scheduleRemoteSave(); });
   if (verdictEl && PROG[id]==='ok'){ verdictEl.className = 'verdict ok'; verdictEl.innerHTML = '<span class="status-dot ok"></span>✓ решено ранее'; }
   btnReset.addEventListener('click', ()=>{ if (!confirm('Вернуть скелет?')) return; cm.setValue(initial); localStorage.removeItem('cfd-nm-w05-lab-cpp:'+id); });
   async function runNow(){
@@ -687,7 +349,40 @@ document.querySelectorAll('[data-mcq]').forEach(box=>{
     PROG[id] = ok ? 'ok' : 'err'; saveProg(); updateProgUI();
   });
 });
-setTimeout(ensureRuntime, 800);
+} // initTasks
+
+// Вызывается из CFDLabs.mountLab после расшифровки и вставки заданий.
+window.__labInit = function(remote, user){
+  window.__labUser = user || null;
+  if (remote) {
+    if (remote.tasks && typeof remote.tasks === 'object') {
+      PROG = Object.assign({}, remote.tasks);
+      try { localStorage.setItem(PROG_KEY, JSON.stringify(PROG)); } catch(e) {}
+    }
+    if (remote.code && typeof remote.code === 'object') {
+      for (const k in remote.code) { try { localStorage.setItem('cfd-nm-w05-lab-cpp:' + k, remote.code[k]); } catch(e) {} }
+    }
+  }
+  initTasks();
+  updateProgUI();
+  setTimeout(ensureRuntime, 800);
+};
+</script>
+
+<script src="../js/labs.js"></script>
+<script>
+(function(){
+  function go(){
+    if (!window.CFDLabs || !window.__labInit) { setTimeout(go, 100); return; }
+    CFDLabs.mountLab({
+      cid: 'nm', lab: 'w05', encUrl: 'w05-lab.enc.json',
+      mount: document.getElementById('lab-body'),
+      onReady: function(remote, user){ window.__labInit(remote, user); },
+      onClosed: function(){ if (window.__labFlush) window.__labFlush(); window.__labUser = null; },
+    });
+  }
+  go();
+})();
 </script>
 </body>
 </html>

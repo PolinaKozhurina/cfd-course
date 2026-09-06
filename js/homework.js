@@ -51,7 +51,7 @@
     if (typeof WORKER_URL === "undefined" || !WORKER_URL) {
       throw new Error("WORKER_URL не настроен — загрузка условия ДЗ невозможна");
     }
-    if (file.size > 25 * 1024 * 1024) throw new Error("Файл больше 25 MB");
+    if (file.size > 50 * 1024 * 1024) throw new Error("Файл больше 50 MB");
     if (typeof onProgress === "function") onProgress(0.05);
     const base64 = await new Promise((res, rej) => {
       const r = new FileReader();
@@ -215,7 +215,7 @@
       if (typeof WORKER_URL === "undefined" || !WORKER_URL) {
         throw new Error("Загрузка файлов не настроена (WORKER_URL пуст). Пока пользуйтесь ссылками на облако.");
       }
-      if (file.size > 25 * 1024 * 1024) throw new Error("Файл больше 25 MB");
+      if (file.size > 50 * 1024 * 1024) throw new Error("Файл больше 50 MB");
       if (typeof onProgress === "function") onProgress(0.05);
       const base64 = await new Promise((res, rej) => {
         const r = new FileReader();
@@ -266,7 +266,7 @@
       });
       const data = await resp.json();
       if (!resp.ok || !data.ok) throw new Error(data.error || "download failed");
-      // Собираем Blob из base64 (может быть <25MB).
+      // Собираем Blob из base64 (может быть <50MB).
       const bin = atob(String(data.base64).replace(/\n/g, ""));
       const buf = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
@@ -438,7 +438,7 @@
       if (typeof WORKER_URL === "undefined" || !WORKER_URL) {
         throw new Error("WORKER_URL не настроен");
       }
-      if (file.size > 25 * 1024 * 1024) throw new Error("Файл больше 25 MB");
+      if (file.size > 50 * 1024 * 1024) throw new Error("Файл больше 50 MB");
       if (typeof onProgress === "function") onProgress(0.05);
       const base64 = await new Promise((res, rej) => {
         const r = new FileReader();

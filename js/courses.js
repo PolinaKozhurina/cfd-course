@@ -20,3 +20,11 @@ window.CFD_COURSES = [
 
 window.CFD_COURSE_BY_ID = {};
 window.CFD_COURSES.forEach(function(c){ window.CFD_COURSE_BY_ID[c.id] = c; });
+
+// Закрытые лабораторные (текст заданий зашифрован, открывает преподаватель
+// на занятии; см. js/labs.js, tools/lab_encrypt.py).
+window.CFD_LABS = {
+  nm: [
+    { id: 'w01', title: 'Лаба 1 · Точное суммирование и катастрофа вычитания', href: 'nm/w01-lab.html', total: 18 },
+  ],
+};

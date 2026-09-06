@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-course="nm">
+<html lang="ru" data-course="nm" data-lab="w01">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" href="../favicon.ico" type="image/x-icon">
@@ -232,821 +232,9 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
   Компилятор clang++ (LLVM 8) весит около 60 МБ и грузится в фоне в браузер один раз — потом кэшируется. Первый запуск любой задачи занимает 15–40 сек в Chromium и до 1–2 минут в Firefox (там медленнее HTTP/2 multiplexing). Последующие — 2–5 секунд. Если через 2 минуты по-прежнему тишина — откройте DevTools → Console: скорее всего, там красная ошибка про <code>cdn.jsdelivr.net</code>, Worker или CORS.
 </div>
 
-<!-- =============================================================== -->
-<!-- Introduction                                                     -->
-<!-- =============================================================== -->
-<h2 id="intro">Что вы делаете и зачем</h2>
-
-<p>В §&nbsp;1.8 лекции сформулирована оценка Уилкинсона: относительная ошибка наивной суммы \(n\) слагаемых одного знака может доходить до \(nu\) вместо \(u\). При \(n = 10^{5}\) это \(\sim 10^{-11}\) — четыре-пять из 16 значащих цифр, обещанных <code>double</code>, потеряны. Возникает вопрос: <em>существует ли алгоритм суммирования, сохраняющий полную машинную точность при любом \(n\)?</em></p>
-
-<p>Ответ утвердительный. Задача этой лабораторной — реализовать в C++11 <em>четыре</em> алгоритма:</p>
-
-<ol>
-<li><strong>Наивный</strong> (последовательный цикл слева направо) — рабочая лошадка, чью ошибку мы будем побеждать;</li>
-<li><strong>Компенсированный Кэхэна</strong> (1965) — суммирование с компенсирующей переменной, восстанавливающей потерянные младшие разряды;</li>
-<li><strong>Попарный</strong> (тот же, что применяет NumPy в <code>np.sum</code>) — рекурсивная свёртка с ошибкой \(O(u \log_2 n)\);</li>
-<li><strong>Отсортированный</strong> — сумма после сортировки по возрастанию модуля.</li>
-</ol>
-
-<p>Для каждого алгоритма вы измерите относительную ошибку на серии \(n = 10^2 \ldots 10^5\); страница сама построит график в двойных логарифмических осях и покажет на нём границу Уилкинсона \(nu\) и уровень \(u\). Так оценки из таблицы §&nbsp;1.8 лекции превращаются в наклоны прямых, которые можно измерить.</p>
-
-<p>Вторая часть (§&nbsp;7) — про другой источник потерь, катастрофу вычитания из §&nbsp;1.7: корни квадратного уравнения, \((1-\cos x)/x^2\) и \(\sqrt{a^2+b^2}\) при переполнении. Там лечит не более точная арифметика, а <em>переписывание формулы</em>, и вы увидите, как невязка выдаёт обратную ошибку алгоритма.</p>
-
-<p>Каждая задача — блок с редактором C++ и кнопкой «▶ Запустить». Код компилируется настоящим clang++, собранным в WebAssembly, и исполняется в браузере. Автопроверка — по выводу программы: harness вокруг вашего кода печатает ответы в виде <code>__ANS__<em>число</em></code>, JS их вылавливает и сравнивает с эталоном.</p>
-
-<div class="warning">
-<strong>Ограничение производительности.</strong> Интерпретация wasm в браузере в 5–10 раз медленнее нативной. Массивы больше \(n = 10^{6}\) практически не собрать (~8 МБ на массив double, плюс long-running loop). Все задачи здесь используют \(n \le 10^{5}\) — этого достаточно, чтобы увидеть теоретические скейлинги.
-</div>
-
-<h3>Что можно и что нельзя</h3>
-<ul>
-<li><strong>Можно</strong>: <code>&lt;cstdio&gt;</code>, <code>&lt;cmath&gt;</code>, <code>&lt;cstdlib&gt;</code> (для <code>qsort</code>), <code>union</code> для бит-разбора <code>double</code>.</li>
-<li><strong>Нельзя</strong>: сторонние библиотеки (Eigen, Boost, fmt); <code>&lt;vector&gt;</code>, <code>&lt;algorithm&gt;</code>, <code>std::sort</code> в браузерном clang.js работают ненадёжно — используйте C-массивы и <code>qsort</code>. И, конечно, готовые суммирующие функции типа <code>std::accumulate</code>.</li>
-<li><strong>Автопроверка</strong> ищет в выводе строки <code>__ANS__<em>число</em></code>. Всё, что вы печатаете рядом (диагностика, промежуточные результаты) — на вашей стороне.</li>
-</ul>
-
-<!-- =============================================================== -->
-<!-- §0. Warm-up                                                     -->
-<!-- =============================================================== -->
-<h2 id="part0">§0. Разминка: печать eps и биты double</h2>
-
-<div class="task" data-num="0.1">
-<strong>Задача 0.1. Машинное \(\varepsilon\).</strong> Напишите функцию <code>double machine_eps()</code>, которая делит \(\eta = 1\) на 2 до тех пор, пока <code>1.0 + eta/2.0 != 1.0</code>, и возвращает \(\eta\). Значение должно совпасть с \(2^{-52} \approx 2{,}22 \cdot 10^{-16}\).
-
-<div class="editor-shell" data-cpp="q01"
-     data-harness='int main() {
-    double eps = machine_eps();
-    printf("machine_eps = %.17g\n", eps);
-    printf("expected    = %.17g\n", 2.220446049250313e-16);
-    printf("__ANS__%.17g\n", eps);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="2.220446049250313e-16" data-check-rtol="1e-10">
-  <div class="editor-head">
-    <span class="fname">task0_1.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-
-double machine_eps() {
-    // TODO: реализовать
-    return 0.0;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="0.2">
-<strong>Задача 0.2. Расстояние в ulp.</strong> Функция <code>dump_double</code> уже написана — она печатает знак, порядок и мантиссу через <code>union</code>. Ваша часть — <code>ulp_distance(a, b)</code>: сколько представимых чисел лежит между <code>a</code> и <code>b</code>. Битовые образы соседних <code>double</code> одного знака отличаются как целые ровно на 1, поэтому достаточно вычесть их как <code>long long</code>. Harness печатает разбор чисел 0,1, 0,2, 0,1&nbsp;+&nbsp;0,2 и 0,3 и просит расстояние между двумя последними. Ответ автопроверки — это расстояние по модулю.
-
-<div class="editor-shell" data-cpp="q02"
-     data-harness='int main() {
-    double s = 0.1 + 0.2;
-    dump_double(0.1);
-    dump_double(0.2);
-    dump_double(s);
-    dump_double(0.3);
-    printf("0.1 + 0.2 == 0.3 ?  %s\n", (s == 0.3) ? "true" : "false");
-    long long d = ulp_distance(s, 0.3);
-    if (d &lt; 0) d = -d;
-    printf("ulp_distance(0.1 + 0.2, 0.3) = %lld\n", d);
-    printf("__ANS__%lld\n", d);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="1" data-check-atol="0">
-  <div class="editor-head">
-    <span class="fname">task0_2.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-
-// union — простой способ прочитать биты double без cstring/cstdint
-union Bits { double d; unsigned long long u; };
-
-void dump_double(double x) {
-    Bits b;
-    b.d = x;
-    unsigned long long bits = b.u;
-
-    unsigned long long sign     = (bits &gt;&gt; 63) &amp; 0x1ULL;
-    unsigned long long exponent = (bits &gt;&gt; 52) &amp; 0x7FFULL;
-    unsigned long long mantissa =  bits         &amp; 0xFFFFFFFFFFFFFULL;
-
-    printf("x = %.17g : sign %llu, e = %d, mantissa 0x%013llx\n",
-           x, sign, (int)exponent - 1023, mantissa);
-}
-
-// Сколько представимых чисел между a и b (для чисел одного знака).
-long long ulp_distance(double a, double b) {
-    // TODO: сравнить битовые образы a и b как целые
-    return 0;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-
-</div>
-
-<!-- =============================================================== -->
-<!-- §1. Naive sum                                                   -->
-<!-- =============================================================== -->
-<h2 id="part1">§1. Наивная сумма</h2>
-
-<p>Определите функцию <code>double sum_naive(const double* x, int n)</code> — обычный цикл слева направо. Harness будет строить массив из \(n = 10^{5}\) копий <code>0.1</code> и звать вашу функцию.</p>
-
-<div class="task" data-num="1.1">
-<strong>Задача 1.1. Сумма \(10^{5}\) копий 0,1.</strong> Ожидаемое значение — \(10^{4}\). Ваша задача: реализовать <code>sum_naive</code>. Автопроверка сверит сумму с эталоном, посчитанным той же формулой в JS.
-
-<div class="editor-shell" data-cpp="q11"
-     data-harness='int main() {
-    const int N = 100000;
-    static double x[N];
-    for (int i = 0; i &lt; N; ++i) x[i] = 0.1;
-    double s = sum_naive(x, N);
-    double exact = (double)N * 0.1;
-    printf("sum   = %.17g\n", s);
-    printf("exact = %.17g\n", exact);
-    printf("error = %.6g\n", s - exact);
-    printf("__ANS__%.17g\n", s);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="naiveOfPointOne(100000)" data-check-rtol="1e-14">
-  <div class="editor-head">
-    <span class="fname">task1_1.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-
-double sum_naive(const double* x, int n) {
-    // TODO: реализовать наивную сумму
-    return 0.0;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-
-</div>
-
-<div class="task" data-num="1.2">
-<strong>Задача 1.2. Серия \(n\) и наклон.</strong> Перенесите сюда <code>sum_naive</code>. Harness прогонит её при \(n = 10^2, 10^3, 10^4, 10^5\), напечатает <em>относительную</em> ошибку \(|\hat S - S|/|S|\) для каждого \(n\), нарисует её на графике в осях \(\log_{10} n\) — \(\log_{10}\delta\) и посчитает наклон прямой по методу наименьших квадратов. Ответ автопроверки — наклон. Сравните его с показателем в оценке Уилкинсона \(\delta \lesssim nu\).
-
-<div class="editor-shell" data-cpp="q12"
-     data-harness='int main() {
-    const int NS = 4;
-    const int ns[NS] = {100, 1000, 10000, 100000};
-    static double x[100000];
-    for (int i = 0; i &lt; 100000; ++i) x[i] = 0.1;
-    const double u = 1.1102230246251565e-16;   /* 2^-53 */
-    double lx[NS], ly[NS];
-    int m = 0;
-    printf("%8s %14s %12s\n", "n", "rel.err", "rel.err/u");
-    for (int k = 0; k &lt; NS; ++k) {
-        int n = ns[k];
-        double exact = (double)n * 0.1;
-        double err = sum_naive(x, n) - exact;
-        if (err &lt; 0) err = -err;
-        double rel = err / exact;
-        printf("%8d %14.3e %12.2f\n", n, rel, rel / u);
-        printf("__PT__ naive %d %.17g\n", n, rel);
-        if (rel &gt; 0) { lx[m] = log10((double)n); ly[m] = log10(rel); ++m; }
-    }
-    double slope = 0.0;
-    if (m &gt;= 2) {
-        double mx = 0, my = 0;
-        for (int i = 0; i &lt; m; ++i) { mx += lx[i]; my += ly[i]; }
-        mx /= m; my /= m;
-        double num = 0, den = 0;
-        for (int i = 0; i &lt; m; ++i) { num += (lx[i]-mx)*(ly[i]-my); den += (lx[i]-mx)*(lx[i]-mx); }
-        slope = num / den;
-    }
-    printf("slope of log10(rel.err) vs log10(n) = %.4f\n", slope);
-    printf("__ANS__%.17g\n", slope);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="naiveSlope(0)" data-check-rtol="1e-6">
-  <div class="editor-head">
-    <span class="fname">task1_2.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;    // log10 нужен harness-у
-
-double sum_naive(const double* x, int n) {
-    // TODO: скопируйте вашу реализацию из задачи 1.1
-    return 0.0;
-}
-</textarea>
-  <div class="output" data-output></div>
-  <canvas data-plot width="820" height="320" style="width:100%;height:auto;display:none;margin-top:.5rem;border-radius:6px;background:var(--bg2);border:1px solid var(--border)" aria-label="График относительной ошибки от n в двойных логарифмических осях."></canvas>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-
-</div>
-
-<!-- =============================================================== -->
-<!-- §2. Kahan                                                       -->
-<!-- =============================================================== -->
-<h2 id="part2">§2. Компенсированное суммирование Кэхэна</h2>
-
-<div class="info" data-lbl="Идея">
-При добавлении маленького \(x_k\) к большому \(s\) младшие биты \(x_k\) теряются в округлении. Компенсированный алгоритм отслеживает эти <em>потерянные биты</em> в дополнительной переменной \(c\) и вычитает их из следующего слагаемого. В итоге ошибка суммы ограничена \(\approx 2u\sum|x_k|\) независимо от \(n\) — как если бы сумма считалась в удвоенной точности, хотя все переменные остаются обычными <code>double</code>.
-</div>
-
-<div class="task" data-num="2.1">
-<strong>Задача 2.1. Реализовать <code>sum_kahan</code>.</strong> Проверьте, что для того же массива \([0{,}1]\times 10^{5}\) сумма Кэхэна практически равна 10000, а ошибка на порядки меньше наивной.
-
-<div class="editor-shell" data-cpp="q21"
-     data-harness='int main() {
-    const int N = 100000;
-    static double x[N];
-    for (int i = 0; i &lt; N; ++i) x[i] = 0.1;
-    double s = sum_kahan(x, N);
-    double exact = (double)N * 0.1;
-    printf("kahan sum = %.17g\n", s);
-    printf("exact     = %.17g\n", exact);
-    printf("error     = %.6g\n", s - exact);
-    printf("__ANS__%.17g\n", s);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="kahanOfPointOne(100000)" data-check-rtol="1e-14">
-  <div class="editor-head">
-    <span class="fname">task2_1.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-
-double sum_kahan(const double* x, int n) {
-    double s = 0.0;
-    double c = 0.0;    // компенсация — потерянные младшие разряды
-    // TODO: реализовать алгоритм Кэхэна
-    return s;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-
-</div>
-
-<div class="task" data-num="2.2">
-<strong>Задача 2.2. Ловушка компилятора.</strong> Если C++ компилировать с флагом <code>-ffast-math</code> (или <code>-Ofast</code>, который его включает), допускаются алгебраические переписывания: <code>(t - s) - y ≡ 0</code>, потому что математически \(t - s = y\). Что произойдёт с алгоритмом?
-
-<div class="mcq" data-mcq="q22" data-correct="B">
-  <div class="head"><span class="status-dot"></span>Что случится</div>
-  <label><input type="radio" name="q22" value="A"> A. Ничего — код эквивалентен исходному.</label>
-  <label><input type="radio" name="q22" value="B"> B. Компенсация обнулится, алгоритм превратится в наивную сумму.</label>
-  <label><input type="radio" name="q22" value="C"> C. Ошибка резко возрастёт до \(n^{2} u\).</label>
-  <label><input type="radio" name="q22" value="D"> D. Компилятор выдаст ошибку сборки.</label>
-  <button class="btn" type="button" data-mcq-check>проверить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-
-</div>
-
-<!-- =============================================================== -->
-<!-- §3. Pairwise                                                    -->
-<!-- =============================================================== -->
-<h2 id="part3">§3. Попарное суммирование</h2>
-
-<p>Идея: сумма пополам делится на две подсуммы, каждая суммируется рекурсивно, потом складывается. Дерево рекурсии имеет глубину \(\log_2 n\), ошибка в худшем случае ограничена \(u \log_2 n \cdot \sum|x_k|\).</p>
-
-<div class="task" data-num="3.1">
-<strong>Задача 3.1. Реализовать <code>sum_pairwise</code>.</strong> База рекурсии — 64 элемента (переключаемся на обычный цикл, чтобы не платить за вызов).
-
-<div class="editor-shell" data-cpp="q31"
-     data-harness='int main() {
-    const int N = 100000;
-    static double x[N];
-    for (int i = 0; i &lt; N; ++i) x[i] = 0.1;
-    double s = sum_pairwise(x, N);
-    double exact = (double)N * 0.1;
-    printf("pairwise = %.17g\n", s);
-    printf("exact    = %.17g\n", exact);
-    printf("error    = %.6g\n", s - exact);
-    printf("__ANS__%.17g\n", s);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="pairwiseOfPointOne(100000)" data-check-rtol="1e-14">
-  <div class="editor-head">
-    <span class="fname">task3_1.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-
-// Рекурсивное попарное суммирование
-double sum_pairwise(const double* x, int n) {
-    const int BASE = 64;
-    if (n &lt;= BASE) {
-        double s = 0.0;
-        for (int i = 0; i &lt; n; ++i) s += x[i];
-        return s;
-    }
-    int m = n / 2;
-    // TODO: рекурсивно сложить две половины массива
-    return 0.0;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="3.2">
-<strong>Задача 3.2. Серия \(n\) для попарной суммы.</strong> Перенесите <code>sum_pairwise</code>. Harness прогонит серию \(n = 10^2 \ldots 10^5\), нарисует попарную сумму рядом с наивной (эталон наивной встроен в harness) и напечатает максимальную по серии относительную ошибку в единицах \(u\). Ответ автопроверки — этот максимум. Сравните его с границей \(u\log_2 n \approx 17u\) при \(n = 10^5\).
-
-<div class="editor-shell" data-cpp="q32"
-     data-harness='static double sum_naive_ref(const double* x, int n) {
-    double s = 0.0;
-    for (int i = 0; i &lt; n; ++i) s += x[i];
-    return s;
-}
-int main() {
-    const int NS = 4;
-    const int ns[NS] = {100, 1000, 10000, 100000};
-    static double x[100000];
-    for (int i = 0; i &lt; 100000; ++i) x[i] = 0.1;
-    const double u = 1.1102230246251565e-16;   /* 2^-53 */
-    double worst = 0.0;
-    printf("%8s %14s %14s %12s\n", "n", "naive rel", "pairwise rel", "pairwise/u");
-    for (int k = 0; k &lt; NS; ++k) {
-        int n = ns[k];
-        double exact = (double)n * 0.1;
-        double en = sum_naive_ref(x, n) - exact;  if (en &lt; 0) en = -en;
-        double ep = sum_pairwise(x, n) - exact;   if (ep &lt; 0) ep = -ep;
-        double rn = en / exact, rp = ep / exact;
-        if (rp &gt; worst) worst = rp;
-        printf("%8d %14.3e %14.3e %12.2f\n", n, rn, rp, rp / u);
-        printf("__PT__ naive %d %.17g\n", n, rn);
-        printf("__PT__ pairwise %d %.17g\n", n, rp);
-    }
-    printf("max pairwise rel.err / u = %.4f   (bound u*log2(n) ~ 17 u at n = 1e5)\n", worst / u);
-    printf("__ANS__%.17g\n", worst / u);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="pairwiseMaxRelU(0)" data-check-rtol="1e-9">
-  <div class="editor-head">
-    <span class="fname">task3_2.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-
-double sum_pairwise(const double* x, int n) {
-    // TODO: скопируйте вашу реализацию из задачи 3.1 (BASE = 64)
-    return 0.0;
-}
-</textarea>
-  <div class="output" data-output></div>
-  <canvas data-plot width="820" height="320" style="width:100%;height:auto;display:none;margin-top:.5rem;border-radius:6px;background:var(--bg2);border:1px solid var(--border)" aria-label="График относительной ошибки от n в двойных логарифмических осях."></canvas>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-
-</div>
-
-<!-- =============================================================== -->
-<!-- §4. Sorted                                                      -->
-<!-- =============================================================== -->
-<h2 id="part4">§4. Отсортированное суммирование</h2>
-
-<p>Ещё одна классическая идея: отсортировать слагаемые по возрастанию модуля и суммировать в этом порядке. Тогда каждая частичная сумма относительно велика по сравнению с прибавляемым слагаемым, и вклад «мелочи» в общий итог не теряется в округлении. Особенно заметно на массивах смешанных знаков.</p>
-
-<div class="task" data-num="4.1">
-<strong>Задача 4.1. Ряд Лейбница.</strong> Реализуйте <code>sum_sorted_abs</code>: сначала сортировка по возрастанию \(|x_k|\), потом наивное суммирование. Проверьте на первых 50000 членах ряда \(\sum_{k=1}^{50000} (-1)^{k+1}/k\), эталон \(\to \ln 2 \approx 0{,}693147\).
-
-<div class="editor-shell" data-cpp="q41"
-     data-harness='int main() {
-    const int N = 50000;
-    static double x[N];
-    for (int k = 0; k &lt; N; ++k) {
-        x[k] = ((k % 2 == 0) ? 1.0 : -1.0) / (double)(k + 1);
-    }
-    double s = sum_sorted_abs(x, N);
-    printf("sorted = %.17g\n", s);
-    printf("ln 2   = %.17g\n", 0.6931471805599453);
-    printf("__ANS__%.17g\n", s);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="leibnizSorted(50000)" data-check-atol="1e-12">
-  <div class="editor-head">
-    <span class="fname">task4_1.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cstdlib&gt;   // qsort
-#include &lt;cmath&gt;     // fabs
-
-// Компаратор для qsort: сравниваем по возрастанию |x|
-int cmp_abs(const void* a, const void* b) {
-    double da = fabs(*(const double*)a);
-    double db = fabs(*(const double*)b);
-    if (da &lt; db) return -1;
-    if (da &gt; db) return  1;
-    return 0;
-}
-
-double sum_sorted_abs(const double* x, int n) {
-    static double y[50000];
-    for (int i = 0; i &lt; n; ++i) y[i] = x[i];
-    // TODO: отсортируйте y через qsort с cmp_abs
-
-    double s = 0.0;
-    // TODO: обычная наивная сумма y
-    return s;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-
-</div>
-
-<!-- =============================================================== -->
-<!-- §5. Scaling                                                     -->
-<!-- =============================================================== -->
-<h2 id="part5">§5. Сравнение алгоритмов на серии \(n\)</h2>
-
-<div class="task" data-num="5.1">
-<strong>Задача 5.1. Свести все алгоритмы вместе.</strong> В одной программе соберите <code>sum_naive</code>, <code>sum_kahan</code>, <code>sum_pairwise</code>. Harness прогонит все три по серии \(n = 10^2 \ldots 10^5\) с массивом \([0{,}1]\times n\), нарисует три кривые на одном графике и напечатает <em>абсолютные ошибки</em> при \(n = 10^5\). Автопроверка сверит эти три числа.
-
-<div class="editor-shell" data-cpp="q51"
-     data-harness='int main() {
-    const int N = 100000;
-    static double x[N];
-    for (int i = 0; i &lt; N; ++i) x[i] = 0.1;
-    const int ns[4] = {100, 1000, 10000, 100000};
-    for (int k = 0; k &lt; 4; ++k) {
-        int n = ns[k];
-        double ex = (double)n * 0.1;
-        double en = sum_naive(x, n) - ex;    if (en &lt; 0) en = -en;
-        double ek = sum_kahan(x, n) - ex;    if (ek &lt; 0) ek = -ek;
-        double ep = sum_pairwise(x, n) - ex; if (ep &lt; 0) ep = -ep;
-        printf("__PT__ naive %d %.17g\n", n, en / ex);
-        printf("__PT__ kahan %d %.17g\n", n, ek / ex);
-        printf("__PT__ pairwise %d %.17g\n", n, ep / ex);
-    }
-    double exact = (double)N * 0.1;
-    double n_err = sum_naive(x, N) - exact;
-    double k_err = sum_kahan(x, N) - exact;
-    double p_err = sum_pairwise(x, N) - exact;
-    printf("naive    error = %.6g\n", n_err);
-    printf("kahan    error = %.6g\n", k_err);
-    printf("pairwise error = %.6g\n", p_err);
-    if (n_err &lt; 0) n_err = -n_err;
-    if (k_err &lt; 0) k_err = -k_err;
-    if (p_err &lt; 0) p_err = -p_err;
-    printf("__ANS__%.17g\n", n_err);
-    printf("__ANS__%.17g\n", k_err);
-    printf("__ANS__%.17g\n", p_err);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="naiveOfPointOneErr(100000)|kahanOfPointOneErr(100000)|pairwiseOfPointOneErr(100000)" data-check-rtol="0.5" data-check-atol="1e-15">
-  <div class="editor-head">
-    <span class="fname">task5_1.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-
-// Перенесите сюда три ваши функции из §1-3
-double sum_naive(const double* x, int n) {
-    double s = 0;
-    for (int i = 0; i &lt; n; ++i) s += x[i];
-    return s;
-}
-
-double sum_kahan(const double* x, int n) {
-    // TODO
-    return 0;
-}
-
-double sum_pairwise(const double* x, int n) {
-    // TODO
-    return 0;
-}
-</textarea>
-  <div class="output" data-output></div>
-  <canvas data-plot width="820" height="320" style="width:100%;height:auto;display:none;margin-top:.5rem;border-radius:6px;background:var(--bg2);border:1px solid var(--border)" aria-label="График относительной ошибки трёх алгоритмов от n."></canvas>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-</div>
-
-<div class="task" data-num="5.2">
-<strong>Задача 5.2. Вывод по сравнению.</strong>
-
-<div class="mcq" data-mcq="q52" data-correct="C">
-  <div class="head"><span class="status-dot"></span>Кто выиграл</div>
-  <label><input type="radio" name="q52" value="A"> A. Все три одинаково.</label>
-  <label><input type="radio" name="q52" value="B"> B. Наивная — самая точная (меньше вычислений).</label>
-  <label><input type="radio" name="q52" value="C"> C. Кэхэн — самая точная; попарная — почти такая же; наивная — заметно хуже.</label>
-  <label><input type="radio" name="q52" value="D"> D. Попарная — самая точная (глубина \(\log n\)).</label>
-  <button class="btn" type="button" data-mcq-check>проверить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-</div>
-
-<!-- =============================================================== -->
-<!-- §6. Basel                                                       -->
-<!-- =============================================================== -->
-<h2 id="part6">§6. Ряд \(\sum 1/n^{2}\): порядок имеет значение</h2>
-
-<p>Частичная сумма ряда Базеля \(S_N = \sum_{n=1}^{N} 1/n^{2} \to \pi^{2}/6\). Слагаемые быстро убывают. Возникает вопрос: суммировать <em>с начала</em> (сначала большие) или <em>с конца</em> (сначала маленькие)?</p>
-
-<div class="task" data-num="6.1">
-<strong>Задача 6.1. Прямой и обратный порядок.</strong> Реализуйте две функции — <code>basel_forward</code> (суммирует <code>1/1 + 1/4 + 1/9 + …</code>) и <code>basel_backward</code> (в обратном порядке). Напечатайте абсолютную ошибку каждой против «почти эталона» — попарной суммы того же массива.
-
-<div class="editor-shell" data-cpp="q61"
-     data-harness='double sum_pairwise(const double* x, int n) {
-    const int BASE = 64;
-    if (n &lt;= BASE) { double s=0; for(int i=0;i&lt;n;++i) s+=x[i]; return s; }
-    int m = n/2;
-    return sum_pairwise(x, m) + sum_pairwise(x + m, n - m);
-}
-int main() {
-    const int N = 100000;
-    static double x[N];
-    for (int k = 0; k &lt; N; ++k) x[k] = 1.0 / (double)(k+1) / (double)(k+1);
-    double ref = sum_pairwise(x, N);
-    double f_err = basel_forward(N)  - ref;
-    double b_err = basel_backward(N) - ref;
-    if (f_err &lt; 0) f_err = -f_err;
-    if (b_err &lt; 0) b_err = -b_err;
-    printf("forward  error = %.6g\n", f_err);
-    printf("backward error = %.6g\n", b_err);
-    printf("__ANS__%.17g\n", f_err);
-    printf("__ANS__%.17g\n", b_err);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="basel_fwd(100000)|basel_bwd(100000)" data-check-rtol="0.5" data-check-atol="1e-15">
-  <div class="editor-head">
-    <span class="fname">task6_1.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-
-double basel_forward(int N) {
-    double s = 0.0;
-    // TODO: суммируйте 1/k^2 для k = 1..N
-    return s;
-}
-
-double basel_backward(int N) {
-    double s = 0.0;
-    // TODO: суммируйте 1/k^2 для k = N..1
-    return s;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-
-</div>
-
-<div class="task" data-num="6.2">
-<strong>Задача 6.2. Мораль.</strong>
-
-<div class="mcq" data-mcq="q62" data-correct="B">
-  <div class="head"><span class="status-dot"></span>Что делать при убывающем ряде</div>
-  <label><input type="radio" name="q62" value="A"> A. Всё равно, оба порядка равнозначны.</label>
-  <label><input type="radio" name="q62" value="B"> B. Суммировать с конца — сначала маленькие, потом большие.</label>
-  <label><input type="radio" name="q62" value="C"> C. Всегда сначала большие — иначе накопится ошибка.</label>
-  <label><input type="radio" name="q62" value="D"> D. Порядок безразличен, только Кэхэн помогает.</label>
-  <button class="btn" type="button" data-mcq-check>проверить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-</div>
-
-<!-- =============================================================== -->
-<!-- §7. Cancellation                                                -->
-<!-- =============================================================== -->
-<h2 id="part7">§7. Катастрофа вычитания: переписать формулу</h2>
-
-<p>Суммирование теряло точность медленно, по \(u\) за операцию. Вычитание близких чисел теряет её мгновенно: по (1.8) относительная ошибка разности усиливается в \((|a|+|b|)/|a-b|\) раз. Ни Кэхэн, ни попарная сумма тут не помогут — лечится только <em>переписывание формулы</em> так, чтобы опасного вычитания не было. Три классических случая из §&nbsp;1.7 лекции.</p>
-
-<div class="task" data-num="7.1">
-<strong>Задача 7.1. Корни квадратного уравнения по Виета.</strong> Для \(x^2 + bx + c = 0\) при \(b = 10^8\), \(c = 1\) корни \(x_1 \approx -10^8\) и \(x_2 \approx -10^{-8}\). Школьная формула \(x_2 = (-b + \sqrt{b^2 - 4c})/2\) вычитает два числа, совпадающих в 16 знаках. Реализуйте <code>roots_stable</code>: сначала больший по модулю корень \(x_1 = -\bigl(b + \operatorname{sign}(b)\sqrt{D}\bigr)/2\) — там сложение, — затем \(x_2 = c/x_1\) по теореме Виета. Harness сравнит с наивной формулой и напечатает невязку \(x^2 + bx + c\) для обоих ответов. Ответ автопроверки — устойчивый \(x_2\).
-
-<div class="editor-shell" data-cpp="q71"
-     data-harness='int main() {
-    double b = 1e8, c = 1.0;
-    double D = sqrt(b*b - 4.0*c);
-    double naive_small = (-b + D) / 2.0;              /* школьная формула */
-    double x1 = 0, x2 = 0;
-    roots_stable(b, c, &amp;x1, &amp;x2);
-    printf("naive  small root = %.17g\n", naive_small);
-    printf("stable small root = %.17g\n", x2);
-    printf("true   small root = -1.0000000000000001e-08  (= -c/b * (1 + c/b^2 + ...))\n");
-    printf("relative error of naive formula = %.3g\n", (naive_small - x2) / x2);
-    printf("residual x^2+bx+c :  naive %.3g   stable %.3g\n",
-           naive_small*naive_small + b*naive_small + c,
-           x2*x2 + b*x2 + c);
-    printf("__ANS__%.17g\n", x2);
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-eval="vietaSmall(0)" data-check-rtol="1e-12">
-  <div class="editor-head">
-    <span class="fname">task7_1.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-// Корни x^2 + b x + c = 0 (считаем b^2 &gt;= 4c).
-void roots_stable(double b, double c, double* x1, double* x2) {
-    double D = sqrt(b*b - 4.0*c);
-    double sgn = (b &gt;= 0) ? 1.0 : -1.0;
-    // TODO: сначала больший по модулю корень, затем второй по Виета
-    *x1 = 0.0;
-    *x2 = 0.0;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-
-</div>
-
-<div class="task" data-num="7.2">
-<strong>Задача 7.2. \((1 - \cos x)/x^2\) при малых \(x\).</strong> Точное значение стремится к \(1/2\). Наивная формула при \(x = 10^{-8}\) даёт ровно 0: \(\cos x\) округляется к 1, и вычитание не оставляет ни одной верной цифры. Реализуйте <code>f_stable</code> по формуле половинного угла \(\dfrac{1-\cos x}{x^2} = \dfrac{1}{2}\left(\dfrac{\sin(x/2)}{x/2}\right)^2\), где вычитания нет вовсе. Ответ автопроверки — значения при \(x = 10^{-8}\) и \(x = 10^{-5}\).
-
-<div class="editor-shell" data-cpp="q72"
-     data-harness='int main() {
-    const double xs[5] = {1e-1, 1e-2, 1e-4, 1e-5, 1e-8};
-    printf("%8s %22s %22s\n", "x", "naive", "stable");
-    for (int i = 0; i &lt; 5; ++i)
-        printf("%8.0e %22.16g %22.16g\n", xs[i], f_naive(xs[i]), f_stable(xs[i]));
-    printf("limit x-&gt;0 : 0.5,   exact = 1/2 - x^2/24 + ...\n");
-    printf("__ANS__%.17g\n", f_stable(1e-8));
-    printf("__ANS__%.17g\n", f_stable(1e-5));
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="0.5,0.49999999999583322" data-check-rtol="1e-12">
-  <div class="editor-head">
-    <span class="fname">task7_2.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double f_naive(double x) {
-    return (1.0 - cos(x)) / (x * x);
-}
-
-double f_stable(double x) {
-    // TODO: формула половинного угла
-    return 0.0;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-
-</div>
-
-<div class="task" data-num="7.3">
-<strong>Задача 7.3. \(\sqrt{a^2 + b^2}\) без переполнения.</strong> Не только вычитание: при \(a = 3\cdot 10^{200}\) квадрат \(a^2 = 9\cdot 10^{400}\) не помещается в <code>double</code> и превращается в \(\infty\), при \(a = 3\cdot 10^{-200}\) — исчезает в 0. Реализуйте <code>hypot_safe</code> через масштабирование: \(m = \max(|a|,|b|)\), результат \(m\sqrt{(a/m)^2 + (b/m)^2}\); отдельно обработайте \(m = 0\). Ответ автопроверки — три значения.
-
-<div class="editor-shell" data-cpp="q73"
-     data-harness='int main() {
-    const double A[3] = {3e200, 3e-200, 3.0};
-    const double B[3] = {4e200, 4e-200, 4.0};
-    printf("%10s %10s %14s %14s\n", "a", "b", "naive", "hypot_safe");
-    for (int i = 0; i &lt; 3; ++i) {
-        double naive = sqrt(A[i]*A[i] + B[i]*B[i]);
-        printf("%10.0e %10.0e %14.6g %14.6g\n", A[i], B[i], naive, hypot_safe(A[i], B[i]));
-    }
-    printf("__ANS__%.17g\n", hypot_safe(3e200, 4e200));
-    printf("__ANS__%.17g\n", hypot_safe(3e-200, 4e-200));
-    printf("__ANS__%.17g\n", hypot_safe(3.0, 4.0));
-    printf("__END__\n");
-    return 0;
-}'
-     data-check-target="5e200,5e-200,5" data-check-rtol="1e-12">
-  <div class="editor-head">
-    <span class="fname">task7_3.cpp</span>
-    <div class="actions">
-      <button class="btn secondary" type="button" data-reset>сбросить код</button>
-      <button class="btn" type="button" data-run>▶ запустить</button>
-    </div>
-  </div>
-  <textarea data-code>#include &lt;cstdio&gt;
-#include &lt;cmath&gt;
-
-double hypot_safe(double a, double b) {
-    double m = fabs(a) &gt; fabs(b) ? fabs(a) : fabs(b);
-    // TODO: масштабирование через m; случай m == 0 отдельно
-    return 0.0;
-}
-</textarea>
-  <div class="output" data-output></div>
-</div>
-<div class="verdict" data-verdict><span class="status-dot"></span></div>
-
-</div>
-
-<div class="task" data-num="7.4">
-<strong>Задача 7.4. Кто виноват: задача или алгоритм?</strong> Малый корень в задаче 7.1 хорошо обусловлен: \(x_2 \approx -c/b\), число обусловленности по \(c\) равно \(\approx 1\). Тем не менее школьная формула дала ошибку 25 %, а невязка вышла \(0{,}25\) при \(c = 1\). Что говорит оценка (1.13) из лекции?
-
-<div class="mcq" data-mcq="q74" data-correct="B">
-  <div class="head"><span class="status-dot"></span>Диагноз</div>
-  <label><input type="radio" name="q74" value="A"> A. Задача плохо обусловлена — никакой алгоритм не даст лучше.</label>
-  <label><input type="radio" name="q74" value="B"> B. Обратная ошибка алгоритма велика: ответ есть точный корень уравнения с \(c\), испорченным на 25 %. Раз \(\kappa \approx 1\), виноват алгоритм — его нужно переписать.</label>
-  <label><input type="radio" name="q74" value="C"> C. Неточно вычислен <code>sqrt</code> — нужна библиотека повышенной точности.</label>
-  <label><input type="radio" name="q74" value="D"> D. Это ошибка усечения: формула корней — приближённая.</label>
-  <button class="btn" type="button" data-mcq-check>проверить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-
-</div>
-
-<!-- =============================================================== -->
-<!-- §8. Report                                                      -->
-<!-- =============================================================== -->
-<h2 id="part8">§8. Отчёт</h2>
-
-<p>Итог работы — таблица результатов по всем алгоритмам. Заполните её по своим измерениям.</p>
-
-<div class="task" data-num="8.1">
-<strong>Задача 8.1. Итоговая таблица.</strong> Заполните таблицу в конспекте по <code>[0.1]*10^5</code>.
-
-<table class="rep">
-  <thead><tr><th>Алгоритм</th><th>Значение</th><th>Ошибка</th><th>Порядок роста</th></tr></thead>
-  <tbody>
-    <tr><td>sum_naive</td><td>—</td><td>—</td><td>—</td></tr>
-    <tr><td>sum_kahan</td><td>—</td><td>—</td><td>—</td></tr>
-    <tr><td>sum_pairwise</td><td>—</td><td>—</td><td>—</td></tr>
-    <tr><td>sum_sorted_abs</td><td>—</td><td>—</td><td>—</td></tr>
-    <tr><td>roots naive → Vieta</td><td>—</td><td>—</td><td>невязка</td></tr>
-  </tbody>
-</table>
-
-<div class="mcq" data-mcq="q81" data-correct="X">
-  <div class="head"><span class="status-dot"></span>отметка</div>
-  <label><input type="radio" name="q81" value="X"> Таблица заполнена.</label>
-  <button class="btn" type="button" data-mcq-check>отметить</button>
-  <div class="verdict" data-verdict></div>
-</div>
-</div>
-
-<h3>Что унести с лабы</h3>
-<ol>
-<li>Относительная ошибка наивной суммы \(n\) слагаемых одного знака растёт как \(n u\) (наклон 1 в log-log — <em>измерено</em>); при случайных знаках — как \(\sqrt n\, u\).</li>
-<li>Компенсированное суммирование Кэхэна возвращает полную машинную точность \(\sim u\) ценой ×4 арифметических операций.</li>
-<li>Попарное суммирование даёт \(u\log_2 n\) без вспомогательных переменных — потому оно и стало умолчанием в NumPy.</li>
-<li>Порядок слагаемых имеет значение: для рядов с убывающими членами суммируйте с конца.</li>
-<li>Не полагайтесь на «математическую» ассоциативность \(+\) в оптимизирующем компиляторе: <code>-ffast-math</code> ломает Кэхэна.</li>
-<li>Катастрофа вычитания лечится не более точной арифметикой, а переписыванием формулы: Виета для корней, половинный угол для \(1-\cos x\), масштабирование для \(\sqrt{a^2+b^2}\).</li>
-<li>Невязка — дешёвый измеритель обратной ошибки. Малое \(\kappa\) плюс большая ошибка ответа означает неустойчивый алгоритм, а не плохую задачу.</li>
-</ol>
+<!-- Задания лабораторной зашифрованы: nm/w01-lab.enc.json (см. tools/lab_encrypt.py, js/labs.js).
+     Расшифровываются в браузере после того, как преподаватель откроет сеанс для отмеченных. -->
+<div id="lab-body"></div>
 
 <div class="lecture-nav">
   <a class="nav-prev" href="w01.html">← §1. Лекция</a>
@@ -1079,47 +267,7 @@ double hypot_safe(double a, double b) {
 <!-- =============================================================== -->
 <!-- Reference eval (float64 in JS = same as C++ double)              -->
 <!-- =============================================================== -->
-<script>
-window.__EVAL__ = (function(){
-  function sumNaive(x){ var s=0; for(var i=0;i<x.length;i++) s+=x[i]; return s; }
-  function sumKahan(x){ var s=0,c=0; for(var i=0;i<x.length;i++){var y=x[i]-c,t=s+y;c=(t-s)-y;s=t;} return s; }
-  function sumPairwise(x){
-    function go(lo,hi){ if(hi-lo<=64){var s=0;for(var i=lo;i<hi;i++) s+=x[i]; return s;} var m=(lo+hi)>>1; return go(lo,m)+go(m,hi);}
-    return go(0,x.length);
-  }
-  function sumSortedAbs(x){var y=x.slice();y.sort(function(a,b){return Math.abs(a)-Math.abs(b);});return sumNaive(y);}
-  function sumNeumaier(x){var s=0,c=0;for(var i=0;i<x.length;i++){var xi=x[i],t=s+xi;if(Math.abs(s)>=Math.abs(xi)) c+=(s-t)+xi; else c+=(xi-t)+s;s=t;} return s+c;}
-  var ARR={};
-  function P1(n){var k='p1#'+n; if(!ARR[k]){var a=new Float64Array(n|0);a.fill(0.1);ARR[k]=a;} return ARR[k];}
-  function LB(n){var k='lb#'+n; if(!ARR[k]){var a=new Float64Array(n|0);for(var i=0;i<a.length;i++) a[i]=(i%2===0?1:-1)/(i+1);ARR[k]=a;} return ARR[k];}
-  function IQ(n){var k='iq#'+n; if(!ARR[k]){var a=new Float64Array(n|0);for(var i=0;i<a.length;i++) a[i]=1/((i+1)*(i+1));ARR[k]=a;} return ARR[k];}
-  return {
-    naiveOfPointOne:    function(n){return sumNaive(P1(n));},
-    naiveOfPointOneErr: function(n){return Math.abs(sumNaive(P1(n))-n*0.1);},
-    kahanOfPointOne:    function(n){return sumKahan(P1(n));},
-    kahanOfPointOneErr: function(n){return Math.abs(sumKahan(P1(n))-n*0.1);},
-    pairwiseOfPointOne:    function(n){return sumPairwise(P1(n));},
-    pairwiseOfPointOneErr: function(n){return Math.abs(sumPairwise(P1(n))-n*0.1);},
-    leibnizSorted: function(n){return sumSortedAbs(LB(n));},
-    basel_fwd: function(n){var a=IQ(n),ex=sumNeumaier(a),s=0;for(var i=0;i<a.length;i++)s+=a[i];return Math.abs(s-ex);},
-    basel_bwd: function(n){var a=IQ(n),ex=sumNeumaier(a),s=0;for(var i=a.length-1;i>=0;i--)s+=a[i];return Math.abs(s-ex);},
-    naiveSlope: function(){
-      var ns=[100,1000,10000,100000],lx=[],ly=[];
-      for(var k=0;k<ns.length;k++){var n=ns[k],ex=n*0.1,rel=Math.abs(sumNaive(P1(n))-ex)/ex; if(rel>0){lx.push(Math.log10(n));ly.push(Math.log10(rel));}}
-      var m=lx.length; if(m<2) return 0;
-      var mx=0,my=0; for(var i=0;i<m;i++){mx+=lx[i];my+=ly[i];} mx/=m; my/=m;
-      var num=0,den=0; for(i=0;i<m;i++){num+=(lx[i]-mx)*(ly[i]-my);den+=(lx[i]-mx)*(lx[i]-mx);}
-      return num/den;
-    },
-    pairwiseMaxRelU: function(){
-      var ns=[100,1000,10000,100000],w=0;
-      for(var k=0;k<ns.length;k++){var n=ns[k],ex=n*0.1,rel=Math.abs(sumPairwise(P1(n))-ex)/ex; if(rel>w) w=rel;}
-      return w/Math.pow(2,-53);
-    },
-    vietaSmall: function(){ var b=1e8,c=1,D=Math.sqrt(b*b-4*c),x1=-(b+D)/2; return c/x1; }
-  };
-})();
-</script>
+<!-- __EVAL__ (эталонные функции автопроверки) — внутри зашифрованного тела -->
 
 <!-- =============================================================== -->
 <!-- Clang runtime + task harness                                     -->
@@ -1295,7 +443,31 @@ function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;',
 // ---- Progress (localStorage) ----
 const PROG_KEY = 'cfd-nm-w01-lab-cpp-progress';
 let PROG = (function(){try{return JSON.parse(localStorage.getItem(PROG_KEY)||'{}');}catch(e){return{};}})();
-function saveProg(){ try{localStorage.setItem(PROG_KEY, JSON.stringify(PROG));}catch(e){} }
+function saveProg(){ try{localStorage.setItem(PROG_KEY, JSON.stringify(PROG));}catch(e){} scheduleRemoteSave(); }
+// ---- Синхронизация с Firestore (lab_progress/{uid}_nm_w01) через CFDLabs ----
+const LAB_CID = 'nm', LAB_ID = 'w01';
+let _rsTimer = null;
+function collectCode(){
+  const code = {};
+  document.querySelectorAll('[data-cpp]').forEach(sh => {
+    const id = sh.getAttribute('data-cpp');
+    const v = localStorage.getItem('cfd-nm-w01-lab-cpp:' + id);
+    if (v != null) code[id] = v;
+  });
+  return code;
+}
+function remoteSaveNow(){
+  if (!window.__labUser || !window.CFDLabs) return;
+  const done = Object.values(PROG).filter(v => v === 'ok').length;
+  return CFDLabs.saveProgress(window.__labUser.uid, LAB_CID, LAB_ID, { tasks: PROG, code: collectCode(), done: done, total: TOTAL });
+}
+function scheduleRemoteSave(){
+  if (!window.__labUser) return;
+  clearTimeout(_rsTimer);
+  _rsTimer = setTimeout(remoteSaveNow, 1500);
+}
+window.__labFlush = function(){ clearTimeout(_rsTimer); return remoteSaveNow(); };
+window.addEventListener('beforeunload', function(){ if (_rsTimer) { clearTimeout(_rsTimer); remoteSaveNow(); } });
 const TOTAL = 18;
 delete PROG.q82; // задача 8.2 удалена
 function updateProgUI(){
@@ -1323,6 +495,7 @@ function closeTo(got, want, rtol, atol){
 }
 
 // ---- Wire up CodeMirror + Run + Verdict ----
+function initTasks(){
 document.querySelectorAll('[data-cpp]').forEach(shell=>{
   const id = shell.getAttribute('data-cpp');
   const ta = shell.querySelector('[data-code]');
@@ -1352,7 +525,7 @@ document.querySelectorAll('[data-cpp]').forEach(shell=>{
   // Restore saved code
   const savedCode = localStorage.getItem('cfd-nm-w01-lab-cpp:'+id);
   if (savedCode) cm.setValue(savedCode);
-  cm.on('change', () => localStorage.setItem('cfd-nm-w01-lab-cpp:'+id, cm.getValue()));
+  cm.on('change', () => { localStorage.setItem('cfd-nm-w01-lab-cpp:'+id, cm.getValue()); scheduleRemoteSave(); });
 
   // Restore verdict
   if (verdictEl && PROG[id]==='ok'){
@@ -1448,9 +621,42 @@ document.querySelectorAll('[data-mcq]').forEach(box=>{
     saveProg(); updateProgUI();
   });
 });
+} // initTasks
 
-// Kick off runtime load in background so first task click is faster
-setTimeout(ensureRuntime, 800);
+// Вызывается из CFDLabs.mountLab после расшифровки и вставки заданий.
+// remote — документ lab_progress пользователя (или null), user — firebase user.
+window.__labInit = function(remote, user){
+  window.__labUser = user || null;
+  if (remote) {
+    if (remote.tasks && typeof remote.tasks === 'object') {
+      PROG = Object.assign({}, remote.tasks);
+      try { localStorage.setItem(PROG_KEY, JSON.stringify(PROG)); } catch(e) {}
+    }
+    if (remote.code && typeof remote.code === 'object') {
+      for (const k in remote.code) { try { localStorage.setItem('cfd-nm-w01-lab-cpp:' + k, remote.code[k]); } catch(e) {} }
+    }
+  }
+  initTasks();
+  updateProgUI();
+  // Kick off runtime load in background so first task click is faster
+  setTimeout(ensureRuntime, 800);
+};
+</script>
+
+<script src="../js/labs.js"></script>
+<script>
+(function(){
+  function go(){
+    if (!window.CFDLabs || !window.__labInit) { setTimeout(go, 100); return; }
+    CFDLabs.mountLab({
+      cid: 'nm', lab: 'w01', encUrl: 'w01-lab.enc.json',
+      mount: document.getElementById('lab-body'),
+      onReady: function(remote, user){ window.__labInit(remote, user); },
+      onClosed: function(){ if (window.__labFlush) window.__labFlush(); window.__labUser = null; },
+    });
+  }
+  go();
+})();
 </script>
 </body>
 </html>

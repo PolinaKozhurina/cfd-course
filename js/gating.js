@@ -173,12 +173,17 @@
   // enrollment / releasedAt). Ставим маркер на <html> моментально —
   // после проверки либо снимаем его (доступ есть), либо показываем
   // блокер (тогда маркер уже стоит и контент так и не мелькнёт).
+  // Закрытые лабораторные (<html data-lab="wNN">) сами управляют доступом
+  // через js/labs.js: задания зашифрованы, ключ выдаётся по сеансу.
+  function isLabPage() { return document.documentElement.hasAttribute("data-lab"); }
+
   function preHideLectureIfNeeded() {
     const adminOnly = isAdminOnlyPage();
     const cid = pageCid();
     const lec = pageLecId();
     if (!adminOnly) {
       if (!cid) return false;
+      if (isLabPage()) return false;
       if (lec === "index") return false;
       if (/^([a-z]+\-)?reference$/i.test(lec)) return false;
       if (/^practice$/i.test(lec)) return false;
@@ -209,6 +214,7 @@
     const cid = pageCid();
     const lec = pageLecId();
     if (!cid) return; // не лекция
+    if (isLabPage()) return; // закрытая лаба — доступ через CFDLabs.mountLab
     if (lec === "index") return; // обзорная страница курса — не блокируем
     if (/^([a-z]+\-)?reference$/i.test(lec)) return;
     if (/^practice$/i.test(lec)) return;
@@ -330,7 +336,7 @@
         const m = hr.match(/([^\/]+)\.html?$/i);
         if (!m) return;
         const lec = m[1];
-        if (/^index$/i.test(lec) || /^([a-z]+\-)?reference$/i.test(lec) || /^practice$/i.test(lec)) return;
+        if (/^index$/i.test(lec) || /^([a-z]+\-)?reference$/i.test(lec) || /^practice$/i.test(lec) || /-lab$/i.test(lec)) return; // закрытые лабы — свой доступ (js/labs.js)
         const h4 = card.querySelector("h4");
         const label = h4 ? (h4.textContent || "").trim() : lec;
         out.push({ lec: lec, href: hr, label: label });
@@ -381,7 +387,7 @@
         const m = href.match(/([^\/]+)\.html?$/i);
         if (!m) return;
         const lec = m[1];
-        if (/^index$/i.test(lec) || /^([a-z]+\-)?reference$/i.test(lec) || /^practice$/i.test(lec)) return;
+        if (/^index$/i.test(lec) || /^([a-z]+\-)?reference$/i.test(lec) || /^practice$/i.test(lec) || /-lab$/i.test(lec)) return; // закрытые лабы — свой доступ (js/labs.js)
         const data = lecMap[lec];
         const releasedAt = data && data.releasedAt || null;
         const isReleased = releasedAt && releasedAt.toMillis() <= Date.now();

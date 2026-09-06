@@ -94,7 +94,7 @@ async function handleUpload(request, env) {
   const base64 = String(body.base64 || "");
   const size = parseInt(body.size || 0, 10) || 0;
   if (!aid || !cid || !base64) return json({ ok: false, error: "missing fields" }, env, 400);
-  if (size > 25 * 1024 * 1024) return json({ ok: false, error: "file > 25MB" }, env, 400);
+  if (size > 50 * 1024 * 1024) return json({ ok: false, error: "file > 50MB" }, env, 400);
 
   const claims = await verifyIdToken(idToken, env);
   if (!claims.email_verified) return json({ ok: false, error: "email not verified" }, env, 403);
@@ -140,7 +140,7 @@ async function handleUploadCommon(request, env) {
   const size = parseInt(body.size || 0, 10) || 0;
   const subdir = body.subdir ? sanitizeSlug(String(body.subdir)) : "";
   if (!cid || !aid || !base64) return json({ ok: false, error: "missing fields" }, env, 400);
-  if (size > 25 * 1024 * 1024) return json({ ok: false, error: "file > 25MB" }, env, 400);
+  if (size > 50 * 1024 * 1024) return json({ ok: false, error: "file > 50MB" }, env, 400);
 
   const claims = await verifyIdToken(idToken, env);
   if (!authorizeAdminForCourse(claims, cid, env)) {
@@ -204,7 +204,7 @@ async function handleUploadReviewed(request, env) {
   if (!cid || !aid || !targetUid || !base64) {
     return json({ ok: false, error: "missing fields" }, env, 400);
   }
-  if (size > 25 * 1024 * 1024) return json({ ok: false, error: "file > 25MB" }, env, 400);
+  if (size > 50 * 1024 * 1024) return json({ ok: false, error: "file > 50MB" }, env, 400);
 
   const claims = await verifyIdToken(idToken, env);
   if (!authorizeAdminForCourse(claims, cid, env)) {
@@ -246,7 +246,7 @@ async function handleUploadReviewed(request, env) {
 // курса cid. Ответ: тело — application/pdf, заголовок X-File-Name — имя
 // файла (URL-encoded). Ошибки — JSON { ok:false, error }.
 // ============================================================
-const FETCH_LINK_MAX = 25 * 1024 * 1024;
+const FETCH_LINK_MAX = 50 * 1024 * 1024;
 
 async function handleFetchLink(request, env) {
   const body = await request.json();
@@ -271,9 +271,9 @@ async function handleFetchLink(request, env) {
       });
       if (!r.ok) { lastErr = "HTTP " + r.status; continue; }
       const len = parseInt(r.headers.get("content-length") || "0", 10) || 0;
-      if (len > FETCH_LINK_MAX) { lastErr = "файл больше 25 MB"; break; }
+      if (len > FETCH_LINK_MAX) { lastErr = "файл больше 50 MB"; break; }
       const buf = await r.arrayBuffer();
-      if (buf.byteLength > FETCH_LINK_MAX) { lastErr = "файл больше 25 MB"; break; }
+      if (buf.byteLength > FETCH_LINK_MAX) { lastErr = "файл больше 50 MB"; break; }
       const head = new Uint8Array(buf.slice(0, 4));
       const isPdf = head[0] === 0x25 && head[1] === 0x50 && head[2] === 0x44 && head[3] === 0x46; // "%PDF"
       if (!isPdf) {

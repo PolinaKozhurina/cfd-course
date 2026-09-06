@@ -513,6 +513,56 @@ service cloud.firestore {
     // Поля: { courseId, lectureId, releasedAt(Timestamp|null), updatedBy }.
     // Читают все auth (нужно, чтобы UI показывал бейджи «⏳ откроется…»).
     // Пишет курсовой admin по своему курсу или super.
+    // ---------- Закрытые лабораторные (js/labs.js) ----------
+    // lab_sessions/{cid}_{lab}: сеанс — открыт ли, кому (allowedUids).
+    // Читают все вошедшие (страница лабы следит за состоянием), пишет
+    // только admin курса.
+    match /lab_sessions/{docId} {
+      function labCid() { return docId.split('_')[0]; }
+      allow read: if isAuth();
+      allow create, update, delete: if adminCanManageCourse(labCid());
+    }
+
+    // lab_keys/{cid}_{lab}: ключ расшифровки заданий. Читается admin'ом
+    // курса ИЛИ студентом, чей uid в allowedUids ОТКРЫТОГО сеанса. Это
+    // единственная серверная преграда: без ключа шифртекст в репозитории
+    // бесполезен.
+    match /lab_keys/{docId} {
+      function labCid() { return docId.split('_')[0]; }
+      function sessPath() { return /databases/$(database)/documents/lab_sessions/$(docId); }
+      function sessOpenForMe() {
+        return exists(sessPath())
+            && get(sessPath()).data.get('open', false) == true
+            && request.auth.uid in get(sessPath()).data.get('allowedUids', []);
+      }
+      allow read: if isAuth() && (adminCanManageCourse(labCid()) || sessOpenForMe());
+      allow create, update, delete: if adminCanManageCourse(labCid());
+    }
+
+    // lab_progress/{uid}_{cid}_{lab}: отметки и код студента. Пишет только
+    // сам студент в свой документ; читает он же и admin курса (в т.ч.
+    // списком where courseId == cid, labId == lab).
+    match /lab_progress/{docId} {
+      allow read: if isAuth() && (
+                       (resource != null
+                        && (resource.data.get('uid', '') == request.auth.uid
+                            || adminCanManageCourse(resource.data.get('courseId', ''))))
+                    || docId.split('_')[0] == request.auth.uid
+                  );
+      allow create: if isAuth()
+                    && docId.split('_').size() == 3
+                    && docId.split('_')[0] == request.auth.uid
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.courseId == docId.split('_')[1]
+                    && request.resource.data.labId == docId.split('_')[2];
+      allow update: if isAuth()
+                    && resource.data.uid == request.auth.uid
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.courseId == resource.data.courseId
+                    && request.resource.data.labId == resource.data.labId;
+      allow delete: if adminCanManageCourse(resource.data.get('courseId', ''));
+    }
+
     match /lectures/{docId} {
       function lecCid() { return docId.split('_')[0]; }
       allow read: if isAuth();

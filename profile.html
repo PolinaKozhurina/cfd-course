@@ -120,6 +120,12 @@ td{padding:5px 10px;border:1px solid var(--border)}
     <div id="myAttendanceList" style="display:flex;flex-direction:column;gap:.4rem"></div>
   </div>
 
+  <div class="card" id="myLabsCard">
+    <h2 style="margin-top:1.5rem">Мои лабы</h2>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:.6rem">Лабораторные открываются преподавателем на занятии для присутствующих. Прогресс — отметки и код — сохраняется автоматически и не теряется при закрытии.</p>
+    <div id="myLabsList" style="display:flex;flex-direction:column;gap:.4rem"></div>
+  </div>
+
   <div id="myHomeworkCard">
     <h2 style="margin-top:1.5rem">Домашние задания</h2>
     <p style="font-size:.82rem;color:var(--text2);margin-bottom:.6rem">По каждому вашему курсу — актуальные ДЗ, срок сдачи, файлы решения, оценки и комментарии преподавателя. Перед сдачей — ознакомьтесь с <a href="policy.html" style="color:var(--accent)">правилами курса</a> (в частности с политикой по генеративным моделям).</p>
@@ -207,6 +213,7 @@ td{padding:5px 10px;border:1px solid var(--border)}
 <script src="js/workgroups.js"></script>
 <script src="js/homework.js"></script>
 <script src="js/attendance.js"></script>
+<script src="js/labs.js"></script>
 <style>
 .mycourse-row{display:flex;align-items:center;gap:.6rem;padding:.5rem .7rem;border:1px solid var(--border);border-radius:6px;background:var(--bg2)}
 .mycourse-row .name{flex:1;font-family:'Playfair Display',serif;font-weight:700;font-size:.95rem;color:var(--text)}
@@ -572,7 +579,7 @@ td{padding:5px 10px;border:1px solid var(--border)}
           ? '<div style="margin-top:.5rem;padding:.5rem .7rem;background:var(--bg2);border-radius:5px">'
             + (typeof WORKER_URL !== 'undefined' && WORKER_URL
                 ? '<div style="margin-bottom:.5rem">'
-                  + '<div style="font-size:.78rem;color:var(--text2);margin-bottom:.3rem">📎 Загрузить файлы (до 25 MB на файл):</div>'
+                  + '<div style="font-size:.78rem;color:var(--text2);margin-bottom:.3rem">📎 Загрузить файлы (до 50 MB на файл):</div>'
                   + '<div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">'
                   + '<input type="file" data-hw-files multiple>'
                   + '<button class="btn btn-primary" data-hw-upload>Загрузить</button>'
@@ -750,12 +757,54 @@ td{padding:5px 10px;border:1px solid var(--border)}
   }
   window._renderMyAttendance = renderMyAttendance;
 
+  async function renderMyLabs() {
+    const wrap = document.getElementById('myLabsList');
+    if (!wrap || !window.CFDLabs) return;
+    const user = firebase.auth().currentUser;
+    if (!user) { wrap.innerHTML = '<div style="color:var(--text3);font-size:.85rem">войдите, чтобы увидеть лабы</div>'; return; }
+    wrap.innerHTML = '<div style="color:var(--text3);font-size:.85rem">загрузка…</div>';
+    const enrSnap = await firebase.firestore().collection('enrollments')
+      .where('uid', '==', user.uid).where('status', '==', 'approved').get().catch(() => null);
+    const cids = []; if (enrSnap) enrSnap.forEach(d => cids.push(d.data().courseId));
+    const labs = [];
+    cids.forEach(cid => CFDLabs.labsOf(cid).forEach(l => labs.push({ cid: cid, lab: l })));
+    if (!labs.length) { wrap.innerHTML = '<div style="color:var(--text3);font-size:.85rem;font-style:italic">По вашим курсам закрытых лабораторных пока нет.</div>'; return; }
+    const progList = await CFDLabs.listMyProgress(user.uid);
+    const prog = {}; progList.forEach(x => { prog[x.courseId + '_' + x.labId] = x; });
+    const rows = [];
+    for (const it of labs) {
+      const c = (window.CFD_COURSE_BY_ID || {})[it.cid] || { name: it.cid };
+      const sess = await CFDLabs.getSession(it.cid, it.lab.id);
+      const openForMe = !!(sess && sess.open && (sess.allowedUids || []).indexOf(user.uid) !== -1);
+      const p = prog[it.cid + '_' + it.lab.id];
+      const done = p ? (p.done || 0) : 0, total = (p && p.total) || it.lab.total || 0;
+      const pct = total ? Math.round(100 * done / total) : 0;
+      const color = pct >= 89 ? '#3d6b5a' : (pct > 0 ? '#3a5ba0' : '#9a8d7e');
+      const upd = p && p.updatedAt ? new Date(p.updatedAt.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) + ' МСК' : 'ещё не начата';
+      const action = openForMe
+        ? '<a href="' + it.lab.href + '" style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;padding:.3rem .7rem;border-radius:5px;background:#1a6b5a;color:#fff;text-decoration:none;white-space:nowrap">▶ открыта — перейти</a>'
+        : '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.68rem;color:var(--text3);white-space:nowrap">🔒 откроется на занятии</span>';
+      rows.push('<div style="display:grid;grid-template-columns:1fr auto;gap:.6rem;align-items:center;padding:.4rem .6rem;background:var(--bg2);border-radius:5px">'
+        + '<div>'
+          + '<div style="font-family:\'Playfair Display\',serif;font-size:.95rem;color:var(--text)">' + hwEsc(it.lab.title) + '</div>'
+          + '<div style="font-size:.72rem;color:var(--text3);margin-bottom:.2rem">' + hwEsc(c.name) + ' · последнее сохранение: ' + upd + '</div>'
+          + '<div style="display:flex;align-items:center;gap:.5rem"><div style="flex:1;height:6px;background:#e6dfd0;border-radius:3px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:' + color + '"></div></div>'
+          + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;font-weight:700;color:' + color + '">' + done + '/' + total + '</span></div>'
+        + '</div>'
+        + '<div>' + action + '</div>'
+        + '</div>');
+    }
+    wrap.innerHTML = rows.join('');
+  }
+  window._renderMyLabs = renderMyLabs;
+
   document.addEventListener('DOMContentLoaded', function(){
     firebase.auth().onAuthStateChanged(function(){
       renderMyCourses();
       renderMyWorkGroups();
       renderMyHomework();
       renderMyAttendance();
+      renderMyLabs();
     });
   });
 })();

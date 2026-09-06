@@ -156,6 +156,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
   <button class="tab" onclick="showTab('workgroups')">Рабочие группы</button>
   <button class="tab" onclick="showTab('homework');renderHomeworkTab()">ДЗ</button>
   <button class="tab" onclick="showTab('attendance');renderAttendanceTab()">Посещаемость</button>
+  <button class="tab" onclick="showTab('labs');renderLabsTab()">Лабы</button>
   <button class="tab" onclick="showTab('gating');renderGatingTab()">Гейтинг лекций</button>
   <!-- Скрыто: относилось к одному конкретному курсу, пока не нужно.
        При необходимости вернуть — раскомментировать. -->
@@ -332,7 +333,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
         <label style="display:inline-flex;align-items:center;gap:.3rem;cursor:pointer"><input type="radio" name="hwMode" value="personal" onchange="hwToggleMode()"> Personal (варианты)</label>
       </div>
       <div id="hwCommonBlock">
-        <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2);display:block;margin-top:.3rem">Файлы условия (общие, до 25 MB каждый)</label>
+        <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2);display:block;margin-top:.3rem">Файлы условия (общие, до 50 MB каждый)</label>
         <input type="file" id="hwFormCommonFiles" multiple>
       </div>
       <div id="hwPersonalBlock" style="display:none">
@@ -399,6 +400,19 @@ if (location.search.indexOf('embedded=1') !== -1) {
     <button class="btn btn-primary" onclick="attOpenNewForm()">+ Новое занятие</button>
   </div>
   <div id="attList" style="border-top:1px solid var(--border);padding-top:.6rem"></div>
+</div>
+
+<div id="tab-labs" class="panel">
+  <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:.7rem">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3)">Курс:</label>
+    <select id="labCourse" onchange="labsFillLabs();renderLabsTab()" style="font-family:'JetBrains Mono',monospace;font-size:.85rem"></select>
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);margin-left:.4rem">Лаба:</label>
+    <select id="labId" onchange="renderLabsTab()" style="font-family:'JetBrains Mono',monospace;font-size:.85rem"></select>
+  </div>
+  <p style="font-size:.8rem;color:var(--text2);margin:0 0 .8rem">Задания лабы зашифрованы; студент получает ключ, только когда сеанс открыт и его uid в списке допущенных. Отметьте присутствующих на вкладке «Посещаемость», затем нажмите «Открыть для отмеченных». Кнопка «Закрыть» мгновенно прячет лабу у всех.</p>
+  <div id="labSession" style="border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;margin-bottom:.8rem;background:#fff"></div>
+  <div id="labKeyBox" style="border:1px dashed var(--border);border-radius:8px;padding:.6rem 1rem;margin-bottom:.8rem;font-size:.82rem"></div>
+  <div id="labProgress" style="border-top:1px solid var(--border);padding-top:.6rem"></div>
 </div>
 
 <!-- Модалка «Новое / редактирование занятия» -->
@@ -617,6 +631,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
 <script src="js/enrollments.js"></script>
 <script src="js/homework.js"></script>
 <script src="js/attendance.js"></script>
+<script src="js/labs.js"></script>
 <script src="js/gating.js"></script>
 <!-- Проверялка PDF (пометки маркером): PDF.js + jsPDF + модуль -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1229,6 +1244,7 @@ function _adminOpenInitialTab() {
   if (want === 'checklist'&& typeof loadChecklistProgress === 'function') loadChecklistProgress();
   if (want === 'groups'   && typeof renderGroupResults === 'function')   renderGroupResults();
   if (want === 'attendance' && typeof renderAttendanceTab === 'function') renderAttendanceTab();
+  if (want === 'labs' && typeof renderLabsTab === 'function') renderLabsTab();
 }
 
 // Prefill формы новой домашки из URL: ?tab=homework&hwPrefill=<base64(JSON)>.
@@ -4289,6 +4305,135 @@ async function gateSchedApply() {
     document.getElementById('gateSchedWrap').style.display = 'none';
     renderGatingTab(true);
   }, 700);
+}
+
+// ============================================================
+// Закрытые лабораторные (labs)
+// ============================================================
+
+let _labWatchUnsub = null;
+let _labSess = null;
+
+function labsFillLabs() {
+  const cid = document.getElementById('labCourse').value;
+  const sel = document.getElementById('labId');
+  const prev = sel.value;
+  const labs = (window.CFDLabs ? CFDLabs.labsOf(cid) : []);
+  sel.innerHTML = labs.map(l => '<option value="' + l.id + '">' + escapeHtml(l.title) + '</option>').join('');
+  if (prev && labs.some(l => l.id === prev)) sel.value = prev;
+}
+
+async function renderLabsTab() {
+  const selC = document.getElementById('labCourse');
+  if (selC && selC.options.length === 0) {
+    (window.CFD_COURSES || []).filter(c => (window.CFD_LABS || {})[c.id] && CFD_LABS[c.id].length).forEach(c => {
+      const o = document.createElement('option'); o.value = c.id; o.textContent = c.name; selC.appendChild(o);
+    });
+    labsFillLabs();
+  }
+  const cid = selC.value, lab = document.getElementById('labId').value;
+  const box = document.getElementById('labSession');
+  if (!cid || !lab) { box.innerHTML = '<div style="color:var(--text3)">Нет закрытых лаб в реестре (js/courses.js → CFD_LABS).</div>'; return; }
+  box.innerHTML = '<div style="color:var(--text3)">загрузка…</div>';
+  if (_labWatchUnsub) { _labWatchUnsub(); _labWatchUnsub = null; }
+  const attList = await CFDAttendance.listByCourse(cid);
+  attList.sort((x, y) => ((y.date && y.date.toMillis()) || 0) - ((x.date && x.date.toMillis()) || 0));
+  _labWatchUnsub = CFDLabs.watchSession(cid, lab, sess => { _labSess = sess; labsRenderSession(cid, lab, sess, attList); labsRenderProgress(cid, lab, sess); });
+  labsRenderKey(cid, lab);
+}
+
+function labsRenderSession(cid, lab, sess, attList) {
+  const box = document.getElementById('labSession');
+  const open = !!(sess && sess.open);
+  const allowed = (sess && Array.isArray(sess.allowedUids)) ? sess.allowedUids : [];
+  const when = (ts) => ts ? new Date(ts.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) : '';
+  const status = open
+    ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;background:#e8f4f0;color:#1a6b5a;padding:.2rem .6rem;border-radius:4px">● ОТКРЫТА</span> <span style="font-size:.8rem;color:var(--text2)">допущено ' + allowed.length + (sess.openedAt ? ' · с ' + when(sess.openedAt) + ' МСК' : '') + (sess.title ? ' · ' + escapeHtml(sess.title) : '') + '</span>'
+    : '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;background:#fde8e8;color:#c44;padding:.2rem .6rem;border-radius:4px">○ ЗАКРЫТА</span>' + (sess && sess.closedAt ? ' <span style="font-size:.8rem;color:var(--text3)">закрыта ' + when(sess.closedAt) + ' МСК</span>' : '');
+  const opts = attList.map(a => {
+    const d = a.date ? new Date(a.date.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) : '—';
+    const p = CFDAttendance.percentFromRecords(a.records || {});
+    return '<option value="' + a.id + '"' + (sess && sess.attendanceId === a.id ? ' selected' : '') + '>' + d + ' · ' + escapeHtml(a.studyGroup || '') + (a.title ? ' · ' + escapeHtml(a.title) : '') + ' · присутствует ' + p.present + '</option>';
+  }).join('');
+  box.innerHTML =
+    '<div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;margin-bottom:.6rem">' + status + '</div>'
+    + '<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">'
+    + '<label style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3)">Занятие:</label>'
+    + '<select id="labAtt" style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;max-width:420px">' + (opts || '<option value="">— нет занятий по курсу —</option>') + '</select>'
+    + '<button class="btn btn-primary" onclick="labsOpenForPresent()">▶ Открыть для отмеченных</button>'
+    + '<button class="btn" onclick="labsClose()" ' + (open ? '' : 'disabled') + '>■ Закрыть</button>'
+    + '<span id="labStatusMsg" style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text3)"></span>'
+    + '</div>';
+}
+
+async function labsOpenForPresent() {
+  const cid = document.getElementById('labCourse').value, lab = document.getElementById('labId').value;
+  const aid = document.getElementById('labAtt').value;
+  const msg = document.getElementById('labStatusMsg');
+  if (!aid) { alert('Сначала создайте занятие и отметьте присутствующих на вкладке «Посещаемость».'); return; }
+  const attList = await CFDAttendance.listByCourse(cid);
+  const a = attList.find(x => x.id === aid);
+  if (!a) { alert('Занятие не найдено'); return; }
+  const present = Object.keys(a.records || {}).filter(uid => a.records[uid] === 'present');
+  if (!present.length) { alert('В этом занятии никто не отмечен присутствующим.'); return; }
+  if (!(await CFDLabs.hasKey(cid, lab))) { alert('Сначала задайте ключ шифрования лабы (поле ниже).'); return; }
+  msg.textContent = 'открываем…';
+  const r = await CFDLabs.openSession(cid, lab, present, { attendanceId: aid, title: (a.title || '') + ' · ' + (a.studyGroup || '') });
+  msg.textContent = r.ok ? '✓ открыто для ' + present.length + ' студ.' : '✗ ' + r.error;
+}
+
+async function labsClose() {
+  const cid = document.getElementById('labCourse').value, lab = document.getElementById('labId').value;
+  if (!confirm('Закрыть лабу для всех? Прогресс студентов сохранён.')) return;
+  const r = await CFDLabs.closeSession(cid, lab);
+  const msg = document.getElementById('labStatusMsg'); if (msg) msg.textContent = r.ok ? '✓ закрыто' : '✗ ' + r.error;
+}
+
+async function labsRenderKey(cid, lab) {
+  const box = document.getElementById('labKeyBox');
+  const has = await CFDLabs.hasKey(cid, lab);
+  box.innerHTML = '<strong>Ключ шифрования:</strong> ' + (has ? '<span style="color:#1a6b5a">задан ✓</span>' : '<span style="color:#c44">не задан — лабу открыть нельзя</span>')
+    + ' <span style="color:var(--text3)">(ключ печатает tools/lab_encrypt.py; хранится в nm/_private/*.key вне репозитория)</span>'
+    + '<div style="display:flex;gap:.4rem;margin-top:.4rem;flex-wrap:wrap">'
+    + '<input id="labKeyInput" type="password" placeholder="base64-ключ, 44 символа" style="flex:1;min-width:260px;font-family:\'JetBrains Mono\',monospace;font-size:.8rem;padding:.3rem .5rem;border:1px solid var(--border);border-radius:4px">'
+    + '<button class="btn btn-sm" onclick="labsSaveKey()">' + (has ? 'Заменить ключ' : 'Сохранить ключ') + '</button>'
+    + '<span id="labKeyMsg" style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text3);align-self:center"></span>'
+    + '</div>';
+}
+
+async function labsSaveKey() {
+  const cid = document.getElementById('labCourse').value, lab = document.getElementById('labId').value;
+  const v = (document.getElementById('labKeyInput').value || '').trim();
+  const msg = document.getElementById('labKeyMsg');
+  if (!/^[A-Za-z0-9+/]{43}=$/.test(v)) { msg.textContent = '✗ это не base64-ключ на 32 байта'; return; }
+  const r = await CFDLabs.setKey(cid, lab, v);
+  msg.textContent = r.ok ? '✓ сохранён' : '✗ ' + r.error;
+  if (r.ok) setTimeout(() => labsRenderKey(cid, lab), 600);
+}
+
+async function labsRenderProgress(cid, lab, sess) {
+  const box = document.getElementById('labProgress');
+  const info = CFDLabs.labInfo(cid, lab);
+  const prog = await CFDLabs.listLabProgress(cid, lab);
+  const allowed = new Set((sess && sess.allowedUids) || []);
+  const uids = new Set([...allowed, ...Object.keys(prog)]);
+  if (!uids.size) { box.innerHTML = '<div style="color:var(--text3);font-style:italic;padding:.5rem">Пока никто не допущен и нет сохранённого прогресса.</div>'; return; }
+  const rows = Array.from(uids).map(uid => {
+    const u = (allUsers || []).find(x => x.uid === uid) || { fio: '', email: uid, studyGroup: '' };
+    const p = prog[uid];
+    const done = p ? (p.done || 0) : 0, total = (p && p.total) || info.total || 0;
+    const upd = p && p.updatedAt ? new Date(p.updatedAt.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) : '—';
+    const pct = total ? Math.round(100 * done / total) : 0;
+    return { fio: u.fio || u.email || uid, sg: u.studyGroup || '', done, total, pct, upd, allowed: allowed.has(uid) };
+  }).sort((x, y) => x.fio.localeCompare(y.fio, 'ru'));
+  box.innerHTML = '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3);margin-bottom:.4rem">ПРОГРЕСС · ' + rows.length + ' студ.</div>'
+    + rows.map(r => '<div style="display:grid;grid-template-columns:1fr 90px 160px 70px 110px;gap:.6rem;align-items:center;padding:.35rem 0;border-bottom:1px dotted var(--border);font-size:.85rem">'
+      + '<div>' + escapeHtml(r.fio) + (r.allowed ? '' : ' <span style="font-size:.7rem;color:var(--text3)">(не в списке)</span>') + '</div>'
+      + '<div style="color:var(--text3);font-size:.75rem">' + escapeHtml(r.sg) + '</div>'
+      + '<div style="height:8px;background:#e6dfd0;border-radius:4px;overflow:hidden"><div style="height:100%;width:' + r.pct + '%;background:' + (r.pct >= 89 ? '#3d6b5a' : '#3a5ba0') + '"></div></div>'
+      + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;text-align:right">' + r.done + '/' + r.total + '</div>'
+      + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3);text-align:right">' + r.upd + '</div>'
+      + '</div>').join('');
 }
 
 // ============================================================

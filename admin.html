@@ -4375,11 +4375,19 @@ function labsRenderSession(cid, lab, sess, attList) {
   const status = open
     ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;background:#e8f4f0;color:#1a6b5a;padding:.2rem .6rem;border-radius:4px">● ОТКРЫТА</span> <span style="font-size:.8rem;color:var(--text2)">допущено ' + allowed.length + (sess.openedAt ? ' · с ' + when(sess.openedAt) + ' МСК' : '') + (sess.title ? ' · ' + escapeHtml(sess.title) : '') + '</span>'
     : '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;background:#fde8e8;color:#c44;padding:.2rem .6rem;border-radius:4px">○ ЗАКРЫТА</span>' + (sess && sess.closedAt ? ' <span style="font-size:.8rem;color:var(--text3)">закрыта ' + when(sess.closedAt) + ' МСК</span>' : '');
+  // По умолчанию — сегодняшнее занятие (по МСК; если несколько — последнее по времени).
+  // Если сегодня занятий нет: у открытого сеанса — его занятие, иначе самое свежее.
+  const mskDay = (ms) => new Date(ms).toLocaleDateString('ru-RU', { timeZone: 'Europe/Moscow' });
+  const today = mskDay(Date.now());
+  const todays = attList.filter(a => a.date && mskDay(a.date.toMillis()) === today); // attList уже от новых к старым
+  const defaultId = todays.length ? todays[0].id : (open && sess.attendanceId ? sess.attendanceId : (attList[0] ? attList[0].id : ''));
   const opts = attList.map(a => {
     const d = a.date ? new Date(a.date.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) : '—';
     const p = CFDAttendance.percentFromRecords(a.records || {});
-    return '<option value="' + a.id + '"' + (sess && sess.attendanceId === a.id ? ' selected' : '') + '>' + d + ' · ' + escapeHtml(a.studyGroup || '') + (a.title ? ' · ' + escapeHtml(a.title) : '') + ' · присутствует ' + p.present + '</option>';
+    const isToday = a.date && mskDay(a.date.toMillis()) === today;
+    return '<option value="' + a.id + '"' + (a.id === defaultId ? ' selected' : '') + '>' + (isToday ? 'сегодня · ' : '') + d + ' · ' + escapeHtml(a.studyGroup || '') + (a.title ? ' · ' + escapeHtml(a.title) : '') + ' · присутствует ' + p.present + '</option>';
   }).join('');
+  const noToday = todays.length ? '' : '<span style="font-size:.78rem;color:#854f0b">Занятия на сегодня нет — </span><button class="btn btn-sm" onclick="labsNewTodayAttendance()">+ создать занятие на сегодня</button>';
   box.innerHTML =
     '<div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;margin-bottom:.6rem">' + status + '</div>'
     + '<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">'
@@ -4388,7 +4396,18 @@ function labsRenderSession(cid, lab, sess, attList) {
     + '<button class="btn btn-primary" onclick="labsOpenForPresent()">▶ Открыть для отмеченных</button>'
     + '<button class="btn" onclick="labsClose()" ' + (open ? '' : 'disabled') + '>■ Закрыть</button>'
     + '<span id="labStatusMsg" style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text3)"></span>'
-    + '</div>';
+    + '</div>'
+    + (noToday ? '<div style="margin-top:.5rem;display:flex;gap:.5rem;align-items:center">' + noToday + '</div>' : '');
+}
+
+// Перейти на вкладку «Посещаемость» и открыть форму нового занятия с текущим курсом.
+async function labsNewTodayAttendance() {
+  const cid = document.getElementById('labCourse').value;
+  showTab('attendance');
+  await renderAttendanceTab();
+  const selC = document.getElementById('attCourse');
+  if (selC && Array.from(selC.options).some(o => o.value === cid)) { selC.value = cid; await renderAttendanceTab(); }
+  await attOpenNewForm();
 }
 
 async function labsOpenForPresent() {

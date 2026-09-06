@@ -62,13 +62,22 @@ describe('users — обновление', () => {
 });
 
 describe('users — удаление', () => {
-  it('только super может удалить', async () => {
-    await seed(async db => { await db.collection('users').doc('gone').set({ fio: 'G' }); });
+  // Правило (с 2026-09-01, клиентское удаление студента без Admin SDK):
+  // super удаляет кого угодно; курсовой admin — только студентов (не admin);
+  // студент — никого.
+  it('студент не удаляет; admin удаляет студента, но не другого admin; super — любого', async () => {
+    await seed(async db => {
+      await db.collection('users').doc('gone').set({ fio: 'G' });
+      await db.collection('users').doc('gone2').set({ fio: 'G2' });
+      await db.collection('users').doc('other-admin').set({ fio: 'A', isAdmin: true, managedCourses: ['sem2'] });
+    });
     const stu = await asStudent('someone-else');
     await assertFails(deleteDoc(doc(stu, 'users', 'gone')));
     const adm = await asAdminNm();
-    await assertFails(deleteDoc(doc(adm, 'users', 'gone')));
+    await assertFails(deleteDoc(doc(adm, 'users', 'other-admin')));
+    await assertSucceeds(deleteDoc(doc(adm, 'users', 'gone')));
     const su = await asSuper();
-    await assertSucceeds(deleteDoc(doc(su, 'users', 'gone')));
+    await assertSucceeds(deleteDoc(doc(su, 'users', 'gone2')));
+    await assertSucceeds(deleteDoc(doc(su, 'users', 'other-admin')));
   });
 });

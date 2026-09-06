@@ -535,7 +535,17 @@ service cloud.firestore {
             && get(sessPath()).data.get('open', false) == true
             && request.auth.uid in get(sessPath()).data.get('allowedUids', []);
       }
-      allow read: if isAuth() && (adminCanManageCourse(labCid()) || sessOpenForMe());
+      // Следующая лаба — только после зачёта по предыдущей: сеанс несёт
+      // prevLabId/prevPass, а done берётся из lab_progress студента.
+      function prevPath() {
+        return /databases/$(database)/documents/lab_progress/$(request.auth.uid + '_' + labCid() + '_' + get(sessPath()).data.get('prevLabId', ''));
+      }
+      function prevPassed() {
+        return get(sessPath()).data.get('prevLabId', null) == null
+            || get(sessPath()).data.get('prevPass', 0) == 0
+            || (exists(prevPath()) && get(prevPath()).data.get('done', 0) >= get(sessPath()).data.get('prevPass', 0));
+      }
+      allow read: if isAuth() && (adminCanManageCourse(labCid()) || (sessOpenForMe() && prevPassed()));
       allow create, update, delete: if adminCanManageCourse(labCid());
     }
 

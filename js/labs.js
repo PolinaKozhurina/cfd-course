@@ -52,6 +52,15 @@
   const API = {
     labsOf: function (cid) { return ((window.CFD_LABS || {})[cid]) || []; },
     labInfo: function (cid, lab) { return API.labsOf(cid).find(l => l.id === lab) || { id: lab, title: lab, href: "" }; },
+    // Предыдущая лаба по реестру (или null): следующая открывается только после зачёта по ней.
+    prevLab: function (cid, lab) {
+      const labs = API.labsOf(cid); const i = labs.findIndex(l => l.id === lab);
+      return i > 0 ? labs[i - 1] : null;
+    },
+    passed: function (progress, labInfo) {
+      const need = (labInfo && labInfo.pass) || 0;
+      return !need || ((progress && progress.done) || 0) >= need;
+    },
 
     // ---- сеансы ----
     getSession: async function (cid, lab) {
@@ -66,9 +75,11 @@
     openSession: async function (cid, lab, allowedUids, extra) {
       const me = auth.currentUser; if (!me) return { ok: false, error: "Не авторизован" };
       try {
+        const prev = API.prevLab(cid, lab);
         await db.collection("lab_sessions").doc(sid(cid, lab)).set(Object.assign({
           courseId: cid, labId: lab, open: true,
           allowedUids: Array.from(new Set(allowedUids || [])),
+          prevLabId: prev ? prev.id : null, prevPass: prev ? (prev.pass || 0) : 0,
           openedAt: nowTs(), openedBy: me.email, closedAt: null, updatedAt: nowTs(),
         }, extra || {}), { merge: true });
         return { ok: true };
@@ -79,11 +90,15 @@
       const me = auth.currentUser; if (!me) return { ok: false, error: "Не авторизован" };
       try {
         const batch = db.batch();
-        labIds.forEach(lab => batch.set(db.collection("lab_sessions").doc(sid(cid, lab)), Object.assign({
-          courseId: cid, labId: lab, open: true,
-          allowedUids: Array.from(new Set(allowedUids || [])),
-          openedAt: nowTs(), openedBy: me.email, closedAt: null, updatedAt: nowTs(),
-        }, extra || {}), { merge: true }));
+        labIds.forEach(lab => {
+          const prev = API.prevLab(cid, lab);
+          batch.set(db.collection("lab_sessions").doc(sid(cid, lab)), Object.assign({
+            courseId: cid, labId: lab, open: true,
+            allowedUids: Array.from(new Set(allowedUids || [])),
+            prevLabId: prev ? prev.id : null, prevPass: prev ? (prev.pass || 0) : 0,
+            openedAt: nowTs(), openedBy: me.email, closedAt: null, updatedAt: nowTs(),
+          }, extra || {}), { merge: true });
+        });
         await batch.commit();
         return { ok: true, n: labIds.length };
       } catch (e) { return { ok: false, error: e.message }; }
@@ -198,6 +213,19 @@
 
       let mounted = false, unsub = null;
       const tryOpen = async () => {
+        // Следующая лаба открывается только после зачёта по предыдущей.
+        const prev = API.prevLab(opts.cid, opts.lab);
+        if (prev && prev.pass) {
+          const pp = await API.loadProgress(user.uid, opts.cid, prev.id);
+          if (!API.passed(pp, prev)) {
+            let isAdmin = false;
+            try { const u = await db.collection("users").doc(user.uid).get(); isAdmin = !!(u.exists && u.data().isAdmin); } catch (e) {}
+            if (!isAdmin) {
+              showMsg("🔒 Сначала предыдущая лаба", "Эта лаба откроется после зачёта по «" + prev.title + "»: сделано " + ((pp && pp.done) || 0) + " из " + (prev.total || "?") + ", нужно " + prev.pass + ". <a href=\"" + prev.id + "-lab.html\" style=\"color:#b44a2d\">Перейти к ней →</a>");
+              return;
+            }
+          }
+        }
         let keyB64 = null;
         try { keyB64 = await API.getKey(opts.cid, opts.lab); }
         catch (e) { keyB64 = null; }

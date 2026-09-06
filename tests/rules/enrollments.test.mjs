@@ -1,6 +1,6 @@
 // Сценарий: студент подаёт заявку на курс, admin курса аппрувит/реджектит.
 import { describe, it, beforeAll, beforeEach, afterAll } from 'vitest';
-import { doc, setDoc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import {
   getEnv, clear, cleanup, seed, asSuper, asAdminNm, asAdminSem2, asStudent,
   assertSucceeds, assertFails,
@@ -105,5 +105,52 @@ describe('enrollments — удаление', () => {
     const db = await asStudent('s7');
     await assertSucceeds(deleteDoc(doc(db, 'enrollments', 's7_nm')));
     await assertFails(deleteDoc(doc(db, 'enrollments', 's7_sem2')));
+  });
+});
+
+describe('enrollments — чтение списка (админка, профиль)', () => {
+  beforeEach(async () => {
+    await seed(async db => {
+      await db.collection('enrollments').doc('s8_nm').set({
+        uid: 's8', courseId: 'nm', status: 'approved', requestedAt: new Date(),
+      });
+      await db.collection('enrollments').doc('s8_sem2').set({
+        uid: 's8', courseId: 'sem2', status: 'pending', requestedAt: new Date(),
+      });
+      await db.collection('enrollments').doc('s9_nm').set({
+        uid: 's9', courseId: 'nm', status: 'pending', requestedAt: new Date(),
+      });
+    });
+  });
+
+  it('курсовой admin[nm] читает список where courseId in [nm] (админка)', async () => {
+    const db = await asAdminNm();
+    const snap = await assertSucceeds(getDocs(query(collection(db, 'enrollments'), where('courseId', 'in', ['nm']))));
+    if (snap.size !== 2) throw new Error('ожидалось 2 записи nm, получено ' + snap.size);
+  });
+
+  it('курсовой admin[nm] НЕ читает список чужого курса и список без фильтра', async () => {
+    const db = await asAdminNm();
+    await assertFails(getDocs(query(collection(db, 'enrollments'), where('courseId', 'in', ['sem2']))));
+    await assertFails(getDocs(collection(db, 'enrollments')));
+  });
+
+  it('студент читает свои записи where uid == me, чужие — нет', async () => {
+    const db = await asStudent('s8');
+    const snap = await assertSucceeds(getDocs(query(collection(db, 'enrollments'), where('uid', '==', 's8'))));
+    if (snap.size !== 2) throw new Error('ожидалось 2 своих записи, получено ' + snap.size);
+    await assertFails(getDocs(query(collection(db, 'enrollments'), where('uid', '==', 's9'))));
+  });
+
+  it('get() несуществующей своей записи не падает с permission-denied', async () => {
+    const db = await asStudent('s8');
+    const d = await assertSucceeds(getDoc(doc(db, 'enrollments', 's8_sph')));
+    if (d.exists()) throw new Error('документ не должен существовать');
+  });
+
+  it('super читает всё без фильтра', async () => {
+    const db = await asSuper();
+    const snap = await assertSucceeds(getDocs(collection(db, 'enrollments')));
+    if (snap.size !== 3) throw new Error('ожидалось 3 записи, получено ' + snap.size);
   });
 });

@@ -369,8 +369,17 @@ service cloud.firestore {
       function enrollCourseId() { return docId.split('_')[1]; }
       function isOwnEnroll()    { return isAuth() && request.auth.uid == enrollUid(); }
 
+      // Чтение. Проверки по ПОЛЯМ документа идут первыми: для запросов
+      // списка (where uid == me / where courseId in [...]) движок правил
+      // может доказать только условия на resource.data, а docId в запросе
+      // не ограничен — условия на него для списка недоказуемы, и весь
+      // запрос отклонялся. Guard resource != null нужен для get()
+      // несуществующего документа.
       allow read: if isAuth() && (
-                       isOwnEnroll()
+                       (resource != null
+                        && (resource.data.get('uid', '') == request.auth.uid
+                            || adminCanManageCourse(resource.data.get('courseId', ''))))
+                    || isOwnEnroll()
                     || adminCanManageCourse(enrollCourseId())
                   );
 

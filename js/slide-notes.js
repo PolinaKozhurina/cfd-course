@@ -1,9 +1,12 @@
 // ============================================================
 // slide-notes.js — заметки докладчика для слайдов (только admin/superadmin)
 // ------------------------------------------------------------
-// В каждой <section class="slide"> может лежать <aside class="notes" hidden>
-// с вопросами к аудитории. При загрузке все aside вырезаются из DOM и
-// хранятся в памяти; показываются только после authReady с ролью admin.
+// Заметки хранятся ЗАШИФРОВАННЫМИ в <deck>.notes.enc.json (AES-256-GCM,
+// см. tools/notes_encrypt.py); ключ — Firestore notes_keys/{cid}, правила
+// отдают его только admin'у курса. После authReady с ролью admin скрипт
+// читает ключ, расшифровывает заметки в браузере и показывает.
+// Совместимость: если в странице ещё лежат <aside class="notes" hidden>
+// (незашифрованная колода), они вырезаются из DOM и используются как есть.
 //
 // Управление (только для админа):
 //   N (или Т)          — показать/скрыть панель заметок на текущем слайде
@@ -27,6 +30,41 @@
     a.parentNode.removeChild(a);
     return html;
   });
+  var cid = document.documentElement.getAttribute('data-course') || '';
+  var notesLoaded = NOTES.some(function (n) { return n; });
+  var notesError = '';
+
+  function b64ToBytes(b64) {
+    var bin = atob(b64), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  // Загрузить и расшифровать заметки (один раз). Требует admin-роли:
+  // иначе Firestore не отдаст ключ.
+  var notesPromise = null;
+  function loadNotes() {
+    if (notesLoaded) return Promise.resolve();
+    if (notesPromise) return notesPromise;
+    notesPromise = (async function () {
+      try {
+        var encUrl = location.pathname.split('/').pop().replace(/\.html?$/i, '') + '.notes.enc.json';
+        var r = await fetch(encUrl, { cache: 'no-cache' });
+        if (!r.ok) { notesError = 'файл заметок не найден'; return; }
+        var enc = await r.json();
+        var d = await firebase.firestore().collection('notes_keys').doc(cid).get();
+        if (!d.exists || !d.data().key) { notesError = 'ключ заметок не задан в админке (Лабы → ключ заметок)'; return; }
+        var key = await crypto.subtle.importKey('raw', b64ToBytes(d.data().key), { name: 'AES-GCM' }, false, ['decrypt']);
+        var pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBytes(enc.iv) }, key, b64ToBytes(enc.ct));
+        var arr = JSON.parse(new TextDecoder().decode(pt));
+        for (var i = 0; i < slides.length; i++) NOTES[i] = arr[i] || null;
+        notesLoaded = true;
+      } catch (e) {
+        notesError = /permission/i.test(String(e)) ? 'нет доступа к ключу заметок' : ('не удалось расшифровать заметки: ' + (e.message || e));
+      }
+    })();
+    return notesPromise;
+  }
+
   var TITLES = slides.map(function (s) {
     var h = s.querySelector('h1, h2');
     return h ? h.textContent.replace(/\s+/g, ' ').trim() : '';
@@ -101,10 +139,14 @@
 
   function renderNotes(target, i) {
     var h = NOTES[i];
+    var empty = notesLoaded
+      ? '<p class="cfd-notes-empty">Заметок к этому слайду нет.</p>'
+      : (notesError ? '<p class="cfd-notes-empty">' + notesError + '</p>' : '<p class="cfd-notes-empty">…расшифровка заметок</p>');
     target.innerHTML =
       '<div class="cfd-notes-h">Преподавателю <span>слайд ' + (i + 1) + ' / ' + slides.length + ' · N — скрыть</span></div>' +
-      (h || '<p class="cfd-notes-empty">Заметок к этому слайду нет.</p>');
+      (h || empty);
     if (h && window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([target]).catch(function () {});
+    if (!notesLoaded && !notesError) loadNotes().then(function () { if (target.isConnected) renderNotes(target, i); });
   }
   function setVisible(v) {
     visible = !!v;

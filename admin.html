@@ -413,6 +413,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
   <div id="labSession" style="border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;margin-bottom:.8rem;background:#fff"></div>
   <div id="labKeyBox" style="border:1px dashed var(--border);border-radius:8px;padding:.6rem 1rem;margin-bottom:.8rem;font-size:.82rem"></div>
   <div id="labProgress" style="border-top:1px solid var(--border);padding-top:.6rem"></div>
+  <div id="notesKeyBox" style="border:1px dashed var(--border);border-radius:8px;padding:.6rem 1rem;margin-top:1rem;font-size:.82rem"></div>
 </div>
 
 <!-- Модалка «Новое / редактирование занятия» -->
@@ -4340,6 +4341,30 @@ async function renderLabsTab() {
   attList.sort((x, y) => ((y.date && y.date.toMillis()) || 0) - ((x.date && x.date.toMillis()) || 0));
   _labWatchUnsub = CFDLabs.watchSession(cid, lab, sess => { _labSess = sess; labsRenderSession(cid, lab, sess, attList); labsRenderProgress(cid, lab, sess); });
   labsRenderKey(cid, lab);
+  labsRenderNotesKey(cid);
+}
+
+// Ключ заметок докладчика (один на курс): слайды хранят заметки зашифрованными.
+async function labsRenderNotesKey(cid) {
+  const box = document.getElementById('notesKeyBox');
+  const has = await CFDLabs.hasNotesKey(cid);
+  box.innerHTML = '<strong>Ключ заметок докладчика (курс ' + escapeHtml(cid) + '):</strong> ' + (has ? '<span style="color:#1a6b5a">задан ✓</span>' : '<span style="color:#c44">не задан — в режиме докладчика заметок не будет</span>')
+    + ' <span style="color:var(--text3)">(печатает tools/notes_encrypt.py; файл nm/_private/' + escapeHtml(cid) + '-notes.key вне репозитория)</span>'
+    + '<div style="display:flex;gap:.4rem;margin-top:.4rem;flex-wrap:wrap">'
+    + '<input id="notesKeyInput" type="password" placeholder="base64-ключ, 44 символа" style="flex:1;min-width:260px;font-family:\'JetBrains Mono\',monospace;font-size:.8rem;padding:.3rem .5rem;border:1px solid var(--border);border-radius:4px">'
+    + '<button class="btn btn-sm" onclick="labsSaveNotesKey()">' + (has ? 'Заменить' : 'Сохранить') + '</button>'
+    + '<span id="notesKeyMsg" style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text3);align-self:center"></span>'
+    + '</div>';
+}
+
+async function labsSaveNotesKey() {
+  const cid = document.getElementById('labCourse').value;
+  const v = (document.getElementById('notesKeyInput').value || '').trim();
+  const msg = document.getElementById('notesKeyMsg');
+  if (!/^[A-Za-z0-9+/]{43}=$/.test(v)) { msg.textContent = '✗ это не base64-ключ на 32 байта'; return; }
+  const r = await CFDLabs.setNotesKey(cid, v);
+  msg.textContent = r.ok ? '✓ сохранён' : '✗ ' + r.error;
+  if (r.ok) setTimeout(() => labsRenderNotesKey(cid), 600);
 }
 
 function labsRenderSession(cid, lab, sess, attList) {

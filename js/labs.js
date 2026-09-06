@@ -103,6 +103,19 @@
     },
     randomKey: randomKeyB64,
 
+    // ---- ключ заметок докладчика (один на курс; читает/пишет только admin курса) ----
+    hasNotesKey: async function (cid) {
+      try { const d = await db.collection("notes_keys").doc(cid).get(); return d.exists && !!d.data().key; }
+      catch (e) { return false; }
+    },
+    setNotesKey: async function (cid, keyB64) {
+      const me = auth.currentUser; if (!me) return { ok: false, error: "Не авторизован" };
+      try {
+        await db.collection("notes_keys").doc(cid).set({ key: keyB64, updatedAt: nowTs(), updatedBy: me.email }, { merge: true });
+        return { ok: true };
+      } catch (e) { return { ok: false, error: e.message }; }
+    },
+
     // ---- расшифровка тела лабы ----
     decrypt: async function (enc, keyB64) {
       const key = await crypto.subtle.importKey("raw", b64ToBytes(keyB64), { name: "AES-GCM" }, false, ["decrypt"]);

@@ -563,6 +563,12 @@ service cloud.firestore {
       allow delete: if adminCanManageCourse(resource.data.get('courseId', ''));
     }
 
+    // notes_keys/{cid}: ключ расшифровки заметок докладчика в слайдах курса.
+    // Только admin курса (и superadmin).
+    match /notes_keys/{cid} {
+      allow read, create, update, delete: if adminCanManageCourse(cid);
+    }
+
     match /lectures/{docId} {
       function lecCid() { return docId.split('_')[0]; }
       allow read: if isAuth();

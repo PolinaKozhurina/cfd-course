@@ -397,6 +397,34 @@
       } catch (e) { return { ok: false, error: e.message }; }
     },
 
+    // Admin: скачать PDF по ссылке студента (Google Drive / Я.Диск / прямая
+    // ссылка) через воркер — сам браузер не может из-за CORS. Возвращает
+    // { blob, name }. Бросает Error; у ошибки e.code === "no-endpoint", если
+    // воркер ещё не обновлён и /fetch-link у него нет.
+    fetchLinkAsPdf: async function (cid, url) {
+      const me = auth.currentUser;
+      if (!me) throw new Error("Не авторизован");
+      if (typeof WORKER_URL === "undefined" || !WORKER_URL) throw new Error("WORKER_URL не настроен");
+      const token = await me.getIdToken();
+      const resp = await fetch(WORKER_URL + "/fetch-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: token, cid: cid, url: url }),
+      });
+      const ct = resp.headers.get("content-type") || "";
+      if (resp.ok && /application\/pdf/i.test(ct)) {
+        const blob = await resp.blob();
+        let name = resp.headers.get("X-File-Name") || "";
+        try { name = decodeURIComponent(name); } catch (_) {}
+        return { blob: blob, name: name || "submission.pdf" };
+      }
+      let data = {};
+      try { data = await resp.json(); } catch (_) {}
+      const err = new Error(data.error || ("HTTP " + resp.status));
+      if (resp.status === 404 && data.error === "not found") err.code = "no-endpoint";
+      throw err;
+    },
+
     // ==== REVIEWED (проверенные преподавателем файлы) ====
 
     // Admin: загрузить проверенный файл (обычно PDF с пометками маркером)

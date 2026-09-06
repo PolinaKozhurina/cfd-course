@@ -1881,7 +1881,10 @@ async function renderHwSubmissionsTable(aid) {
         + '</div>'
       : '';
     const linksPart = (s && s.links && s.links.length)
-      ? s.links.map(l => '<a href="'+l.url+'" target="_blank" style="color:var(--accent3);margin-right:.4rem;font-size:.78rem" title="'+hwEscape(l.url)+'">🔗 '+hwEscape(l.name || l.url)+'</a>').join('')
+      ? s.links.map((l, li) =>
+          '<a href="'+l.url+'" target="_blank" style="color:var(--accent3);margin-right:.25rem;font-size:.78rem" title="'+hwEscape(l.url)+'">🔗 '+hwEscape(l.name || l.url)+'</a>'
+          + ' <button onclick="hwOpenAnnotatorLink(\''+aid+'\',\''+u.uid+'\','+li+')" title="Проверить: скачать PDF по ссылке, пометки маркером и вернуть студенту" style="background:#fdf9f0;border:1px solid #c8bfa8;color:#5a4a2a;cursor:pointer;padding:1px 5px;margin-right:.4rem;font-size:.72rem;border-radius:3px">✏️ Проверить</button>'
+        ).join('')
       : '';
     const filesHtml = ((filesPart + linksPart) || '<span style="color:var(--text3);font-style:italic;font-size:.78rem">—</span>') + reviewedPart;
     const submittedAt = s && s.updatedAt ? new Date(s.updatedAt.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) : '';
@@ -1991,6 +1994,82 @@ function hwOpenAnnotator(aid, uid, fileIdx) {
       await renderHwSubmissionsTable(aid);
     },
   });
+}
+
+// Проверка сдачи-ссылки (Google Drive / Я.Диск / Dropbox / прямая ссылка).
+// Сначала воркер скачивает PDF по ссылке (/fetch-link), дальше — та же
+// проверялка, что и для загруженных файлов; проверенный PDF уходит студенту
+// в reviewedFiles. Если автоматически не вышло (воркер ещё не обновлён,
+// файл закрыт для всех, по ссылке не PDF) — диалог: открыть ссылку, скачать
+// файл руками и выбрать его с диска.
+async function hwOpenAnnotatorLink(aid, uid, linkIdx) {
+  const a = window._hwCurrentAssignment;
+  const subs = window._hwSubsCache || {};
+  if (!a) return;
+  const s = subs[uid];
+  const link = s && s.links && s.links[linkIdx];
+  if (!link) { alert('Ссылка не найдена'); return; }
+  if (!window.CFDAnnotator || typeof CFDAnnotator.open !== 'function') {
+    alert('Модуль проверки не загружен — обновите страницу');
+    return;
+  }
+  const u = allUsers.find(x => x.uid === uid) || { uid: uid, fio: '', email: '' };
+  const openWith = (blob, name) => CFDAnnotator.open({
+    assignment: { id: aid, courseId: a.courseId, title: a.title || aid },
+    student: { uid: u.uid, fio: u.fio || '', email: u.email || '', studyGroup: u.studyGroup || '' },
+    submission: s,
+    sourceFile: { name: name || 'submission.pdf' },
+    sourceBlob: blob,
+    onDone: async function () {
+      window._hwSubsCache = await CFDHomework.listSubmissions(aid, a.courseId);
+      await renderHwSubmissionsTable(aid);
+    },
+  });
+
+  // 1) автоматически, через воркер
+  const busy = hwLinkDialog('<div style="text-align:center;padding:.4rem 0">⏳ Скачиваем PDF по ссылке…</div>');
+  let autoErr = '';
+  try {
+    const r = await CFDHomework.fetchLinkAsPdf(a.courseId, link.url);
+    busy.close();
+    openWith(r.blob, r.name);
+    return;
+  } catch (e) {
+    busy.close();
+    autoErr = (e && e.code === 'no-endpoint')
+      ? 'воркер ещё не обновлён (нет /fetch-link) — см. worker/README.md'
+      : (e && e.message) || String(e);
+  }
+
+  // 2) вручную: открыть ссылку → скачать → выбрать файл
+  const dlg = hwLinkDialog(
+    '<div style="font-weight:600;margin-bottom:.45rem">Проверка сдачи по ссылке</div>'
+    + '<div style="color:var(--text2);margin-bottom:.7rem;line-height:1.45">Автоматически скачать не получилось: <em>' + hwEscape(autoErr) + '</em></div>'
+    + '<ol style="margin:0 0 .9rem 1.2rem;padding:0;line-height:1.6">'
+    + '<li><a href="' + hwEscape(link.url) + '" target="_blank" style="color:var(--accent3)">Открыть ссылку ↗</a> и скачать файл (нужен PDF).</li>'
+    + '<li>Выбрать скачанный файл: <input type="file" accept="application/pdf,.pdf" data-pick style="font-size:.8rem"></li>'
+    + '</ol>'
+    + '<div style="text-align:right"><button data-cancel style="background:none;border:1px solid var(--border);border-radius:5px;padding:.3rem .8rem;cursor:pointer;font-size:.8rem">Отмена</button></div>'
+  );
+  dlg.el.querySelector('[data-cancel]').onclick = dlg.close;
+  dlg.el.querySelector('[data-pick]').onchange = function () {
+    const f = this.files && this.files[0];
+    if (!f) return;
+    if (!/\.pdf$/i.test(f.name) && !/pdf/i.test(f.type || '')) { alert('Нужен PDF-файл'); this.value = ''; return; }
+    dlg.close();
+    openWith(f, f.name);
+  };
+}
+
+// Маленькая модалка для hwOpenAnnotatorLink. Возвращает { el, close }.
+function hwLinkDialog(innerHtml) {
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9998;display:flex;align-items:center;justify-content:center';
+  el.innerHTML = '<div style="background:var(--bg,#fff);color:var(--text,#222);border:1px solid var(--border,#ccc);border-radius:10px;padding:1.1rem 1.3rem;max-width:32rem;width:92%;font-size:.88rem;box-shadow:0 12px 40px rgba(0,0,0,.25)">' + innerHtml + '</div>';
+  const close = () => { if (el.parentNode) el.parentNode.removeChild(el); };
+  el.addEventListener('click', ev => { if (ev.target === el) close(); });
+  document.body.appendChild(el);
+  return { el: el, close: close };
 }
 
 // Экспорт всех сдач в CSV (ФИО, email, ссылки через ;).

@@ -13,6 +13,8 @@
 //     student:    { uid, fio, email },
 //     submission: { files, ... },
 //     sourceFile: { path, name },   // один из submission.files
+//     sourceBlob: Blob,             // опц.: PDF уже на руках (сдача-ссылка,
+//                                   //   файл с диска) — path не нужен
 //     onDone:     function() {}     // после успешной отправки
 //   });
 //
@@ -80,11 +82,15 @@
     this._buildShell();
     document.body.style.overflow = "hidden";
     try {
-      this._setStatus("Скачивание файла…");
-      var dl = await CFDHomework.downloadFile(this.opts.sourceFile.path);
-      this.pdfBlob = dl.blob;
+      var blob = this.opts.sourceBlob || null;
+      if (!blob) {
+        this._setStatus("Скачивание файла…");
+        var dl = await CFDHomework.downloadFile(this.opts.sourceFile.path);
+        blob = dl.blob;
+      }
+      this.pdfBlob = blob;
       this._setStatus("Рендер PDF…");
-      var buf = await dl.blob.arrayBuffer();
+      var buf = await blob.arrayBuffer();
       var pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
       this.pdf = pdf;
       this.state = newState(pdf.numPages);

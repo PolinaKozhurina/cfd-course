@@ -39,6 +39,9 @@ export default {
       if (url.pathname === "/upload-reviewed" && request.method === "POST") {
         return await handleUploadReviewed(request, env);
       }
+      if (url.pathname === "/fetch-link" && request.method === "POST") {
+        return await handleFetchLink(request, env);
+      }
       if (url.pathname === "/admin-verify-email" && request.method === "POST") {
         return await handleAdminVerifyEmail(request, env);
       }
@@ -231,6 +234,116 @@ async function handleUploadReviewed(request, env) {
     size: size,
     uploadedAt: new Date().toISOString(),
   }, env);
+}
+
+// ============================================================
+// Admin: скачать PDF по ссылке студента (Google Drive / Я.Диск / Dropbox /
+// прямая ссылка) для проверялки.
+// ------------------------------------------------------------
+// POST /fetch-link  { token, cid, url }
+// Браузер не может сам забрать файл с drive.google.com (CORS), поэтому
+// воркер делает это за него и отдаёт байты PDF как есть. Только admin
+// курса cid. Ответ: тело — application/pdf, заголовок X-File-Name — имя
+// файла (URL-encoded). Ошибки — JSON { ok:false, error }.
+// ============================================================
+const FETCH_LINK_MAX = 25 * 1024 * 1024;
+
+async function handleFetchLink(request, env) {
+  const body = await request.json();
+  const idToken = body.token || "";
+  const cid = String(body.cid || "");
+  const link = String(body.url || "").trim();
+  if (!cid || !/^https?:\/\//i.test(link)) {
+    return json({ ok: false, error: "missing fields" }, env, 400);
+  }
+  const claims = await verifyIdToken(idToken, env);
+  if (!authorizeAdminForCourse(claims, cid, env)) {
+    return json({ ok: false, error: "forbidden (not admin of course " + cid + ")" }, env, 403);
+  }
+
+  const candidates = await resolveDirectLinks(link);
+  let lastErr = "";
+  for (const c of candidates) {
+    try {
+      const r = await fetch(c.url, {
+        redirect: "follow",
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; cfd-course-worker)" },
+      });
+      if (!r.ok) { lastErr = "HTTP " + r.status; continue; }
+      const len = parseInt(r.headers.get("content-length") || "0", 10) || 0;
+      if (len > FETCH_LINK_MAX) { lastErr = "файл больше 25 MB"; break; }
+      const buf = await r.arrayBuffer();
+      if (buf.byteLength > FETCH_LINK_MAX) { lastErr = "файл больше 25 MB"; break; }
+      const head = new Uint8Array(buf.slice(0, 4));
+      const isPdf = head[0] === 0x25 && head[1] === 0x50 && head[2] === 0x44 && head[3] === 0x46; // "%PDF"
+      if (!isPdf) {
+        const ct = (r.headers.get("content-type") || "?").split(";")[0];
+        lastErr = /html/i.test(ct)
+          ? "по ссылке отдаётся страница, а не файл (файл закрыт? откройте доступ «всем, у кого есть ссылка»)"
+          : "по ссылке не PDF (" + ct + ")";
+        continue;
+      }
+      const name = fileNameFromResponse(r) || c.name || "submission.pdf";
+      return new Response(buf, {
+        status: 200,
+        headers: Object.assign({
+          "Content-Type": "application/pdf",
+          "Content-Length": String(buf.byteLength),
+          "X-File-Name": encodeURIComponent(name),
+          "Access-Control-Expose-Headers": "X-File-Name",
+        }, corsHeaders(env)),
+      });
+    } catch (e) { lastErr = e.message || String(e); }
+  }
+  return json({ ok: false, error: lastErr || "не удалось скачать" }, env, 502);
+}
+
+// Ссылка «для людей» → список кандидатов на прямое скачивание.
+async function resolveDirectLinks(link) {
+  let u;
+  try { u = new URL(link); } catch (_) { return [{ url: link }]; }
+  const host = u.hostname.toLowerCase();
+  let m;
+  if (host === "drive.google.com" || host === "docs.google.com") {
+    // Google Docs / Slides / Sheets — экспорт в PDF.
+    m = u.pathname.match(/^\/(document|presentation|spreadsheets)\/d\/([\w-]+)/);
+    if (m) {
+      return [{ url: "https://docs.google.com/" + m[1] + "/d/" + m[2] + "/export?format=pdf",
+                name: m[1] + "_" + m[2].slice(0, 8) + ".pdf" }];
+    }
+    // Обычный файл на Диске: /file/d/ID/view, /open?id=ID, /uc?id=ID.
+    let id = null;
+    m = u.pathname.match(/\/file\/d\/([\w-]+)/);
+    if (m) id = m[1];
+    if (!id) id = u.searchParams.get("id");
+    if (id) {
+      return [
+        { url: "https://drive.google.com/uc?export=download&id=" + id },
+        // Для больших файлов Диск показывает страницу «проверка на вирусы»; этот хост её обходит.
+        { url: "https://drive.usercontent.google.com/download?id=" + id + "&export=download&confirm=t" },
+      ];
+    }
+  }
+  if (/(^|\.)disk\.yandex\.(ru|com|by|kz)$/.test(host) || host === "yadi.sk") {
+    try {
+      const r = await fetch("https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key=" + encodeURIComponent(link));
+      const d = await r.json();
+      if (d && d.href) return [{ url: d.href }];
+    } catch (_) {}
+  }
+  if (/(^|\.)dropbox\.com$/.test(host)) {
+    u.searchParams.set("dl", "1");
+    return [{ url: u.toString() }];
+  }
+  return [{ url: link }];
+}
+
+function fileNameFromResponse(r) {
+  const cd = r.headers.get("content-disposition") || "";
+  let m = cd.match(/filename\*=UTF-8''([^;]+)/i);
+  if (m) { try { return decodeURIComponent(m[1]); } catch (_) {} }
+  m = cd.match(/filename="?([^";]+)"?/i);
+  return m ? m[1] : null;
 }
 
 // ============================================================

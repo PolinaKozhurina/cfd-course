@@ -168,7 +168,42 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <div class="course">Численные методы</div>
   <div class="badge">Занятие 1 · Блок I. Основы вычислений</div>
   <h1>Машинная арифметика и <span class="u">анализ ошибок</span></h1>
-  <div class="sub">IEEE 754 · машинное ε · обусловленность vs устойчивость</div>
+  <div class="sub">моделирование · IEEE 754 · машинное ε · обусловленность vs устойчивость</div>
+</section>
+
+<!-- 1a: Математическое моделирование -->
+<section class="slide">
+  <div class="slide-num">§1.0 · Введение</div>
+  <h2>Откуда берутся задачи: математическое моделирование</h2>
+  <p style="font-size:.94em">Инженеру нужно <em>число</em> — температура лопатки, прогиб балки, подъёмная сила. Прямой эксперимент невозможен, опасен или дорог. Обходной путь: заменить объект математической моделью и получить число из неё.</p>
+  <div class="two-col">
+    <div class="definition" data-num="1">
+      <em style="color:inherit;font-weight:600">математическая модель.</em> Описание объекта на языке математики — уравнения, неравенства, функционалы — вместе с входными данными, искомыми величинами и <em>допущениями</em>, при которых описание адекватно объекту.
+    </div>
+    <div class="example">
+      <span class="lbl">Пример: остывание стержня</span>
+      <ul>
+        <li><em>явление:</em> стержень, один конец в печи; нужна \(T\) на другом конце через час;</li>
+        <li><em>модель:</em> \(u_t = a\,u_{xx}\), \(a\) из справочника, боковой теплообмен отброшен;</li>
+        <li><em>метод:</em> сетка, разности, на каждом шаге трёхдиагональная СЛАУ;</li>
+        <li><em>анализ:</em> сгустить сетку, сравнить с термопарой.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 1b: Этапы вычислительного эксперимента -->
+<section class="slide">
+  <div class="slide-num">§1.0 · Введение</div>
+  <h2>Вычислительный эксперимент: пять звеньев и пять источников ошибки</h2>
+  <div class="tiles">
+    <div class="tile"><div class="h">1 · Явление</div><div class="t">Физическая постановка</div><div class="d">что нужно узнать, чем пренебрегаем; измеренные входы → <em>ошибки данных</em></div></div>
+    <div class="tile"><div class="h">2 · Модель</div><div class="t">Уравнения и условия</div><div class="d">корректность по Адамару; отброшенные эффекты → <em>ошибка модели</em></div></div>
+    <div class="tile hi"><div class="h">3 · Метод</div><div class="t">Дискретизация</div><div class="d">сетка вместо отрезка, сумма вместо интеграла, \(N\) итераций вместо предела → <em>ошибка метода</em></div></div>
+    <div class="tile hi"><div class="h">4 · Программа</div><div class="t">Алгоритм в конечной арифметике</div><div class="d">конечная последовательность операций в <code>double</code> → <em>ошибки округления</em>; стоимость</div></div>
+    <div class="tile"><div class="h">5 · Число</div><div class="t">Верификация и валидация</div><div class="d">те ли уравнения решили (эксперимент) и правильно ли (сгущение сетки); расхождение → назад к модели</div></div>
+  </div>
+  <div class="callout">Численные методы — звенья 3 и 4 плюс умение сказать, <em>насколько</em> число далеко от точного ответа модели. Курс начинается с звена 4: сначала — что умеет машинная арифметика.</div>
 </section>
 
 <!-- 2: Что такое численный метод -->
@@ -176,7 +211,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <div class="slide-num">§1.1 · Задача вычислительной математики</div>
   <h2>Что такое численный метод</h2>
   <p style="font-size:.96em">Большинство задач анализа — интеграл, корень уравнения, значение функции, решение системы, дифференциальная задача — не имеют замкнутого ответа в элементарных функциях либо требуют выполнения <em>бесконечного</em> процесса. Компьютер оперирует только конечными последовательностями арифметических операций.</p>
-  <div class="definition" data-num="1">
+  <div class="definition" data-num="2">
     <em style="color:inherit;font-weight:600">численный метод.</em> Алгоритм, ставящий в соответствие входным данным \(F\) приближённое решение \(\tilde u\) задачи \(Au = F\) за <em>конечное</em> число элементарных арифметических операций и обращений к таблицам стандартных функций.
   </div>
   <div class="example">
@@ -238,7 +273,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
 <section class="slide">
   <div class="slide-num">§1.2 · Погрешности</div>
   <h2>Абсолютная и относительная погрешность</h2>
-  <div class="definition" data-num="2">
+  <div class="definition" data-num="3">
     <em style="color:inherit;font-weight:600">погрешность приближения.</em> Пусть \(\tilde a\) — приближение точного значения \(a\in\mathbb{R}\). Тогда
     <div class="eq">\[
     \Delta = |\tilde a - a|, \qquad
@@ -258,7 +293,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <h2>Числа с плавающей точкой</h2>
   <p style="font-size:.94em">Вещественное число хранится в нормализованной форме — двоичный аналог экспоненциальной записи:</p>
   <div class="eq">\[ x \;=\; (-1)^s \cdot (1.b_1 b_2 \ldots b_{p-1})_2 \cdot 2^{e}, \qquad e_{\min} \le e \le e_{\max}. \tag{1.3} \]</div>
-  <div class="definition" data-num="3">
+  <div class="definition" data-num="4">
     <em style="color:inherit;font-weight:600">множество чисел с плавающей точкой.</em> \(\mathbb{F} \subset \mathbb{R}\) — конечное подмножество, содержащее ноль, все числа вида (1.3) с \(b_i\in\{0,1\}\), \(e\in[e_{\min},e_{\max}]\), а также специальные значения \(\pm\infty\) и <code>NaN</code> («не число»).
   </div>
   <ul style="font-size:.86em;margin-top:.4rem">
@@ -366,12 +401,12 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <div class="slide-num">§1.6 · Машинное ε и единица округления</div>
   <h2>Не путать: \(\varepsilon_{\text{м}}\) и \(u\)</h2>
   <div class="two-col">
-    <div class="definition" data-num="4">
+    <div class="definition" data-num="5">
       <em style="color:inherit;font-weight:600">машинное \(\varepsilon\).</em> Расстояние от единицы до следующего представимого числа:
       <div class="eq">\[ \varepsilon_{\text{м}} = 2^{-(p-1)}. \tag{1.6} \]</div>
       Для binary64: \(\varepsilon_{\text{м}} = 2^{-52} \approx 2{,}22\cdot 10^{-16}\).
     </div>
-    <div class="definition" data-num="5">
+    <div class="definition" data-num="6">
       <em style="color:inherit;font-weight:600">единица округления.</em> Верхняя граница относительной ошибки одной операции:
       <div class="eq">\[ u = 2^{-p}. \]</div>
       Для binary64: \(u = 2^{-53} \approx 1{,}11\cdot 10^{-16}\).
@@ -441,7 +476,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
 <section class="slide">
   <div class="slide-num">§1.9 · Обусловленность</div>
   <h2>Обусловленность задачи: чувствительность к возмущению входа</h2>
-  <div class="definition" data-num="6">
+  <div class="definition" data-num="7">
     <em style="color:inherit;font-weight:600">число обусловленности.</em> Для \(y=f(x)\), \(f\colon X\to Y\) между нормированными пространствами:
     <div class="eq">\[
     \kappa(x) \;=\; \lim_{\delta\to+0}\,\sup_{\|\Delta x\|\le\delta\|x\|}\;
@@ -495,11 +530,11 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <div class="slide-num">§1.10 · Устойчивость</div>
   <h2>Устойчивость алгоритма — свойство способа вычисления</h2>
   <p style="font-size:.94em">Одну и ту же \(f\) можно считать по разным формулам: наивной и алгебраически переписанной; методом Гаусса без выбора главного элемента и с ним; через нормальные уравнения или через QR. <em>Задача одна, алгоритмы разные.</em></p>
-  <div class="definition" data-num="7">
+  <div class="definition" data-num="8">
     <em style="color:inherit;font-weight:600">обратно устойчивый алгоритм.</em> \(\tilde f\), вычисляющий \(f\), называется <em>обратно устойчивым</em> (backward stable), если результат есть <em>точное</em> решение задачи для <em>слегка возмущённого</em> входа:
     <div class="eq">\[ \tilde f(x) = f(\tilde x)\ \ \text{для некоторого } \tilde x\ \text{с}\ \frac{\|\tilde x - x\|}{\|x\|} = O(u). \tag{1.12} \]</div>
   </div>
-  <p style="font-size:.86em;color:var(--text2)">«Мы решили точно почти ту задачу, что хотели». Метод Гаусса с выбором главного элемента, QR-разложение, Холецкий, вычисление скалярного произведения — <em>обратно устойчивы</em>.</p>
+  <p style="font-size:.86em;color:var(--text2)">«Мы решили точно почти ту задачу, что хотели». Метод Гаусса с выбором главного элемента, QR-разложение, Холецкий, скалярное произведение, <em>наивная сумма</em> (оценка Уилкинсона — это её обратная ошибка) — обратно устойчивы. Школьная формула корней квадратного уравнения при \(b^2 \gg 4c\) — нет: ответ не является корнем никакого близкого уравнения.</p>
 </section>
 
 <!-- 17: Прямая и обратная ошибка -->
@@ -583,6 +618,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <div class="slide-num">§1.12 · Итоги</div>
   <h2>Итоги: что унести с занятия 1</h2>
   <ol style="font-size:.92em;line-height:1.6">
+    <li>Число рождается из цепочки модель → дискретизация → алгоритм → программа; в каждом звене свой источник ошибки. ЧМ — два средних звена.</li>
     <li>\(\mathbb{F}\) конечно и неравномерно; относительная точность задаётся \(u = 2^{-p}\); для binary64 \(u \approx 10^{-16}\).</li>
     <li>Модель округления: \(\mathrm{fl}(a\circ b) = (a\circ b)(1+\varepsilon)\), \(|\varepsilon|\le u\). Различайте \(u\) и \(\varepsilon_{\text{м}} = 2u\).</li>
     <li>Опасна не отдельная операция, а <em>вычитание близких чисел</em>: погрешность разности растёт в \((|a|+|b|)/|a-b|\) раз.</li>
@@ -600,7 +636,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <div class="two-col">
     <div>
       <h3 style="color:var(--accent)">▶ Лаба на паре</h3>
-      <p style="font-size:.9em">Соберите §&nbsp;1.5–1.8 руками: реализуйте четыре алгоритма суммирования в C++11, проверьте оценку Уилкинсона на серии \(n\), сравните с эталоном. Компиляция и запуск — прямо в браузере (Clang в WebAssembly), автопроверка ответа.</p>
+      <p style="font-size:.9em">Реализуйте четыре алгоритма суммирования в C++11, измерьте наклон ошибки на серии \(n\) по графику в log-log осях, затем уберите катастрофу вычитания: корни по Виета, \(1-\cos x\), \(\sqrt{a^2+b^2}\) без переполнения. Компиляция и запуск — прямо в браузере (Clang в WebAssembly), автопроверка ответа.</p>
       <div style="margin-top:.5rem;font-family:'JetBrains Mono',monospace;font-size:.8rem"><a href="w01-lab.html" style="color:var(--accent);text-decoration:none;border:1px solid var(--accent);padding:.35rem .8rem;border-radius:5px">открыть лабу →</a></div>
     </div>
     <div>

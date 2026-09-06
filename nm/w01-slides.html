@@ -98,6 +98,18 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
 .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;align-items:start}
 .lead{font-size:1em}
 .figure{width:100%}
+.slide .disaster{grid-template-columns:8.5rem 6em 1fr;align-items:center;padding:.35rem .9rem;margin:.3rem 0}
+.slide .disaster .b{font-size:.84rem}
+.slide .disaster .h{font-size:1rem}
+.disaster img{width:8.5rem;height:4.7rem;object-fit:cover;border-radius:6px;display:block;box-shadow:0 2px 8px rgba(44,36,25,.18)}
+.credits{font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--text3);margin-top:.15rem;letter-spacing:.02em}
+.rod-fig{width:100%;max-width:21rem;height:auto;display:block;margin:0 auto}
+.errtiles{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin:.6rem 0}
+.errtiles .et{background:#fff;border:1px solid var(--border);border-radius:8px;padding:.6rem .9rem}
+.errtiles .et .t{font-family:'Playfair Display',serif;font-weight:700;font-size:1.05rem;margin-bottom:.25rem}
+.errtiles .et ul{margin:0;padding-left:1.1em;font-size:.9em;color:var(--text2)}
+.errtiles .et.a .t{color:var(--accent3)}
+.errtiles .et.r .t{color:var(--accent2)}
 .two-col .figure{margin:0 auto}
 html .cfd-st-btn{font-size:13px;padding:5px 12px}
 html .hud .cfd-hud-btn{font-size:13px;padding:6px 14px;margin-left:4px}
@@ -202,15 +214,55 @@ ol,ul{padding-left:1.2em}
   <aside class="notes" hidden><p class="q">Какое допущение в модели стержня первым сломается на практике?</p><p class="a">Боковой теплообмен с воздухом; зависимость \(a\) от температуры.</p><p class="q">Где здесь ошибка данных, а где ошибка модели?</p><p class="a">Данные — \(a\) из справочника; модель — отброшенный боковой теплообмен.</p></aside>
   <div class="slide-num">§1.0 · Введение</div>
   <h2>Пример: остывание стержня</h2>
-  <div class="example">
-    <span class="lbl">От явления к числу</span>
-    <ul>
-      <li><em>явление:</em> стальной стержень, один конец в печи; нужна температура другого конца через час;</li>
-      <li><em>модель:</em> \(u_t = a\,u_{xx}\), температура задана на одном конце, теплоизоляция на другом; \(a\) из справочника; боковой теплообмен отброшен;</li>
-      <li><em>метод:</em> сетка по \(x\) и \(t\), производные заменены разностями — на каждом шаге трёхдиагональная СЛАУ;</li>
-      <li><em>программа:</em> метод прогонки в <code>double</code>;</li>
-      <li><em>анализ:</em> сгустить сетку, сравнить с термопарой.</li>
-    </ul>
+  <div class="two-col" style="grid-template-columns:1.15fr 1fr;align-items:center">
+    <div class="example" style="margin:0;font-size:.88em">
+      <span class="lbl">От явления к числу</span>
+      <ul>
+        <li><em>явление:</em> стержень, один конец в печи; нужна температура другого конца через час;</li>
+        <li><em>модель:</em> \(u_t = a\,u_{xx}\), температура задана слева, теплоизоляция справа; \(a\) из справочника; боковой теплообмен отброшен;</li>
+        <li><em>метод:</em> сетка по \(x\) и \(t\), разности вместо производных — на каждом шаге СЛАУ;</li>
+        <li><em>программа:</em> прогонка в <code>double</code>;</li>
+        <li><em>анализ:</em> сгустить сетку, сравнить с термопарой.</li>
+      </ul>
+    </div>
+    <div><svg class="rod-fig" viewBox="0 0 520 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Схема: печь слева, стальной стержень с узлами сетки, теплоизоляция справа, термопара на дальнем конце.">
+  <defs>
+    <linearGradient id="rodg" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#d9532b"/><stop offset=".45" stop-color="#e1a26a"/><stop offset="1" stop-color="#7d95bd"/></linearGradient>
+    <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="#6b5d4f" stroke-width="2"/></pattern>
+    <marker id="ra" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#6b5d4f"/></marker>
+  </defs>
+  <!-- furnace -->
+  <rect x="14" y="70" width="76" height="120" rx="8" fill="#fbeee7" stroke="#b44a2d" stroke-width="2.5"/>
+  <path d="M40 160 q10 -28 0 -50 q22 16 26 44 q4 -14 2 -26 q16 20 10 46 z" fill="#b44a2d"/>
+  <text x="52" y="210" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" fill="#b44a2d">печь</text>
+  <text x="52" y="226" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d">T = T₀</text>
+  <!-- rod -->
+  <rect x="90" y="115" width="380" height="30" rx="4" fill="url(#rodg)" stroke="#2c2419" stroke-width="1.5"/>
+  <!-- grid nodes -->
+  <g fill="#2c2419">
+    <circle cx="110" cy="130" r="4"/><circle cx="160" cy="130" r="4"/><circle cx="210" cy="130" r="4"/><circle cx="260" cy="130" r="4"/><circle cx="310" cy="130" r="4"/><circle cx="360" cy="130" r="4"/><circle cx="410" cy="130" r="4"/><circle cx="455" cy="130" r="4"/>
+  </g>
+  <g font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419" text-anchor="middle">
+    <text x="110" y="168">x₀</text><text x="160" y="168">x₁</text><text x="210" y="168">x₂</text><text x="260" y="168">…</text><text x="455" y="168">x_N</text>
+  </g>
+  <line x1="110" y1="180" x2="160" y2="180" stroke="#6b5d4f" stroke-width="1.2" marker-start="url(#ra)" marker-end="url(#ra)"/>
+  <text x="135" y="196" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f">h</text>
+  <text x="330" y="196" text-anchor="middle" font-family="Source Serif 4,serif" font-style="italic" font-size="13" fill="#2c2419">сетка: N узлов, на каждом шаге по времени — СЛАУ</text>
+  <!-- insulation -->
+  <rect x="470" y="100" width="22" height="60" fill="url(#hatch)" stroke="#6b5d4f" stroke-width="1.2"/>
+  <text x="481" y="90" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f">∂T/∂x = 0</text>
+  <!-- thermocouple -->
+  <line x1="455" y1="115" x2="455" y2="60" stroke="#1a6b5a" stroke-width="2"/>
+  <circle cx="455" cy="54" r="6" fill="#1a6b5a"/>
+  <text x="440" y="44" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="12" fill="#1a6b5a">термопара: T(L, 1 ч) = ?</text>
+  <!-- side heat loss (neglected) -->
+  <g stroke="#9a8d7e" stroke-width="1.2" stroke-dasharray="3 3" fill="none">
+    <path d="M200 112 v-28"/><path d="M280 112 v-28"/><path d="M360 112 v-28"/>
+    <path d="M200 148 v28"/><path d="M280 148 v28"/><path d="M360 148 v28"/>
+  </g>
+  <text x="280" y="74" text-anchor="middle" font-family="Source Serif 4,serif" font-style="italic" font-size="12" fill="#9a8d7e">боковой теплообмен — отброшен (ошибка модели)</text>
+  <text x="110" y="250" font-family="Source Serif 4,serif" font-size="13" fill="#2c2419">Модель: u<tspan font-size="9" dy="4">t</tspan><tspan dy="-4"> = a·u</tspan><tspan font-size="9" dy="4">xx</tspan><tspan dy="-4">,  a — из справочника (ошибка данных)</tspan></text>
+</svg></div>
   </div>
   <p class="bridge">Число получилось не из «природы», а из цепочки замен: объект → модель → сетка → программа. <strong>В каждом звене что-то теряется.</strong></p>
 </section>
@@ -262,21 +314,25 @@ ol,ul{padding-left:1.2em}
   <div class="slide-num">§1.1 · Зачем это важно</div>
   <h2>Три катастрофы машинной арифметики</h2>
   <div class="disaster">
+    <img src="img/patriot.jpg" alt="Пуск ракеты Patriot">
     <div><div class="yr">25.02.1991</div></div>
     <div><div class="h">ЗРК Patriot</div>
-    <div class="b">Время хранилось в десятых долях секунды и умножалось на 24-битное приближение 0,1. За 100 часов набежало 0,34 с — Scud не перехвачен, 28 погибших.</div></div>
+    <div class="b">Время в десятых долях секунды умножалось на 24-битное приближение 0,1. За 100 часов набежало 0,34 с: Scud не перехвачен, 28 погибших.</div></div>
   </div>
   <div class="disaster">
+    <img src="img/ariane501.jpg" alt="Фрагмент ракеты Ariane 5, рейс 501">
     <div><div class="yr">04.06.1996</div></div>
     <div><div class="h">Ariane 5</div>
-    <div class="b">64-битное число с плавающей точкой преобразовали в 16-битное целое — переполнение. Самоуничтожение на 37-й секунде, $370 млн.</div></div>
+    <div class="b">64-битное число с плавающей точкой преобразовали в 16-битное целое: переполнение. Самоуничтожение на 37-й секунде, $370 млн.</div></div>
   </div>
   <div class="disaster">
+    <img src="img/vse.jpg" alt="Здание Ванкуверской фондовой биржи">
     <div><div class="yr">1982–1983</div></div>
     <div><div class="h">Vancouver Stock Exchange</div>
-    <div class="b">Индекс усекался, а не округлялся, после каждой сделки. За 22 месяца потеряно 574 пункта из 1000.</div></div>
+    <div class="b">Индекс после каждой сделки усекался, а не округлялся. За 22 месяца потеряно 574 пункта из 1000.</div></div>
   </div>
   <p class="bridge">Формулы были верны, программы делали ровно то, что написано. <strong>Подвело представление чисел — тремя разными способами.</strong></p>
+  <div class="credits">Фото: U.S. Air Force, public domain · фрагмент Ariane 501 — Wikimedia Commons, public domain · здание VSE — mafue, CC BY-SA 3.0</div>
 </section>
 
 <section class="slide">
@@ -310,8 +366,8 @@ ol,ul{padding-left:1.2em}
     <div class="callout"><strong>Стол.</strong> Длина \(1\) м, ошибка \(\pm 1\) мм.</div>
     <div class="callout"><strong>Луна.</strong> Расстояние \(384\,400\) км, ошибка \(\pm 1\) км.</div>
   </div>
-  <p class="lead" style="margin-top:.8rem">По разности стол точнее в миллион раз. Но доля ошибки от измеряемого: у стола \(10^{-3}\), у Луны \(2{,}6\cdot 10^{-6}\) — Луна измерена точнее на три порядка.</p>
-  <p class="bridge">Одного числа для «точности» мало. <strong>Нужны два.</strong></p>
+  <p class="lead" style="margin-top:.8rem">По разности стол точнее в миллион раз: 1 мм против 1 км. По доле от измеряемого — наоборот: у стола \(10^{-3}\), у Луны \(2{,}6\cdot 10^{-6}\), Луна точнее на три порядка.</p>
+  <p class="bridge">Оба ответа верны — они отвечают на <em>разные</em> вопросы: «на сколько промахнулись?» и «какая это доля величины?». <strong>Поэтому погрешностей две.</strong></p>
 </section>
 
 <section class="slide">
@@ -324,7 +380,18 @@ ol,ul{padding-left:1.2em}
     — <em>абсолютная</em> и <em>относительная</em> погрешность.
   </div>
   <p class="lead">\(\delta \approx 10^{-k}\) означает примерно \(k\) верных значащих цифр: стол — 3, Луна — 5–6.</p>
-  <p class="bridge">Дальше все оценки — в терминах \(\delta\): именно её машина умеет контролировать. <strong>Первый вопрос: с какой относительной точностью машина хранит числа?</strong></p>
+  <p class="bridge">Две формулы — потому что два вопроса. <strong>Разберём, когда нужна какая.</strong></p>
+</section>
+
+<section class="slide">
+  <aside class="notes" hidden><p class="q">Складываем две длины с \(\Delta = 1\) мм каждая. Какая \(\Delta\) у суммы? А \(\delta\)?</p><p class="a">\(\Delta \le 2\) мм — абсолютные складываются; \(\delta\) зависит от того, велика ли сумма: при вычитании близких длин \(\delta\) взрывается — это катастрофа вычитания, §1.7.</p><p class="q">Токарю нужен допуск \(\pm 0{,}1\) мм на вал диаметром 20 мм и на вал 200 мм. Какая мера одинакова?</p><p class="a">\(\Delta\) — одинакова, \(\delta\) отличается в 10 раз. Допуски — язык абсолютной погрешности.</p></aside>
+  <div class="slide-num">§1.2 · Погрешности</div>
+  <h2>Зачем две меры: «на сколько» и «какая доля»</h2>
+  <div class="errtiles">
+    <div class="et a"><div class="t">\(\Delta\) — «на сколько»</div><ul><li>имеет единицы: мм, км, градусы;</li><li>нужна там, где важен сам промах: допуск «деталь \(\pm 0{,}1\) мм», попадёт ли ракета;</li><li>при сложении и вычитании складываются именно \(\Delta\).</li></ul></div>
+    <div class="et r"><div class="t">\(\delta\) — «какая доля»</div><ul><li>безразмерна; \(\delta \approx 10^{-k}\) — примерно \(k\) верных цифр (стол 3, Луна 5–6);</li><li>при умножении и делении складываются именно \(\delta\);</li><li>машина хранит число с одной и той же \(\delta\), большое оно или маленькое.</li></ul></div>
+  </div>
+  <p class="bridge">Стол и Луна: по \(\Delta\) точнее стол, по \(\delta\) — Луна, и оба ответа верны. Дальше почти все оценки — в терминах \(\delta\): именно её контролирует машина. <strong>Первый вопрос: с какой относительной точностью она хранит числа?</strong></p>
 </section>
 
 <section class="slide">
@@ -721,7 +788,7 @@ ol,ul{padding-left:1.2em}
   <a href="w01.html" class="back" title="К тексту лекции">← к тексту</a>
   <div class="center">
     <button id="btnPrev" onclick="prev()">◀ назад</button>
-    <span class="counter" id="counter">1 / 32</span>
+    <span class="counter" id="counter">1 / 33</span>
     <button id="btnNext" onclick="next()">вперёд ▶</button>
   </div>
   <a href="w02.html" class="back" title="Следующая лекция">§2 →</a>

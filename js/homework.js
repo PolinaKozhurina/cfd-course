@@ -153,8 +153,11 @@
       try {
         const snap = await db.collection("assignments").doc(aid).get();
         if (!snap.exists) return { ok: false, error: "not found" };
-        // Сабмишны студентов
-        const subs = await db.collection("submissions").where("assignmentId", "==", aid).get();
+        const cid = (snap.data() || {}).courseId || "";
+        // Сабмишны студентов (фильтр по courseId нужен правилам Firestore для курсового admin)
+        let subQ = db.collection("submissions").where("assignmentId", "==", aid);
+        if (cid) subQ = subQ.where("courseId", "==", cid);
+        const subs = await subQ.get();
         // Best-effort удаление файлов сдач через Worker (они в приватном
         // cfd-submissions). Не блокируем удаление записей при ошибке.
         if (typeof WORKER_URL !== "undefined" && WORKER_URL) {
@@ -178,7 +181,9 @@
         // Удалить документы Firestore одним батчем
         const batch = db.batch();
         subs.forEach(s => batch.delete(s.ref));
-        const grades = await db.collection("assignment_grades").where("assignmentId", "==", aid).get();
+        let grQ = db.collection("assignment_grades").where("assignmentId", "==", aid);
+        if (cid) grQ = grQ.where("courseId", "==", cid);
+        const grades = await grQ.get();
         grades.forEach(g => batch.delete(g.ref));
         batch.delete(db.collection("assignments").doc(aid));
         await batch.commit();
@@ -516,17 +521,24 @@
       } catch (e) { console.warn("listAssignmentsForCourse:", e); return []; }
     },
 
-    listSubmissions: async function (aid) {
+    // cid — courseId задания. Курсовому admin правила Firestore разрешают
+    // читать сдачи только своего курса, и запрос без фильтра по courseId
+    // отклоняется целиком; superadmin проходит и без него.
+    listSubmissions: async function (aid, cid) {
       try {
-        const snap = await db.collection("submissions").where("assignmentId", "==", aid).get();
+        let q = db.collection("submissions").where("assignmentId", "==", aid);
+        if (cid) q = q.where("courseId", "==", cid);
+        const snap = await q.get();
         const out = {}; snap.forEach(d => { out[d.data().uid] = d.data(); });
         return out;
       } catch (e) { console.warn("listSubmissions:", e); return {}; }
     },
 
-    listGrades: async function (aid) {
+    listGrades: async function (aid, cid) {
       try {
-        const snap = await db.collection("assignment_grades").where("assignmentId", "==", aid).get();
+        let q = db.collection("assignment_grades").where("assignmentId", "==", aid);
+        if (cid) q = q.where("courseId", "==", cid);
+        const snap = await q.get();
         const out = {}; snap.forEach(d => { out[d.data().uid] = d.data(); });
         return out;
       } catch (e) { console.warn("listGrades:", e); return {}; }

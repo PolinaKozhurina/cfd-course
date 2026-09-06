@@ -733,6 +733,7 @@ function canManageUser(u) {
   if (_currentAdminStudyGroups === null && _currentAdminGroups === null) return true; // superadmin
   // Admins can't see other admins' data (only own or students in own groups)
   if (u.isAdmin && u.uid !== (_currentAdminUser && _currentAdminUser.uid)) return false;
+  if (window._scopedUids && window._scopedUids.has(u.uid)) return true; // записан на мой курс
   if (u.studyGroup && canManageStudyGroup(u.studyGroup)) return true;
   if (u.group && canManageGroup(u.group)) return true;
   return false;
@@ -760,6 +761,21 @@ async function loadAllData() {
   window._rawAllUsersByUid = {};
   rawAllUsers.forEach(u => { window._rawAllUsersByUid[u.uid] = u; });
 
+  // Записи/заявки на курсы грузим ДО фильтрации пользователей: курсовому
+  // admin студент виден, если он записан (любой статус) на его курс —
+  // это основная модель scope (managedCourses); managedStudyGroups и
+  // managedGroups остаются как legacy-дополнение.
+  let enrSnapEarly = null;
+  if (_currentAdminCourses === null) {
+    enrSnapEarly = await db.collection('enrollments').get().catch(() => null);
+  } else if (_currentAdminCourses.length > 0) {
+    enrSnapEarly = await db.collection('enrollments')
+      .where('courseId', 'in', _currentAdminCourses).get().catch(() => null);
+  }
+  const _scopedUids = new Set();
+  if (enrSnapEarly) enrSnapEarly.forEach(d => { const e = d.data() || {}; if (e.uid) _scopedUids.add(e.uid); });
+  window._scopedUids = _scopedUids;
+
   // Filter users: only students my admin can see
   if (_currentAdminGroups === null && _currentAdminStudyGroups === null) {
     // superadmin: see everything
@@ -768,10 +784,11 @@ async function loadAllData() {
     allUsers = rawAllUsers.filter(function(u) {
       if (u.uid === _currentAdminUser.uid) return true; // always include self
       if (u.isAdmin) return false; // other admins hidden from regular admins
-      // Visible if studyGroup ∈ managedStudyGroups OR group ∈ managedGroups
+      // Visible if enrolled in a managed course OR studyGroup ∈ managedStudyGroups OR group ∈ managedGroups
+      const byCourse = _scopedUids.has(u.uid);
       const byStudy = u.studyGroup && _currentAdminStudyGroups && _currentAdminStudyGroups.indexOf(u.studyGroup) !== -1;
       const byWork = u.group && _currentAdminGroups && _currentAdminGroups.indexOf(u.group) !== -1;
-      return byStudy || byWork;
+      return byCourse || byStudy || byWork;
     });
   }
 
@@ -850,18 +867,21 @@ async function loadAllData() {
     db.collection('grades').get().catch(() => null),
     db.collection('task_claims').get().catch(() => null),
     db.collection('individual_grades').get().catch(() => null),
+    Promise.resolve(enrSnapEarly || { forEach: function(){} }),
+    // ДЗ и сдачи — для расчёта колонки «Прогресс» на вкладке «Оценки».
+    db.collection('assignments').get().catch(() => null),
+    // Сдачи: правила Firestore разрешают курсовому admin читать только
+    // документы своих курсов, поэтому запрос без фильтра по courseId
+    // отклоняется целиком. Superadmin читает всё.
     (async () => {
       if (_currentAdminCourses === null) {
-        return await db.collection('enrollments').get().catch(() => null);
+        return await db.collection('submissions').get().catch(() => null);
       } else if (_currentAdminCourses.length === 0) {
         return { forEach: function(){} };
       }
-      return await db.collection('enrollments')
+      return await db.collection('submissions')
         .where('courseId', 'in', _currentAdminCourses).get().catch(() => null);
     })(),
-    // ДЗ и сдачи — для расчёта колонки «Прогресс» на вкладке «Оценки».
-    db.collection('assignments').get().catch(() => null),
-    db.collection('submissions').get().catch(() => null),
   ]);
 
   // Ждём всё параллельно.
@@ -1797,7 +1817,7 @@ function hwCloseSubs() { document.getElementById('hwSubsWrap').style.display = '
 async function renderHwSubmissionsTable(aid) {
   const a = window._hwCurrentAssignment;
   if (!a) return;
-  const [subs, grades] = await Promise.all([ CFDHomework.listSubmissions(aid), CFDHomework.listGrades(aid) ]);
+  const [subs, grades] = await Promise.all([ CFDHomework.listSubmissions(aid, a.courseId), CFDHomework.listGrades(aid, a.courseId) ]);
   window._hwSubsCache = subs;
   window._hwGradesCache = grades;
   // Список кому показывать: студенты с approved-enrollment на этот курс.
@@ -1967,7 +1987,7 @@ function hwOpenAnnotator(aid, uid, fileIdx) {
     sourceFile: s.files[fileIdx],
     onDone: async function () {
       // Обновить кэш сдач и перерисовать таблицу.
-      window._hwSubsCache = await CFDHomework.listSubmissions(aid);
+      window._hwSubsCache = await CFDHomework.listSubmissions(aid, a.courseId);
       await renderHwSubmissionsTable(aid);
     },
   });
@@ -2052,7 +2072,7 @@ async function hwSyncToGitHub(aid) {
   const token = (document.getElementById('hwSyncToken').value || '').trim();
   if (!repo.match(/^[^\/]+\/[^\/]+$/)) { st.textContent = '✗ формат owner/repo'; return; }
   if (!token) { st.textContent = '✗ введите PAT'; return; }
-  const subs = window._hwSubsCache || await CFDHomework.listSubmissions(aid);
+  const subs = window._hwSubsCache || await CFDHomework.listSubmissions(aid, a.courseId);
   const cid = a.courseId;
   const aidSlug = _hwSlug(a.title || aid);
   const uids = Object.keys(subs);

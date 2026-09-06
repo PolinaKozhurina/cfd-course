@@ -95,6 +95,11 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
 .figure .caption{font-size:.78rem;color:var(--text2);margin-top:.4rem;font-style:italic}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
 .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.4rem;align-items:start}
+@media (max-height:820px){body{font-size:20px}}
+@media (max-height:680px){body{font-size:17px}}
+.lead{font-size:.94em}
+.bridge{font-size:.86em;color:var(--text2);border-top:1px dashed var(--border);padding-top:.5rem;margin-top:.7rem}
+.bridge strong{color:var(--accent)}
 .callout{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;font-size:.95em;color:var(--text2)}
 
 .flow{display:grid;grid-template-columns:1fr;gap:.55rem;margin:1rem 0}
@@ -192,6 +197,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
       </ul>
     </div>
   </div>
+  <p class="bridge">Число получилось не из «природы», а из цепочки замен: объект → модель → сетка → программа. <strong>В каждом звене что-то теряется.</strong> Разложим цепочку по звеньям и посмотрим, где именно.</p>
 </section>
 
 <!-- 1b: Этапы вычислительного эксперимента -->
@@ -199,6 +205,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <aside class="notes" hidden><p class="q">Удвоили сетку — ответ не изменился, а с термопарой расходится на 20 %. Какое звено виновато?</p><p class="a">Модель (провал валидации), а не метод: верификация пройдена.</p><p class="t">Студенты хотят «ещё сгустить сетку». Спросить: что это изменит, если метод уже сошёлся?</p></aside>
   <div class="slide-num">§1.0 · Введение</div>
   <h2>Вычислительный эксперимент: пять звеньев и пять источников ошибки</h2>
+  <p class="lead">Тот же стержень, но теперь смотрим на путь целиком. Пять звеньев — и в каждом свой, ни к какому другому не сводимый источник погрешности.</p>
   <div class="tiles">
     <div class="tile"><div class="h">1 · Явление</div><div class="t">Физическая постановка</div><div class="d">что нужно узнать, чем пренебрегаем; измеренные входы → <em>ошибки данных</em></div></div>
     <div class="tile"><div class="h">2 · Модель</div><div class="t">Уравнения и условия</div><div class="d">корректность по Адамару; отброшенные эффекты → <em>ошибка модели</em></div></div>
@@ -214,20 +221,21 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <aside class="notes" hidden><p class="q">Формула корней квадратного уравнения — численный метод или нет?</p><p class="a">Да, как только \(\sqrt{\ }\) вычисляется приближённо: «конечное число операций и обращений к стандартным функциям».</p><p class="q">В каком из примеров ошибка метода равна нулю?</p><p class="a">Метод Гаусса: при точной арифметике он точен за конечное число шагов; остаётся только округление.</p></aside>
   <div class="slide-num">§1.1 · Задача вычислительной математики</div>
   <h2>Что такое численный метод</h2>
-  <p style="font-size:.96em">Большинство задач анализа — интеграл, корень уравнения, значение функции, решение системы, дифференциальная задача — не имеют замкнутого ответа в элементарных функциях либо требуют выполнения <em>бесконечного</em> процесса. Компьютер оперирует только конечными последовательностями арифметических операций.</p>
+  <p class="lead">Интеграл, корень, значение функции, решение системы — почти ничего из этого не имеет замкнутого ответа либо требует <em>бесконечного</em> процесса, а компьютер умеет только конечные цепочки арифметики. Как выглядит выход?</p>
+  <div class="example">
+    <span class="lbl">Пять способов выйти из положения</span>
+    <ul>
+      <li>\(\ln(1+x)\) — вместо бесконечного ряда Тейлора взять отрезок длины \(N\);</li>
+      <li>\(\int_a^b f(x)\,dx\) — вместо предела сумм взять формулу трапеций на \(N\) узлах;</li>
+      <li>\(f(x)=0\) — вместо предела итераций Ньютона остановиться при \(|f(x_k)|&lt;\varepsilon\);</li>
+      <li>\(Ax=b\) — метод Гаусса с выбором главного элемента: конечен сам по себе;</li>
+      <li>\(u_t + a u_x = 0\) — вместо производных разностные отношения на сетке (схема «уголок»).</li>
+    </ul>
+  </div>
   <div class="definition" data-num="2">
     <em style="color:inherit;font-weight:600">численный метод.</em> Алгоритм, ставящий в соответствие входным данным \(F\) приближённое решение \(\tilde u\) задачи \(Au = F\) за <em>конечное</em> число элементарных арифметических операций и обращений к таблицам стандартных функций.
   </div>
-  <div class="example">
-    <span class="lbl">Примеры численных методов</span>
-    <ul>
-      <li>вычисление \(\ln(1+x)\) через отрезок ряда Тейлора длины \(N\);</li>
-      <li>вычисление \(\int_a^b f(x)\,dx\) по формуле трапеций на \(N\) узлах;</li>
-      <li>решение \(f(x)=0\) методом Ньютона с остановкой при \(|f(x_k)|&lt;\varepsilon\);</li>
-      <li>решение \(Ax=b\) методом Гаусса с выбором главного элемента;</li>
-      <li>явная разностная схема «уголок» для \(u_t + a u_x = 0\).</li>
-    </ul>
-  </div>
+  <p class="bridge">Общее во всех пяти: бесконечное заменено конечным, и ответ приближённый — это не оговорка, а суть. <strong>Три истории о том, что бывает, когда об этом забывают.</strong></p>
 </section>
 
 <!-- 3: Катастрофы -->
@@ -235,6 +243,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <aside class="notes" hidden><p class="q">Patriot, Ariane, Ванкувер — какого типа ошибка в каждом случае?</p><p class="a">Patriot — представление 0,1 и накопление округления; Ariane — переполнение при преобразовании типа, не округление; Ванкувер — систематическое усечение, то есть смещение, а не случайная ошибка.</p><p class="t">«Надо было брать double»: для Patriot помогло бы, для Ariane нет.</p></aside>
   <div class="slide-num">§1.1 · Зачем это важно</div>
   <h2>Реальные катастрофы машинной арифметики</h2>
+  <p class="lead">Во всех трёх случаях формулы были верны и программа делала ровно то, что написано. Подвело представление чисел — тремя разными способами.</p>
   <div class="disaster">
     <div><div class="yr">25 фев 1991</div></div>
     <div><div class="h">ЗРК Patriot, Дахран</div>
@@ -250,6 +259,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
     <div><div class="h">Vancouver Stock Exchange</div>
     <div class="b">Индекс усекался (а не округлялся) после каждой сделки. За 22 месяца накопленная ошибка составила \(\approx 574\) пункта из \(\approx 1000\); после пересчёта индекс подскочил с 524 до 1098.</div></div>
   </div>
+  <p class="bridge">Накопление округления, переполнение, систематическое усечение — три разных механизма одной природы: <strong>машина хранит не числа, а их приближения.</strong> Чтобы с этим работать, нужно понять, откуда вообще берутся ошибки, и завести язык, на котором о них говорят.</p>
 </section>
 
 <!-- 4: Три источника ошибок -->
@@ -257,6 +267,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <aside class="notes" hidden><p class="q">Какую из трёх ошибок можно уменьшить, купив компьютер помощнее?</p><p class="a">Только ошибку метода (сгустить сетку, взять больше членов) — и то до уровня округления. Данные и модель мощностью не лечатся.</p></aside>
   <div class="slide-num">§1.2 · Источники ошибок</div>
   <h2>Три независимых источника погрешности</h2>
+  <p class="lead">Ошибка конечного ответа складывается из трёх независимых частей. Катастрофы с прошлого слайда — целиком из третьей.</p>
   <div class="flow">
     <div class="step"><span class="n">1</span>
       <div class="title">Ошибки в данных</div>
@@ -273,13 +284,18 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
       <div class="body">Вещественные числа хранятся в конечном наборе битов; каждая арифметическая операция даёт результат, который заново округляется до представимого. Возникают в каждой операции и накапливаются весь расчёт. <strong>Сегодняшняя тема.</strong></div>
     </div>
   </div>
+  <p class="bridge">Данные и метод — темы следующих занятий. Сегодня — округление. Но говорить о любой из трёх ошибок нужно на одном языке: <strong>что значит «ошибка 10⁻⁶»?</strong></p>
 </section>
 
 <!-- 5: Абсолютная и относительная погрешность -->
 <section class="slide">
-  <aside class="notes" hidden><p class="q">Длина стола 1 м измерена с ошибкой 1 мм, расстояние до Луны — с ошибкой 1 км. Что измерено точнее?</p><p class="a">Луна: \(\delta \approx 2{,}6\cdot10^{-6}\) против \(10^{-3}\).</p><p class="q">Сколько верных цифр при \(\delta = 3\cdot 10^{-5}\)?</p><p class="a">Четыре, с натяжкой пять.</p></aside>
+  <aside class="notes" hidden><p class="n">Вопрос про стол и Луну задать до переключения на этот слайд: ответ уже на нём.</p><p class="q">Сколько верных цифр при \(\delta = 3\cdot 10^{-5}\)?</p><p class="a">Четыре, с натяжкой пять.</p></aside>
   <div class="slide-num">§1.2 · Погрешности</div>
   <h2>Абсолютная и относительная погрешность</h2>
+  <div class="example">
+    <span class="lbl">Что измерено точнее?</span>
+    Длина стола: \(1\) м \(\pm 1\) мм. Расстояние до Луны: \(384\,400\) км \(\pm 1\) км. По разности — стол в миллион раз точнее. По доле от измеряемого — Луна: \(10^{-3}\) против \(2{,}6\cdot 10^{-6}\). Одного числа для «точности» мало — нужны два.
+  </div>
   <div class="definition" data-num="3">
     <em style="color:inherit;font-weight:600">погрешность приближения.</em> Пусть \(\tilde a\) — приближение точного значения \(a\in\mathbb{R}\). Тогда
     <div class="eq">\[
@@ -289,8 +305,8 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
     \]</div>
     называются <em>абсолютной</em> и <em>относительной</em> погрешностью соответственно.
   </div>
-  <div class="callout" style="font-size:.9em">
-    Относительная погрешность безразмерна и удобно связана с числом верных значащих цифр десятичной записи: \(\delta \approx 10^{-k}\) означает, что в \(\tilde a\) верны примерно \(k\) первых цифр. В машинной арифметике мы естественно контролируем именно её.
+  <div class="callout" style="font-size:.86em">
+    Относительная погрешность безразмерна и связана с числом верных значащих цифр: \(\delta \approx 10^{-k}\) — верны примерно \(k\) первых цифр. Стол: 3 верные цифры, Луна: 5–6. Дальше все оценки — в терминах \(\delta\), потому что именно её машина умеет контролировать. <strong>Первый вопрос: с какой относительной точностью машина вообще хранит числа?</strong>
   </div>
 </section>
 
@@ -308,6 +324,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
     <li>\(\mathbb{F}\) <em>конечно</em>: \(2\cdot 2^{p-1}\cdot(e_{\max}-e_{\min}+1)\) значений;</li>
     <li>\(\mathbb{F}\) распределено на оси <em>неравномерно</em>: плотность постоянна в <em>относительном</em>, не в абсолютном смысле.</li>
   </ul>
+  <p class="bridge">Конечность и неравномерность — два свойства, из которых вырастает всё дальнейшее. <strong>Неравномерность стоит увидеть глазами.</strong></p>
 </section>
 
 <!-- 7: Ось с числами -->
@@ -315,6 +332,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <aside class="notes" hidden><p class="q">Чему равно \(10^{20} + 1 - 10^{20}\) в double?</p><p class="a">0: единица меньше половины шага сетки у \(10^{20}\) (шаг \(\approx 16384\)).</p><p class="q">Какое наименьшее положительное нормальное число и что ниже него?</p><p class="a">\(2^{-1022} \approx 2{,}2\cdot 10^{-308}\); ниже — субнормальные вплоть до \(4{,}9\cdot 10^{-324}\).</p></aside>
   <div class="slide-num">§1.3 · Распределение ℱ на оси</div>
   <h2>Числа с плавающей точкой на оси — сгущаются у нуля</h2>
+  <p class="lead">Между соседними степенями двойки укладывается ровно \(2^{p-1}\) чисел, а при переходе через степень двойки шаг удваивается. Абсолютное расстояние между соседями растёт вместе с числом — относительное остаётся постоянным.</p>
   <div class="figure">
     <svg viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" style="max-width:780px">
       <line x1="30" y1="110" x2="675" y2="110" stroke="#2c2419" stroke-width="1.4"/>
@@ -341,6 +359,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
     </svg>
     <div class="caption">Плотность \(\mathbb{F}\) постоянна не абсолютно, а <em>относительно</em>: относительный зазор \(\approx 2^{-(p-1)}\) — это и есть машинное \(\varepsilon\).</div>
   </div>
+  <p class="bridge">Вот почему машина контролирует именно относительную погрешность: ошибка представления любого числа — одна и та же доля от него самого. <strong>Осталось договориться о конкретных \(p\) и диапазоне порядка.</strong></p>
 </section>
 
 <!-- 8: IEEE 754 форматы -->
@@ -348,6 +367,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <aside class="notes" hidden><p class="q">Почему float не годится для накопления суммы \(10^{6}\) слагаемых?</p><p class="a">\(u \approx 6\cdot 10^{-8}\), \(nu \approx 0{,}06\) — до 6 % в худшем случае.</p><p class="q"><code>NaN == NaN</code>?</p><p class="a">false. Поэтому <code>x != x</code> — стандартный тест на NaN.</p></aside>
   <div class="slide-num">§1.4 · IEEE 754</div>
   <h2>Стандартные форматы IEEE 754</h2>
+  <p class="lead">Стандарт 1985 года (актуальная редакция — 2019) закрепил два основных двоичных формата. Для научных расчётов по умолчанию — <code>double</code>.</p>
   <div class="figure">
     <svg viewBox="0 0 700 170" xmlns="http://www.w3.org/2000/svg" style="max-width:780px">
       <text x="350" y="18" font-family="JetBrains Mono,monospace" font-size="13" fill="#2c2419" text-anchor="middle" font-weight="600">binary64 · double (64 бита)</text>
@@ -390,6 +410,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
       </ul>
     </div>
   </div>
+  <p class="bridge">Одно число на память: для <code>double</code> \(u \approx 10^{-16}\), то есть 16 верных цифр — потолок, выше которого не поднимется никакой результат. <strong>Как этот потолок входит в каждую операцию — модель округления.</strong></p>
 </section>
 
 <!-- 9: Модель округления -->
@@ -405,13 +426,15 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
     <div class="eq">\[ \mathrm{fl}(a\circ b) = (a\circ b)\,(1+\varepsilon'), \qquad |\varepsilon'|\le u. \tag{1.5} \]</div>
   </div>
   <p style="font-size:.86em;color:var(--text2)">Стандарт IEEE 754 гарантирует такое «корректно округлённое» поведение для \(+,-,\times,/,\sqrt{\ }\). Для тригонометрии и экспоненты — с ошибкой в несколько \(u\).</p>
+  <p class="bridge">(1.4)–(1.5) — рабочая гипотеза всего анализа ошибок округления: каждая операция портит результат не более чем на долю \(u\). <strong>Рядом с \(u\) живёт вторая, очень похожая константа — их путают.</strong></p>
 </section>
 
 <!-- 10: eps vs u -->
 <section class="slide">
-  <aside class="notes" hidden><p class="q"><code>np.finfo(np.float64).eps</code> — это \(u\) или \(\varepsilon_{\text{м}}\)?</p><p class="a">\(\varepsilon_{\text{м}} = 2u\).</p><p class="q"><code>1 + 1e-16 == 1</code>? А <code>1 + 1.2e-16</code>?</p><p class="a">Первое — true (\(10^{-16} < \varepsilon_{\text{м}}/2 \approx 1{,}1\cdot10^{-16}\)), второе — false.</p></aside>
+  <aside class="notes" hidden><p class="q"><code>np.finfo(np.float64).eps</code> — это \(u\) или \(\varepsilon_{\text{м}}\)?</p><p class="a">\(\varepsilon_{\text{м}} = 2u\).</p><p class="q">Почему граница опыта — половина \(\varepsilon_{\text{м}}\), а не само \(\varepsilon_{\text{м}}\)?</p><p class="a">Округление к ближайшему: \(1+\eta\) уходит вверх, как только \(\eta \ge \varepsilon_{\text{м}}/2 = u\).</p></aside>
   <div class="slide-num">§1.6 · Машинное ε и единица округления</div>
   <h2>Не путать: \(\varepsilon_{\text{м}}\) и \(u\)</h2>
+  <p style="font-size:.92em"><strong>Опыт.</strong> <code>1.0 + 1e-16 == 1.0</code> даёт <code>true</code>, а <code>1.0 + 1.2e-16 == 1.0</code> — <code>false</code>. Граница проходит около \(1{,}1\cdot 10^{-16}\): всё, что меньше, «не долетает» до единицы. У этой границы два имени, и их регулярно путают — они отличаются ровно вдвое.</p>
   <div class="two-col">
     <div class="definition" data-num="5">
       <em style="color:inherit;font-weight:600">машинное \(\varepsilon\).</em> Расстояние от единицы до следующего представимого числа:
@@ -427,6 +450,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <div class="warning">
     <strong>Важно.</strong> \(\varepsilon_{\text{м}} = 2u\). В NumPy <code>np.finfo(np.float64).eps</code> — это <em>машинное \(\varepsilon\)</em>, для оценок ошибок из (1.4)–(1.5) берут <code>eps/2</code>.
   </div>
+  <p class="bridge">Итак, отдельная операция теряет не больше \(10^{-16}\). Откуда тогда катастрофы с потерей <em>всех</em> цифр? <strong>Из одной-единственной операции — вычитания.</strong></p>
 </section>
 
 <!-- 11: Катастрофическая потеря значимости -->
@@ -434,14 +458,15 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <aside class="notes" hidden><p class="q">Вычитание в машине выполнено точно — откуда тогда ошибка?</p><p class="a">Из аргументов: вычитание её не создаёт, а усиливает в \((|a|+|b|)/|a-b|\) раз.</p><p class="q">\(a = 1{,}000001\), \(b = 1{,}000000\) заданы с 7 верными знаками. Сколько верных в разности?</p><p class="a">Один.</p></aside>
   <div class="slide-num">§1.7 · Потеря значимости</div>
   <h2>Катастрофическое вычитание близких чисел</h2>
-  <p style="font-size:.94em">Пусть \(\tilde a = a(1+\alpha)\), \(\tilde b = b(1+\beta)\), \(|\alpha|,|\beta|\le u\). Разность:</p>
+  <p class="lead">Из (1.5) кажется, что любая операция безопасна: ошибка \(\le u\). Проверим на вычитании чисел, <em>уже</em> несущих ошибку: \(\tilde a = a(1+\alpha)\), \(\tilde b = b(1+\beta)\), \(|\alpha|,|\beta|\le u\). Их разность:</p>
   <div class="eq">\[ \tilde a - \tilde b = (a-b) + (a\alpha - b\beta). \tag{1.7} \]</div>
-  <p style="font-size:.94em">Относительная погрешность разности:</p>
+  <p style="font-size:.9em;margin:.2rem 0">Относительная погрешность разности:</p>
   <div class="eq">\[ \frac{|(\tilde a - \tilde b) - (a - b)|}{|a-b|} \;\le\; \underbrace{\frac{|a|+|b|}{|a-b|}}_{\kappa_-(a,b)}\cdot u. \tag{1.8} \]</div>
-  <div class="example">
+  <div class="example" style="font-size:.86em">
     <span class="lbl">Иллюстрация</span>
-    Пусть \(a = 1{,}23456789\), \(b = 1{,}23456700\) — с 9 верными цифрами. Тогда \(a-b = 0{,}00000089\) — из девяти верных цифр осталось <strong>две</strong>. Само вычитание точно; беда — в сокращении старших разрядов, за которым обнажаются младшие «мусорные».
+    Пусть \(a = 1{,}23456789\), \(b = 1{,}23456700\) — с 9 верными цифрами. Тогда \(a-b = 0{,}00000089\) — из девяти верных цифр осталось <strong>две</strong>. Вычитание выполнено точно; беда в том, что старшие разряды сократились и обнажились младшие «мусорные».
   </div>
+  <p class="bridge">Вычитание не создаёт ошибку — оно <em>усиливает</em> уже имеющуюся, в \((|a|+|b|)/|a-b|\) раз. <strong>Значит, лечить нужно не арифметику, а формулу.</strong></p>
 </section>
 
 <!-- 12: Как лечить — три примера -->
@@ -449,6 +474,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <aside class="notes" hidden><p class="q">Как посчитать \(\sqrt{x+1} - \sqrt{x}\) при \(x = 10^{12}\)?</p><p class="a">Домножить на сопряжённое: \(1/(\sqrt{x+1} + \sqrt{x})\).</p><p class="q">\(e^{x} - 1\) при \(x = 10^{-10}\) «в лоб» через exp?</p><p class="a">Потеряем около 6 знаков из 16; нужен <code>expm1</code>. В лабе — корни по Виета и \(1 - \cos x\).</p></aside>
   <div class="slide-num">§1.7 · Лечение — переписать формулу</div>
   <h2>Алгебраическое переписывание против катастрофы</h2>
+  <p class="lead">Рецепт один: переписать выражение так, чтобы вычитание близких чисел исчезло. Три классических случая — все три вы соберёте руками в лабораторной.</p>
   <div class="three-col">
     <div class="callout">
       <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);letter-spacing:.08em">1 − cos x при x → 0</div>
@@ -467,8 +493,9 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
     </div>
   </div>
   <div class="callout" style="margin-top:.8rem;font-size:.86em">
-    <strong>Общее правило.</strong> Верных цифр в разности \(a-b\) остаётся столько, на сколько порядков она меньше самих аргументов. Множитель \((|a|+|b|)/|a-b|\) — <em>число обусловленности вычитания</em>.
+    <strong>Общее правило.</strong> В разности \(a-b\) <em>теряется</em> столько верных цифр, на сколько порядков она меньше самих аргументов. Множитель \((|a|+|b|)/|a-b|\) — <em>число обусловленности вычитания</em>; к этому слову мы вернёмся.
   </div>
+  <p class="bridge">Катастрофа — удар одной операцией. <strong>Есть и медленная угроза: тысячи безобидных операций подряд.</strong></p>
 </section>
 
 <!-- 13: Накопление ошибок — теорема Уилкинсона -->
@@ -476,7 +503,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <aside class="notes" hidden><p class="q">Складываем \(10^{5}\) копий 0,1. Какой относительной ошибки ждёте?</p><p class="a">До \(nu \approx 10^{-11}\); в лабе получится \(\approx 2\cdot 10^{-12}\), граница верхняя.</p><p class="q">А если слагаемые случайных знаков?</p><p class="a">Рост как \(\sqrt{n}\,u\) — случайное блуждание.</p></aside>
   <div class="slide-num">§1.8 · Накопление ошибок в сумме</div>
   <h2>Наивная сумма: оценка Уилкинсона</h2>
-  <p style="font-size:.94em">Пусть \(S = \sum_{k=1}^{n} x_k\) вычисляется наивным циклом \(\hat S_k = \mathrm{fl}(\hat S_{k-1} + x_k)\). Тогда:</p>
+  <p style="font-size:.94em">Каждое сложение теряет не больше \(u\). Сложим \(n\) чисел подряд — сколько потеряем в сумме? Пусть \(S = \sum_{k=1}^{n} x_k\) вычисляется наивным циклом \(\hat S_k = \mathrm{fl}(\hat S_{k-1} + x_k)\). Тогда:</p>
   <div class="theorem" data-num="2">
     <em style="color:inherit;font-weight:600">оценка Уилкинсона для наивного суммирования.</em>
     <div class="eq">\[ |\hat S_n - S| \;\le\; \gamma_{n-1}\sum_{k=1}^{n}|x_k|,\qquad \gamma_m = \frac{mu}{1-mu} \approx mu. \tag{1.9} \]</div>
@@ -485,13 +512,30 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <div class="callout" style="font-size:.88em">
     <strong>Есть ли алгоритм с постоянной точностью \(O(u)\) при любом \(n\)?</strong> Да: <em>компенсированное</em> Кэхэна (1965), <em>попарное</em> суммирование, <em>отсортированное</em> — предмет лабораторной работы к этой лекции.
   </div>
+  <p class="bridge">Мы научились оценивать ошибку, которую вносит <em>алгоритм</em>. Но иногда плохой ответ — не вина алгоритма: <strong>сама задача не позволяет ответить точнее.</strong></p>
 </section>
 
 <!-- 14: Обусловленность задачи -->
 <section class="slide">
-  <aside class="notes" hidden><p class="q">\(\kappa\) — свойство задачи или программы?</p><p class="a">Задачи в точке. Никакая программа не даст точнее \(\kappa u\).</p><p class="q">Пример плохо обусловленной задачи из вашей области?</p><p class="a">Обратные задачи, дифференцирование зашумлённых данных, корни многочлена высокой степени.</p></aside>
+  <aside class="notes" hidden><p class="q">Какая из трёх задач «плохая»? Может, дело в формуле?</p><p class="a">Все три формулы точные и одинаково простые. Плохая — сама задача около полюса: маленькое возмущение входа задача обязана усилить, что бы мы ни программировали.</p><p class="q">Где в нашей практике \(\delta_{\text{вх}} = 10^{-6}\)?</p><p class="a">Любое измерение с 6 верными цифрами; коэффициент из справочника; результат предыдущего расчёта.</p></aside>
   <div class="slide-num">§1.9 · Обусловленность</div>
-  <h2>Обусловленность задачи: чувствительность к возмущению входа</h2>
+  <h2>Одна и та же ошибка входа — разные ошибки выхода</h2>
+  <p style="font-size:.94em">Вход задан с относительной ошибкой \(\delta_{\text{вх}} = 10^{-6}\) — шесть верных цифр. Считаем три функции <em>точно</em>, без единого округления. Сколько верных цифр останется в ответе?</p>
+  <div class="tiles">
+    <div class="tile"><div class="h">\(\sqrt{x}\), \(x = 2\)</div><div class="t">\(\delta_{\text{вых}} \approx 5\cdot 10^{-7}\)</div><div class="d">стало даже точнее: ошибка входа ополовинилась</div></div>
+    <div class="tile"><div class="h">\(e^{x}\), \(x = 100\)</div><div class="t">\(\delta_{\text{вых}} \approx 10^{-4}\)</div><div class="d">потеряли две цифры из шести: ошибка выросла в 100 раз</div></div>
+    <div class="tile hi"><div class="h">\(1/(1-x)\), \(x = 0{,}9999\)</div><div class="t">\(\delta_{\text{вых}} \approx 10^{-2}\)</div><div class="d">осталось две цифры: ошибка выросла в \(10^{4}\) раз — у полюса задача сама усиливает любое возмущение</div></div>
+  </div>
+  <div class="callout" style="font-size:.9em">
+    Алгоритм здесь ни при чём: все три вычислены точно. Различается <em>коэффициент усиления</em> ошибки, встроенный в саму задачу: \(\tfrac12\), \(100\) и \(10^{4}\). Этому коэффициенту и дадим имя.
+  </div>
+</section>
+
+<section class="slide">
+  <aside class="notes" hidden><p class="q">\(\kappa\) — свойство задачи или программы?</p><p class="a">Задачи в точке. Никакая программа не даст точнее \(\kappa u\).</p><p class="q">Зачем в определении и sup, и предел?</p><p class="a">sup — худшее направление возмущения (в многомерном случае их много), предел — линеаризация: смотрим только на малые возмущения.</p><p class="q">Пример плохо обусловленной задачи из вашей области?</p><p class="a">Обратные задачи, дифференцирование зашумлённых данных, корни многочлена высокой степени.</p></aside>
+  <div class="slide-num">§1.9 · Определение</div>
+  <h2>Число обусловленности задачи</h2>
+  <p class="lead">Коэффициент усиления относительной ошибки — в худшем направлении возмущения и в пределе малых возмущений. Это и есть определение.</p>
   <div class="definition" data-num="7">
     <em style="color:inherit;font-weight:600">число обусловленности.</em> Для \(y=f(x)\), \(f\colon X\to Y\) между нормированными пространствами:
     <div class="eq">\[
@@ -510,6 +554,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <aside class="notes" hidden><p class="q">Чему равно \(\kappa\) для \(\sin x\) вблизи \(x = \pi\)?</p><p class="a">\(|x\cos x/\sin x| \to \infty\): значение мало, а аргумент большой.</p><p class="q">\(x^{2}\) даёт \(\kappa = 2\). Это плохо?</p><p class="a">Нет: порядка единиц — хорошо обусловлена. Плохо — когда \(\kappa \sim 10^{6}\) и выше.</p></aside>
   <div class="slide-num">§1.9 · Скалярный случай</div>
   <h2>Число обусловленности гладкой скалярной функции</h2>
+  <p style="font-size:.9em;color:var(--text2)">Для \(f\colon\mathbb{R}\to\mathbb{R}\) предел в (1.10) берётся явно — и три коэффициента с позапрошлого слайда получаются одной формулой:</p>
   <div class="eq">\[ \kappa(x) \;=\; \left|\frac{x\,f'(x)}{f(x)}\right|. \tag{1.11} \]</div>
   <div class="two-col">
     <div>
@@ -523,7 +568,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
       </ul>
     </div>
     <div class="figure">
-      <svg viewBox="0 0 380 280" xmlns="http://www.w3.org/2000/svg" style="max-width:380px">
+      <svg viewBox="0 0 380 280" xmlns="http://www.w3.org/2000/svg" style="max-width:300px">
         <defs><marker id="ark" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2c2419"/></marker></defs>
         <line x1="40" y1="240" x2="360" y2="240" stroke="#2c2419" stroke-width="1.4" marker-end="url(#ark)"/>
         <line x1="40" y1="240" x2="40" y2="30" stroke="#2c2419" stroke-width="1.4" marker-end="url(#ark)"/>
@@ -540,6 +585,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
       <div class="caption">Красная штриховая линия \(\kappa = 10\) — условная граница «плохо обусловлено».</div>
     </div>
   </div>
+  <p class="bridge">Вычитание близких чисел — тоже плохо обусловленная задача: \(\kappa_-\) с слайда о катастрофе есть частный случай (1.11). Итак, часть ошибки «принадлежит» задаче. <strong>Остальное создаёт алгоритм — и для него нужна своя мера.</strong></p>
 </section>
 
 <!-- 16: Устойчивость алгоритма -->
@@ -553,6 +599,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
     <div class="eq">\[ \tilde f(x) = f(\tilde x)\ \ \text{для некоторого } \tilde x\ \text{с}\ \frac{\|\tilde x - x\|}{\|x\|} = O(u). \tag{1.12} \]</div>
   </div>
   <p style="font-size:.86em;color:var(--text2)">«Мы решили точно почти ту задачу, что хотели». Метод Гаусса с выбором главного элемента, QR-разложение, Холецкий, скалярное произведение, <em>наивная сумма</em> (оценка Уилкинсона — это её обратная ошибка) — обратно устойчивы. Школьная формула корней квадратного уравнения при \(b^2 \gg 4c\) — нет: ответ не является корнем никакого близкого уравнения.</p>
+  <p class="bridge">Чтобы соединить \(\kappa\) задачи и устойчивость алгоритма в одну формулу, нужно точно различить две ошибки одного и того же ответа.</p>
 </section>
 
 <!-- 17: Прямая и обратная ошибка -->
@@ -560,6 +607,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <aside class="notes" hidden><p class="q">Покажите на диаграмме, где живёт обратная ошибка.</p><p class="a">Горизонтальная стрелка \(x \to \tilde x\): насколько нужно испортить вход.</p><p class="q">Обратная ошибка мала, прямая велика — кто виноват?</p><p class="a">Задача: \(\kappa\) велико.</p></aside>
   <div class="slide-num">§1.11 · Прямая и обратная ошибка</div>
   <h2>Диаграмма: прямая vs обратная ошибка</h2>
+  <p class="lead">Один и тот же вычисленный ответ \(\tilde y\) можно измерить двумя линейками: насколько он далёк от истины — и для какой задачи он был бы точным.</p>
   <div class="two-col" style="grid-template-columns:1fr 1.1fr">
     <div>
       <p style="font-size:.9em"><strong>Прямая ошибка</strong> — \(\|\tilde y - y\|/\|y\|\): насколько ответ отличается от истинного. Это то, что нас интересует.</p>
@@ -592,6 +640,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
       </svg>
     </div>
   </div>
+  <p class="bridge">Обратно устойчивый алгоритм — тот, у которого обратная ошибка \(O(u)\): он не добавляет к задаче ничего сверх неизбежного округления входа. <strong>Теперь обе ошибки соединяются одной формулой.</strong></p>
 </section>
 
 <!-- 18: Главное правило -->
@@ -599,6 +648,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <aside class="notes" hidden><p class="q">Решаем \(Ax = b\): невязка \(10^{-15}\), а ошибка решения \(10^{-3}\). Что это значит?</p><p class="a">Обратная ошибка мала, значит \(\kappa(A) \sim 10^{12}\): матрица плохо обусловлена (§11). Алгоритм не виноват.</p></aside>
   <div class="slide-num">§1.11 · Главное правило</div>
   <h2>Главное правило вычислительной математики</h2>
+  <p class="lead">Обратная ошибка — вклад алгоритма; \(\kappa\) — множитель, встроенный в задачу. Их произведение ограничивает то, что нас на самом деле интересует.</p>
   <div class="theorem" data-num="3">
     <em style="color:inherit;font-weight:600">κ × backward error.</em> Для любого алгоритма:
     <div class="eq">\[
@@ -616,6 +666,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <aside class="notes" hidden><p class="q">Результат плохой, \(\kappa \approx 1\). Ваши действия?</p><p class="a">Искать неустойчивость алгоритма: катастрофическое вычитание, нормальные уравнения, отсутствие выбора главного элемента.</p><p class="q">Результат плохой, \(\kappa \approx 10^{15}\)?</p><p class="a">Менять постановку: регуляризация, другой базис, другие переменные.</p></aside>
   <div class="slide-num">§1.11 · Диагностика</div>
   <h2>Диагностика плохого численного результата</h2>
+  <p class="lead">Правило (1.13) превращается в порядок действий, когда результат расчёта не устраивает.</p>
   <div class="flow">
     <div class="step"><span class="n">Шаг 1</span>
       <div class="title">Оцените \(\kappa(x)\) задачи в вашей точке</div>
@@ -632,6 +683,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
       <div class="body">Устраните катастрофическое вычитание (переписав формулу), примените QR вместо нормальных уравнений, добавьте компенсированное суммирование.</div>
     </div>
   </div>
+  <p class="bridge">На вопросе «кто виноват — задача или алгоритм» держится весь курс: <strong>каждый следующий метод мы будем оценивать по двум осям — ошибка метода и устойчивость.</strong></p>
 </section>
 
 <!-- 20: Итоги -->

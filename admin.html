@@ -409,7 +409,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
     <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);margin-left:.4rem">Лаба:</label>
     <select id="labId" onchange="renderLabsTab()" style="font-family:'JetBrains Mono',monospace;font-size:.85rem"></select>
   </div>
-  <p style="font-size:.8rem;color:var(--text2);margin:0 0 .8rem">Задания лабы зашифрованы; студент получает ключ, только когда сеанс открыт и его uid в списке допущенных. Отметьте присутствующих на вкладке «Посещаемость», затем нажмите «Открыть для отмеченных». Кнопка «Закрыть» мгновенно прячет лабу у всех. Следующая лаба открывается студенту только после зачёта по предыдущей (порог задач в реестре CFD_LABS).</p>
+  <p style="font-size:.8rem;color:var(--text2);margin:0 0 .8rem">Задания лабы зашифрованы; студент получает ключ, только когда сеанс открыт и его uid в списке допущенных. Отметьте присутствующих на вкладке «Посещаемость», затем нажмите «Открыть для отмеченных». Кнопка «Закрыть» мгновенно прячет лабу у всех. Следующая лаба открывается студенту только после того, как вы зачтёте предыдущую (кнопка «Зачесть» в таблице ниже); число задач автопроверки — ориентир, не решение.</p>
   <div id="labSession" style="border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;margin-bottom:.8rem;background:#fff"></div>
   <div id="labKeyBox" style="border:1px dashed var(--border);border-radius:8px;padding:.6rem 1rem;margin-bottom:.8rem;font-size:.82rem"></div>
   <div id="labProgress" style="border-top:1px solid var(--border);padding-top:.6rem"></div>
@@ -4498,16 +4498,30 @@ async function labsRenderProgress(cid, lab, sess) {
     const done = p ? (p.done || 0) : 0, total = (p && p.total) || info.total || 0;
     const upd = p && p.updatedAt ? new Date(p.updatedAt.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) : '—';
     const pct = total ? Math.round(100 * done / total) : 0;
-    return { fio: u.fio || u.email || uid, sg: u.studyGroup || '', done, total, pct, upd, allowed: allowed.has(uid) };
+    const accepted = !!(p && p.accepted);
+    const reached = info.pass ? done >= info.pass : false;
+    return { uid, fio: u.fio || u.email || uid, sg: u.studyGroup || '', done, total, pct, upd, allowed: allowed.has(uid), accepted, reached };
   }).sort((x, y) => x.fio.localeCompare(y.fio, 'ru'));
-  box.innerHTML = '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3);margin-bottom:.4rem">ПРОГРЕСС · ' + rows.length + ' студ.</div>'
-    + rows.map(r => '<div style="display:grid;grid-template-columns:1fr 90px 160px 70px 110px;gap:.6rem;align-items:center;padding:.35rem 0;border-bottom:1px dotted var(--border);font-size:.85rem">'
+  box.innerHTML = '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3);margin-bottom:.4rem">ПРОГРЕСС · ' + rows.length + ' студ.' + (info.pass ? ' · ориентир зачёта ' + info.pass + '/' + (info.total || '?') + ' задач; зачёт ставите вы' : '') + '</div>'
+    + rows.map(r => '<div style="display:grid;grid-template-columns:1fr 90px 140px 70px 110px 120px;gap:.6rem;align-items:center;padding:.35rem 0;border-bottom:1px dotted var(--border);font-size:.85rem">'
       + '<div>' + escapeHtml(r.fio) + (r.allowed ? '' : ' <span style="font-size:.7rem;color:var(--text3)">(не в списке)</span>') + '</div>'
       + '<div style="color:var(--text3);font-size:.75rem">' + escapeHtml(r.sg) + '</div>'
-      + '<div style="height:8px;background:#e6dfd0;border-radius:4px;overflow:hidden"><div style="height:100%;width:' + r.pct + '%;background:' + (r.pct >= 89 ? '#3d6b5a' : '#3a5ba0') + '"></div></div>'
-      + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;text-align:right">' + r.done + '/' + r.total + '</div>'
+      + '<div style="height:8px;background:#e6dfd0;border-radius:4px;overflow:hidden"><div style="height:100%;width:' + r.pct + '%;background:' + (r.reached ? '#3d6b5a' : '#3a5ba0') + '"></div></div>'
+      + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;text-align:right;color:' + (r.reached ? '#3d6b5a' : 'inherit') + '" title="' + (r.reached ? 'порог достигнут' : 'порог не достигнут') + '">' + r.done + '/' + r.total + '</div>'
       + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3);text-align:right">' + r.upd + '</div>'
+      + '<div style="text-align:right">' + (r.accepted
+          ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.7rem;color:#1a6b5a">✓ зачтено</span> <button class="btn btn-sm" title="Снять зачёт" onclick="labsSetAccepted(\'' + r.uid + '\', false)">×</button>'
+          : '<button class="btn btn-sm" style="' + (r.reached ? 'border-color:#1a6b5a;color:#1a6b5a' : '') + '" onclick="labsSetAccepted(\'' + r.uid + '\', true)">Зачесть</button>')
+      + '</div>'
       + '</div>').join('');
+}
+
+// Зачёт по лабе — решение преподавателя; открывает студенту следующую лабу.
+async function labsSetAccepted(uid, accepted) {
+  const cid = document.getElementById('labCourse').value, lab = document.getElementById('labId').value;
+  const r = await CFDLabs.setAccepted(uid, cid, lab, accepted);
+  if (!r.ok) { alert('Не удалось: ' + r.error); return; }
+  labsRenderProgress(cid, lab, _labSess);
 }
 
 // ============================================================

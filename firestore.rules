@@ -540,10 +540,11 @@ service cloud.firestore {
       function prevPath() {
         return /databases/$(database)/documents/lab_progress/$(request.auth.uid + '_' + labCid() + '_' + get(sessPath()).data.get('prevLabId', ''));
       }
+      // Зачёт ставит преподаватель: поле accepted в lab_progress студента
+      // (студент сам менять его не может — см. правила lab_progress).
       function prevPassed() {
         return get(sessPath()).data.get('prevLabId', null) == null
-            || get(sessPath()).data.get('prevPass', 0) == 0
-            || (exists(prevPath()) && get(prevPath()).data.get('done', 0) >= get(sessPath()).data.get('prevPass', 0));
+            || (exists(prevPath()) && get(prevPath()).data.get('accepted', false) == true);
       }
       allow read: if isAuth() && (adminCanManageCourse(labCid()) || (sessOpenForMe() && prevPassed()));
       allow create, update, delete: if adminCanManageCourse(labCid());
@@ -559,17 +560,32 @@ service cloud.firestore {
                             || adminCanManageCourse(resource.data.get('courseId', ''))))
                     || docId.split('_')[0] == request.auth.uid
                   );
-      allow create: if isAuth()
-                    && docId.split('_').size() == 3
-                    && docId.split('_')[0] == request.auth.uid
-                    && request.resource.data.uid == request.auth.uid
-                    && request.resource.data.courseId == docId.split('_')[1]
-                    && request.resource.data.labId == docId.split('_')[2];
-      allow update: if isAuth()
-                    && resource.data.uid == request.auth.uid
-                    && request.resource.data.uid == request.auth.uid
-                    && request.resource.data.courseId == resource.data.courseId
-                    && request.resource.data.labId == resource.data.labId;
+      // Поля зачёта (accepted*) студент трогать не может — их ставит admin курса.
+      function acceptFields() { return ['accepted', 'acceptedAt', 'acceptedBy']; }
+      function studentCreateOk() {
+        return docId.split('_').size() == 3
+            && docId.split('_')[0] == request.auth.uid
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.courseId == docId.split('_')[1]
+            && request.resource.data.labId == docId.split('_')[2]
+            && !request.resource.data.keys().hasAny(acceptFields());
+      }
+      function adminWriteOk() {
+        return docId.split('_').size() == 3
+            && adminCanManageCourse(docId.split('_')[1])
+            && request.resource.data.uid == docId.split('_')[0]
+            && request.resource.data.courseId == docId.split('_')[1]
+            && request.resource.data.labId == docId.split('_')[2];
+      }
+      allow create: if isAuth() && (studentCreateOk() || adminWriteOk());
+      allow update: if isAuth() && (
+                       (resource.data.uid == request.auth.uid
+                        && request.resource.data.uid == request.auth.uid
+                        && request.resource.data.courseId == resource.data.courseId
+                        && request.resource.data.labId == resource.data.labId
+                        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(acceptFields()))
+                    || adminWriteOk()
+                  );
       allow delete: if adminCanManageCourse(resource.data.get('courseId', ''));
     }
 

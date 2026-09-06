@@ -57,9 +57,21 @@
       const labs = API.labsOf(cid); const i = labs.findIndex(l => l.id === lab);
       return i > 0 ? labs[i - 1] : null;
     },
+    // Зачёт ставит преподаватель (accepted в lab_progress); автопроверка только подсказывает.
     passed: function (progress, labInfo) {
-      const need = (labInfo && labInfo.pass) || 0;
-      return !need || ((progress && progress.done) || 0) >= need;
+      return !!(progress && progress.accepted === true);
+    },
+    // Admin: зачесть / снять зачёт. Документ создаётся, если студент ещё не открывал лабу.
+    setAccepted: async function (uid, cid, lab, accepted) {
+      const me = auth.currentUser; if (!me) return { ok: false, error: "Не авторизован" };
+      try {
+        await db.collection("lab_progress").doc(pid(uid, cid, lab)).set({
+          uid: uid, courseId: cid, labId: lab,
+          accepted: !!accepted, acceptedAt: accepted ? nowTs() : null, acceptedBy: accepted ? me.email : null,
+          updatedAt: nowTs(),
+        }, { merge: true });
+        return { ok: true };
+      } catch (e) { return { ok: false, error: e.message }; }
     },
 
     // ---- сеансы ----
@@ -215,13 +227,13 @@
       const tryOpen = async () => {
         // Следующая лаба открывается только после зачёта по предыдущей.
         const prev = API.prevLab(opts.cid, opts.lab);
-        if (prev && prev.pass) {
+        if (prev) {
           const pp = await API.loadProgress(user.uid, opts.cid, prev.id);
           if (!API.passed(pp, prev)) {
             let isAdmin = false;
             try { const u = await db.collection("users").doc(user.uid).get(); isAdmin = !!(u.exists && u.data().isAdmin); } catch (e) {}
             if (!isAdmin) {
-              showMsg("🔒 Сначала предыдущая лаба", "Эта лаба откроется после зачёта по «" + prev.title + "»: сделано " + ((pp && pp.done) || 0) + " из " + (prev.total || "?") + ", нужно " + prev.pass + ". <a href=\"" + prev.id + "-lab.html\" style=\"color:#b44a2d\">Перейти к ней →</a>");
+              showMsg("🔒 Сначала предыдущая лаба", "Эта лаба откроется после того, как преподаватель зачтёт «" + prev.title + "» (сделано " + ((pp && pp.done) || 0) + " из " + (prev.total || "?") + ", ориентир для зачёта — " + (prev.pass || "?") + "). <a href=\"" + prev.id + "-lab.html\" style=\"color:#b44a2d\">Перейти к ней →</a>");
               return;
             }
           }

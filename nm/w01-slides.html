@@ -122,6 +122,7 @@ ol,ul{padding-left:1.2em}
 
 .tiles{display:grid;grid-template-columns:1fr;gap:.4rem;margin:.6rem 0}
 .tile{background:#fff;border:1px solid var(--border);border-radius:6px;padding:.4rem .9rem;display:grid;grid-template-columns:7.5em 8.5em 1fr;align-items:center;gap:1rem}
+.tile .h mjx-container{text-transform:none}
 .tile .h{font-family:'JetBrains Mono',monospace;font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
 .tile .t{font-family:'Playfair Display',serif;font-weight:700;font-size:1.02rem;color:var(--text);line-height:1.2}
 .tile .d{font-size:.9rem;color:var(--text2);line-height:1.35}
@@ -335,14 +336,42 @@ ol,ul{padding-left:1.2em}
   <div class="definition" data-num="4">
     <em style="color:inherit;font-weight:600">множество чисел с плавающей точкой.</em> \(\mathbb{F} \subset \mathbb{R}\) — конечное множество: ноль, все числа вида (1.3), а также \(\pm\infty\) и <code>NaN</code>.
   </div>
-  <p class="bridge">\(\mathbb{F}\) <em>конечно</em> и распределено <em>неравномерно</em>. <strong>Неравномерность стоит увидеть глазами.</strong></p>
+  <p class="bridge">В формуле (1.3) три части: знак, мантисса и порядок. <strong>Разберём на конкретном числе, что каждая из них хранит.</strong></p>
+</section>
+
+<section class="slide">
+  <aside class="notes" hidden><p class="q">Запишите 0,1 в двоичной системе. Что получится?</p><p class="a">Периодическая дробь \(0{,}000110011001\ldots_2\): в 52 бита не помещается, хранится округлённая — отсюда <code>0.1 + 0.2 != 0.3</code> (лаба, задача 0.2).</p><p class="q">Зачем экономить один бит на ведущей единице?</p><p class="a">Это лишняя двоичная цифра точности бесплатно: 53 значащих бита при 52 хранимых.</p></aside>
+  <div class="slide-num">§1.3 · Как хранится число</div>
+  <h2>Мантисса и порядок: точка «плавает»</h2>
+  <p class="lead">Физик пишет \(6{,}02\cdot 10^{23}\): значащие цифры отдельно, положение запятой отдельно. Компьютер делает то же самое, только по основанию 2. Например, \(6{,}25\):</p>
+  <div class="eq">\[ 6{,}25 \;=\; 110{,}01_2 \;=\; 1{,}1001_2 \cdot 2^{2}. \]</div>
+  <div class="tiles">
+    <div class="tile"><div class="h">знак</div><div class="t">1 бит</div><div class="d">\(s = 0\) — число положительное</div></div>
+    <div class="tile"><div class="h">порядок \(e\)</div><div class="t">где стоит точка</div><div class="d">\(e = 2\): сдвиг точки на два разряда — это <em>масштаб</em> числа</div></div>
+    <div class="tile hi"><div class="h">мантисса</div><div class="t">значащие цифры</div><div class="d">\(1{,}1001_2\); ведущая единица есть всегда, её не хранят — в память идут только \(1001\). Это <em>точность</em></div></div>
+  </div>
+  <p class="bridge">Мантисса — это ровно \(p\) значащих двоичных цифр, и их всегда \(p\), каким бы ни было число. <strong>Из этого одного факта следует главное свойство машинных чисел.</strong></p>
+</section>
+
+<section class="slide">
+  <aside class="notes" hidden><p class="q">Сколько чисел игрушечного формата лежит между 8 и 16?</p><p class="a">Те же восемь, с шагом 1: 8, 9, …, 15. Число 8,5 непредставимо, а 0,5625 — представимо.</p><p class="q">Что общего у шага 1/16 около 0,5 и шага 1/2 около 4?</p><p class="a">Отношение шага к числу: \(1/8 = 2^{-(p-1)}\) в обоих случаях.</p></aside>
+  <div class="slide-num">§1.3 · Почему сгущение у нуля</div>
+  <h2>Игрушечный формат: \(p = 4\)</h2>
+  <p class="lead">Мантисса из четырёх двоичных цифр пробегает \(1{,}000_2 \ldots 1{,}111_2\) — ровно восемь значений, и так при <em>каждом</em> порядке \(e\):</p>
+  <div class="tiles">
+    <div class="tile"><div class="h">\(e = -1\)</div><div class="t">\(0{,}5 \ldots 0{,}9375\)</div><div class="d">8 чисел, шаг \(1/16\)</div></div>
+    <div class="tile"><div class="h">\(e = 0\)</div><div class="t">\(1 \ldots 1{,}875\)</div><div class="d">8 чисел, шаг \(1/8\)</div></div>
+    <div class="tile"><div class="h">\(e = 1\)</div><div class="t">\(2 \ldots 3{,}75\)</div><div class="d">8 чисел, шаг \(1/4\)</div></div>
+    <div class="tile hi"><div class="h">\(e = 2\)</div><div class="t">\(4 \ldots 7{,}5\)</div><div class="d">8 чисел, шаг \(1/2\): между 4 и 8 уже нет ни \(4{,}25\), ни \(5{,}1\)</div></div>
+  </div>
+  <p class="bridge">Восемь чисел на октаву, а длина октавы удваивается — значит, удваивается и шаг. Абсолютная точность падает с ростом числа, относительная — шаг/число \(\approx 2^{-(p-1)}\) — одна и та же. <strong>Так это выглядит на оси.</strong></p>
 </section>
 
 <section class="slide">
   <aside class="notes" hidden><p class="q">Чему равно \(10^{20} + 1 - 10^{20}\) в double?</p><p class="a">0: единица меньше половины шага сетки у \(10^{20}\) (шаг \(\approx 16384\)).</p><p class="q">Какое наименьшее положительное нормальное число и что ниже него?</p><p class="a">\(2^{-1022} \approx 2{,}2\cdot 10^{-308}\); ниже — субнормальные до \(4{,}9\cdot 10^{-324}\).</p></aside>
   <div class="slide-num">§1.3 · Распределение ℱ на оси</div>
   <h2>Числа сгущаются у нуля</h2>
-  <p class="lead">Между соседними степенями двойки — ровно \(2^{p-1}\) чисел; при переходе через степень двойки шаг удваивается.</p>
+  <p class="lead">То же в общем виде: между соседними степенями двойки — ровно \(2^{p-1}\) чисел (в double \(2^{52}\)); при переходе через степень двойки шаг удваивается.</p>
   <div class="figure">
     <svg style="width:100%;max-width:38rem" viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg">
       <line x1="30" y1="110" x2="675" y2="110" stroke="#2c2419" stroke-width="1.4"/>
@@ -692,7 +721,7 @@ ol,ul{padding-left:1.2em}
   <a href="w01.html" class="back" title="К тексту лекции">← к тексту</a>
   <div class="center">
     <button id="btnPrev" onclick="prev()">◀ назад</button>
-    <span class="counter" id="counter">1 / 30</span>
+    <span class="counter" id="counter">1 / 32</span>
     <button id="btnNext" onclick="next()">вперёд ▶</button>
   </div>
   <a href="w02.html" class="back" title="Следующая лекция">§2 →</a>

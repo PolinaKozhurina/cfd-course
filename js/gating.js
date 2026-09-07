@@ -82,6 +82,22 @@
     });
   }
 
+  // get() с повторами: при старте страницы первый запрос иногда уходит до
+  // готовности auth-токена (permission-denied) или возвращает «нет документа»
+  // — из-за этого записанный студент изредка видел «Запишитесь на курс».
+  async function getDocRetry(ref) {
+    let last = null;
+    for (let i = 0; i < 3; i++) {
+      try {
+        const d = await ref.get();
+        if (d.exists || i === 2) return d;
+        last = d;
+      } catch (e) { if (i === 2) throw e; }
+      await new Promise(function (r) { setTimeout(r, 400 * (i + 1)); });
+    }
+    return last;
+  }
+
   // Модель доступа.
   // Возвращает { open, reason, releasedAt, role }.
   //   reason: 'ok' | 'not-logged' | 'not-enrolled' | 'not-released' | 'no-course-id'
@@ -101,7 +117,7 @@
     // Проверить isAdmin + managedCourses.
     let isAdmin = false, managedCourses = [];
     try {
-      const u = await db.collection("users").doc(user.uid).get();
+      const u = await getDocRetry(db.collection("users").doc(user.uid));
       if (u.exists) {
         isAdmin = !!u.data().isAdmin;
         managedCourses = Array.isArray(u.data().managedCourses) ? u.data().managedCourses : [];
@@ -112,7 +128,7 @@
     // Проверить enrollment approved.
     let approved = false;
     try {
-      const e = await db.collection("enrollments").doc(user.uid + "_" + cid).get();
+      const e = await getDocRetry(db.collection("enrollments").doc(user.uid + "_" + cid));
       if (e.exists && e.data().status === "approved") approved = true;
     } catch (_) {}
     if (!approved) return { open: false, reason: "not-enrolled" };
@@ -120,8 +136,8 @@
     // Проверить releasedAt.
     let releasedAt = null;
     try {
-      const l = await db.collection("lectures").doc(docId(cid, lec)).get();
-      if (l.exists) releasedAt = l.data().releasedAt || null;
+      const l = await getDocRetry(db.collection("lectures").doc(docId(cid, lec)));
+      if (l && l.exists) releasedAt = l.data().releasedAt || null;
     } catch (_) {}
     if (!releasedAt) return { open: false, reason: "not-released", role: "student" };
     if (releasedAt.toMillis() > Date.now()) return { open: false, reason: "not-released", releasedAt: releasedAt, role: "student" };

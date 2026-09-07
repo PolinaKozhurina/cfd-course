@@ -191,6 +191,7 @@
     if (this.root && this.root.parentNode) this.root.parentNode.removeChild(this.root);
     document.body.style.overflow = "";
     this.root = null;
+    this.liveCanvas = null; this._pendingSnap = null;
     var hidden = this._hidden || []; this._hidden = [];
     for (var hi = 0; hi < hidden.length; hi++) {
       try { hidden[hi].el.style.display = hidden[hi].display || "flex"; } catch (_) {}
@@ -275,6 +276,10 @@
   Annotator.prototype._applySnapshot = function (snap) {
     var self = this;
     this.synced = true;
+    // Пока идёт штрих, страницу не перерисовываем (на iPad это давало
+    // рывки пера); снимок применим сразу после pointerup.
+    if (this.drawing) { this._pendingSnap = snap; return; }
+    this._pendingSnap = null;
     snap.forEach(function (doc) {
       var data = doc.data() || {};
       var pageIndex = data.page;
@@ -403,7 +408,8 @@
       '.cfd-annot-pages{flex:1;overflow:auto;padding:1rem;background:#e6e0d0}' +
       '.cfd-annot-page-wrap{position:absolute;left:0;top:0;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.15);display:block;transform-origin:0 0;will-change:transform}' +
       '.cfd-annot-page-wrap canvas{display:block}' +
-      '.cfd-annot-ink{position:absolute;left:0;top:0;touch-action:pan-y;cursor:crosshair}' +
+      '.cfd-annot-ink{position:absolute;left:0;top:0;touch-action:none;cursor:crosshair;-webkit-user-select:none;user-select:none}' +
+      '.cfd-annot-live{position:absolute;left:0;top:0;pointer-events:none}' +
       '.cfd-annot-page-num{position:absolute;top:-1.6rem;left:0;font-family:"JetBrains Mono",monospace;font-size:.78rem;color:#7a6a4a}' +
       '.cfd-annot-zoom{display:inline-flex;align-items:center;gap:2px;background:#fdf9f0;border:1px solid #c8bfa8;border-radius:5px;padding:2px}' +
       '.cfd-annot-zoom .cfd-annot-zoom-btn{border:none;padding:.15rem .5rem;font-size:.95rem;min-width:1.8rem;background:transparent}' +
@@ -658,12 +664,24 @@
     }
     function acceptPointer(e) { return e.pointerType !== "touch"; }
 
+    // Прокрутка пальцем: у холста touch-action:none (иначе Safari на iPad
+    // перехватывает вертикальные движения пера как прокрутку и штрих рвётся),
+    // поэтому одним пальцем листаем сами. Пинч-зум идёт через gesture-события.
+    var fingerId = null, fingerLast = null;
+    function box() { return self.root && self.root.querySelector(".cfd-annot-pages"); }
+
     el.addEventListener("pointerdown", function (e) {
       // Заметку можно поставить и пальцем — это не рисование
       if (self.tool === "note") {
         e.preventDefault();
         self.state.currentPage = p.pageIndex;
         self._createNote(p, getPos(e));
+        return;
+      }
+      if (e.pointerType === "touch") {
+        if (fingerId != null || self.drawing) return;
+        fingerId = e.pointerId; fingerLast = { x: e.clientX, y: e.clientY };
+        try { el.setPointerCapture(e.pointerId); } catch (_) {}
         return;
       }
       if (!acceptPointer(e)) return;
@@ -704,24 +722,46 @@
       self.activePage = p;
       self.drawing = true;
       self.state.pages[p.pageIndex].strokes.push(st);
-      self._drawStrokeSegment(p, st, st.points.length - 1);
+      self._drawnUpTo = 0;
+      if (st.tool === "highlighter") self._liveBegin(p);
+      else self._drawStrokeSegment(p, st, 0);
     });
 
     el.addEventListener("pointermove", function (e) {
+      if (e.pointerType === "touch") {
+        if (e.pointerId !== fingerId || !fingerLast) return;
+        var bx = box();
+        if (bx) { bx.scrollTop -= (e.clientY - fingerLast.y); bx.scrollLeft -= (e.clientX - fingerLast.x); }
+        fingerLast = { x: e.clientX, y: e.clientY };
+        return;
+      }
       if (!self.drawing) return;
       if (!acceptPointer(e)) return;
       e.preventDefault();
-      var pos = getPos(e);
-      if (self.tool === "eraser") { self._eraseAt(p, pos, 14); return; }
+      if (self.tool === "eraser") { self._eraseAt(p, getPos(e), 14); return; }
       if (!self.activeStroke) return;
-      self.activeStroke.points.push({ x: pos.x, y: pos.y, p: pressureOf(e) });
-      // маркер рисуется целиком одним путём (иначе полупрозрачные сегменты
-      // накладываются и получаются «бусы»), перо — посегментно
-      if (self.activeStroke.tool === "highlighter") self._redrawPage(p);
-      else self._drawStrokeSegment(p, self.activeStroke, self.activeStroke.points.length - 1);
+      // Coalesced events: перо даёт до 240 точек/с, а pointermove — 60;
+      // без них линия ломаная и «рывками».
+      var evs = (typeof e.getCoalescedEvents === "function") ? e.getCoalescedEvents() : null;
+      if (!evs || !evs.length) evs = [e];
+      var st = self.activeStroke;
+      for (var k = 0; k < evs.length; k++) {
+        var pos = getPos(evs[k]);
+        st.points.push({ x: pos.x, y: pos.y, p: pressureOf(evs[k]) });
+      }
+      if (st.tool === "highlighter") self._liveSchedule(p);
+      else {
+        // перо — посегментно, сразу (без ожидания кадра)
+        for (var i = self._drawnUpTo + 1; i < st.points.length; i++) self._drawStrokeSegment(p, st, i);
+        self._drawnUpTo = st.points.length - 1;
+      }
     });
 
     function finish(e) {
+      if (e && e.pointerType === "touch") {
+        if (e.pointerId === fingerId) { fingerId = null; fingerLast = null; try { el.releasePointerCapture(e.pointerId); } catch (_) {} }
+        return;
+      }
       if (!self.drawing) return;
       self.drawing = false;
       try { el.releasePointerCapture(e.pointerId); } catch (_) {}
@@ -729,14 +769,60 @@
         var ids = self.erased[p.pageIndex] || [];
         self.erased[p.pageIndex] = [];
         if (ids.length) self._syncDel(p.pageIndex, ids);
+        self._flushPendingSnap();
         return;
       }
       var st = self.activeStroke;
       self.activeStroke = null; self.activePage = null;
-      if (st) self._commitStroke(p, st);
+      if (st) {
+        if (st.tool === "highlighter") { self._liveEnd(p); self._drawWholePath(p.inkCanvas.getContext("2d"), st); }
+        else self._drawStrokeTail(p, st);
+        self._commitStroke(p, st);
+      }
+      self._flushPendingSnap();
     }
     el.addEventListener("pointerup", finish);
     el.addEventListener("pointercancel", finish);
+  };
+
+  Annotator.prototype._flushPendingSnap = function () {
+    var snap = this._pendingSnap; this._pendingSnap = null;
+    if (snap) this._applySnapshot(snap);
+  };
+
+  // ---------- Живой слой: текущий штрих маркера рисуется на отдельном холсте ----------
+  // Иначе на каждое движение пришлось бы перерисовывать всю страницу со всеми
+  // штрихами (на iPad это и давало рывки). Холст один на всю проверялку,
+  // переносится на активную страницу.
+
+  Annotator.prototype._liveBegin = function (p) {
+    var cv = this.liveCanvas;
+    if (!cv) { cv = document.createElement("canvas"); cv.className = "cfd-annot-live"; this.liveCanvas = cv; }
+    if (cv.width !== p.inkCanvas.width || cv.height !== p.inkCanvas.height) { cv.width = p.inkCanvas.width; cv.height = p.inkCanvas.height; }
+    else cv.getContext("2d").clearRect(0, 0, cv.width, cv.height);
+    cv.style.width = p.inkCanvas.style.width || ""; cv.style.height = p.inkCanvas.style.height || "";
+    if (cv.parentNode !== p.wrap) { if (cv.parentNode) cv.parentNode.removeChild(cv); p.wrap.appendChild(cv); }
+    cv.style.display = "block";
+    this._liveDirty = false;
+  };
+  Annotator.prototype._liveSchedule = function (p) {
+    var self = this;
+    if (this._liveDirty) return;
+    this._liveDirty = true;
+    requestAnimationFrame(function () {
+      self._liveDirty = false;
+      var st = self.activeStroke, cv = self.liveCanvas;
+      if (!st || !cv || self.activePage !== p) return;
+      var ctx = cv.getContext("2d");
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      self._drawWholePath(ctx, st);
+    });
+  };
+  Annotator.prototype._liveEnd = function (p) {
+    var cv = this.liveCanvas;
+    if (!cv) return;
+    cv.getContext("2d").clearRect(0, 0, cv.width, cv.height);
+    cv.style.display = "none";
   };
 
   Annotator.prototype._newStroke = function (base) {
@@ -771,16 +857,47 @@
       ctx.restore();
       return;
     }
-    if (i <= 0) { ctx.restore(); return; }
-    var a = stroke.points[i - 1], b = stroke.points[i];
+    var pts = stroke.points;
+    if (i <= 0) {
+      // одиночная точка: точка-кружок, чтобы тап пером что-то оставлял
+      if (pts.length === 1) {
+        var w0 = Math.max(0.5, stroke.size * (0.5 + 1.5 * (pts[0].p != null ? pts[0].p : 0.5)));
+        ctx.beginPath(); ctx.arc(pts[0].x, pts[0].y, w0 / 2, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore(); return;
+    }
+    var a = pts[i - 1], b = pts[i];
     var w;
     if (stroke.tool === "highlighter") w = stroke.size;
     else w = Math.max(0.5, stroke.size * (0.5 + 1.5 * (b.p != null ? b.p : 0.5)));
     ctx.lineWidth = w;
     ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
+    // Сглаживание: сегмент идёт от середины [a-1,a] до середины [a,b],
+    // точка a — контрольная. Ломаная превращается в плавную кривую.
+    if (i >= 2) {
+      var z = pts[i - 2];
+      ctx.moveTo((z.x + a.x) / 2, (z.y + a.y) / 2);
+      ctx.quadraticCurveTo(a.x, a.y, (a.x + b.x) / 2, (a.y + b.y) / 2);
+    } else {
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo((a.x + b.x) / 2, (a.y + b.y) / 2);
+    }
     ctx.stroke();
+    ctx.restore();
+  };
+
+  // Дорисовать хвост от последней середины до последней точки (после pointerup)
+  Annotator.prototype._drawStrokeTail = function (p, stroke) {
+    var pts = stroke.points;
+    if (stroke.tool === "stamp" || pts.length < 2) return;
+    var a = pts[pts.length - 2], b = pts[pts.length - 1];
+    var ctx = p.inkCanvas.getContext("2d");
+    ctx.save();
+    ctx.globalCompositeOperation = stroke.blend || "source-over";
+    ctx.globalAlpha = stroke.opacity != null ? stroke.opacity : 1;
+    ctx.strokeStyle = stroke.color; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.lineWidth = Math.max(0.5, stroke.size * (0.5 + 1.5 * (b.p != null ? b.p : 0.5)));
+    ctx.beginPath(); ctx.moveTo((a.x + b.x) / 2, (a.y + b.y) / 2); ctx.lineTo(b.x, b.y); ctx.stroke();
     ctx.restore();
   };
 
@@ -792,7 +909,9 @@
       var st = strokes[s];
       if (st.tool === "stamp") { this._drawStrokeSegment(p, st, 0); continue; }
       if (st.tool === "highlighter") { this._drawWholePath(ctx, st); continue; }
+      if (st.points.length === 1) { this._drawStrokeSegment(p, st, 0); continue; }
       for (var i = 1; i < st.points.length; i++) this._drawStrokeSegment(p, st, i);
+      this._drawStrokeTail(p, st);
     }
   };
 
@@ -804,9 +923,14 @@
     ctx.globalAlpha = st.opacity != null ? st.opacity : 0.28;
     ctx.strokeStyle = st.color; ctx.lineWidth = st.size; ctx.lineCap = "round"; ctx.lineJoin = "round";
     ctx.beginPath();
-    ctx.moveTo(st.points[0].x, st.points[0].y);
-    if (st.points.length === 1) ctx.lineTo(st.points[0].x + 0.1, st.points[0].y);
-    for (var i = 1; i < st.points.length; i++) ctx.lineTo(st.points[i].x, st.points[i].y);
+    var q = st.points;
+    ctx.moveTo(q[0].x, q[0].y);
+    if (q.length === 1) ctx.lineTo(q[0].x + 0.1, q[0].y);
+    else if (q.length === 2) ctx.lineTo(q[1].x, q[1].y);
+    else {
+      for (var i = 1; i < q.length - 1; i++) ctx.quadraticCurveTo(q[i].x, q[i].y, (q[i].x + q[i + 1].x) / 2, (q[i].y + q[i + 1].y) / 2);
+      ctx.lineTo(q[q.length - 1].x, q[q.length - 1].y);
+    }
     ctx.stroke();
     ctx.restore();
   };

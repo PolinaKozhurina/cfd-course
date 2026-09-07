@@ -16,6 +16,8 @@
 //   lab_progress/{uid}_{cid}_{lab} = { uid, courseId, labId,
 //                                tasks: { taskId: 'ok'|'err' }, code: { editorId: text },
 //                                done, total, updatedAt }
+//   Резервная копия кода и отметок — в приватном репо сдач через Worker
+//   (/lab-progress → labs/{cid}/{lab}/{uid}/…), см. backupToGit.
 //
 // Реестр лаб: window.CFD_LABS (js/courses.js).
 // Зависит от firebase-*-compat + firebase-config.js.
@@ -47,6 +49,26 @@
       if (u) { res(u); return; }
       const un = auth.onAuthStateChanged(user => { un(); res(user); });
     });
+  }
+
+  // Когда слать копию в git: впервые пройдена ещё одна задача, либо код менялся
+  // и с прошлой отправки прошло больше 5 минут. Ничего не ждём и не бросаем.
+  const _bk = {};
+  function maybeBackup(uid, cid, lab, data) {
+    try {
+      if (typeof WORKER_URL === "undefined" || !WORKER_URL) return;
+      if (!data || !data.code) return;
+      const k = pid(uid, cid, lab);
+      const st = _bk[k] || (_bk[k] = { at: 0, sig: "", ok: 0 });
+      const okNow = Object.keys(data.tasks || {}).filter(t => data.tasks[t] === "ok").length;
+      const sig = JSON.stringify(data.code);
+      const now = Date.now();
+      const due = (okNow > st.ok && sig !== st.sig) || (sig !== st.sig && now - st.at > 5 * 60 * 1000);
+      if (!due) return;
+      st.at = now; st.sig = sig; st.ok = Math.max(st.ok, okNow);
+      API.backupToGit(cid, lab, { tasks: data.tasks || {}, code: data.code, done: data.done || 0, total: data.total || 0 }, { keepalive: true })
+        .then(r => { if (r && !r.ok) console.warn("lab backup:", r.error); });
+    } catch (e) { console.warn("lab backup:", e); }
   }
 
   const API = {
@@ -192,6 +214,7 @@
         await db.collection("lab_progress").doc(pid(uid, cid, lab)).set(Object.assign({
           uid: uid, courseId: cid, labId: lab, updatedAt: nowTs(),
         }, data), { merge: true });
+        maybeBackup(uid, cid, lab, data);
         return { ok: true };
       } catch (e) { return { ok: false, error: e.message }; }
     },
@@ -208,6 +231,24 @@
         s.forEach(d => { out[d.data().uid] = d.data(); });
       } catch (e) { console.warn("listLabProgress", e); }
       return out;
+    },
+
+    // ---- резервная копия в приватный git (через Worker, маршрут /lab-progress) ----
+    // Необязательна: любая ошибка глушится, прогресс в Firestore от неё не зависит.
+    // data: { tasks, code, done, total } (студент) либо { items: [...] } (admin).
+    backupToGit: async function (cid, lab, data, opts) {
+      try {
+        if (typeof WORKER_URL === "undefined" || !WORKER_URL) return { ok: false, error: "WORKER_URL" };
+        const me = auth.currentUser; if (!me) return { ok: false, error: "Не авторизован" };
+        const token = await me.getIdToken();
+        const body = JSON.stringify(Object.assign({ token: token, cid: cid, lab: lab }, data));
+        const init = { method: "POST", headers: { "Content-Type": "application/json" }, body: body };
+        if (opts && opts.keepalive && body.length < 60000) init.keepalive = true;
+        const resp = await fetch(WORKER_URL + "/lab-progress", init);
+        const j = await resp.json().catch(() => ({}));
+        if (!resp.ok || !j.ok) return { ok: false, error: j.error || ("HTTP " + resp.status) };
+        return j;
+      } catch (e) { return { ok: false, error: e.message || String(e) }; }
     },
 
     // ---- монтирование страницы лабы ----

@@ -39,6 +39,9 @@ export default {
       if (url.pathname === "/upload-reviewed" && request.method === "POST") {
         return await handleUploadReviewed(request, env);
       }
+      if (url.pathname === "/lab-progress" && request.method === "POST") {
+        return await handleLabProgress(request, env);
+      }
       if (url.pathname === "/fetch-link" && request.method === "POST") {
         return await handleFetchLink(request, env);
       }
@@ -247,6 +250,93 @@ async function handleUploadReviewed(request, env) {
 // файла (URL-encoded). Ошибки — JSON { ok:false, error }.
 // ============================================================
 const FETCH_LINK_MAX = 50 * 1024 * 1024;
+
+// Резервная копия прогресса закрытой лабы в приватный репо сдач:
+//   labs/{cid}/{lab}/{uid}/{editorId}.cpp  — код студента по задачам
+//   labs/{cid}/{lab}/{uid}/progress.json   — отметки автопроверки, зачёт
+// Все файлы одного запроса — один коммит (Git Data API); если содержимое
+// не изменилось, коммит не создаётся.
+// Тело (студент, только свой uid):
+//   { token, cid, lab, tasks, code, done, total }
+// Тело (admin курса, выгрузка всех):
+//   { token, cid, lab, items: [{ uid, email, fio, tasks, code, done, total, accepted }] }
+async function handleLabProgress(request, env) {
+  const body = await request.json();
+  const cid = sanitizeSlug(String(body.cid || ""));
+  const lab = sanitizeSlug(String(body.lab || ""));
+  if (!cid || !lab) return json({ ok: false, error: "missing cid/lab" }, env, 400);
+
+  const claims = await verifyIdToken(body.token || "", env);
+  const me = claims.user_id || claims.sub;
+  const isAdmin = authorizeAdminForCourse(claims, cid, env);
+
+  let items;
+  if (Array.isArray(body.items)) {
+    if (!isAdmin) return json({ ok: false, error: "forbidden (not admin of course " + cid + ")" }, env, 403);
+    items = body.items;
+  } else {
+    items = [{ uid: me, email: claims.email, tasks: body.tasks, code: body.code, done: body.done, total: body.total }];
+  }
+
+  const files = {};
+  let n = 0;
+  for (const it of items) {
+    if (!it || typeof it !== "object") continue;
+    const uid = sanitizeSlug(String(it.uid || ""));
+    if (!uid) continue;
+    if (uid !== me && !isAdmin) continue;
+    const dir = "labs/" + cid + "/" + lab + "/" + uid;
+    const code = (it.code && typeof it.code === "object") ? it.code : {};
+    for (const k of Object.keys(code)) {
+      const text = String(code[k] == null ? "" : code[k]);
+      if (text.length > 200000) continue;
+      files[dir + "/" + (sanitizeSlug(k) || "code") + ".cpp"] = text;
+    }
+    files[dir + "/progress.json"] = JSON.stringify({
+      uid: uid, email: it.email || null, fio: it.fio || null,
+      courseId: cid, labId: lab,
+      tasks: (it.tasks && typeof it.tasks === "object") ? it.tasks : {},
+      done: it.done || 0, total: it.total || 0, accepted: !!it.accepted,
+      savedAt: new Date().toISOString(), savedBy: claims.email || me,
+    }, null, 2) + "\n";
+    n++;
+  }
+  if (!n) return json({ ok: false, error: "nothing to save" }, env, 400);
+
+  const msg = "lab progress: " + cid + "/" + lab + " · " + (n === 1 ? (claims.email || me) : n + " студ. (выгрузка " + (claims.email || me) + ")");
+  const r = await ghCommitFiles(files, msg, env);
+  return json({ ok: true, students: n, files: Object.keys(files).length, commit: r.commit, unchanged: r.unchanged }, env);
+}
+
+// Один коммит с несколькими файлами в основной (приватный) репо через Git
+// Data API. При гонке двух запросов (ref ушёл вперёд) — перечитать и повторить.
+async function ghCommitFiles(files, message, env) {
+  let branch = String(env.GITHUB_BRANCH || "").trim();
+  if (!branch) {
+    const info = await ghGet("", env);
+    branch = (info && info.default_branch) || "main";
+  }
+  const tree = Object.keys(files).map(p => ({ path: p, mode: "100644", type: "blob", content: files[p] }));
+  let lastErr = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const ref = await ghGet("/git/ref/heads/" + branch, env);
+    if (!ref || !ref.object) throw new Error("branch not found: " + branch);
+    const headSha = ref.object.sha;
+    const head = await ghGet("/git/commits/" + headSha, env);
+    const baseTree = head.tree.sha;
+    const newTree = await ghApi("POST", "/git/trees", { base_tree: baseTree, tree: tree }, env);
+    if (newTree.sha === baseTree) return { unchanged: true, commit: headSha };
+    const commit = await ghApi("POST", "/git/commits", { message: message, tree: newTree.sha, parents: [headSha] }, env);
+    try {
+      await ghApi("PATCH", "/git/refs/heads/" + branch, { sha: commit.sha, force: false }, env);
+      return { unchanged: false, commit: commit.sha };
+    } catch (e) {
+      lastErr = e;
+      await new Promise(r => setTimeout(r, 200 + Math.random() * 400));
+    }
+  }
+  throw lastErr || new Error("ref update failed");
+}
 
 async function handleFetchLink(request, env) {
   const body = await request.json();

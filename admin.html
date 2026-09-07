@@ -4489,6 +4489,7 @@ async function labsRenderProgress(cid, lab, sess) {
   const box = document.getElementById('labProgress');
   const info = CFDLabs.labInfo(cid, lab);
   const prog = await CFDLabs.listLabProgress(cid, lab);
+  _labProg = prog;
   const allowed = new Set((sess && sess.allowedUids) || []);
   const uids = new Set([...allowed, ...Object.keys(prog)]);
   if (!uids.size) { box.innerHTML = '<div style="color:var(--text3);font-style:italic;padding:.5rem">Пока никто не допущен и нет сохранённого прогресса.</div>'; return; }
@@ -4500,10 +4501,10 @@ async function labsRenderProgress(cid, lab, sess) {
     const pct = total ? Math.round(100 * done / total) : 0;
     const accepted = !!(p && p.accepted);
     const reached = info.pass ? done >= info.pass : false;
-    return { uid, fio: u.fio || u.email || uid, sg: u.studyGroup || '', done, total, pct, upd, allowed: allowed.has(uid), accepted, reached };
+    return { uid, fio: u.fio || u.email || uid, sg: u.studyGroup || '', done, total, pct, upd, allowed: allowed.has(uid), accepted, reached, hasCode: !!(p && p.code && Object.keys(p.code).length) };
   }).sort((x, y) => x.fio.localeCompare(y.fio, 'ru'));
-  box.innerHTML = '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3);margin-bottom:.4rem">ПРОГРЕСС · ' + rows.length + ' студ.' + (info.pass ? ' · ориентир зачёта ' + info.pass + '/' + (info.total || '?') + ' задач; зачёт ставите вы' : '') + '</div>'
-    + rows.map(r => '<div style="display:grid;grid-template-columns:1fr 90px 140px 70px 110px 120px;gap:.6rem;align-items:center;padding:.35rem 0;border-bottom:1px dotted var(--border);font-size:.85rem">'
+  box.innerHTML = '<div style="display:flex;align-items:center;gap:.8rem;margin-bottom:.4rem"><span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3)">ПРОГРЕСС · ' + rows.length + ' студ.' + (info.pass ? ' · ориентир зачёта ' + info.pass + '/' + (info.total || '?') + ' задач; зачёт ставите вы' : '') + '</span>' + '<button class="btn btn-sm" onclick="labsBackupToGit()" title="Сохранить код и отметки всех студентов этой лабы в приватный репозиторий cfd-submissions (labs/курс/лаба/uid/)">⇩ выгрузить в git</button><span id="labBackupStatus" style="font-size:.75rem;color:var(--text3)"></span></div>'
+    + rows.map(r => '<div style="display:grid;grid-template-columns:1fr 90px 140px 70px 110px 120px 52px;gap:.6rem;align-items:center;padding:.35rem 0;border-bottom:1px dotted var(--border);font-size:.85rem">'
       + '<div>' + escapeHtml(r.fio) + (r.allowed ? '' : ' <span style="font-size:.7rem;color:var(--text3)">(не в списке)</span>') + '</div>'
       + '<div style="color:var(--text3);font-size:.75rem">' + escapeHtml(r.sg) + '</div>'
       + '<div style="height:8px;background:#e6dfd0;border-radius:4px;overflow:hidden"><div style="height:100%;width:' + r.pct + '%;background:' + (r.reached ? '#3d6b5a' : '#3a5ba0') + '"></div></div>'
@@ -4513,7 +4514,51 @@ async function labsRenderProgress(cid, lab, sess) {
           ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.7rem;color:#1a6b5a">✓ зачтено</span> <button class="btn btn-sm" title="Снять зачёт" onclick="labsSetAccepted(\'' + r.uid + '\', false)">×</button>'
           : '<button class="btn btn-sm" style="' + (r.reached ? 'border-color:#1a6b5a;color:#1a6b5a' : '') + '" onclick="labsSetAccepted(\'' + r.uid + '\', true)">Зачесть</button>')
       + '</div>'
+      + '<div style="text-align:right">' + (r.hasCode ? '<button class="btn btn-sm" title="Показать код студента" onclick="labsShowCode(\'' + r.uid + '\')">Код</button>' : '') + '</div>'
       + '</div>').join('');
+}
+
+let _labProg = {};
+
+// Код студента по задачам (из lab_progress.code) — в оверлее.
+function labsShowCode(uid) {
+  const p = _labProg[uid]; if (!p) return;
+  const u = (allUsers || []).find(x => x.uid === uid) || { fio: '', email: uid };
+  const info = CFDLabs.labInfo(p.courseId, p.labId);
+  const code = p.code || {}, tasks = p.tasks || {};
+  const ids = Object.keys(code).sort();
+  const mark = id => { const t = tasks[id]; return t === 'ok' ? '<span style="color:#1a6b5a">✓ ok</span>' : (t === 'err' ? '<span style="color:#c44">✗ err</span>' : '<span style="color:var(--text3)">—</span>'); };
+  let wrap = document.getElementById('labCodeWrap');
+  if (!wrap) {
+    wrap = document.createElement('div'); wrap.id = 'labCodeWrap';
+    wrap.style.cssText = 'display:none;position:fixed;inset:0;z-index:10003;background:rgba(0,0,0,.45);align-items:flex-start;justify-content:center;overflow:auto;padding:2rem 1rem';
+    wrap.addEventListener('click', e => { if (e.target === wrap) wrap.style.display = 'none'; });
+    document.body.appendChild(wrap);
+  }
+  wrap.innerHTML = '<div style="background:#fff;border-radius:10px;max-width:960px;width:100%;padding:1rem 1.2rem;box-shadow:0 10px 40px rgba(0,0,0,.25)">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:.6rem">'
+    + '<div><strong>' + escapeHtml(u.fio || u.email || uid) + '</strong> <span style="color:var(--text3);font-size:.8rem">· ' + escapeHtml(info.title || p.labId) + ' · ' + (p.done || 0) + '/' + (p.total || info.total || '?') + (p.accepted ? ' · <span style="color:#1a6b5a">зачтено</span>' : '') + '</span></div>'
+    + '<button class="btn btn-sm" onclick="document.getElementById(\'labCodeWrap\').style.display=\'none\'">закрыть</button></div>'
+    + (ids.length ? ids.map(id => '<div style="margin:.5rem 0"><div style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text2);margin-bottom:.2rem">' + escapeHtml(id) + ' · ' + mark(id) + '</div>'
+        + '<pre style="margin:0;padding:.6rem .8rem;background:#1e1e1e;color:#e8e6e3;border-radius:6px;font-size:.78rem;line-height:1.4;overflow:auto;max-height:340px;white-space:pre">' + escapeHtml(code[id]) + '</pre></div>').join('')
+      : '<div style="color:var(--text3);font-style:italic">Код не сохранён.</div>')
+    + '</div>';
+  wrap.style.display = 'flex';
+}
+
+// Выгрузка кода и отметок всех студентов текущей лабы в приватный репо (через Worker).
+async function labsBackupToGit() {
+  const cid = document.getElementById('labCourse').value, lab = document.getElementById('labId').value;
+  const st = document.getElementById('labBackupStatus');
+  const items = Object.keys(_labProg).map(uid => {
+    const p = _labProg[uid], u = (allUsers || []).find(x => x.uid === uid) || {};
+    return { uid: uid, email: u.email || null, fio: u.fio || null, tasks: p.tasks || {}, code: p.code || {}, done: p.done || 0, total: p.total || 0, accepted: !!p.accepted };
+  });
+  if (!items.length) { if (st) st.textContent = 'нечего выгружать'; return; }
+  if (st) st.textContent = 'выгрузка ' + items.length + ' студ.…';
+  const r = await CFDLabs.backupToGit(cid, lab, { items: items });
+  if (!r.ok) { if (st) { st.textContent = '✗ ' + r.error; st.style.color = '#c44'; } return; }
+  if (st) { st.style.color = '#1a6b5a'; st.textContent = r.unchanged ? '✓ в git уже актуально' : '✓ коммит ' + String(r.commit || '').slice(0, 7) + ' · ' + r.students + ' студ., ' + r.files + ' файл.'; }
 }
 
 // Зачёт по лабе — решение преподавателя; открывает студенту следующую лабу.

@@ -21,7 +21,7 @@
 const CACHE_JWKS_TTL_SEC = 3600;
 // Версия кода воркера: видна в GET /health → проверка, что Cloudflare
 // выкатил свежий коммит (Workers Builds деплоит при каждом push в master).
-const WORKER_VERSION = "2026-09-07.4";
+const WORKER_VERSION = "2026-09-07.5";
 
 export default {
   async fetch(request, env, ctx) {
@@ -358,19 +358,30 @@ async function handleFetchLink(request, env) {
   const candidates = await resolveDirectLinks(link);
   let lastErr = "";
   for (const c of candidates) {
+    if (c.error) { lastErr = c.error; continue; }
     try {
       const r = await fetch(c.url, {
         redirect: "follow",
         headers: { "User-Agent": "Mozilla/5.0 (compatible; cfd-course-worker)" },
       });
-      if (!r.ok) { lastErr = "HTTP " + r.status; continue; }
+      if (!r.ok) { lastErr = "HTTP " + r.status + " от " + safeHost(c.url); continue; }
       const len = parseInt(r.headers.get("content-length") || "0", 10) || 0;
       if (len > FETCH_LINK_MAX) { lastErr = "файл больше 50 MB"; break; }
-      const buf = await r.arrayBuffer();
-      if (buf.byteLength > FETCH_LINK_MAX) { lastErr = "файл больше 50 MB"; break; }
-      const head = new Uint8Array(buf.slice(0, 4));
-      const isPdf = head[0] === 0x25 && head[1] === 0x50 && head[2] === 0x44 && head[3] === 0x46; // "%PDF"
+      if (!r.body) { lastErr = "пустой ответ от " + safeHost(c.url); continue; }
+      // Читаем начало, чтобы проверить сигнатуру, дальше отдаём потоком —
+      // без буферизации всего файла (сканы бывают по 50 МБ).
+      const reader = r.body.getReader();
+      let first = new Uint8Array(0);
+      while (first.length < 8) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const merged = new Uint8Array(first.length + value.length);
+        merged.set(first, 0); merged.set(value, first.length);
+        first = merged;
+      }
+      const isPdf = first.length >= 4 && first[0] === 0x25 && first[1] === 0x50 && first[2] === 0x44 && first[3] === 0x46; // "%PDF"
       if (!isPdf) {
+        try { await reader.cancel(); } catch (_) {}
         const ct = (r.headers.get("content-type") || "?").split(";")[0];
         lastErr = /html/i.test(ct)
           ? "по ссылке отдаётся страница, а не файл (файл закрыт? откройте доступ «всем, у кого есть ссылка»)"
@@ -378,21 +389,34 @@ async function handleFetchLink(request, env) {
         continue;
       }
       const name = fileNameFromResponse(r) || c.name || "submission.pdf";
-      return new Response(buf, {
-        status: 200,
-        headers: Object.assign({
-          "Content-Type": "application/pdf",
-          "Content-Length": String(buf.byteLength),
-          "X-File-Name": encodeURIComponent(name),
-          "Access-Control-Expose-Headers": "X-File-Name",
-        }, corsHeaders(env)),
+      let total = first.length;
+      const stream = new ReadableStream({
+        start(ctrl) { ctrl.enqueue(first); },
+        async pull(ctrl) {
+          const { done, value } = await reader.read();
+          if (done) { ctrl.close(); return; }
+          total += value.length;
+          if (total > FETCH_LINK_MAX) { try { await reader.cancel(); } catch (_) {} ctrl.error(new Error("файл больше 50 MB")); return; }
+          ctrl.enqueue(value);
+        },
+        cancel() { try { reader.cancel(); } catch (_) {} },
       });
-    } catch (e) { lastErr = e.message || String(e); }
+      const h = Object.assign({
+        "Content-Type": "application/pdf",
+        "X-File-Name": encodeURIComponent(name),
+        "Access-Control-Expose-Headers": "Content-Length,X-File-Name",
+      }, corsHeaders(env));
+      if (len) h["Content-Length"] = String(len);
+      return new Response(stream, { status: 200, headers: h });
+    } catch (e) { lastErr = (e && e.message) || String(e); }
   }
   return json({ ok: false, error: lastErr || "не удалось скачать" }, env, 502);
 }
 
+function safeHost(u) { try { return new URL(u).hostname; } catch (_) { return "?"; } }
+
 // Ссылка «для людей» → список кандидатов на прямое скачивание.
+// Элемент { url, name? } или { error } — понятная причина, если кандидатов нет.
 async function resolveDirectLinks(link) {
   let u;
   try { u = new URL(link); } catch (_) { return [{ url: link }]; }
@@ -405,6 +429,9 @@ async function resolveDirectLinks(link) {
       return [{ url: "https://docs.google.com/" + m[1] + "/d/" + m[2] + "/export?format=pdf",
                 name: m[1] + "_" + m[2].slice(0, 8) + ".pdf" }];
     }
+    if (/^\/drive\/(u\/\d+\/)?folders\//.test(u.pathname)) {
+      return [{ error: "это ссылка на папку Google Диска — нужна ссылка на сам PDF (правый клик по файлу → «Поделиться» → «Копировать ссылку»)" }];
+    }
     // Обычный файл на Диске: /file/d/ID/view, /open?id=ID, /uc?id=ID.
     let id = null;
     m = u.pathname.match(/\/file\/d\/([\w-]+)/);
@@ -412,24 +439,57 @@ async function resolveDirectLinks(link) {
     if (!id) id = u.searchParams.get("id");
     if (id) {
       return [
-        { url: "https://drive.google.com/uc?export=download&id=" + id },
-        // Для больших файлов Диск показывает страницу «проверка на вирусы»; этот хост её обходит.
+        // Этот хост отдаёт файл любого размера без страницы «проверка на вирусы».
         { url: "https://drive.usercontent.google.com/download?id=" + id + "&export=download&confirm=t" },
+        { url: "https://drive.google.com/uc?export=download&id=" + id },
       ];
     }
   }
   if (/(^|\.)disk\.yandex\.(ru|com|by|kz)$/.test(host) || host === "yadi.sk") {
-    try {
-      const r = await fetch("https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key=" + encodeURIComponent(link));
-      const d = await r.json();
-      if (d && d.href) return [{ url: d.href }];
-    } catch (_) {}
+    return await resolveYandexPublic(link);
   }
   if (/(^|\.)dropbox\.com$/.test(host)) {
     u.searchParams.set("dl", "1");
     return [{ url: u.toString() }];
   }
   return [{ url: link }];
+}
+
+// Яндекс Диск: публичная ссылка может вести на файл или на папку.
+// Для папки берём PDF из неё (если один — его; если несколько — самый большой).
+async function resolveYandexPublic(link) {
+  const api = "https://cloud-api.yandex.net/v1/disk/public/resources";
+  const key = encodeURIComponent(link);
+  let meta = null;
+  try {
+    const r = await fetch(api + "?public_key=" + key + "&limit=200");
+    if (r.ok) meta = await r.json();
+    else if (r.status === 404) return [{ error: "Яндекс Диск: ссылка не найдена или доступ закрыт" }];
+  } catch (_) {}
+  const dl = async (path) => {
+    try {
+      const r = await fetch(api + "/download?public_key=" + key + (path ? "&path=" + encodeURIComponent(path) : ""));
+      const d = await r.json();
+      return d && d.href ? d.href : null;
+    } catch (_) { return null; }
+  };
+  if (meta && meta.type === "dir") {
+    const items = ((meta._embedded && meta._embedded.items) || []).filter(it =>
+      it.type === "file" && (/\.pdf$/i.test(it.name || "") || /pdf/i.test(it.mime_type || "")));
+    if (!items.length) return [{ error: "в папке на Яндекс Диске нет PDF" }];
+    items.sort((x, y) => (y.size || 0) - (x.size || 0));
+    const out = [];
+    for (const it of items.slice(0, 3)) {
+      const href = await dl(it.path);
+      if (href) out.push({ url: href, name: it.name });
+      else if (it.file) out.push({ url: it.file, name: it.name });
+    }
+    return out.length ? out : [{ error: "Яндекс Диск не дал ссылку на скачивание PDF из папки" }];
+  }
+  const href = await dl(null);
+  if (href) return [{ url: href, name: meta && meta.name }];
+  if (meta && meta.file) return [{ url: meta.file, name: meta.name }];
+  return [{ error: "Яндекс Диск не дал ссылку на скачивание (доступ закрыт?)" }];
 }
 
 function fileNameFromResponse(r) {

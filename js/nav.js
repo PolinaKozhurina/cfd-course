@@ -167,8 +167,7 @@
         ],
         extras: [
           { href: "nm/index.html", label: "Обзор курса" },
-          { href: "nm/w16.html", label: "Зачётное занятие" },
-          { href: "nm/python-reference.html", label: "📘 Памятка Python" }
+          { href: "nm/w16.html", label: "Зачётное занятие" }
         ]
       },
       {

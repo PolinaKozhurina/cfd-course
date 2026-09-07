@@ -4520,14 +4520,59 @@ async function labsRenderProgress(cid, lab, sess) {
 
 let _labProg = {};
 
-// Код студента по задачам (из lab_progress.code) — в оверлее.
-function labsShowCode(uid) {
+// Код студента по задачам (из lab_progress.code) — в оверлее, рядом с условием
+// каждой задачи. Условия берутся из зашифрованного тела лабы (ключ — у admin
+// курса), поэтому видно и постановку, и скелет: строки, которых в скелете нет,
+// подсвечены; задача, где код совпадает со скелетом, помечена «не начато».
+const _labBodyCache = {};
+async function labsLoadBody(cid, lab) {
+  const k = cid + '_' + lab;
+  if (_labBodyCache[k]) return _labBodyCache[k];
+  const info = CFDLabs.labInfo(cid, lab);
+  const url = (info.href || '').replace(/-lab\.html$/, '-lab.enc.json');
+  if (!url) return null;
+  try {
+    const [enc, key] = await Promise.all([fetch(url, { cache: 'no-cache' }).then(r => r.json()), CFDLabs.getKey(cid, lab)]);
+    if (!key) return null;
+    const html = await CFDLabs.decrypt(enc, key);
+    const doc = new DOMParser().parseFromString('<div id="root">' + html + '</div>', 'text/html');
+    const tasks = {}; const order = [];
+    doc.querySelectorAll('.task').forEach(t => {
+      const sh = t.querySelector('.editor-shell[data-cpp]'); if (!sh) return;
+      const id = sh.getAttribute('data-cpp');
+      const ta = sh.querySelector('textarea[data-code]');
+      const clone = t.cloneNode(true);
+      clone.querySelectorAll('.editor-shell, .verdict, .mcq, canvas, script').forEach(e => e.remove());
+      tasks[id] = { num: t.getAttribute('data-num') || '', html: clone.innerHTML, skeleton: ta ? ta.value : '' };
+      order.push(id);
+    });
+    return (_labBodyCache[k] = { tasks, order });
+  } catch (e) { console.warn('labsLoadBody', e); return null; }
+}
+function labsEnsureMathJax() {
+  if (window.MathJax && window.MathJax.typesetPromise) return Promise.resolve();
+  if (window._mjLoading) return window._mjLoading;
+  window.MathJax = { tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] }, options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] } };
+  window._mjLoading = new Promise(res => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js'; sc.async = true; sc.onload = () => res(); sc.onerror = () => res(); document.head.appendChild(sc); });
+  return window._mjLoading;
+}
+function labsCodeHtml(code, skeleton) {
+  const norm = t => String(t || '').replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '').trim();
+  const same = norm(code) === norm(skeleton);
+  const skel = new Set(norm(skeleton).split('\n').map(l => l.trim()).filter(Boolean));
+  const lines = String(code || '').replace(/\r\n/g, '\n').split('\n');
+  const body = lines.map(l => {
+    const t = l.trim();
+    const own = t && !skel.has(t);
+    return '<span style="display:block' + (own ? ';background:rgba(120,200,120,.16)' : '') + '">' + (escapeHtml(l) || ' ') + '</span>';
+  }).join('');
+  return { same, html: body };
+}
+async function labsShowCode(uid) {
   const p = _labProg[uid]; if (!p) return;
   const u = (allUsers || []).find(x => x.uid === uid) || { fio: '', email: uid };
   const info = CFDLabs.labInfo(p.courseId, p.labId);
   const code = p.code || {}, tasks = p.tasks || {};
-  const ids = Object.keys(code).sort();
-  const mark = id => { const t = tasks[id]; return t === 'ok' ? '<span style="color:#1a6b5a">✓ ok</span>' : (t === 'err' ? '<span style="color:#c44">✗ err</span>' : '<span style="color:var(--text3)">—</span>'); };
   let wrap = document.getElementById('labCodeWrap');
   if (!wrap) {
     wrap = document.createElement('div'); wrap.id = 'labCodeWrap';
@@ -4535,15 +4580,29 @@ function labsShowCode(uid) {
     wrap.addEventListener('click', e => { if (e.target === wrap) wrap.style.display = 'none'; });
     document.body.appendChild(wrap);
   }
-  wrap.innerHTML = '<div style="background:#fff;border-radius:10px;max-width:960px;width:100%;padding:1rem 1.2rem;box-shadow:0 10px 40px rgba(0,0,0,.25)">'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:.6rem">'
+  const head = '<div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:.6rem;position:sticky;top:0;background:#fff;padding:.2rem 0;z-index:1">'
     + '<div><strong>' + escapeHtml(u.fio || u.email || uid) + '</strong> <span style="color:var(--text3);font-size:.8rem">· ' + escapeHtml(info.title || p.labId) + ' · ' + (p.done || 0) + '/' + (p.total || info.total || '?') + (p.accepted ? ' · <span style="color:#1a6b5a">зачтено</span>' : '') + '</span></div>'
-    + '<button class="btn btn-sm" onclick="document.getElementById(\'labCodeWrap\').style.display=\'none\'">закрыть</button></div>'
-    + (ids.length ? ids.map(id => '<div style="margin:.5rem 0"><div style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text2);margin-bottom:.2rem">' + escapeHtml(id) + ' · ' + mark(id) + '</div>'
-        + '<pre style="margin:0;padding:.6rem .8rem;background:#1e1e1e;color:#e8e6e3;border-radius:6px;font-size:.78rem;line-height:1.4;overflow:auto;max-height:340px;white-space:pre">' + escapeHtml(code[id]) + '</pre></div>').join('')
-      : '<div style="color:var(--text3);font-style:italic">Код не сохранён.</div>')
-    + '</div>';
+    + '<button class="btn btn-sm" onclick="document.getElementById(\'labCodeWrap\').style.display=\'none\'">закрыть</button></div>';
+  wrap.innerHTML = '<div style="background:#fff;border-radius:10px;max-width:1100px;width:100%;padding:1rem 1.2rem;box-shadow:0 10px 40px rgba(0,0,0,.25)">' + head + '<div style="color:var(--text3);font-style:italic">загрузка условий…</div></div>';
   wrap.style.display = 'flex';
+
+  const body = await labsLoadBody(p.courseId, p.labId);
+  const ids = body ? body.order.filter(id => id in code).concat(Object.keys(code).filter(id => !(id in body.tasks)).sort()) : Object.keys(code).sort();
+  const mark = id => { const t = tasks[id]; return t === 'ok' ? '<span style="color:#1a6b5a;font-weight:600">✓ автопроверка пройдена</span>' : (t === 'err' ? '<span style="color:#c44;font-weight:600">✗ последний запуск не прошёл</span>' : '<span style="color:var(--text3)">не запускалось</span>'); };
+  const blocks = ids.map(id => {
+    const t = body && body.tasks[id];
+    const c = labsCodeHtml(code[id], t ? t.skeleton : '');
+    const cond = t ? '<div style="font-size:.86rem;line-height:1.5;padding:.6rem .8rem;background:#e7efe8;border-radius:6px 6px 0 0">' + t.html + '</div>' : '<div style="font-size:.8rem;color:var(--text3);padding:.3rem .8rem">' + escapeHtml(id) + '</div>';
+    return '<div style="margin:1rem 0;border:1px solid var(--border);border-radius:6px;overflow:hidden">' + cond
+      + '<div style="display:flex;gap:1rem;align-items:center;font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text2);padding:.3rem .8rem;background:#f3efe7">' + escapeHtml(id) + ' · ' + mark(id) + (c.same ? ' · <span style="color:#854f0b">не начато: код совпадает со скелетом</span>' : ' · <span style="color:#3d6b5a">подсвечены строки, которых нет в скелете</span>') + '</div>'
+      + '<pre style="margin:0;padding:.6rem .8rem;background:#1e1e1e;color:#e8e6e3;font-size:.78rem;line-height:1.4;overflow:auto;max-height:420px;white-space:pre">' + c.html + '</pre></div>';
+  });
+  const notStarted = body ? body.order.filter(id => !(id in code)) : [];
+  wrap.firstChild.innerHTML = head
+    + (blocks.length ? blocks.join('') : '<div style="color:var(--text3);font-style:italic">Код не сохранён.</div>')
+    + (notStarted.length ? '<div style="font-size:.8rem;color:var(--text3);margin-top:.6rem">Не открывались: ' + notStarted.map(escapeHtml).join(', ') + '</div>' : '')
+    + (body ? '' : '<div style="font-size:.8rem;color:#c44;margin-top:.6rem">Условия не загружены (нет ключа лабы или файла заданий) — показан только код.</div>');
+  if (body) { try { await labsEnsureMathJax(); if (window.MathJax && window.MathJax.typesetPromise) await window.MathJax.typesetPromise([wrap]); } catch (e) {} }
 }
 
 // Выгрузка кода и отметок всех студентов текущей лабы в приватный репо (через Worker).

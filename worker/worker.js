@@ -650,10 +650,18 @@ async function handleDownload(request, env, path) {
   const claims = await verifyIdToken(idToken, env);
   if (!authorizePath(claims, path, env)) return json({ ok: false, error: "forbidden" }, env, 403);
   const data = await ghGet("/contents/" + encodeURI(path), env);
-  if (!data || !data.content) return json({ ok: false, error: "not found" }, env, 404);
+  if (!data) return json({ ok: false, error: "файл не найден в хранилище: " + path }, env, 404);
+  let b64 = data.content ? String(data.content).replace(/\n/g, "") : "";
+  // Contents API отдаёт content только до 1 МБ; для файлов больше (обычно
+  // PDF-сканы) content пустой, а sha есть — забираем blob (до 100 МБ).
+  if (!b64 && data.sha && data.size > 0) {
+    const blob = await ghGet("/git/blobs/" + data.sha, env);
+    if (blob && blob.content) b64 = String(blob.content).replace(/\n/g, "");
+  }
+  if (!b64 && data.size > 0) return json({ ok: false, error: "file too large for API (" + data.size + " bytes)" }, env, 413);
   return json({
     ok: true,
-    base64: data.content.replace(/\n/g, ""),
+    base64: b64,
     name: data.name,
     size: data.size,
     sha: data.sha,

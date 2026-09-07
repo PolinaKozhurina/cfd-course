@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ru" data-course="sem1">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Практика к §2. Исследование аппроксимации в Maple</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--border:#d9cfc0}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
+.main{max-width:820px;margin:0 auto;padding:2rem 2.5rem 4rem}
+.doc-kind{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.18em;color:var(--text3);margin-bottom:.4rem}
+h1{font-family:'Playfair Display',serif;font-size:1.7rem;font-weight:700;line-height:1.2;margin-bottom:.4rem;color:var(--text)}
+.subtitle{color:var(--text2);font-size:.95rem;font-style:italic;margin-bottom:2rem;line-height:1.5}
+.subtitle a,.task a{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(180,74,45,.3)}
+h2{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:2.2rem 0 .3rem;padding-bottom:.3rem;border-bottom:1px solid var(--border);font-style:italic}
+p{margin-bottom:.7rem;text-align:justify;hyphens:auto}
+.eq{margin:.9rem 0;text-align:center;overflow-x:auto}
+.task{margin:1.4rem 0;padding-top:.2rem}
+.task-head{font-family:'Source Serif 4',serif;font-size:1rem;font-weight:700;color:var(--text);margin-bottom:.4rem}
+.task-head .num{font-family:'JetBrains Mono',monospace;font-weight:500;font-size:.85rem;color:var(--accent);margin-right:.5rem;letter-spacing:.02em}
+.task-head .time{font-family:'JetBrains Mono',monospace;font-weight:400;font-size:.72rem;color:var(--text3);margin-left:.6rem}
+.task ol,.task ul{margin:.3rem 0 .3rem 1.6rem}
+.task li{margin-bottom:.25rem}
+.task+.task{border-top:1px dotted var(--border);padding-top:1.2rem}
+.rules{font-size:.9rem;color:var(--text2);margin:.4rem 0 2rem;padding:0 0 0 1rem;border-left:2px solid var(--border)}
+.rules .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:.35rem}
+.rules ul{margin:.1rem 0 0 1.1rem;padding:0}
+.rules li{margin-bottom:.15rem}
+pre{font-family:'JetBrains Mono',monospace;font-size:.8rem;line-height:1.5;background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:.7rem .9rem;margin:.5rem 0 .8rem;overflow-x:auto;white-space:pre}
+code{font-family:'JetBrains Mono',monospace;font-size:.82em;background:var(--bg2);padding:0 .25em;border-radius:3px}
+pre code{background:none;padding:0;font-size:inherit}
+table{border-collapse:collapse;margin:.6rem auto 1rem;font-size:.92rem}
+th,td{border:1px solid var(--border);padding:.3rem .7rem;text-align:center;vertical-align:middle}
+th{background:var(--bg2);font-weight:600;font-family:'JetBrains Mono',monospace;font-size:.78rem;letter-spacing:.04em}
+td.l{text-align:left}
+.variants td:first-child{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--accent);white-space:nowrap}
+.report{background:var(--bg2);border-left:3px solid var(--accent);padding:.6rem 1rem;margin:.6rem 0 .9rem;font-size:.92rem}
+.report .lbl{font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:.25rem}
+.back{display:inline-block;margin-top:2.5rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);text-decoration:none;padding:.4rem .7rem;border:1px solid var(--border);border-radius:4px}
+@media(max-width:700px){.main{padding:1.5rem}}
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<div class="main">
+<div class="doc-kind">Практическое занятие · §2 · Семестр 1 · Maple</div>
+<h1>Практика к §2. Исследование аппроксимации в Maple</h1>
+<div class="subtitle">Работа по материалу <a href="s1-02.html">лекции §2</a>: определения 1–4, алгоритм исследования аппроксимации §2.8, замечания §2.9. Заготовка с командами: <a href="s1-02-practice.mpl" download>s1-02-practice.mpl</a> (File → Open, тип «Maple Input»). Рецепты по Maple — в <a href="../literature.html">памятке</a>.</div>
+
+<div class="rules">
+  <span class="lbl">Как работаем</span>
+  <ul>
+    <li>Задания A, C, D — общие; задание B — по варианту из таблицы ниже; E — если осталось время.</li>
+    <li>Maple выполняет разложения, а выводы формулируете вы: после каждого задания в лист вставляется текстовый блок «Вывод» (см. подсказку в каждом задании).</li>
+    <li>К концу занятия рабочий лист <code>Фамилия_Б23-221_prac2.mw</code> загружается в личном кабинете как сдача задания «Практика §2»; в первой строке листа — фамилия, группа, вариант.</li>
+    <li>Ссылки на формулы и определения — по нумерации §2 («по (2.7)», «Опр. 2»).</li>
+  </ul>
+</div>
+
+<h2>Варианты (для задания B)</h2>
+<p>Уравнение переноса \(u_t + a\,u_x = 0\), \(a = \mathrm{const} > 0\); сетка с шагами \(h\) по \(x\) и \(\tau\) по \(t\).</p>
+<table class="variants">
+<tr><th>Вариант</th><th>Схема</th><th>Вторая базовая точка</th></tr>
+<tr><td>В1</td><td class="l">\(\displaystyle \frac{u_i^{n+1}-u_i^{n-1}}{2\tau} + a\,\frac{u_{i+1}^{n}-u_{i-1}^{n}}{2h} = 0\)</td><td>\((x_i,\ t_{n-1})\)</td></tr>
+<tr><td>В2</td><td class="l">\(\displaystyle \frac{u_i^{n+1}-u_i^{n}}{\tau} + \frac{a}{2}\left(\frac{u_i^{n+1}-u_{i-1}^{n+1}}{h} + \frac{u_{i+1}^{n}-u_{i}^{n}}{h}\right) = 0\)</td><td>\((x_i,\ t_{n+1})\)</td></tr>
+<tr><td>В3</td><td class="l">\(\displaystyle \frac{u_i^{n+1}-u_i^{n}}{\tau} + a\,\frac{u_{i+1}^{n}-u_{i-1}^{n}}{2h} = \frac{a^2\tau}{2}\,\frac{u_{i-1}^{n}-2u_i^{n}+u_{i+1}^{n}}{h^2}\)</td><td>\((x_i,\ t_{n+1/2})\)</td></tr>
+<tr><td>В4</td><td class="l">\(\displaystyle \frac12\left(\frac{u_i^{n+1}-u_i^{n}}{\tau} + \frac{u_{i-1}^{n+1}-u_{i-1}^{n}}{\tau}\right) + \frac{a}{2}\left(\frac{u_i^{n+1}-u_{i-1}^{n+1}}{h} + \frac{u_{i}^{n}-u_{i-1}^{n}}{h}\right) = 0\)</td><td>\((x_{i-1/2},\ t_{n+1/2})\)</td></tr>
+<tr><td>В5</td><td class="l">\(\displaystyle \frac{u_i^{n+1}-u_i^{n}}{\tau} + a\,\frac{u_i^{n+1}-u_{i-1}^{n+1}}{h} = 0\)</td><td>\((x_{i-1/2},\ t_{n+1})\)</td></tr>
+</table>
+
+<h2>Задания</h2>
+
+<div class="task">
+<div class="task-head"><span class="num">A.</span>Алгоритм §2.8 на явном «уголке» (2.17)<span class="time">≈ 15 мин, общее</span></div>
+<p>Схему задаём как функцию базовой точки и шагов; \(u\) — произвольная гладкая функция, Maple разложит её по Тейлору сам:</p>
+<pre><code>scheme := (x, t, h, tau) -> (u(x, t + tau) - u(x, t))/tau + a*(u(x, t) - u(x - h, t))/h;
+L1 := collect(convert(mtaylor(scheme(x, t, h, tau), [h, tau], 3), diff), [tau, h], simplify);
+Lu := diff(u(x, t), t) + a*diff(u(x, t), x):
+Ru := collect(simplify(Lu - L1), [tau, h]);</code></pre>
+<ol>
+  <li>Сопоставьте вывод Maple с шагами 1–4 алгоритма §2.8: где здесь \(L_1 u\) из (2.22), где \(Ru = Lu - L_1 u\). Назовите порядок по \(\tau\) и по \(h\) <em>на произвольной гладкой функции</em>.</li>
+  <li>Перейдите к аппроксимации <em>на решении</em>: подставьте общее решение \(u = F(x - at)\) — тогда все дифференциальные следствия уравнения (\(u_{tt} = a^2 u_{xx}\) и т.&nbsp;д.) выполняются автоматически:
+<pre><code>onSol := expr -> collect(simplify(eval(expr, u = ((x, t) -> F(x - a*t)))), [tau, h], factor):
+RuSol := onSol(Ru);</code></pre>
+  Сравните с оценкой (2.21) лекции: какие производные и с какими множителями стоят в главном члене.</li>
+  <li>Прочитайте множитель при \(F''\): при каком соотношении \(\tau\) и \(h\) член первого порядка обращается в нуль? Свяжите с задачей 9 ДЗ №1 (точная схема при \(a\tau/h = 1\)).</li>
+</ol>
+<div class="report"><span class="lbl">Вывод в лист</span>Порядок на произвольной функции; порядок на решении; главный член невязки и условие его обнуления.</div>
+</div>
+
+<div class="task">
+<div class="task-head"><span class="num">B.</span>Схема варианта<span class="time">≈ 30 мин, по вариантам</span></div>
+<ol>
+  <li>Запишите схему варианта как функцию <code>schemeV</code> по образцу задания A (в заготовке для примера записана В3). Для трёхслойной В1 в функцию входит \(u(x, t-\tau)\).</li>
+  <li>Получите \(L_1 u\) и \(Ru\) с точностью до членов третьего порядка (<code>mtaylor(..., [h, tau], 4)</code>). Назовите порядок по \(\tau\) и по \(h\) на произвольной функции.</li>
+  <li>Примените <code>onSol</code> и назовите порядок <em>на решении</em>. Если он выше, чем в п.&nbsp;2, — выпишите руками, какой член разложения обнулился и каким следствием уравнения (например, \(u_{tt} = a^2 u_{xx}\) или \(u_{xt} = -a\,u_{xx}\)). Это и есть замечание §2.9 о том, что аппроксимацию достаточно проверять на решении.</li>
+  <li>Повторите расчёт во второй базовой точке из таблицы. Разложение Maple всегда идёт около \((x,t)\), поэтому сдвигаются аргументы схемы: для точки \((x_i, t_{n+1/2})\) вызываем <code>schemeV(x, t - tau/2, h, tau)</code>, для \((x_{i-1/2}, t_{n+1})\) — <code>schemeV(x + h/2, t - tau, h, tau)</code>. Убедитесь, что порядок на решении не изменился, а коэффициенты \(L_1\) — изменились.</li>
+  <li>Для отдельного оператора \((u_i - u_{i-1})/h\) покажите тем же приёмом, что около \(x_i\) он приближает \(u_x\) с порядком \(O(h)\), а около \(x_{i-1/2}\) — с порядком \(O(h^2)\):
+<pre><code>D1 := (x, h) -> (u(x) - u(x - h))/h:
+mtaylor(D1(x, h), [h], 3);          # около x_i
+mtaylor(D1(x + h/2, h), [h], 3);    # около x_{i-1/2}</code></pre></li>
+</ol>
+<div class="report"><span class="lbl">Вывод в лист</span>Шаблон схемы (нарисовать, можно от руки и вставить фото), явная/неявная, число слоёв; порядок на произвольной функции и на решении с указанием использованного следствия; результат во второй базовой точке; почему для отдельного оператора порядок зависит от точки, а для уравнения на решении — нет.</div>
+</div>
+
+<div class="task">
+<div class="task-head"><span class="num">C.</span>Схема Лакса и закон предельного перехода<span class="time">≈ 15 мин, общее</span></div>
+<div class="eq">\[
+\frac{u_i^{n+1} - \tfrac12\bigl(u_{i-1}^{n} + u_{i+1}^{n}\bigr)}{\tau} + a\,\frac{u_{i+1}^{n} - u_{i-1}^{n}}{2h} = 0.
+\]</div>
+<pre><code>schemeL := (x, t, h, tau) -> (u(x, t + tau) - (u(x - h, t) + u(x + h, t))/2)/tau
+    + a*(u(x + h, t) - u(x - h, t))/(2*h);
+L1L    := collect(convert(mtaylor(schemeL(x, t, h, tau), [h, tau], 4), diff), [tau, h], simplify);
+L1Lpar := collect(convert(mtaylor(subs(tau = h^2/mu,    schemeL(x, t, h, tau)), [h], 3), diff), h, simplify);
+L1Lhyp := collect(convert(mtaylor(subs(tau = kappa*h,   schemeL(x, t, h, tau)), [h], 3), diff), h, simplify);</code></pre>
+<ol>
+  <li>В <code>L1L</code> найдите член \(-\dfrac{h^2}{2\tau}u_{xx}\). Почему его нельзя отнести ни к \(O(\tau)\), ни к \(O(h)\), пока не задано, как \(\tau\) и \(h\) связаны?</li>
+  <li>При законе \(\tau = h^2/\mu\) выпишите предел \(L_1 u\) при \(h \to 0\). Аппроксимирует ли схема уравнение переноса по Опр. 2? Какое уравнение она аппроксимирует на самом деле?</li>
+  <li>При законе \(\tau = \varkappa h\) назовите порядок аппроксимации.</li>
+</ol>
+<div class="report"><span class="lbl">Вывод в лист</span>От чего, кроме самой схемы, зависит наличие аппроксимации; почему в Опр. 2 один предел \(h \to 0\), а не два независимых.</div>
+</div>
+
+<div class="task">
+<div class="task-head"><span class="num">D.</span>Аппроксимация без сходимости<span class="time">≈ 20 мин, общее</span></div>
+<p>Задача Коши \(x' = 2t\), \(x(0) = 0\), точное решение \(x = t^2\); сетка \(t_i = i\tau\); явный двухшаговый метод</p>
+<div class="eq">\[
+\frac{x_i - 3x_{i-1} + 2x_{i-2}}{\tau} = f(t_{i-1}, x_{i-1}) - 2f(t_{i-2}, x_{i-2}), \qquad f(t,x) = 2t.
+\]</div>
+<pre><code>f := (t, x) -> 2*t:
+resid := simplify((t^2 - 3*(t - tau)^2 + 2*(t - 2*tau)^2)/tau - (f(t - tau, 0) - 2*f(t - 2*tau, 0)));
+rec := X(i) - 3*X(i - 1) + 2*X(i - 2) = tau*(f((i - 1)*tau, 0) - 2*f((i - 2)*tau, 0)):
+solExact := factor(rsolve({rec, X(0) = 0, X(1) = tau^2}, X(i)));
+solPert  := simplify(rsolve({rec, X(0) = 0, X(1) = tau^2 + eps}, X(i)));
+errPert  := simplify(solPert - (i*tau)^2);
+evalf(subs(eps = 1e-16, tau = 1e-2, i = 100, errPert));</code></pre>
+<ol>
+  <li><code>resid</code> — невязка (2.7) на проекции точного решения. Есть ли аппроксимация по Опр. 2 и какого порядка?</li>
+  <li><code>solExact</code> — точное решение разностной задачи при точных стартовых значениях. Какова погрешность \(x_i - t_i^2\) и стремится ли она к нулю при \(\tau \to 0\)?</li>
+  <li><code>solPert</code> — то же при стартовом значении с погрешностью \(\varepsilon\). Выпишите, как растёт возмущение при \(t_i = T\) фиксированном и \(\tau \to 0\). Выполняется ли Опр. 3 с постоянной \(C_2 \ne C_2(\tau)\)?</li>
+  <li>Оцените число: погрешность округления \(10^{-16}\) в \(x_1\) при \(\tau = 10^{-2}\) на \(t = 1\). Сходится ли метод по Опр. 1 на практике? Какого из свойств Опр. 1–4 ему не хватает?</li>
+</ol>
+<div class="report"><span class="lbl">Вывод в лист</span>Аппроксимация есть / устойчивости нет / сходимости нет — с числами; одна фраза о том, что доказывает этот пример про связь трёх понятий (к §3).</div>
+</div>
+
+<div class="task">
+<div class="task-head"><span class="num">E.</span>Порядок сходимости численно<span class="time">если осталось время</span></div>
+<p>Процедура <code>runCorner(N, sigma, T)</code> из заготовки считает «уголком» задачу \(u_t + u_x = 0\), \(u_0 = \sin 2\pi x\) на периоде при \(\sigma = \tau/h\) и возвращает \(\|z\|_C\) в момент \(T\).</p>
+<pre><code>errs   := [seq(runCorner(N, 0.5, 1.0), N in [20, 40, 80, 160])];
+orders := [seq(evalf(log[2](errs[k]/errs[k + 1])), k = 1 .. 3)];
+runCorner(40, 1.0, 1.0);</code></pre>
+<ol>
+  <li>Выведите формулу \(p \approx \log_2(\|z_h\|/\|z_{h/2}\|)\) из (2.6) и сравните <code>orders</code> с порядком аппроксимации из задания A.</li>
+  <li>Объясните результат при \(\sigma = 1\).</li>
+  <li>Почему шаги измельчаются при фиксированном \(\sigma\), а не по отдельности? (Ответ — в задании C.)</li>
+</ol>
+</div>
+
+<a class="back" href="s1-02.html">← Вернуться к §2</a>
+
+</div><!-- /main -->
+</body>
+</html>

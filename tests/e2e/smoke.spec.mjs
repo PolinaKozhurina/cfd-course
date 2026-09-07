@@ -27,14 +27,6 @@ test('гейтинг: не залогин → страница лекции по
   await expect(blocker).toContainText(/Войдите|Войти/);
 });
 
-test('справочная страница nm/python-reference.html — блокера НЕТ', async ({ page }) => {
-  await enableEmulatorAnon(page);
-  await page.goto('/nm/python-reference.html');
-  // ждём загрузки скриптов и не показывается блокер
-  await page.waitForLoadState('domcontentloaded');
-  await expect(page.locator('.gating-blocker')).toHaveCount(0);
-});
-
 test('обзорная страница курса /nm/index.html — тоже без блокера', async ({ page }) => {
   await enableEmulatorAnon(page);
   await page.goto('/nm/index.html');

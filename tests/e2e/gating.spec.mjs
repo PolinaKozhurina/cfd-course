@@ -16,6 +16,21 @@ async function loginAs(page, email, password = 'test12345') {
   await page.evaluate(async ({ email, password }) => {
     await firebase.auth().signInWithEmailAndPassword(email, password);
   }, { email, password });
+  // Дождаться, пока auth-состояние доедет до persistence: иначе следующая
+  // навигация иногда стартует с currentUser == null → «not-logged» → блокер
+  // (плавающие падения теста «enrolled студент видит лекцию»).
+  await page.waitForFunction(() => firebase.auth().currentUser && firebase.auth().currentUser.email);
+  await page.waitForTimeout(500);
+}
+
+// gating.js снимает класс gating-checking и убирает лоадер ровно в момент
+// принятия решения — ждём его, а не фиксированные 1,5 с.
+async function waitGatingDecided(page) {
+  await page.waitForFunction(() => typeof CFDGating !== 'undefined');
+  await page.waitForFunction(
+    () => !document.documentElement.classList.contains('gating-checking') && !document.querySelector('.gating-loader'),
+    null, { timeout: 20000 });
+  await page.waitForTimeout(200);
 }
 
 test('не-enrolled студент видит «Запишитесь» на странице лекции', async ({ page }) => {
@@ -53,8 +68,7 @@ test('enrolled студент видит лекцию, если releasedAt в п
   await loginAs(page, 'stu3@t.ru');
   await page.goto('/nm/w01.html');
   // Дожидаемся, пока gating.js закончит async-цепочку проверки доступа.
-  await page.waitForFunction(() => typeof CFDGating !== 'undefined');
-  await page.waitForTimeout(1500);
+  await waitGatingDecided(page);
   await expect(page.locator('.gating-blocker')).toHaveCount(0);
 });
 
@@ -66,7 +80,6 @@ test('super видит лекцию всегда, даже без releasedAt', a
   await loginAs(page, 'polinakozhurina2020@gmail.com');
   await page.goto('/nm/w01.html');
   // Дожидаемся, пока gating.js закончит async-цепочку проверки доступа.
-  await page.waitForFunction(() => typeof CFDGating !== 'undefined');
-  await page.waitForTimeout(1500);
+  await waitGatingDecided(page);
   await expect(page.locator('.gating-blocker')).toHaveCount(0);
 });

@@ -51,24 +51,44 @@
     });
   }
 
-  // Когда слать копию в git: впервые пройдена ещё одна задача, либо код менялся
-  // и с прошлой отправки прошло больше 5 минут. Ничего не ждём и не бросаем.
+  // Копия в git — всегда полный снимок (весь код + все отметки). Шлём при каждом
+  // сохранении, но не чаще раза в минуту на студента (иначе GitHub захлебнётся
+  // коммитами); отложенный снимок досылается по таймеру, при уходе со вкладки —
+  // сразу. Если ничего не изменилось, Worker коммит не создаёт. Ошибки глушатся.
   const _bk = {};
+  const BACKUP_MIN_GAP = 60 * 1000;
+  function sendBackup(cid, lab, st) {
+    const d = st.pending; st.pending = null; st.timer = null;
+    if (!d) return;
+    st.at = Date.now(); st.sig = d.sig;
+    API.backupToGit(cid, lab, { tasks: d.tasks, code: d.code, done: d.done, total: d.total }, { keepalive: true })
+      .then(r => { if (r && !r.ok) console.warn("lab backup:", r.error); });
+  }
   function maybeBackup(uid, cid, lab, data) {
     try {
       if (typeof WORKER_URL === "undefined" || !WORKER_URL) return;
       if (!data || !data.code) return;
       const k = pid(uid, cid, lab);
-      const st = _bk[k] || (_bk[k] = { at: 0, sig: "", ok: 0 });
-      const okNow = Object.keys(data.tasks || {}).filter(t => data.tasks[t] === "ok").length;
-      const sig = JSON.stringify(data.code);
-      const now = Date.now();
-      const due = (okNow > st.ok && sig !== st.sig) || (sig !== st.sig && now - st.at > 5 * 60 * 1000);
-      if (!due) return;
-      st.at = now; st.sig = sig; st.ok = Math.max(st.ok, okNow);
-      API.backupToGit(cid, lab, { tasks: data.tasks || {}, code: data.code, done: data.done || 0, total: data.total || 0 }, { keepalive: true })
-        .then(r => { if (r && !r.ok) console.warn("lab backup:", r.error); });
+      const st = _bk[k] || (_bk[k] = { at: 0, sig: "", pending: null, timer: null });
+      const snap = { tasks: data.tasks || {}, code: data.code, done: data.done || 0, total: data.total || 0 };
+      snap.sig = JSON.stringify([snap.tasks, snap.code]);
+      if (snap.sig === st.sig && !st.pending) return;          // ничего нового
+      st.pending = snap;                                        // всегда последний снимок
+      const hidden = (typeof document !== "undefined" && document.visibilityState === "hidden");
+      const wait = hidden ? 0 : Math.max(0, BACKUP_MIN_GAP - (Date.now() - st.at));
+      if (wait === 0) { if (st.timer) { clearTimeout(st.timer); } sendBackup(cid, lab, st); return; }
+      if (!st.timer) st.timer = setTimeout(function () { sendBackup(cid, lab, st); }, wait);
     } catch (e) { console.warn("lab backup:", e); }
+  }
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState !== "hidden") return;
+      Object.keys(_bk).forEach(function (k) {
+        const st = _bk[k]; if (!st.pending) return;
+        const parts = k.split("_"); if (st.timer) clearTimeout(st.timer);
+        sendBackup(parts[1], parts[2], st);
+      });
+    });
   }
 
   const API = {

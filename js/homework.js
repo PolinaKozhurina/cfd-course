@@ -253,7 +253,9 @@
     },
 
     // Скачать файл через Worker → отдать Blob (для download или preview).
-    downloadFile: async function (path) {
+    // onProgress(0..1) — если известен размер. Сначала потоковый режим
+    // (/file?raw=1: сам файл, без base64), при неудаче — старый JSON-ответ.
+    downloadFile: async function (path, onProgress) {
       if (!path) throw new Error("Нет пути");
       if (typeof WORKER_URL === "undefined" || !WORKER_URL) {
         throw new Error("WORKER_URL не настроен");
@@ -261,15 +263,40 @@
       const me = auth.currentUser;
       if (!me) throw new Error("Не авторизован");
       const token = await me.getIdToken();
-      const resp = await fetch(WORKER_URL + "/file?path=" + encodeURIComponent(path), {
-        headers: { Authorization: "Bearer " + token },
-      });
+      const headers = { Authorization: "Bearer " + token };
+      // 1) потоком
+      try {
+        const r = await fetch(WORKER_URL + "/file?raw=1&path=" + encodeURIComponent(path), { headers });
+        const ct = r.headers.get("content-type") || "";
+        if (r.ok && ct.indexOf("application/json") === -1 && r.body) {
+          const total = parseInt(r.headers.get("content-length") || "0", 10) || 0;
+          const reader = r.body.getReader();
+          const chunks = []; let got = 0;
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value); got += value.length;
+            if (onProgress && total) onProgress(Math.min(1, got / total));
+          }
+          const name = decodeURIComponent(r.headers.get("x-file-name") || "") || path.split("/").pop();
+          return { blob: new Blob(chunks, { type: ct || "application/octet-stream" }), name: name, size: got };
+        }
+        if (r.ok === false && ct.indexOf("application/json") !== -1) {
+          const j = await r.json().catch(() => ({}));
+          if (r.status === 403 || r.status === 404) throw new Error(j.error || ("HTTP " + r.status));
+        }
+      } catch (e) {
+        if (/не найден|forbidden|HTTP 40[34]/.test(String(e.message))) throw e;
+        // иначе — воркер без raw-режима или сеть; пробуем JSON
+      }
+      // 2) старый путь: JSON с base64
+      const resp = await fetch(WORKER_URL + "/file?path=" + encodeURIComponent(path), { headers });
       const data = await resp.json();
       if (!resp.ok || !data.ok) throw new Error(data.error || "download failed");
-      // Собираем Blob из base64 (может быть <50MB).
       const bin = atob(String(data.base64).replace(/\n/g, ""));
       const buf = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+      if (onProgress) onProgress(1);
       return { blob: new Blob([buf]), name: data.name, size: data.size };
     },
 

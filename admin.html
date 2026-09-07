@@ -2000,6 +2000,12 @@ function hwOpenAnnotator(aid, uid, fileIdx) {
     alert('Модуль проверки не загружен — обновите страницу');
     return;
   }
+  // На время проверки прячем модалку со сдачами: иначе на iPad проверялка
+  // может оказаться «за таблицей» (два fixed-оверлея), а после закрытия
+  // возвращаем её.
+  const subsWrap = document.getElementById('hwSubsWrap');
+  const subsWasOpen = subsWrap && subsWrap.style.display !== 'none';
+  if (subsWasOpen) subsWrap.style.display = 'none';
   CFDAnnotator.open({
     assignment: { id: aid, courseId: a.courseId, title: a.title || aid },
     student: { uid: u.uid, fio: u.fio || '', email: u.email || '', studyGroup: u.studyGroup || '' },
@@ -2010,6 +2016,7 @@ function hwOpenAnnotator(aid, uid, fileIdx) {
       window._hwSubsCache = await CFDHomework.listSubmissions(aid, a.courseId);
       await renderHwSubmissionsTable(aid);
     },
+    onClose: function () { if (subsWasOpen && subsWrap) subsWrap.style.display = 'flex'; },
   });
 }
 
@@ -2031,17 +2038,23 @@ async function hwOpenAnnotatorLink(aid, uid, linkIdx) {
     return;
   }
   const u = allUsers.find(x => x.uid === uid) || { uid: uid, fio: '', email: '' };
-  const openWith = (blob, name) => CFDAnnotator.open({
-    assignment: { id: aid, courseId: a.courseId, title: a.title || aid },
-    student: { uid: u.uid, fio: u.fio || '', email: u.email || '', studyGroup: u.studyGroup || '' },
-    submission: s,
-    sourceFile: { name: name || 'submission.pdf' },
-    sourceBlob: blob,
-    onDone: async function () {
-      window._hwSubsCache = await CFDHomework.listSubmissions(aid, a.courseId);
-      await renderHwSubmissionsTable(aid);
-    },
-  });
+  const subsWrap = document.getElementById('hwSubsWrap');
+  const openWith = (blob, name) => {
+    const subsWasOpen = subsWrap && subsWrap.style.display !== 'none';
+    if (subsWasOpen) subsWrap.style.display = 'none';
+    return CFDAnnotator.open({
+      assignment: { id: aid, courseId: a.courseId, title: a.title || aid },
+      student: { uid: u.uid, fio: u.fio || '', email: u.email || '', studyGroup: u.studyGroup || '' },
+      submission: s,
+      sourceFile: { name: name || 'submission.pdf' },
+      sourceBlob: blob,
+      onDone: async function () {
+        window._hwSubsCache = await CFDHomework.listSubmissions(aid, a.courseId);
+        await renderHwSubmissionsTable(aid);
+      },
+      onClose: function () { if (subsWasOpen && subsWrap) subsWrap.style.display = 'flex'; },
+    });
+  };
 
   // 1) автоматически, через воркер
   const busy = hwLinkDialog('<div style="text-align:center;padding:.4rem 0">⏳ Скачиваем PDF по ссылке…</div>');

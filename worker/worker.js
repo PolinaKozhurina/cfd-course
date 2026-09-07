@@ -651,6 +651,23 @@ async function handleDownload(request, env, path) {
   if (!authorizePath(claims, path, env)) return json({ ok: false, error: "forbidden" }, env, 403);
   const data = await ghGet("/contents/" + encodeURI(path), env);
   if (!data) return json({ ok: false, error: "файл не найден в хранилище: " + path }, env, 404);
+  // ?raw=1 — отдать сам файл потоком (без base64 в JSON): быстрее, меньше
+  // памяти в браузере, есть прогресс по Content-Length. GitHub отдаёт raw
+  // содержимое для файлов до 100 МБ по media type application/vnd.github.raw.
+  if (new URL(request.url).searchParams.get("raw") === "1") {
+    const owner = String(env.GITHUB_OWNER || "").trim(), repo = String(env.GITHUB_REPO || "").trim();
+    const gh = await fetch("https://api.github.com/repos/" + owner + "/" + repo + "/contents/" + encodeURI(path), {
+      headers: { Authorization: "Bearer " + env.GITHUB_PAT, Accept: "application/vnd.github.raw", "User-Agent": "cfd-course-worker" },
+    });
+    if (!gh.ok) return json({ ok: false, error: "github raw " + gh.status }, env, 502);
+    const h = corsHeaders(env);
+    h["Content-Type"] = /\.pdf$/i.test(path) ? "application/pdf" : "application/octet-stream";
+    if (data.size) h["Content-Length"] = String(data.size);
+    h["X-File-Name"] = encodeURIComponent(data.name || "");
+    h["Access-Control-Expose-Headers"] = "Content-Length,X-File-Name";
+    h["Cache-Control"] = "private, max-age=300";
+    return new Response(gh.body, { status: 200, headers: h });
+  }
   let b64 = data.content ? String(data.content).replace(/\n/g, "") : "";
   // Contents API отдаёт content только до 1 МБ; для файлов больше (обычно
   // PDF-сканы) content пустой, а sha есть — забираем blob (до 100 МБ).

@@ -19,6 +19,9 @@
 // ============================================================
 
 const CACHE_JWKS_TTL_SEC = 3600;
+// Версия кода воркера: видна в GET /health → проверка, что Cloudflare
+// выкатил свежий коммит (Workers Builds деплоит при каждом push в master).
+const WORKER_VERSION = "2026-09-07.4";
 
 export default {
   async fetch(request, env, ctx) {
@@ -60,6 +63,7 @@ export default {
       if (url.pathname === "/health") {
         return json({
           ok: true,
+          version: WORKER_VERSION,
           ts: Date.now(),
           // Диагностика какие env реально видит Worker (без выдачи значений).
           env: {
@@ -146,7 +150,7 @@ async function handleUploadCommon(request, env) {
   if (size > 50 * 1024 * 1024) return json({ ok: false, error: "file > 50MB" }, env, 400);
 
   const claims = await verifyIdToken(idToken, env);
-  if (!authorizeAdminForCourse(claims, cid, env)) {
+  if (!(await authorizeAdminForCourse(claims, cid, env))) {
     return json({ ok: false, error: "forbidden (not admin of course " + cid + ")" }, env, 403);
   }
 
@@ -210,7 +214,7 @@ async function handleUploadReviewed(request, env) {
   if (size > 50 * 1024 * 1024) return json({ ok: false, error: "file > 50MB" }, env, 400);
 
   const claims = await verifyIdToken(idToken, env);
-  if (!authorizeAdminForCourse(claims, cid, env)) {
+  if (!(await authorizeAdminForCourse(claims, cid, env))) {
     return json({ ok: false, error: "forbidden (not admin of course " + cid + ")" }, env, 403);
   }
 
@@ -268,7 +272,7 @@ async function handleLabProgress(request, env) {
 
   const claims = await verifyIdToken(body.token || "", env);
   const me = claims.user_id || claims.sub;
-  const isAdmin = authorizeAdminForCourse(claims, cid, env);
+  const isAdmin = await authorizeAdminForCourse(claims, cid, env);
 
   let items;
   if (Array.isArray(body.items)) {
@@ -347,7 +351,7 @@ async function handleFetchLink(request, env) {
     return json({ ok: false, error: "missing fields" }, env, 400);
   }
   const claims = await verifyIdToken(idToken, env);
-  if (!authorizeAdminForCourse(claims, cid, env)) {
+  if (!(await authorizeAdminForCourse(claims, cid, env))) {
     return json({ ok: false, error: "forbidden (not admin of course " + cid + ")" }, env, 403);
   }
 
@@ -648,8 +652,18 @@ async function handleDownload(request, env, path) {
   if (!path) return json({ ok: false, error: "missing path" }, env, 400);
   const idToken = extractBearer(request);
   const claims = await verifyIdToken(idToken, env);
-  if (!authorizePath(claims, path, env)) return json({ ok: false, error: "forbidden" }, env, 403);
-  const data = await ghGet("/contents/" + encodeURI(path), env);
+  if (!(await authorizePath(claims, path, env))) return json({ ok: false, error: "forbidden" }, env, 403);
+  let data = await ghGet("/contents/" + encodeURI(path), env);
+  if (!data) {
+    // Имя файла могло прийти в другой Unicode-нормализации (iPad/macOS дают
+    // NFD, в git лежит NFC или наоборот) — пробуем обе формы.
+    for (const form of ["NFC", "NFD"]) {
+      const alt = path.normalize(form);
+      if (alt === path) continue;
+      data = await ghGet("/contents/" + encodeURI(alt), env);
+      if (data) { path = alt; break; }
+    }
+  }
   if (!data) return json({ ok: false, error: "файл не найден в хранилище: " + path }, env, 404);
   // ?raw=1 — отдать сам файл потоком (без base64 в JSON): быстрее, меньше
   // памяти в браузере, есть прогресс по Content-Length. GitHub отдаёт raw
@@ -689,7 +703,7 @@ async function handleDelete(request, env, path) {
   if (!path) return json({ ok: false, error: "missing path" }, env, 400);
   const idToken = extractBearer(request);
   const claims = await verifyIdToken(idToken, env);
-  if (!authorizePath(claims, path, env)) return json({ ok: false, error: "forbidden" }, env, 403);
+  if (!(await authorizePath(claims, path, env))) return json({ ok: false, error: "forbidden" }, env, 403);
   const cur = await ghGet("/contents/" + encodeURI(path), env);
   if (!cur || !cur.sha) return json({ ok: true, note: "already gone" }, env);
   await ghApi("DELETE", "/contents/" + encodeURI(path), {
@@ -703,32 +717,74 @@ async function handleDelete(request, env, path) {
 // Authorization helpers
 // ============================================================
 
-function authorizePath(claims, path, env) {
+async function authorizePath(claims, path, env) {
   const supers = (env.SUPERADMINS || "").split(",").map(s => s.trim()).filter(Boolean);
   if (supers.indexOf(claims.email) !== -1) return true;
   // Path вида {cid}/{aid}/{uid_...}/{file}. Разрешаем автору, если
   // его uid — префикс третьего сегмента.
   const parts = path.split("/");
   if (parts.length < 3) return false;
+  if (parts.some(seg => seg === "" || seg === "." || seg === "..")) return false;
   const studentDir = parts[2] || "";
   const uid = claims.user_id || claims.sub;
-  return studentDir.startsWith(uid);
+  if (uid && studentDir.startsWith(uid)) return true;
+  // Курсовой admin — файлы сдач своего курса (первый сегмент пути = cid).
+  return await authorizeAdminForCourse(claims, parts[0], env);
 }
 
 // Разрешение admin-доступа к курсу. Superadmin — по email в env.SUPERADMINS.
 // Курсовые admin — по опциональному env.COURSE_ADMINS_JSON вида
 //   {"email@example.com": ["sem1", "sem2", ...]}
-// Строка COURSE_ADMINS_JSON, если задана, парсится один раз на запрос.
-function authorizeAdminForCourse(claims, cid, env) {
+// либо, если там не найден, — по документу users/{uid} в Firestore
+// (isAdmin == true и cid ∈ managedCourses), как в правилах Firestore
+// (adminCanManageCourse). Читается сервисным аккаунтом FIREBASE_ADMIN_SA_JSON.
+async function authorizeAdminForCourse(claims, cid, env) {
   const email = claims.email || "";
   const supers = (env.SUPERADMINS || "").split(",").map(s => s.trim()).filter(Boolean);
   if (supers.indexOf(email) !== -1) return true;
+  if (!cid) return false;
   try {
     const map = JSON.parse(env.COURSE_ADMINS_JSON || "{}");
     const list = map[email];
     if (Array.isArray(list) && list.indexOf(cid) !== -1) return true;
   } catch (_) {}
-  return false;
+  try {
+    const courses = await fetchManagedCourses(claims.user_id || claims.sub, env);
+    return courses.indexOf(cid) !== -1;
+  } catch (e) {
+    console.warn("authorizeAdminForCourse: firestore lookup failed:", e && e.message);
+    return false;
+  }
+}
+
+// users/{uid} → managedCourses, если isAdmin == true; иначе [].
+// Кэш на время жизни изолята (Cloudflare может держать его минуты),
+// чтобы не ходить в Firestore на каждый файл.
+const _managedCache = new Map();
+async function fetchManagedCourses(uid, env) {
+  if (!uid) return [];
+  const hit = _managedCache.get(uid);
+  if (hit && hit.exp > Date.now()) return hit.courses;
+  if (!env.FIREBASE_ADMIN_SA_JSON || !env.FIREBASE_PROJECT_ID) return [];
+  const sa = JSON.parse(env.FIREBASE_ADMIN_SA_JSON);
+  const accessToken = await getGoogleAccessToken(sa);
+  const resp = await fetch(
+    "https://firestore.googleapis.com/v1/projects/" + env.FIREBASE_PROJECT_ID
+      + "/databases/(default)/documents/users/" + encodeURIComponent(uid),
+    { headers: { Authorization: "Bearer " + accessToken } }
+  );
+  let courses = [];
+  if (resp.ok) {
+    const doc = await resp.json();
+    const f = (doc && doc.fields) || {};
+    const isAdmin = !!(f.isAdmin && f.isAdmin.booleanValue === true);
+    const arr = (f.managedCourses && f.managedCourses.arrayValue && f.managedCourses.arrayValue.values) || [];
+    if (isAdmin) courses = arr.map(v => v.stringValue).filter(Boolean);
+  } else if (resp.status !== 404) {
+    throw new Error("firestore users/" + uid + " " + resp.status);
+  }
+  _managedCache.set(uid, { courses: courses, exp: Date.now() + 60 * 1000 });
+  return courses;
 }
 
 function extractBearer(request) {

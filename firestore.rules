@@ -450,6 +450,20 @@ service cloud.firestore {
     // ключ: '{aid}_{uid}'; поля: { assignmentId, uid, courseId,
     //   files:[{path,url,name,size,uploadedAt}], submittedAt, updatedAt,
     //   note?, syncedAt? }.
+    // hw_annotations/{aid}_{uid}_{hash}_p{page}: совместные пометки
+    // преподавателей в проверялке PDF (штрихи, маркер, стикеры-заметки).
+    // Читают и пишут только admin'ы курса (courseId в документе); студенту
+    // они не видны — ему уходит собранный PDF в reviewedFiles.
+    // Запрос списком: where courseId == cid AND fileKey == key — поле
+    // courseId в запросе обязательно, иначе правило недоказуемо.
+    match /hw_annotations/{docId} {
+      allow read:   if isAuth() && adminCanManageCourse(resource.data.get('courseId', ''));
+      allow create: if isAuth() && adminCanManageCourse(request.resource.data.get('courseId', ''));
+      allow update: if isAuth() && adminCanManageCourse(resource.data.get('courseId', ''))
+                    && request.resource.data.get('courseId', '') == resource.data.get('courseId', '');
+      allow delete: if isAuth() && adminCanManageCourse(resource.data.get('courseId', ''));
+    }
+
     match /submissions/{docId} {
       function subUid()      { return docId.split('_')[1]; }
       function subAid()      { return docId.split('_')[0]; }

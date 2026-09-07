@@ -274,15 +274,39 @@
     },
 
     // Триггер download (создать <a download> и кликнуть).
+    // iPad/iPhone (Safari): скачивание через <a download> для blob-ссылок не
+    // работает или молча открывает пустую вкладку. Там открываем новую вкладку
+    // СИНХРОННО (внутри клика — иначе Safari её блокирует), а после загрузки
+    // показываем в ней PDF: из встроенного просмотрщика его можно «Поделиться»
+    // → Файлы / Notability / Разметка Pencil-ом.
     triggerDownload: async function (path, name) {
-      const d = await this.downloadFile(path);
-      const url = URL.createObjectURL(d.blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = name || d.name || "file";
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+      const ua = navigator.userAgent || "";
+      const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      let tab = null;
+      if (isIOS) {
+        try { tab = window.open("", "_blank"); } catch (_) { tab = null; }
+        if (tab) { try { tab.document.write('<p style="font-family:sans-serif;padding:2rem">Загрузка файла…</p>'); } catch (_) {} }
+      }
+      try {
+        const d = await this.downloadFile(path);
+        const isPdf = /\.pdf$/i.test(name || d.name || "");
+        const blob = isPdf ? new Blob([d.blob], { type: "application/pdf" }) : d.blob;
+        const url = URL.createObjectURL(blob);
+        if (tab) {
+          tab.location.href = url;
+          setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000);
+          return;
+        }
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = name || d.name || "file";
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+      } catch (e) {
+        if (tab) { try { tab.close(); } catch (_) {} }
+        throw e;
+      }
     },
 
     // Удалить файл на Worker-е и записать в submissions.

@@ -258,6 +258,7 @@ function scheduleRemoteSave(){
 }
 window.__labFlush = function(){ clearTimeout(_rsTimer); return remoteSaveNow(); };
 window.addEventListener('beforeunload', function(){ if (_rsTimer) { clearTimeout(_rsTimer); remoteSaveNow(); } });
+document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden' && _rsTimer) { clearTimeout(_rsTimer); _rsTimer = null; remoteSaveNow(); } });
 const TOTAL = 9;
 delete PROG.q41; // задача-обсуждение удалена
 function updateProgUI(){
@@ -295,7 +296,7 @@ document.querySelectorAll('[data-cpp]').forEach(shell=>{
   cm.getWrapperElement().addEventListener('contextmenu', e => e.preventDefault());
   const savedCode = localStorage.getItem('cfd-nm-w04-lab-cpp:'+id);
   if (savedCode) cm.setValue(savedCode);
-  cm.on('change', () => { localStorage.setItem('cfd-nm-w04-lab-cpp:'+id, cm.getValue()); scheduleRemoteSave(); });
+  cm.on('change', () => { localStorage.setItem('cfd-nm-w04-lab-cpp:'+id, cm.getValue()); try { localStorage.setItem('cfd-nm-w04-lab-cpp-ts', String(Date.now())); } catch(e) {} scheduleRemoteSave(); });
   if (verdictEl && PROG[id]==='ok'){ verdictEl.className = 'verdict ok'; verdictEl.innerHTML = '<span class="status-dot ok"></span>✓ решено ранее'; }
   btnReset.addEventListener('click', ()=>{ if (!confirm('Вернуть скелет?')) return; cm.setValue(initial); localStorage.removeItem('cfd-nm-w04-lab-cpp:'+id); });
   async function runNow(){
@@ -362,7 +363,16 @@ window.__labInit = function(remote, user){
       try { localStorage.setItem(PROG_KEY, JSON.stringify(PROG)); } catch(e) {}
     }
     if (remote.code && typeof remote.code === 'object') {
-      for (const k in remote.code) { try { localStorage.setItem('cfd-nm-w04-lab-cpp:' + k, remote.code[k]); } catch(e) {} }
+      // Если локальная копия новее облачной (прошлое сохранение не дошло до Firestore),
+      // оставляем локальную и досылаем её; иначе берём облачную (другое устройство).
+      let remoteMs = 0, localMs = 0;
+      try { remoteMs = (remote.updatedAt && remote.updatedAt.toMillis) ? remote.updatedAt.toMillis() : 0; } catch(e) {}
+      try { localMs = parseInt(localStorage.getItem('cfd-nm-w04-lab-cpp-ts') || '0', 10) || 0; } catch(e) {}
+      if (localMs > remoteMs + 30000) {
+        setTimeout(function(){ if (window.__labFlush) window.__labFlush(); }, 800);
+      } else {
+        for (const k in remote.code) { try { localStorage.setItem('cfd-nm-w04-lab-cpp:' + k, remote.code[k]); } catch(e) {} }
+      }
     }
   }
   initTasks();

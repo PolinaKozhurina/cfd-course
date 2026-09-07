@@ -264,6 +264,8 @@
       if (!me) throw new Error("Не авторизован");
       const token = await me.getIdToken();
       const headers = { Authorization: "Bearer " + token };
+      const short = (t) => String(t || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 140);
+      let lastErr = "";
       // 1) потоком
       try {
         const r = await fetch(WORKER_URL + "/file?raw=1&path=" + encodeURIComponent(path), { headers });
@@ -278,21 +280,31 @@
             chunks.push(value); got += value.length;
             if (onProgress && total) onProgress(Math.min(1, got / total));
           }
+          if (!got) throw new Error("воркер отдал пустой файл");
           const name = decodeURIComponent(r.headers.get("x-file-name") || "") || path.split("/").pop();
           return { blob: new Blob(chunks, { type: ct || "application/octet-stream" }), name: name, size: got };
         }
-        if (r.ok === false && ct.indexOf("application/json") !== -1) {
-          const j = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          const txt = await r.text().catch(() => "");
+          let j = {}; try { j = JSON.parse(txt); } catch (_) {}
+          // 403/404 — окончательный ответ воркера (нет прав / нет файла).
           if (r.status === 403 || r.status === 404) throw new Error(j.error || ("HTTP " + r.status));
+          lastErr = "воркер: HTTP " + r.status + (j.error ? " — " + j.error : (txt ? " — " + short(txt) : ""));
         }
       } catch (e) {
-        if (/не найден|forbidden|HTTP 40[34]/.test(String(e.message))) throw e;
+        if (/не найден|forbidden|HTTP 40[34]|пустой файл/.test(String(e.message))) throw e;
+        if (!lastErr) lastErr = "поток: " + (e && e.message ? e.message : String(e));
         // иначе — воркер без raw-режима или сеть; пробуем JSON
       }
       // 2) старый путь: JSON с base64
       const resp = await fetch(WORKER_URL + "/file?path=" + encodeURIComponent(path), { headers });
-      const data = await resp.json();
-      if (!resp.ok || !data.ok) throw new Error(data.error || "download failed");
+      const txt2 = await resp.text().catch(() => "");
+      let data = null; try { data = JSON.parse(txt2); } catch (_) {}
+      if (!data) {
+        throw new Error("воркер ответил не JSON (HTTP " + resp.status + "): " + short(txt2)
+          + (lastErr ? " | до этого: " + lastErr : ""));
+      }
+      if (!resp.ok || !data.ok) throw new Error(data.error || ("download failed (HTTP " + resp.status + ")"));
       const bin = atob(String(data.base64).replace(/\n/g, ""));
       const buf = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);

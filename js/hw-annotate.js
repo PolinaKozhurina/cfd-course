@@ -145,6 +145,19 @@
     }
     this._buildShell();
     document.body.style.overflow = "hidden";
+    // Другие фиксированные окна страницы (например, таблица сдач в админке)
+    // прячем сами, чтобы проверялка ни при каких стилях не оказалась «за» ними;
+    // при закрытии возвращаем.
+    this._hidden = [];
+    try {
+      var others = document.querySelectorAll(".hw-subs-modal, [data-hide-under-annotator]");
+      for (var oi = 0; oi < others.length; oi++) {
+        var el = others[oi];
+        if (el === this.root || getComputedStyle(el).display === "none") continue;
+        this._hidden.push({ el: el, display: el.style.display });
+        el.style.display = "none";
+      }
+    } catch (_) {}
     try {
       var blob = this.opts.sourceBlob || null;
       if (!blob) {
@@ -178,6 +191,10 @@
     if (this.root && this.root.parentNode) this.root.parentNode.removeChild(this.root);
     document.body.style.overflow = "";
     this.root = null;
+    var hidden = this._hidden || []; this._hidden = [];
+    for (var hi = 0; hi < hidden.length; hi++) {
+      try { hidden[hi].el.style.display = hidden[hi].display || "flex"; } catch (_) {}
+    }
     if (typeof this.opts.onClose === "function") { try { this.opts.onClose(); } catch (_) {} }
   };
 
@@ -474,6 +491,9 @@
         '</div>' +
         '<div class="cfd-annot-pages" data-pages></div>' +
       '</div>';
+    // Дублируем ключевые стили инлайном: даже если <style> внутри root не
+    // применился, оверлей остаётся на весь экран и поверх всего.
+    root.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:2147483000";
     document.body.appendChild(root);
     this.root = root;
 

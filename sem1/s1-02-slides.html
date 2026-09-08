@@ -202,9 +202,39 @@ table.sum td.c{text-align:center}
   <h1>Аппроксимация, устойчивость, <span class="u">сходимость</span></h1>
   <div class="sub">Невязка и порядок аппроксимации · Устойчивость и корректность · Теорема Лакса</div>
 </section>
+
+<section class="slide">
+  <div class="slide-num">§2 · Обозначения</div>
+  <h2>Что означают \(h\) и \(u_h\)</h2>
+  <div class="two-col">
+    <div>
+      <div class="definition" style="min-height:0;font-size:.9em">
+        <strong>Сетка и шаг.</strong> В полосе \(\bar\Omega = \mathbb{R}\times[0,T]\) введена равномерная сетка (§1.9)
+        \[ \omega_{h\tau} = \bigl\{(x_i, t_n)\colon\ x_i = ih,\ t_n = n\tau,\ i \in \mathbb{Z},\ n = 0, 1, \ldots, N\bigr\}, \]
+        \(h > 0\) — шаг по \(x\), \(\tau > 0\) — шаг по \(t\). <em>Характеристический шаг</em> сетки — \(|h| = \max(h, \tau)\) (§1.7, (1.5)); для одномерной сетки \(|h| = h\).
+      </div>
+      <div class="definition" style="min-height:0;font-size:.9em">
+        <strong>Сеточная функция.</strong> \(u_h\colon \omega_{h\tau} \to \mathbb{R}\) — функция, заданная только в узлах сетки; её значения обозначаются \(u_i^n = u_h(x_i, t_n)\). Множество всех сеточных функций — линейное пространство \(H\) с сеточной нормой \(\|\cdot\|\) (§1.10–§1.11), например \(\|u_h\|_C = \max_{i,n}|u_i^n|\).
+      </div>
+    </div>
+    <div>
+      <div class="note" style="font-size:.9em"><span class="lbl">Соглашение об индексе \(h\)</span>
+        Индекс \(h\) у любого объекта означает, что объект относится к сетке с характеристическим шагом \(|h|\): \(u_h\) — сеточная функция, \(L_h\) — разностный оператор, действующий в \(H\), \(f_h\) — сеточная правая часть. Запись \(h \to 0\) означает \(|h| \to 0\), то есть \(h \to 0\) и \(\tau \to 0\) одновременно, вдоль заданного закона \(\tau = \tau(h)\) (закон предельного перехода, §2.9).
+      </div>
+      <table class="sum" style="font-size:.84em">
+        <tr><th>Символ</th><th>Определение</th></tr>
+        <tr><td>\(U = U(x,t)\)</td><td>точное решение дифференциальной задачи; функция на \(\bar\Omega\)</td></tr>
+        <tr><td>\(U_h = P_\tau U\)</td><td>проекция \(U\) на сетку (§1.12, (1.17)): \((U_h)_i^n = U(x_i, t_n)\); элемент \(H\)</td></tr>
+        <tr><td>\(u_h\)</td><td>решение разностной задачи \(L_h u_h = f_h\); элемент \(H\)</td></tr>
+        <tr><td>\(\|u_h - U_h\|\)</td><td>сеточная норма разности двух элементов \(H\); именно она входит в определения §2</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
 <section class="slide">
   <div class="slide-num">§2 · Постановка вопроса</div>
-  <h2>Как проверить схему, если точного решения нет?</h2>
+  <h2>Постановка вопроса</h2>
   <div class="two-col wide-left">
     <div>
       <p>Разностная схема даёт лишь <em>приближённое</em> решение. Точность легко проверить сравнением с аналитическим решением — но для сложных задач математической физики его <strong>нет</strong> даже при упрощающих предположениях.</p>
@@ -252,15 +282,15 @@ table.sum td.c{text-align:center}
         <tr><td>\(U\)</td><td>точное решение дифференциальной задачи</td><td>функция на \(\Omega\)</td></tr>
         <tr><td>\(U_h\)</td><td><em>проекция</em> точного решения на сетку: \(U_h = U(x_i, t_n)\)</td><td>сеточная функция, \(H\)</td></tr>
         <tr><td>\(u_h\)</td><td>решение разностной задачи</td><td>сеточная функция, \(H\)</td></tr>
-        <tr><td>\(\xi_h\)</td><td>невязка \(L_h U_h - f_h\) — «насколько \(U_h\) не удовлетворяет схеме»</td><td>сеточная функция, \(H\)</td></tr>
+        <tr><td>\(\xi_h\)</td><td>невязка \(L_h U_h - f_h\): результат подстановки проекции точного решения в схему</td><td>сеточная функция, \(H\)</td></tr>
       </table>
-      <div class="note"><span class="lbl">Ключевое</span>Все сравнения ниже — между <strong>сеточными</strong> функциями, в сеточной норме \(\|\cdot\|\) (§1.11). Сравнивать \(u_h\) с \(U\) напрямую нельзя — они из разных пространств.</div>
+      <div class="note"><span class="lbl">Замечание</span>Все сравнения ниже — между <strong>сеточными</strong> функциями, в сеточной норме \(\|\cdot\|\) (§1.11). Сравнивать \(u_h\) с \(U\) напрямую нельзя — они из разных пространств.</div>
     </div>
   </div>
 </section>
 <section class="slide">
   <div class="slide-num">§2.2 · Определение сходимости</div>
-  <h2>Сходимость — то, что нам на самом деле нужно</h2>
+  <h2>Определение сходимости</h2>
   <div class="two-col wide-left">
     <div class="definition" data-num="1">
       Решение \(u_h\) разностной задачи \(L_h u_h = f_h\) <em>сходится</em> к решению \(U\) дифференциальной задачи \(LU = f\), если
@@ -271,14 +301,14 @@ table.sum td.c{text-align:center}
     </div>
     <div>
       <div class="callout">
-        <p style="margin-bottom:.5rem"><strong>Что здесь важно</strong></p>
+        <p style="margin-bottom:.5rem"><strong>Замечания к определению</strong></p>
         <ul style="margin-bottom:0;font-size:.95em">
           <li>Сравниваем \(u_h\) с проекцией \(U_h\): обе — сеточные функции.</li>
           <li>Постоянная \(C\) <em>не зависит от \(h\)</em> — иначе оценка пуста.</li>
           <li>Для нестационарной задачи \(h\) — совокупность шагов \((h, \tau)\); в оценке появляются \(C_x h^{p} + C_t \tau^{q}\).</li>
         </ul>
       </div>
-      <div class="example" style="margin-top:.8rem"><span class="lbl">Как проверить численно</span>
+      <div class="example" style="margin-top:.8rem"><span class="lbl">Численная оценка порядка</span>
         Из (2.6): \(\|z_h\| / \|z_{h/2}\| \approx 2^p\), то есть
         \[ p \approx \log_2\frac{\|z_h\|}{\|z_{h/2}\|}, \qquad z_h = u_h - U_h. \]
         Считаем на сетках \(h, h/2, h/4,\ldots\) и смотрим на отношение погрешностей.
@@ -288,11 +318,11 @@ table.sum td.c{text-align:center}
 </section>
 <section class="slide">
   <div class="slide-num">§2.3 · Аппроксимация и невязка</div>
-  <h2>Невязка: подставляем точное решение в схему</h2>
+  <h2>Невязка и определение аппроксимации</h2>
   <div class="two-col wide-left">
     <div>
       <div class="eq">\[ \xi_h = L_h U_h - f_h \tag{2.7} \]</div>
-      <p style="font-size:.92em">Проекция \(U_h\) точного решения схему, вообще говоря, <em>не</em> удовлетворяет. То, что останется после подстановки, — <strong>невязка</strong> (погрешность аппроксимации).</p>
+      <p style="font-size:.92em">Проекция \(U_h\) точного решения, вообще говоря, не удовлетворяет разностной схеме. Результат подстановки \(U_h\) в схему — <strong>невязка</strong> (погрешность аппроксимации).</p>
       <div class="definition" data-num="2" style="min-height:0">
         Разностная схема \(L_h u_h = f_h\) <em>аппроксимирует</em> задачу \(LU = f\) <strong>на решении \(U\)</strong>, если
         \[ \|\xi_h\| \xrightarrow[h \to 0]{} 0. \tag{2.8} \]
@@ -324,13 +354,13 @@ table.sum td.c{text-align:center}
           <text x="210" y="240" font-family="Source Serif 4,serif" font-size="11" fill="#9a8d7e" text-anchor="middle" font-style="italic">сходимость: ‖u_h − U_h‖ → 0</text>
         </svg>
       </div>
-      <div class="note"><span class="lbl">Не путать</span>Аппроксимация — свойство <em>схемы относительно уравнения</em>, про близость решений в ней ни слова. Малая невязка ещё не гарантирует, что \(u_h\) близко к \(U_h\).</div>
+      <div class="note"><span class="lbl">Замечание</span>Аппроксимация — свойство <em>схемы относительно уравнения</em>, про близость решений в ней ни слова. Малая невязка ещё не гарантирует, что \(u_h\) близко к \(U_h\).</div>
     </div>
   </div>
 </section>
 <section class="slide">
   <div class="slide-num">§2.4 · Устойчивость</div>
-  <h2>Устойчивость: малое возмущение — малый отклик</h2>
+  <h2>Определение устойчивости</h2>
   <div class="two-col wide-left">
     <div class="definition" data-num="3">
       Разностная задача \(L_h u_h = f_h\) называется <em>устойчивой</em>, если её решение существует и единственно, причём из
@@ -340,9 +370,9 @@ table.sum td.c{text-align:center}
     </div>
     <div>
       <div class="callout">
-        <p style="margin-bottom:.5rem"><strong>Смысл</strong></p>
+        <p style="margin-bottom:.5rem"><strong>Замечания к определению</strong></p>
         <ul style="margin-bottom:0;font-size:.95em">
-          <li>Два расчёта с чуть разными правыми частями дают чуть разные ответы — и «чуть» <em>не растёт</em> при измельчении сетки.</li>
+          <li>Близким правым частям отвечают близкие решения, и постоянная в оценке близости <em>не зависит</em> от шага сетки.</li>
           <li>Возмущение \(\eta_h\) — это и ошибки округления, и погрешность начальных данных, и… <strong>невязка</strong> (см. §3).</li>
           <li>Постоянная \(C_2\) равномерна по \(h\): вся трудность именно здесь.</li>
         </ul>
@@ -384,7 +414,7 @@ table.sum td.c{text-align:center}
 </section>
 <section class="slide">
   <div class="slide-num">§2.2–§2.5 · Сводка</div>
-  <h2>Четыре определения: кто с кем сравнивается</h2>
+  <h2>Сводка определений 1–4</h2>
   <div class="tiles">
     <div class="tile">
       <div><div class="h">Опр. 1</div><div class="t">Сходимость</div></div>
@@ -450,16 +480,43 @@ table.sum td.c{text-align:center}
 </section>
 <section class="slide">
   <div class="slide-num">§2.7 · Разложение Тейлора</div>
-  <h2>Подставляем гладкое решение \(u(x,t)\) в схему</h2>
-  <p style="font-size:.92em">Пусть \(u\) — точное решение (2.15), достаточно гладкое. Разложим значения на шаблоне относительно \((x_i, t_n)\):</p>
-  <div class="eq">\[ \frac{u(x_i, t_n + \tau) - u(x_i, t_n)}{\tau} = \frac{\partial u}{\partial t} + \frac{\tau}{2}\,\frac{\partial^2 u}{\partial t^2}\Big|_{(x_i,\, t_n + \eta)} \tag{2.18} \]</div>
-  <div class="eq">\[ \frac{u(x_i, t_n) - u(x_i - h, t_n)}{h} = \frac{\partial u}{\partial x} - \frac{h}{2}\,\frac{\partial^2 u}{\partial x^2}\Big|_{(x_i - \xi,\, t_n)} \tag{2.19} \]</div>
-  <p style="font-size:.9em">(2.18) — разностная производная по времени, (2.19) — по пространству («назад»); \(0 < \eta < \tau\), \(0 < \xi < h\) — остаточные члены в форме Лагранжа. Складываем с весами \(1\) и \(a\); первые слагаемые дают \(u_t + a u_x = 0\) — <em>уравнение выполнено на решении</em>, и остаётся невязка:</p>
-  <div class="eq">\[ \xi_h\big|_i^n = \frac{\tau}{2}\,\frac{\partial^2 u}{\partial t^2}\Big|_{(x_i,\, t_n+\eta)} - \frac{a h}{2}\,\frac{\partial^2 u}{\partial x^2}\Big|_{(x_i-\xi,\, t_n)} \]</div>
+  <h2>Разложение решения в ряд Тейлора на шаблоне схемы (2.17)</h2>
+  <div class="two-col wide-left">
+    <div>
+      <p style="font-size:.9em">Пусть \(u\) — точное решение (2.15), достаточно гладкое. Разложим значения \(u\) в узлах шаблона относительно \((x_i, t_n)\):</p>
+      <div class="eq">\[ \frac{u(x_i, t_n + \tau) - u(x_i, t_n)}{\tau} = \frac{\partial u}{\partial t} + \frac{\tau}{2}\,\frac{\partial^2 u}{\partial t^2}\Big|_{(x_i,\, t_n + \eta)} \tag{2.18} \]</div>
+      <div class="eq">\[ \frac{u(x_i, t_n) - u(x_i - h, t_n)}{h} = \frac{\partial u}{\partial x} - \frac{h}{2}\,\frac{\partial^2 u}{\partial x^2}\Big|_{(x_i - \xi,\, t_n)} \tag{2.19} \]</div>
+      <p style="font-size:.88em">(2.18) — разностная производная по времени, (2.19) — по пространству (разность назад); \(0 < \eta < \tau\), \(0 < \xi < h\) — остаточные члены в форме Лагранжа. Умножим (2.19) на \(a\) и сложим с (2.18): сумма первых слагаемых \(u_t + a u_x\) равна нулю, так как \(u\) — решение (2.15). Оставшаяся часть — невязка:</p>
+      <div class="eq">\[ \xi_h\big|_i^n = \frac{\tau}{2}\,\frac{\partial^2 u}{\partial t^2}\Big|_{(x_i,\, t_n+\eta)} - \frac{a h}{2}\,\frac{\partial^2 u}{\partial x^2}\Big|_{(x_i-\xi,\, t_n)} \]</div>
+    </div>
+    <div>
+      <div class="eq" style="font-size:.95em">\[ \frac{u_i^{n+1} - u_i^{n}}{\tau} + a\,\frac{u_i^{n} - u_{i-1}^{n}}{h} = 0 \tag{2.17} \]</div>
+      <div class="figure">
+        <svg viewBox="0 0 300 230" xmlns="http://www.w3.org/2000/svg" style="max-width:360px;width:100%">
+          <g stroke="#d9cfc0" stroke-width="1">
+            <line x1="60" y1="50" x2="240" y2="50"/><line x1="60" y1="160" x2="240" y2="160"/>
+            <line x1="80" y1="30" x2="80" y2="180"/><line x1="150" y1="30" x2="150" y2="180"/><line x1="220" y1="30" x2="220" y2="180"/>
+          </g>
+          <circle cx="150" cy="50" r="9" fill="#b44a2d"/>
+          <circle cx="80" cy="160" r="9" fill="#6b5d4f"/>
+          <circle cx="150" cy="160" r="9" fill="#6b5d4f"/>
+          <line x1="150" y1="59" x2="150" y2="151" stroke="#b44a2d" stroke-width="2" stroke-dasharray="6,4"/>
+          <line x1="89" y1="160" x2="141" y2="160" stroke="#b44a2d" stroke-width="2" stroke-dasharray="6,4"/>
+          <circle cx="150" cy="160" r="14" fill="none" stroke="#1a6b5a" stroke-width="1.5" stroke-dasharray="3,2"/>
+          <text x="80"  y="205" font-family="JetBrains Mono,monospace" font-size="14" fill="#6b5d4f" text-anchor="middle">i−1</text>
+          <text x="150" y="205" font-family="JetBrains Mono,monospace" font-size="14" fill="#6b5d4f" text-anchor="middle">i</text>
+          <text x="245" y="55"  font-family="JetBrains Mono,monospace" font-size="13" fill="#b44a2d">n+1</text>
+          <text x="245" y="165" font-family="JetBrains Mono,monospace" font-size="13" fill="#6b5d4f">n</text>
+          <text x="150" y="226" font-family="Source Serif 4,serif" font-size="12" fill="#1a6b5a" text-anchor="middle" font-style="italic">базовая точка (x_i, t_n)</text>
+        </svg>
+        <div class="caption">Шаблон схемы (2.17): узлы \((x_i, t_{n+1})\), \((x_i, t_n)\), \((x_{i-1}, t_n)\); разложения относительно \((x_i, t_n)\).</div>
+      </div>
+    </div>
+  </div>
 </section>
 <section class="slide">
   <div class="slide-num">§2.7 · Порядок аппроксимации</div>
-  <h2>Оценка невязки: первый порядок по \(\tau\) и по \(h\)</h2>
+  <h2>Оценка невязки. Порядок аппроксимации</h2>
   <div class="two-col wide-left">
     <div>
       <p style="font-size:.92em">В норме \(\|\cdot\|_C\) (максимум по узлам сетки в области \(G\)):</p>
@@ -468,13 +525,13 @@ table.sum td.c{text-align:center}
       <div class="eq">\[ \|\xi_h\| = O(\tau) + O(h). \]</div>
     </div>
     <div>
-      <div class="note"><span class="lbl">Что потребовалось</span>
+      <div class="note"><span class="lbl">Использованные предположения</span>
         <ul style="margin-bottom:0">
           <li>ограниченность вторых производных решения — постоянные в (2.21) — это \(\max|u_{tt}|\), \(\max|u_{xx}|\), они не зависят от \(\tau, h\);</li>
           <li>ничего про устойчивость — аппроксимация проверяется <em>независимо</em>.</li>
         </ul>
       </div>
-      <div class="example"><span class="lbl">Заглянем вперёд</span>
+      <div class="example"><span class="lbl">Замечание (к §4)</span>
         На решении \(u_{tt} = a^2 u_{xx}\), и главный член невязки собирается в
         \[ \xi_h = -\frac{a h}{2}\Bigl(1 - \frac{a\tau}{h}\Bigr) u_{xx} + O(\tau^2 + h^2). \]
         При \(a\tau/h = 1\) он обнуляется — схема переносит профиль <em>точно</em> (задача 9 ДЗ №1).
@@ -513,7 +570,7 @@ table.sum td.c{text-align:center}
         \[ Ru = -\frac{\tau}{2}u_{tt} + \frac{a h}{2}u_{xx} + O(\tau^2 + h^2) \]
         \(k = 1\), \(m = 1\): первый порядок по \(\tau\) и по \(h\).
       </div>
-      <div class="note"><span class="lbl">На произвольной функции или на решении?</span>
+      <div class="note"><span class="lbl">Аппроксимация на произвольной функции и на решении</span>
         Шаги 2–4 не требуют, чтобы \(u\) удовлетворяла уравнению: так получается порядок <em>на произвольной гладкой функции</em>. Для сходимости (§3) достаточно аппроксимации <em>на решении</em> — тогда можно ещё подставить дифференциальные следствия уравнения.
       </div>
     </div>
@@ -572,7 +629,7 @@ table.sum td.c{text-align:center}
 </section>
 <section class="slide">
   <div class="slide-num">§2.9 · Замечание 2: аппроксимация на решении</div>
-  <h2>А на решении порядок от базовой точки не зависит</h2>
+  <h2>Порядок аппроксимации на решении не зависит от базовой точки</h2>
   <div class="two-col wide-left">
     <div>
       <ul style="font-size:.95em">
@@ -587,7 +644,7 @@ table.sum td.c{text-align:center}
         Коэффициенты \(L_1\) меняются: появляются члены \(\pm\frac{\tau}{2}u_{tt}\), \(\pm\frac{h}{2}u_{xt}\), … Но после подстановки следствий уравнения главный член невязки тот же:
         \[ \xi_h = -\frac{a h}{2}\Bigl(1 - \frac{a\tau}{h}\Bigr)u_{xx} + O(\tau^2 + h^2). \]
       </div>
-      <div class="note"><span class="lbl">Практический вывод</span>
+      <div class="note"><span class="lbl">Следствие</span>
         Базовую точку выбираем <em>удобную</em> — там, где разложения короче (обычно центр шаблона). Ответ от этого не изменится.
       </div>
     </div>
@@ -605,14 +662,14 @@ table.sum td.c{text-align:center}
           <div class="d">\(\dfrac{u_i^{n+1} - u_i^{n}}{\tau} + a\,\dfrac{u_i^{n} - u_{i-1}^{n}}{h} = 0\)</div>
         </div>
         <div class="tile bad" style="grid-template-columns:130px 1fr">
-          <div><div class="h">умножили на \(\tau\)</div><div class="t">«\(O(\tau^2)\)»?</div></div>
+          <div><div class="h">умножили на \(\tau\)</div><div class="t">формально \(O(\tau^2)\)</div></div>
           <div class="d">\(u_i^{n+1} - u_i^{n} + \dfrac{a\tau}{h}\bigl(u_i^{n} - u_{i-1}^{n}\bigr) = 0\) — невязка формально \(O(\tau^2 + \tau h)\), но это та же схема</div>
         </div>
       </div>
     </div>
     <div>
-      <div class="note"><span class="lbl">Почему это обман</span>
-        Домножив уравнение на \(\tau\), мы домножили на \(\tau\) и невязку, и \(f_h\). Схема в регулярной записи аппроксимирует \(Lu = f\); та же схема, умноженная на \(\tau\), «аппроксимирует» \(\tau\,(Lu - f) = 0\), а это при \(\tau \to 0\) — вообще не уравнение.
+      <div class="note"><span class="lbl">Почему порядок не повысился</span>
+        Домножив уравнение на \(\tau\), мы домножили на \(\tau\) и невязку, и \(f_h\). Схема в регулярной записи аппроксимирует \(Lu = f\); та же схема, умноженная на \(\tau\), аппроксимирует уравнение \(\tau\,(Lu - f) = 0\), левая часть которого при \(\tau \to 0\) стремится к нулю тождественно.
       </div>
       <div class="example"><span class="lbl">Правило</span>
         Прежде чем считать порядок, приводим схему к виду
@@ -624,7 +681,7 @@ table.sum td.c{text-align:center}
 </section>
 <section class="slide">
   <div class="slide-num">§2.9 · Один предел \(h \to 0\): закон предельного перехода</div>
-  <h2>Аппроксимация может зависеть от того, <em>как</em> \(\tau, h \to 0\)</h2>
+  <h2>Зависимость аппроксимации от закона предельного перехода</h2>
   <div class="two-col wide-left">
     <div>
       <p style="font-size:.9em">Схема Лакса для уравнения переноса:</p>
@@ -644,15 +701,15 @@ table.sum td.c{text-align:center}
           <div class="d">\(\dfrac{h^2}{2\tau} = \dfrac{\mu}{2}\) не стремится к нулю: схема аппроксимирует <em>другое</em> уравнение \(u_t + a u_x = \frac{\mu}{2}u_{xx}\).</div>
         </div>
       </div>
-      <div class="note"><span class="lbl">Поэтому в Опр. 2 один предел</span>
-        \(h \to 0\) понимается вдоль <em>закона предельного перехода</em> \(\tau = \tau(h)\). Наличие и порядок аппроксимации — свойство пары «схема + закон», а не схемы самой по себе.
+      <div class="note"><span class="lbl">Следствие для Опр. 2</span>
+        \(h \to 0\) понимается вдоль <em>закона предельного перехода</em> \(\tau = \tau(h)\). Наличие и порядок аппроксимации — свойство схемы вместе с законом предельного перехода, а не схемы самой по себе.
       </div>
     </div>
   </div>
 </section>
 <section class="slide">
-  <div class="slide-num">§2 → §3 · Почему аппроксимации мало</div>
-  <h2>Аппроксимация есть, сходимости нет</h2>
+  <div class="slide-num">§2 → §3 · Пример</div>
+  <h2>Пример: аппроксимация без устойчивости и сходимости</h2>
   <div class="two-col wide-left">
     <div>
       <p style="font-size:.9em">Задача Коши \(x' = 2t\), \(x(0) = 0\), точное решение \(x = t^2\). Сетка \(t_i = i\tau\); явный двухшаговый метод</p>
@@ -669,8 +726,8 @@ table.sum td.c{text-align:center}
         <div class="tile bad" style="grid-template-columns:170px 1fr"><div><div class="h">Опр. 3</div><div class="t">Устойчивость</div></div><div class="d">нет: \(\|u_h - \nu_h\| \sim 2^{T/\tau}\varepsilon\)</div></div>
         <div class="tile bad" style="grid-template-columns:170px 1fr"><div><div class="h">Опр. 1</div><div class="t">Сходимость</div></div><div class="d">нет на практике: округление \(10^{-16}\) при \(\tau = 10^{-2}\), \(T = 1\) даёт ошибку \(\sim 2^{100}\cdot 10^{-16} \approx 10^{14}\)</div></div>
       </div>
-      <div class="note"><span class="lbl">Мораль</span>
-        Невязка — про схему и уравнение. Чтобы малая невязка превратилась в малую ошибку решения, нужен «усилитель с ограниченным коэффициентом» — устойчивость. Это и есть теорема Лакса.
+      <div class="note"><span class="lbl">Вывод</span>
+        Невязка характеризует отношение схемы к уравнению. Для того чтобы малая невязка влекла малую погрешность решения, необходима равномерная по \(h\) ограниченность \(L_h^{-1}\), то есть устойчивость. Это утверждение — теорема Лакса (§3).
       </div>
     </div>
   </div>
@@ -678,7 +735,7 @@ table.sum td.c{text-align:center}
 <!-- 18: Итоги §2 -->
 <section class="slide">
   <div class="slide-num">§2 · Итоги</div>
-  <h2>Что нужно унести с §2</h2>
+  <h2>Итоги §2</h2>
   <div class="two-col">
     <div>
       <ol style="font-size:.95em">
@@ -686,11 +743,11 @@ table.sum td.c{text-align:center}
         <li><strong>Невязка</strong> \(\xi_h = L_h U_h - f_h\) — подстановка точного решения в схему; её порядок — порядок аппроксимации.</li>
         <li><strong>Алгоритм §2.8</strong>: базовая точка → ряды Тейлора → \(L_1 u\) → \(Ru = Lu - L_1 u\). Уголок: \(O(\tau) + O(h)\).</li>
         <li><strong>Замечания §2.9</strong>: порядок оператора зависит от базовой точки, порядок уравнения на решении — нет; регулярная запись; закон предельного перехода \(\tau = \tau(h)\).</li>
-        <li><strong>Аппроксимации мало</strong>: без устойчивости невязка не превращается в малую ошибку решения.</li>
+        <li><strong>Аппроксимации недостаточно</strong>: без устойчивости малая невязка не влечёт малой погрешности решения.</li>
       </ol>
     </div>
     <div>
-      <div class="example"><span class="lbl">Дальше</span>
+      <div class="example"><span class="lbl">Следующие разделы</span>
         <ul style="margin-bottom:0">
           <li><strong>§3.</strong> Теорема Лакса: аппроксимация + устойчивость \(\Rightarrow\) сходимость, доказательство по этапам.</li>
           <li><strong>§4.</strong> Первое дифференциальное приближение: что на самом деле решает схема; Г- и П-формы.</li>
@@ -698,7 +755,7 @@ table.sum td.c{text-align:center}
         </ul>
       </div>
       <div class="callout" style="margin-top:.8rem">
-        <p style="margin-bottom:.4rem"><strong>Проверьте себя</strong></p>
+        <p style="margin-bottom:.4rem"><strong>Вопросы для самопроверки</strong></p>
         <ul style="margin-bottom:0;font-size:.92em">
           <li>Почему в Опр. 1 стоит \(U_h\), а не \(U\)?</li>
           <li>Может ли схема аппроксимировать уравнение при одном законе \(\tau(h)\) и не аппроксимировать при другом?</li>
@@ -716,7 +773,7 @@ table.sum td.c{text-align:center}
   <a href="s1-02.html" class="back" title="Полный текст лекции">← полная лекция</a>
   <div class="center">
     <button id="btnPrev" onclick="prev()" title="←">◀</button>
-    <span class="counter" id="counter">1 / 18</span>
+    <span class="counter" id="counter">1 / 19</span>
     <button id="btnNext" onclick="next()" title="→ / Space">▶</button>
   </div>
   <a href="s1-03-slides.html" class="back" title="Следующая лекция">§3 →</a>

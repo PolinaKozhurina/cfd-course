@@ -147,6 +147,22 @@
       (h || empty);
     if (h && window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([target]).catch(function () {});
     if (!notesLoaded && !notesError) loadNotes().then(function () { if (target.isConnected) renderNotes(target, i); });
+    // Ключ не задан в Firestore — дать ввести его прямо здесь (только admin курса; правила проверят).
+    if (!notesLoaded && /не задан/.test(notesError)) {
+      var b = document.createElement('button');
+      b.className = 'cfd-notes-btn'; b.type = 'button'; b.textContent = 'Ввести ключ заметок';
+      b.addEventListener('click', function () {
+        var k = (prompt('Вставьте base64-ключ заметок докладчика (44 символа, печатает tools/notes_encrypt.py):') || '').trim();
+        if (!k) return;
+        if (!/^[A-Za-z0-9+\/]{43}=$/.test(k)) { alert('Это не base64-ключ на 32 байта'); return; }
+        var me = firebase.auth().currentUser;
+        firebase.firestore().collection('notes_keys').doc(cid).set(
+          { key: k, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: me ? me.email : '' }, { merge: true }
+        ).then(function () { notesError = ''; notesPromise = null; renderNotes(target, i); })
+         .catch(function (e) { alert('Не удалось сохранить ключ: ' + e.message); });
+      });
+      target.appendChild(b);
+    }
   }
   function setVisible(v) {
     visible = !!v;

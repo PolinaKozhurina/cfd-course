@@ -128,9 +128,9 @@ strong{color:var(--text)}
 /* Плитки — сводка понятий */
 .tiles{display:grid;grid-template-columns:1fr;gap:.5rem;margin:1rem 0}
 .tile{background:#fff;border:1px solid var(--border);border-radius:6px;padding:.6rem .9rem;display:grid;grid-template-columns:190px 1fr 1fr;align-items:center;gap:1rem}
-.tile .h{font-family:'JetBrains Mono',monospace;font-size:.76rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
-.tile .t{font-family:'Playfair Display',serif;font-weight:700;font-size:1.1rem;color:var(--text);line-height:1.2}
-.tile .d{font-size:.95rem;color:var(--text2);line-height:1.35}
+.tile .h{font-family:'JetBrains Mono',monospace;font-size:.72em;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
+.tile .t{font-family:'Playfair Display',serif;font-weight:700;font-size:1.05em;color:var(--text);line-height:1.2}
+.tile .d{font-size:.95em;color:var(--text2);line-height:1.35}
 .tile.hi{background:#f8efe1}
 .tile.hi .t{color:var(--accent)}
 .tile.hi .h{color:var(--accent)}
@@ -516,30 +516,38 @@ table.sum td.c{text-align:center}
 </section>
 
 <section class="slide">
-  <div class="slide-num">§2.7 · Разложение Тейлора · Невязка</div>
-  <h2>Деление на шаг и сложение</h2>
-  <p style="font-size:.97em">Подставим разложения в \(L_h U_h\) и разделим на \(\tau\) и \(h\) соответственно; члены \(u(x_i, t_n)\) в числителях сокращаются:</p>
-  <div class="eq">\[ \frac{u(x_i, t_n + \tau) - u(x_i, t_n)}{\tau} = u_t(x_i, t_n) + \frac{\tau}{2}\,u_{tt}(x_i, t_n + \eta), \tag{2.18} \]</div>
-  <div class="eq">\[ \frac{u(x_i, t_n) - u(x_i - h, t_n)}{h} = u_x(x_i, t_n) - \frac{h}{2}\,u_{xx}(x_i - \xi, t_n). \tag{2.19} \]</div>
-  <p style="font-size:.97em">Умножим (2.19) на \(a\) и сложим с (2.18). По определению (2.7) при \(f_h = 0\) невязка равна \(\xi_h = L_h U_h\):</p>
-  <div class="eq">\[ \xi_h\big|_i^n = \underbrace{u_t(x_i,t_n) + a\,u_x(x_i,t_n)}_{=\,0,\ \text{так как } u \text{ — решение (2.15)}} \;+\; \underbrace{\frac{\tau}{2}\,u_{tt}(x_i, t_n+\eta) - \frac{a h}{2}\,u_{xx}(x_i - \xi, t_n)}_{\text{невязка}}. \]</div>
+  <div class="slide-num">§2.7 · Шаги 2–4 алгоритма §2.8 для схемы (2.17)</div>
+  <h2>Шаги 2–4 алгоритма §2.8 для схемы (2.17)</h2>
+  <p style="font-size:.97em"><strong>Шаг 2.</strong> Подставим разложения в \(L_h U_h\) и разделим на \(\tau\) и \(h\); члены \(u(x_i, t_n)\) в числителях сокращаются. Получим уравнение вида \(L_1 u = 0\):</p>
+  <div class="eq">\[ L_1 u \equiv u_t + a\,u_x + \frac{\tau}{2}\,u_{tt}(x_i, t_n+\eta) - \frac{a h}{2}\,u_{xx}(x_i - \xi, t_n) = 0. \tag{2.22} \]</div>
+  <p style="font-size:.97em"><strong>Шаг 3.</strong> Исходное уравнение (2.15) в виде \(L u = 0\): \(\;L u \equiv u_t + a\,u_x\). &nbsp; <strong>Шаг 4.</strong> Разность операторов:</p>
+  <div class="eq">\[ R u = L u - L_1 u = -\frac{\tau}{2}\,u_{tt}(x_i, t_n+\eta) + \frac{a h}{2}\,u_{xx}(x_i - \xi, t_n), \qquad \|R u\| = O(\tau) + O(h). \]</div>
+  <p style="font-size:.97em">Следовательно, схема (2.17) аппроксимирует уравнение (2.15) с порядком \(k = 1\) по времени и \(m = 1\) по пространству.</p>
+  <div class="two-col">
+    <div class="note" style="font-size:.9em"><span class="lbl">Связь с невязкой (2.7)</span>
+      По построению \(L_h U_h = L_1 u\) в узле \((x_i, t_n)\). Если \(u\) — решение (2.15), то \(L u = 0\) и \(\xi_h = L_h U_h - f_h = L_1 u = -R u\). Поэтому порядок \(R u\) есть порядок невязки на решении; оценка (2.21) — норма от (2.22).
+    </div>
+    <div class="example" style="font-size:.9em"><span class="lbl">Что здесь использовано</span>
+      Шаги 2–4 не требуют, чтобы \(u\) удовлетворяла уравнению: порядок \(R u\) получен на произвольной гладкой функции. Для уголка он совпадает с порядком на решении (§2.9).
+    </div>
+  </div>
 </section>
 
 <section class="slide">
-  <div class="slide-num">§2.7 · Разложение Тейлора · Члены разложения</div>
+  <div class="slide-num">§2.7 · Члены разложения</div>
   <h2>Какие члены разложения определяют порядок</h2>
   <div class="two-col wide-left">
     <div>
       <table class="sum">
-        <tr><th>Члены разложения невязки</th><th>Порядок</th><th>Роль</th></tr>
-        <tr><td>\(u_t + a u_x\)</td><td class="c">\(\tau^0, h^0\)</td><td>равны нулю: \(u\) — решение (2.15)</td></tr>
-        <tr><td>\(\tfrac{\tau}{2}u_{tt}\), \(-\tfrac{ah}{2}u_{xx}\)</td><td class="c">\(\tau^1, h^1\)</td><td>главный член невязки; определяют порядок \((1,1)\)</td></tr>
-        <tr><td>\(\tfrac{\tau^2}{6}u_{ttt}\), \(\tfrac{ah^2}{6}u_{xxx}\), …</td><td class="c">\(\tau^2, h^2\) и выше</td><td>в форме Лагранжа включены в значения \(u_{tt}(x_i, t_n+\eta)\), \(u_{xx}(x_i-\xi, t_n)\); в форме Пеано — отдельные слагаемые \(O(\tau^2)+O(h^2)\), бесконечно малые по сравнению с главным членом</td></tr>
+        <tr><th>Члены разложения</th><th>Порядок</th><th>Роль</th></tr>
+        <tr><td>\(u_t + a u_x\)</td><td class="c">\(\tau^0, h^0\)</td><td>совпадают с \(L u\); в \(R u = L u - L_1 u\) сокращаются (на решении равны нулю)</td></tr>
+        <tr><td>\(\tfrac{\tau}{2}u_{tt}\), \(-\tfrac{ah}{2}u_{xx}\)</td><td class="c">\(\tau^1, h^1\)</td><td>главный член \(R u\); определяют порядок \((1,1)\)</td></tr>
+        <tr><td>\(\tfrac{\tau^2}{6}u_{ttt}\), \(\tfrac{ah^2}{6}u_{xxx}\), …</td><td class="c">\(\tau^2, h^2\) и выше</td><td>отбрасываются: при \(\tau, h \to 0\) бесконечно малы по сравнению с главным членом</td></tr>
       </table>
     </div>
     <div>
       <div class="note"><span class="lbl">Правило</span>
-        Порядок аппроксимации по Опр. 2 определяется наименьшими степенями \(\tau\) и \(h\), при которых коэффициенты разложения невязки отличны от нуля. Члены более высокого порядка на порядок не влияют; в оценке (2.21) они учитываются как \(O(\tau^2) + O(h^2)\).
+        Порядок аппроксимации по Опр. 2 определяется наименьшими степенями \(\tau\) и \(h\), при которых коэффициенты разложения \(R u\) отличны от нуля. Члены более высокого порядка на порядок не влияют; в оценке (2.21) они учитываются как \(O(\tau^2) + O(h^2)\).
       </div>
       <div class="example"><span class="lbl">Когда высшие члены удерживать необходимо</span>
         Если главный член обращается в нуль тождественно (на решении с учётом \(u_{tt} = a^2 u_{xx}\) при \(a\tau = h\)), порядок определяется следующими членами, и их следует выписать. Так строится второе дифференциальное приближение (§4).
@@ -552,25 +560,23 @@ table.sum td.c{text-align:center}
 <section class="slide">
   <div class="slide-num">§2.7 · Порядок аппроксимации</div>
   <h2>Оценка невязки. Порядок аппроксимации</h2>
-  <div class="two-col wide-left">
+  <p style="font-size:.97em">На решении \(u\) невязка равна \(\xi_h = -R u\). В норме \(\|\cdot\|_C\) (максимум по узлам сетки, лежащим в области \(G\)):</p>
+  <div class="eq">\[ \|\xi_h\| \;\le\; \frac{\tau}{2}\,\max_{(x,t)\in G}\Bigl|\frac{\partial^2 u}{\partial t^2}\Bigr| \;+\; \frac{|a|\,h}{2}\,\max_{(x,t)\in G}\Bigl|\frac{\partial^2 u}{\partial x^2}\Bigr|. \tag{2.21} \]</div>
+  <div class="two-col">
     <div>
-      <p style="font-size:.97em">В норме \(\|\cdot\|_C\) (максимум по узлам сетки в области \(G\)):</p>
-      <div class="eq">\[ \|\xi_h\| \;\le\; \frac{\tau}{2}\,\max_{(x,t)\in G}\Bigl|\frac{\partial^2 u}{\partial t^2}\Bigr| \;+\; \frac{|a|\,h}{2}\,\max_{(x,t)\in G}\Bigl|\frac{\partial^2 u}{\partial x^2}\Bigr| \tag{2.21} \]</div>
       <p style="font-size:.97em">Шаги входят в степенях \(\tau^1\) и \(h^1\): схема (2.17) имеет <strong>первый порядок аппроксимации по времени и по пространству</strong> на решении \(u\):</p>
       <div class="eq">\[ \|\xi_h\| = O(\tau) + O(h). \]</div>
-    </div>
-    <div>
       <div class="note"><span class="lbl">Использованные предположения</span>
         <ul style="margin-bottom:0">
-          <li>ограниченность вторых производных решения — постоянные в (2.21) — это \(\max|u_{tt}|\), \(\max|u_{xx}|\), они не зависят от \(\tau, h\);</li>
-          <li>ничего про устойчивость — аппроксимация проверяется <em>независимо</em>.</li>
+          <li>ограниченность вторых производных решения: постоянные в (2.21) — \(\max|u_{tt}|\), \(\max|u_{xx}|\) — не зависят от \(\tau, h\);</li>
+          <li>об устойчивости ничего не предполагалось: аппроксимация проверяется независимо.</li>
         </ul>
       </div>
-      <div class="example"><span class="lbl">Замечание (к §4)</span>
-        На решении \(u_{tt} = a^2 u_{xx}\), и главный член невязки собирается в
-        \[ \xi_h = -\frac{a h}{2}\Bigl(1 - \frac{a\tau}{h}\Bigr) u_{xx} + O(\tau^2 + h^2). \]
-        При \(a\tau/h = 1\) он обнуляется — схема переносит профиль <em>точно</em> (задача 9 ДЗ №1).
-      </div>
+    </div>
+    <div class="example"><span class="lbl">Замечание (к §4)</span>
+      На решении \(u_{tt} = a^2 u_{xx}\), и главный член невязки собирается в
+      \[ \xi_h = -\frac{a h}{2}\Bigl(1 - \frac{a\tau}{h}\Bigr) u_{xx} + O(\tau^2 + h^2). \]
+      При \(a\tau/h = 1\) он обращается в нуль: схема переносит профиль точно (задача 9 ДЗ №1).
     </div>
   </div>
 </section>
@@ -640,16 +646,16 @@ table.sum td.c{text-align:center}
 <section class="slide">
   <div class="slide-num">§2.9 · Замечание 1: выбор базовой точки</div>
   <h2>Порядок отдельного оператора зависит от базовой точки</h2>
-  <div class="two-col">
+  <div class="two-col" style="grid-template-columns:1fr 1.5fr">
     <div>
       <p style="font-size:.97em">Один и тот же разностный оператор</p>
       <div class="eq">\[ L_h u_i = \frac{u_i - u_{i-1}}{h} \]</div>
       <div class="tiles" style="margin-top:.3rem">
-        <div class="tile" style="grid-template-columns:150px 1fr">
+        <div class="tile" style="grid-template-columns:210px 1fr;font-size:1.25em">
           <div><div class="h">около \(x_i\)</div><div class="t">\(O(h)\)</div></div>
           <div class="d">\(\dfrac{u_i - u_{i-1}}{h} = u_x(x_i) - \dfrac{h}{2}u_{xx}(x_i) + O(h^2)\)</div>
         </div>
-        <div class="tile ok" style="grid-template-columns:150px 1fr">
+        <div class="tile ok" style="grid-template-columns:210px 1fr;font-size:1.25em">
           <div><div class="h">около \(x_{i-1/2}\)</div><div class="t">\(O(h^2)\)</div></div>
           <div class="d">\(\dfrac{u_i - u_{i-1}}{h} = u_x(x_{i-1/2}) + \dfrac{h^2}{24}u_{xxx}(x_{i-1/2}) + O(h^4)\)</div>
         </div>
@@ -657,7 +663,7 @@ table.sum td.c{text-align:center}
       <p style="font-size:.95em">Около середины отрезка нечётные члены разложений \(u(x_{i-1/2} \pm h/2)\) сокращаются — центральная разность.</p>
     </div>
     <div class="figure">
-      <svg viewBox="0 0 400 260" xmlns="http://www.w3.org/2000/svg" style="max-width:640px;width:100%">
+      <svg viewBox="0 0 400 260" xmlns="http://www.w3.org/2000/svg" style="max-width:1100px;width:100%">
         <defs><marker id="ar3" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2c2419"/></marker></defs>
         <line x1="30" y1="220" x2="380" y2="220" stroke="#2c2419" stroke-width="1.3" marker-end="url(#ar3)"/>
         <text x="385" y="236" font-family="Source Serif 4,serif" font-size="13" font-style="italic" fill="#2c2419">x</text>
@@ -675,10 +681,10 @@ table.sum td.c{text-align:center}
         <text x="200" y="240" font-family="JetBrains Mono,monospace" font-size="12" fill="#1a6b5a" text-anchor="middle">x_{i−1/2}</text>
         <!-- хорда -->
         <line x1="90" y1="166" x2="330" y2="42" stroke="#b44a2d" stroke-width="2"/>
-        <text x="60" y="150" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d">хорда: (u_i − u_{i−1})/h</text>
+        <text x="150" y="257" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d">хорда: (u_i − u_{i−1})/h</text>
         <!-- касательная в x_i (не параллельна хорде) -->
         <line x1="200" y1="100" x2="370" y2="55" stroke="#9a8d7e" stroke-width="1.5" stroke-dasharray="6,3"/>
-        <text x="300" y="112" font-family="JetBrains Mono,monospace" font-size="11" fill="#9a8d7e">касательная в x_i</text>
+        <text x="392" y="128" font-family="JetBrains Mono,monospace" font-size="11" fill="#9a8d7e" text-anchor="end">касательная в x_i</text>
         <!-- касательная в середине (почти параллельна хорде) -->
         <circle cx="200" cy="94" r="5" fill="#1a6b5a"/>
         <line x1="110" y1="141" x2="300" y2="43" stroke="#1a6b5a" stroke-width="1.5" stroke-dasharray="6,3"/>
@@ -712,55 +718,34 @@ table.sum td.c{text-align:center}
   </div>
 </section>
 <section class="slide">
-  <div class="slide-num">§2.9 · Один предел \(h \to 0\): закон предельного перехода</div>
-  <h2>Зависимость аппроксимации от закона предельного перехода</h2>
-  <div class="two-col wide-left">
+  <div class="slide-num">§2.9 · Закон предельного перехода</div>
+  <h2>Закон предельного перехода. Условная и безусловная аппроксимация</h2>
+  <div class="two-col">
     <div>
-      <p style="font-size:.97em">Схема Лакса для уравнения переноса:</p>
-      <div class="eq">\[ \frac{u_i^{n+1} - \tfrac12\bigl(u_{i-1}^{n} + u_{i+1}^{n}\bigr)}{\tau} + a\,\frac{u_{i+1}^{n} - u_{i-1}^{n}}{2h} = 0 \]</div>
-      <p style="font-size:.97em">Разложение около \((x_i, t_n)\):</p>
-      <div class="eq">\[ L_1 u = u_t + a u_x \;\underbrace{-\;\frac{h^2}{2\tau}\,u_{xx}}_{?} \;+\; \frac{\tau}{2}u_{tt} + \frac{a h^2}{6}u_{xxx} + \ldots \]</div>
-      <p style="font-size:.97em">Член \(h^2/(2\tau)\) нельзя отнести ни к \(O(\tau)\), ни к \(O(h)\), пока не сказано, как связаны \(\tau\) и \(h\).</p>
+      <div class="definition" style="min-height:0;font-size:.95em">
+        <strong>Закон предельного перехода.</strong> Семейство сеток задачи Коши зависит от двух параметров \(h\), \(\tau\). Правило, связывающее их при стремлении к нулю, — функция \(\tau = \tau(h)\), \(\tau(h) \to 0\) при \(h \to 0\), — называется <em>законом предельного перехода</em>. Предел \(h \to 0\) в Опр. 1–4 берётся вдоль этого правила: \(\|\xi_h\| \to 0\) означает \(\|\xi_{h,\tau(h)}\| \to 0\) при \(h \to 0\). Типичные законы: \(\tau = \varkappa h\), \(\tau = h^2/\mu\), \(\varkappa, \mu = \mathrm{const} > 0\).
+      </div>
+      <div class="definition" style="min-height:0;font-size:.95em">
+        <strong>Условная и безусловная аппроксимация.</strong> Аппроксимация называется <em>безусловной</em>, если \(\|\xi_h\| \to 0\) при любом способе стремления \(\tau, h \to 0\), и <em>условной</em>, если только при определённом законе предельного перехода.
+      </div>
+      <p style="font-size:.95em">Почему без закона не обойтись: невязка есть функция двух переменных \(\tau\), \(h\), и её предел при \(\tau, h \to 0\) может зависеть от пути. Пример — схема Лакса.</p>
     </div>
     <div>
-      <div class="tiles" style="margin-top:0">
-        <div class="tile ok" style="grid-template-columns:150px 1fr">
+      <p style="font-size:.95em">Схема Лакса для уравнения переноса:</p>
+      <div class="eq" style="font-size:.95em">\[ \frac{u_i^{n+1} - \tfrac12\bigl(u_{i-1}^{n} + u_{i+1}^{n}\bigr)}{\tau} + a\,\frac{u_{i+1}^{n} - u_{i-1}^{n}}{2h} = 0 \]</div>
+      <p style="font-size:.95em">Разложение около \((x_i, t_n)\):</p>
+      <div class="eq" style="font-size:.95em">\[ L_1 u = u_t + a u_x - \frac{h^2}{2\tau}\,u_{xx} + \frac{\tau}{2}u_{tt} + \frac{a h^2}{6}u_{xxx} + \ldots \]</div>
+      <div class="tiles" style="margin-top:.3rem">
+        <div class="tile ok" style="grid-template-columns:170px 1fr;font-size:1.2em">
           <div><div class="h">\(\tau = \varkappa h\)</div><div class="t">есть, \(O(h)\)</div></div>
-          <div class="d">\(\dfrac{h^2}{2\tau} = \dfrac{h}{2\varkappa} \to 0\): первый порядок.</div>
+          <div class="d">\(\dfrac{h^2}{2\tau} = \dfrac{h}{2\varkappa} \to 0\): аппроксимация первого порядка.</div>
         </div>
-        <div class="tile bad" style="grid-template-columns:150px 1fr">
+        <div class="tile bad" style="grid-template-columns:170px 1fr;font-size:1.2em">
           <div><div class="h">\(\tau = h^2/\mu\)</div><div class="t">нет</div></div>
-          <div class="d">\(\dfrac{h^2}{2\tau} = \dfrac{\mu}{2}\) не стремится к нулю: схема аппроксимирует <em>другое</em> уравнение \(u_t + a u_x = \frac{\mu}{2}u_{xx}\).</div>
+          <div class="d">\(\dfrac{h^2}{2\tau} = \dfrac{\mu}{2}\) не стремится к нулю: схема аппроксимирует уравнение \(u_t + a u_x = \tfrac{\mu}{2}u_{xx}\).</div>
         </div>
       </div>
-      <div class="note"><span class="lbl">Следствие для Опр. 2</span>
-        \(h \to 0\) понимается вдоль <em>закона предельного перехода</em> \(\tau = \tau(h)\). Наличие и порядок аппроксимации — свойство схемы вместе с законом предельного перехода, а не схемы самой по себе.
-      </div>
-    </div>
-  </div>
-</section>
-<section class="slide">
-  <div class="slide-num">§2 → §3 · Пример</div>
-  <h2>Пример: аппроксимация без устойчивости и сходимости</h2>
-  <div class="two-col wide-left">
-    <div>
-      <p style="font-size:.97em">Задача Коши \(x' = 2t\), \(x(0) = 0\), точное решение \(x = t^2\). Сетка \(t_i = i\tau\); явный двухшаговый метод</p>
-      <div class="eq">\[ \frac{x_i - 3x_{i-1} + 2x_{i-2}}{\tau} = f_{i-1} - 2 f_{i-2}, \qquad f = 2t. \]</div>
-      <ul style="font-size:.97em">
-        <li><strong>Невязка</strong> на \(x = t^2\): \(\xi_i = -\tau\) — аппроксимация первого порядка есть.</li>
-        <li><strong>Возмущение</strong>: однородное уравнение \(x_i - 3x_{i-1} + 2x_{i-2} = 0\) имеет корни \(\lambda = 1\) и \(\lambda = 2\). Ошибка \(\varepsilon\) в \(x_1\) растёт как \(\varepsilon\,2^{\,i}\).</li>
-        <li>При \(t_i = T\) фиксированном \(i = T/\tau \to \infty\): \(2^{T/\tau}\) — постоянной \(C_2 \ne C_2(\tau)\) в Опр. 3 не существует.</li>
-      </ul>
-    </div>
-    <div>
-      <div class="tiles" style="margin-top:0">
-        <div class="tile ok" style="grid-template-columns:170px 1fr"><div><div class="h">Опр. 2</div><div class="t">Аппроксимация</div></div><div class="d">есть, \(O(\tau)\)</div></div>
-        <div class="tile bad" style="grid-template-columns:170px 1fr"><div><div class="h">Опр. 3</div><div class="t">Устойчивость</div></div><div class="d">нет: \(\|u_h - \nu_h\| \sim 2^{T/\tau}\varepsilon\)</div></div>
-        <div class="tile bad" style="grid-template-columns:170px 1fr"><div><div class="h">Опр. 1</div><div class="t">Сходимость</div></div><div class="d">нет на практике: округление \(10^{-16}\) при \(\tau = 10^{-2}\), \(T = 1\) даёт ошибку \(\sim 2^{100}\cdot 10^{-16} \approx 10^{14}\)</div></div>
-      </div>
-      <div class="note"><span class="lbl">Вывод</span>
-        Невязка характеризует отношение схемы к уравнению. Для того чтобы малая невязка влекла малую погрешность решения, необходима равномерная по \(h\) ограниченность \(L_h^{-1}\), то есть устойчивость. Это утверждение — теорема Лакса (§3).
-      </div>
+      <p style="font-size:.95em">Схема Лакса аппроксимирует уравнение переноса <em>условно</em>; уголок (2.17) — <em>безусловно</em>: \(\|\xi_h\| = O(\tau) + O(h)\) при любых \(\tau, h \to 0\).</p>
     </div>
   </div>
 </section>
@@ -805,7 +790,7 @@ table.sum td.c{text-align:center}
   <a href="s1-02.html" class="back" title="Полный текст лекции">← полная лекция</a>
   <div class="center">
     <button id="btnPrev" onclick="prev()" title="←">◀</button>
-    <span class="counter" id="counter">1 / 21</span>
+    <span class="counter" id="counter">1 / 20</span>
     <button id="btnNext" onclick="next()" title="→ / Space">▶</button>
   </div>
   <a href="s1-03-slides.html" class="back" title="Следующая лекция">§3 →</a>

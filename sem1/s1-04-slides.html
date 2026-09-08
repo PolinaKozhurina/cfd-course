@@ -186,6 +186,7 @@ table.sum td.c{text-align:center}
 /* Колонки не должны расширяться под широкие формулы */
 .two-col > *{min-width:0}
 .two-col > .figure{width:100%}
+code{font-family:'JetBrains Mono',monospace;font-size:.88em;background:#f1ece3;padding:.05em .3em;border-radius:3px}
 .eq mjx-container[display="true"]{max-width:100%;overflow-x:auto;overflow-y:hidden}
 </style>
 </head>
@@ -453,6 +454,27 @@ table.sum td.c{text-align:center}
   </div>
 </section>
 
+<!-- 12: Памятка по Maple -->
+<section class="slide">
+  <div class="slide-num">§4.5 · Памятка: функции Maple для задания</div>
+  <h2>Какие функции Maple понадобятся</h2>
+  <table class="sum compact" style="font-size:.68em;line-height:1.3">
+    <tr><th style="width:26%">Действие</th><th style="width:34%">Функция</th><th>Примечание</th></tr>
+    <tr><td>Неизвестная гладкая функция и её значения на шаблоне</td><td><code>u(x, t)</code>, <code>u(x + h, t)</code>, <code>u(x, t + tau)</code></td><td>функция не определяется — остаётся символом; схема записывается как выражение через такие значения</td></tr>
+    <tr><td>Производные</td><td><code>diff(u(x,t), t)</code>, <code>diff(u(x,t), x$2)</code>, <code>diff(u(x,t), x, t)</code></td><td><code>x$2</code> — вторая производная по \(x\); смешанные — перечислением переменных</td></tr>
+    <tr><td>Ряд Тейлора по одной переменной</td><td><code>taylor(expr, h = 0, n)</code></td><td><code>n</code> — порядок отбрасываемого остатка \(O(h^n)\)</td></tr>
+    <tr><td>Ряд Тейлора по двум переменным \(\tau\), \(h\)</td><td><code>mtaylor(expr, [h, tau], n)</code></td><td>разложение около \(h = \tau = 0\), удерживаются члены суммарной степени \(< n\); остаток не пишется — порядок контролировать самостоятельно</td></tr>
+    <tr><td>Убрать символ \(O(\cdot)\) из результата <code>taylor</code></td><td><code>convert(expr, polynom)</code></td><td></td></tr>
+    <tr><td>Раскрыть скобки, привести подобные</td><td><code>expand</code>, <code>simplify</code>, <code>normal</code></td><td><code>normal</code> — приведение дробей к общему знаменателю</td></tr>
+    <tr><td>Сгруппировать по степеням \(\tau\), \(h\)</td><td><code>collect(expr, [tau, h], simplify)</code></td><td>третий аргумент применяется к каждому коэффициенту</td></tr>
+    <tr><td>Коэффициент при \(\tau^i h^j\)</td><td><code>coeff(coeff(expr, tau, i), h, j)</code></td><td>для проверки, какие члены обнулились</td></tr>
+    <tr><td>Подстановка дифференциального следствия</td><td><code>subs(diff(u(x,t), t$2) = a^2*diff(u(x,t), x$2), expr)</code></td><td>или подстановка общего решения: <code>eval(expr, u = ((x, t) -&gt; F(x - a*t)))</code></td></tr>
+    <tr><td>Закон предельного перехода</td><td><code>subs(tau = kappa*h, expr)</code>, <code>subs(tau = h^2/mu, expr)</code></td><td>затем снова <code>collect</code> по \(h\)</td></tr>
+    <tr><td>Смена базовой точки</td><td><code>subs(x = x + h/2, expr)</code>, <code>subs(t = t - tau, expr)</code></td><td>сдвигаются аргументы схемы, разложение по-прежнему около \((x, t)\)</td></tr>
+    <tr><td>Проверка порядка</td><td><code>ldegree(expr, h)</code>, <code>limit(expr, h = 0)</code></td><td>наименьшая степень; предел коэффициента</td></tr>
+  </table>
+</section>
+
 <!-- ============================================================
      HUD навигации
      ============================================================ -->
@@ -460,7 +482,7 @@ table.sum td.c{text-align:center}
   <a href="s1-04.html" class="back" title="Полный текст лекции">← полная лекция</a>
   <div class="center">
     <button id="btnPrev" onclick="prev()" title="←">◀</button>
-    <span class="counter" id="counter">1 / 11</span>
+    <span class="counter" id="counter">1 / 12</span>
     <button id="btnNext" onclick="next()" title="→ / Space">▶</button>
   </div>
   <a href="s1-05.html" class="back" title="Следующая лекция">§5 →</a>

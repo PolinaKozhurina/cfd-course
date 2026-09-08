@@ -21,6 +21,10 @@ js/slide-notes.js после входа admin читает ключ из Firesto
     запустить команду.
 """
 import base64, io, json, os, re, sys
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 ASIDE = re.compile(r'[ \t]*<aside class="notes" hidden>.*?</aside>\n?', re.S)

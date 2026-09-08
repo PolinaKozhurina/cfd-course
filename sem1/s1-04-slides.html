@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ru" data-course="sem1">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>§4. Слайды · Первое дифференциальное приближение</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<!-- Инструменты слайдов: рисование (сразу) + экспорт PDF/PPTX (по клику подгрузит html2canvas / jsPDF / PptxGenJS) -->
+<script src="../js/slide-tools.js"></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:24px;line-height:1.55;color:var(--text);background:var(--bg);overflow:hidden}
+
+/* Слайд — фиксирован в viewport, контент центрирован по вертикали и горизонтали */
+.slide{position:fixed;inset:0;padding:0;display:none;overflow:auto}
+.slide.active{display:flex;align-items:center;justify-content:center}
+.slide-content{width:100%;max-width:min(96vw, 1600px);margin:auto;padding:1.4rem 1.6rem 2.8rem;box-sizing:border-box}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Поэтапное появление детей активного слайда (JS проставляет --i) */
+.slide.active .slide-content > *{
+  animation: slideStep .38s cubic-bezier(.22,.61,.36,1) both;
+  animation-delay: calc(var(--i, 0) * 85ms);
+}
+@keyframes slideStep{
+  from{opacity:0;transform:translateY(12px)}
+  to  {opacity:1;transform:none}
+}
+
+/* Анимация формул — с эффектом «фокус» (scale + blur → sharp). */
+.slide.active .eq{
+  animation: formulaIn .55s cubic-bezier(.22,.61,.36,1) both;
+  animation-delay: calc(var(--i, 0) * 85ms);
+  transform-origin: center;
+}
+@keyframes formulaIn{
+  0%  {opacity:0;transform:scale(.92) translateY(4px);filter:blur(3.5px)}
+  55% {opacity:1;transform:scale(1.02);filter:blur(0)}
+  100%{opacity:1;transform:scale(1)}
+}
+.slide.active .eq::after{
+  content:'';position:absolute;left:0;right:0;bottom:-6px;height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent) 50%,transparent);
+  transform:scaleX(0);opacity:0;
+  animation: formulaUnderline .55s ease-out both;
+  animation-delay: calc(var(--i, 0) * 85ms + .35s);
+}
+.slide.active .eq{position:relative}
+@keyframes formulaUnderline{
+  0%  {transform:scaleX(0);opacity:0}
+  40% {transform:scaleX(1);opacity:.7}
+  100%{transform:scaleX(1);opacity:0}
+}
+.slide.title.active .slide-content > *{animation:slideStep .55s ease both;animation-delay:calc(var(--i,0) * 140ms)}
+@media (prefers-reduced-motion: reduce){
+  .slide.active .slide-content > *, .slide.active .eq, .slide.active .eq::after{animation:none}
+}
+.slide-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:.6rem}
+h1{font-family:'Playfair Display',serif;font-weight:900;font-size:2.6rem;line-height:1.12;color:var(--text);margin-bottom:1rem;letter-spacing:-.01em}
+h2{font-family:'Playfair Display',serif;font-weight:700;font-size:1.8rem;color:var(--accent);margin-bottom:1.2rem;line-height:1.15}
+h3{font-family:'Source Serif 4',serif;font-weight:700;font-size:1.15rem;color:var(--text);margin:1rem 0 .5rem}
+p{margin-bottom:.9rem}
+ul,ol{margin:0 0 .9rem 1.6rem;line-height:1.65}
+li{margin-bottom:.35rem}
+em{color:var(--accent2)}
+strong{color:var(--text)}
+.eq{margin:1.2rem 0;text-align:center;font-size:1.05em}
+/* Карточки: определение / условие / теорема */
+.definition,.condition,.theorem{position:relative;padding:1rem 1.3rem 1rem 3.2rem;border-radius:6px;margin:1rem 0;border:none;overflow:hidden;min-height:11rem}
+.definition{background:#e7efe8}
+.condition {background:#f2e5d6}
+.theorem   {background:#e0e8f2}
+.definition strong,.condition strong,.theorem strong{color:var(--text)}
+.definition::before,.condition::before,.theorem::before{
+  position:absolute;left:0;top:0;bottom:0;width:2.1rem;
+  display:flex;align-items:center;justify-content:center;
+  writing-mode:vertical-rl;transform:rotate(180deg);
+  font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:500;
+  letter-spacing:.22em;text-transform:uppercase;
+}
+.definition::before{background:#d0dfd4;color:#3d6b5a;content:'Определение'}
+.definition[data-num]::before{content:'Определение ' attr(data-num)}
+.condition::before{background:#e5d1b8;color:#8a5236;content:'Условие'}
+.condition[data-num]::before{content:'Условие ' attr(data-num)}
+.theorem::before{background:#c8d5e6;color:#4a5f88;content:'Теорема'}
+.theorem[data-num]::before{content:'Теорема ' attr(data-num)}
+.definition.compact,.theorem.compact{min-height:0}
+
+/* Голубой боковой блок «Примеры» / замечание */
+.example{background:#e0e8f2;border-left:3px solid #7d95bd;padding:.8rem 1.1rem;border-radius:0 6px 6px 0;margin:.5rem 0 .8rem;font-size:.9em;color:var(--text)}
+.example .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#4a5f88;margin-bottom:.35rem}
+.example ul{margin:.15rem 0 0 1.1rem;font-size:.94em}
+.example li{margin-bottom:.15rem}
+.note{background:#f8efe1;border-left:3px solid var(--accent);padding:.8rem 1.1rem;border-radius:0 6px 6px 0;margin:.5rem 0 .8rem;font-size:.9em}
+.note .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:.35rem}
+@media(max-width:900px){
+  .definition,.condition,.theorem{padding-left:2.6rem}
+  .definition::before,.condition::before,.theorem::before{width:1.8rem;font-size:.56rem;letter-spacing:.18em}
+}
+.figure{margin:1rem auto;text-align:center;max-width:100%}
+.figure svg{max-width:100%;height:auto}
+.figure .caption{font-size:.78rem;color:var(--text2);margin-top:.4rem;font-style:italic}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+.two-col.wide-left{grid-template-columns:1.25fr 1fr}
+.callout{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;font-size:.95em;color:var(--text2)}
+.tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.12em;padding:.2rem .55rem;border-radius:3px;background:#f3e8f9;color:#7b3fa0;margin-right:.4rem;vertical-align:middle}
+
+/* Flow-chart из боксов со стрелками */
+.flow{display:grid;grid-template-columns:1fr;gap:.55rem;margin:1rem 0}
+.flow .step{position:relative;background:#fff;border:1.5px solid var(--border);border-left:5px solid var(--accent);border-radius:8px;padding:.7rem 1rem .7rem 1.2rem;box-shadow:0 2px 8px rgba(44,36,25,.04)}
+.flow .step .n{position:absolute;left:-14px;top:-12px;background:var(--accent);color:#fff;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;padding:.15rem .45rem;border-radius:3px;letter-spacing:.03em}
+.flow .step .title{font-family:'Playfair Display',serif;font-weight:700;font-size:1.05rem;color:var(--text);margin-bottom:.15rem}
+.flow .step .body{font-size:.9rem;color:var(--text2);line-height:1.45}
+.flow .step ul{margin:.25rem 0 0 1.1rem;font-size:.86rem;color:var(--text2)}
+.flow .arrow{text-align:center;color:var(--accent);font-size:1.4rem;line-height:.7;font-weight:700;user-select:none}
+@media(max-width:900px){.flow .step{padding:.55rem .8rem .55rem 1rem}.flow .step .title{font-size:.95rem}}
+
+/* Плитки — сводка понятий */
+.tiles{display:grid;grid-template-columns:1fr;gap:.5rem;margin:1rem 0}
+.tile{background:#fff;border:1px solid var(--border);border-radius:6px;padding:.6rem .9rem;display:grid;grid-template-columns:190px 1fr 1fr;align-items:center;gap:1rem}
+.tile .h{font-family:'JetBrains Mono',monospace;font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
+.tile .t{font-family:'Playfair Display',serif;font-weight:700;font-size:1.02rem;color:var(--text);line-height:1.2}
+.tile .d{font-size:.86rem;color:var(--text2);line-height:1.35}
+.tile.hi{background:#f8efe1}
+.tile.hi .t{color:var(--accent)}
+.tile.hi .h{color:var(--accent)}
+.tile.ok{background:#e7efe8}
+.tile.ok .t{color:var(--accent2)}
+.tile.bad{background:#fbe9e4}
+.tile.bad .t{color:var(--accent)}
+@media(max-width:900px){.tile{grid-template-columns:1fr;gap:.15rem}}
+
+/* Таблица-сводка */
+table.sum{border-collapse:collapse;width:100%;font-size:.86em;margin:.6rem 0}
+table.sum th,table.sum td{border:1px solid var(--border);padding:.45rem .7rem;text-align:left;vertical-align:top}
+table.sum th{background:var(--bg2);font-family:'JetBrains Mono',monospace;font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text2);font-weight:500}
+table.sum td.c{text-align:center}
+
+/* Титульный */
+.slide.title{text-align:center;background:radial-gradient(ellipse at 30% 20%,#fff 0%,var(--bg) 55%,var(--bg2) 100%)}
+.slide.title .slide-content{max-width:1000px}
+.slide.title h1{font-size:3.4rem;margin-bottom:1.5rem;max-width:900px;margin-left:auto;margin-right:auto}
+.slide.title h1 .u{color:var(--accent);border-bottom:4px solid var(--accent);padding-bottom:.15rem}
+.slide.title .sub{font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--text2);margin-bottom:1rem;letter-spacing:.05em}
+.slide.title .course{font-size:.85rem;color:var(--text3);text-transform:uppercase;letter-spacing:.24em;margin-bottom:.6rem}
+.slide.title .badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:.35rem .85rem;border:1.5px solid var(--accent);color:var(--accent);border-radius:20px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:1.4rem}
+
+/* Разделитель между §2 и §3 */
+.slide.section{text-align:center;background:radial-gradient(ellipse at 70% 30%,#fff 0%,var(--bg) 55%,var(--bg2) 100%)}
+.slide.section h1{font-size:3rem}
+
+/* HUD навигации */
+.hud{position:fixed;bottom:0;left:0;right:0;padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to top,rgba(250,248,244,.95),transparent);z-index:100;pointer-events:none}
+.hud > *{pointer-events:auto}
+.hud button{font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:.4rem .9rem;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text2);cursor:pointer;transition:all .12s}
+.hud button:hover{border-color:var(--accent);color:var(--accent);background:var(--bg2)}
+.hud button:disabled{opacity:.35;cursor:default}
+.hud .counter{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);letter-spacing:.06em}
+.hud .center{display:flex;gap:.4rem;align-items:center}
+.hud .back{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);text-decoration:none;padding:.35rem .7rem;border:1px dashed var(--border);border-radius:4px}
+.hud .back:hover{color:var(--accent);border-color:var(--accent)}
+
+/* Прогресс-бар вверху */
+.progress{position:fixed;top:0;left:0;right:0;height:3px;background:var(--bg3);z-index:99}
+.progress .fill{height:100%;background:var(--accent);transition:width .2s ease;width:0%}
+
+@media(min-width:1600px){body{font-size:26px}h1{font-size:3rem}h2{font-size:2rem}}
+@media(max-width:900px){.slide-content{padding:1.6rem 1.2rem 3rem}h1{font-size:1.9rem}h2{font-size:1.4rem}.two-col,.two-col.wide-left{grid-template-columns:1fr}body{font-size:19px}}
+
+@media print{
+  body{overflow:visible;background:#fff}
+  .slide{position:relative;display:flex!important;page-break-after:always;min-height:100vh;align-items:center;justify-content:center}
+  .hud,.progress{display:none}
+}
+
+/* Колонки не должны расширяться под широкие формулы */
+.two-col > *{min-width:0}
+.eq mjx-container[display="true"]{max-width:100%;overflow-x:auto;overflow-y:hidden}
+</style>
+</head>
+<body>
+
+<div class="progress"><div class="fill" id="progressFill"></div></div>
+
+<!-- ============================================================
+     СЛАЙДЫ  (порядок = логика лекции §4)
+     ============================================================ -->
+
+<!-- 1: Титульный -->
+<section class="slide title active">
+  <div class="course">Теория разностных схем</div>
+  <div class="badge">Семестр 1 · Лекция §4</div>
+  <h1>Первое дифференциальное <span class="u">приближение</span></h1>
+  <div class="sub">Г-форма и П-форма · Modified equation · Что на самом деле решает схема</div>
+</section>
+
+<!-- 2: Откуда берётся L_1 u -->
+<section class="slide">
+  <div class="slide-num">§4 · Напоминание: уравнение \(L_1 u = 0\)</div>
+  <h2>Вернёмся к уравнению \(L_1 u = 0\) из алгоритма §2.8</h2>
+  <div class="two-col wide-left">
+    <div>
+      <p style="font-size:.92em">Для явного уголка (2.17) разложения относительно \((x_i, t_n)\) дали (шаг 2 алгоритма §2.8)</p>
+      <div class="eq">\[ L_1 u = \frac{\partial u}{\partial t} + a\frac{\partial u}{\partial x} - a\frac{h}{2}\frac{\partial^2 u}{\partial x^2} + \frac{\tau}{2}\frac{\partial^2 u}{\partial t^2} + O(\tau^2) + O(h^2) = 0. \tag{4.1} \]</div>
+      <p style="font-size:.92em">В §2 мы использовали (4.1) только для одного: вычесть из \(Lu\) и назвать порядок. Теперь посмотрим на (4.1) как на <em>самостоятельное уравнение в частных производных</em>.</p>
+    </div>
+    <div>
+      <div class="note"><span class="lbl">Что это за уравнение</span>
+        <ul style="margin-bottom:0">
+          <li>Его порядок <strong>выше</strong> порядка исходного уравнения переноса: появились вторые производные.</li>
+          <li>Коэффициенты при них — \(a h/2\) и \(\tau/2\) — зависят от шагов сетки: это уравнение «знает» о схеме.</li>
+          <li>При \(\tau, h \to 0\) оно переходит в \(u_t + a u_x = 0\): это уравнение «знает» и об исходной задаче.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3: Г-форма -->
+<section class="slide">
+  <div class="slide-num">§4.1 · Г-форма первого дифференциального приближения</div>
+  <h2>Г-форма: отбрасываем \(O(\tau^2)\) и \(O(h^2)\)</h2>
+  <div class="two-col wide-left">
+    <div>
+      <p style="font-size:.92em">Считая коэффициенты при \(\tau^2\) и \(h^2\) ограниченными, пренебрежём в (4.1) величинами порядка \(O(\tau^2)\), \(O(h^2)\). Получим дифференциальное уравнение</p>
+      <div class="eq">\[ \frac{\partial u}{\partial t} + a\frac{\partial u}{\partial x} \;=\; a\frac{h}{2}\frac{\partial^2 u}{\partial x^2} - \frac{\tau}{2}\frac{\partial^2 u}{\partial t^2}. \tag{4.2} \]</div>
+      <div class="definition" style="min-height:0">
+        Уравнение (4.2) называется <em>Г-формой первого дифференциального приближения</em> разностной схемы (2.17). Буква «Г» — первая буква слова «гиперболический»: (4.2) содержит \(u_{tt}\) и является уравнением гиперболического типа.
+      </div>
+    </div>
+    <div>
+      <div class="example"><span class="lbl">Термин</span>
+        Название дали Ю. И. Шокин и Н. Н. Яненко [Shokin]; там же построена общая теория дифференциальных приближений.
+      </div>
+      <div class="note"><span class="lbl">Второе, третье… приближения</span>
+        Если в (4.1) аккуратно выписать члены второго порядка по \(\tau\) и \(h\) и отбросить \(O(\tau^3)\), \(O(h^3)\), получится <em>второе</em> дифференциальное приближение; аналогично третье и т.&nbsp;д. Первое содержит <strong>главный член</strong> невязки — с ним и работаем.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4: Modified equation -->
+<section class="slide">
+  <div class="slide-num">§4.2 · Modified equation</div>
+  <h2>П.д.п. содержит главный член погрешности аппроксимации</h2>
+  <div class="two-col">
+    <div>
+      <p style="font-size:.92em">Правая часть (4.2) — это в точности главный член невязки \(\xi_h\) со слайда §2.7 (с обратным знаком):</p>
+      <div class="eq">\[ \xi_h = \frac{\tau}{2}u_{tt} - a\frac{h}{2}u_{xx} + O(\tau^2 + h^2). \]</div>
+      <p style="font-size:.92em">Поэтому в теории дифференциальных приближений [Shokin] основное внимание сосредоточено на первом приближении: оно описывает, <em>чем именно</em> схема отличается от уравнения в главном порядке.</p>
+    </div>
+    <div>
+      <div class="example"><span class="lbl">Терминология</span>
+        В западной литературе метод дифференциального приближения называется <strong>the method of modified equation</strong>: п.д.п. = modified equation — «модифицированное уравнение», которое схема решает вместо исходного.
+      </div>
+      <div class="note"><span class="lbl">Смена точки зрения</span>
+        В §2: «схема приближает уравнение с погрешностью \(\xi_h\)». В §4: «схема <em>точно</em> (в главном порядке) решает другое уравнение — п.д.п.». Одно и то же, но второе позволяет изучать схему методами теории УрЧП.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4b: Определение и зачем -->
+<section class="slide">
+  <div class="slide-num">§4.2 · Определение и назначение п.д.п.</div>
+  <h2>Что такое п.д.п. и зачем оно нужно</h2>
+  <div class="two-col">
+    <div>
+      <div class="definition" style="min-height:0;font-size:.92em">
+        <strong>Дифференциальное представление</strong> разностной схемы — уравнение \(L_1 u = 0\), полученное заменой всех сеточных значений в схеме их рядами Тейлора в базовой точке (шаг 2 алгоритма §2.8); на гладких функциях оно <em>эквивалентно</em> схеме. <strong>Первое дифференциальное приближение</strong> — уравнение, получаемое из представления отбрасыванием всех членов, кроме членов низшего порядка по \(\tau\), \(h\) (Г-форма), с последующим исключением производных по \(t\) выше первой через дифференциальные следствия исходного уравнения (П-форма).
+      </div>
+      <div class="note" style="font-size:.9em"><span class="lbl">Точный смысл слов «схема решает п.д.п.»</span>
+        Невязка схемы на решении <em>исходного</em> уравнения есть \(O(\tau) + O(h)\), а невязка той же схемы на решении <em>п.д.п.</em> — второго порядка: схема аппроксимирует своё п.д.п. на порядок точнее, чем исходное уравнение. В этом смысле численное решение ближе к решению п.д.п., чем к решению исходной задачи.
+      </div>
+    </div>
+    <div>
+      <div class="example"><span class="lbl">Что можно прочитать из п.д.п.</span>
+        <ol style="margin-bottom:0">
+          <li><strong>Порядок аппроксимации на решении</strong> — наименьшие степени \(\tau\) и \(h\) в правой части П-формы (Опр. 2 §2). Г-форма даёт порядок на произвольной гладкой функции.</li>
+          <li><strong>Характер погрешности</strong>: член с \(u_{xx}\) — «схемная вязкость» (размазывание), член с \(u_{xxx}\) — дисперсия (фазовые ошибки); знак и величина коэффициентов зависят от \(\gamma\) (§6).</li>
+          <li><strong>Необходимое условие устойчивости</strong> (Яненко–Шокин): П-форма п.д.п. должна быть корректной задачей — коэффициент при \(u_{xx}\) неотрицателен. Для уголка это \(\gamma \le 1\) (§5).</li>
+          <li><strong>Конструирование схем</strong>: обнулив главный член п.д.п., получаем схему более высокого порядка (уголок при \(\gamma = 1\); схема 3 из задания).</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5: П-форма — вывод -->
+<section class="slide">
+  <div class="slide-num">§4.3 · П-форма первого дифференциального приближения</div>
+  <h2>П-форма: исключаем \(u_{tt}\) через дифференциальные следствия</h2>
+  <div class="two-col">
+    <div>
+      <p style="font-size:.92em">Выразим \(u_{tt}\) через производные по \(x\) с помощью исходного уравнения переноса:</p>
+      <div class="eq">\[ u_t = -a\,u_x. \tag{4.3} \]</div>
+      <p style="font-size:.92em">Продифференцируем обе части (4.3) по \(t\) и снова воспользуемся (4.3):</p>
+      <div class="eq">\[ u_{tt} = -a\,u_{xt} = -a\,u_{tx} = -a\,(-a\,u_x)_x = a^2 u_{xx}. \]</div>
+      <p style="font-size:.9em">Равенства такого рода называются <em>дифференциальными следствиями</em> уравнения в частных производных. Аналогично: \(u_{xt} = -a\,u_{xx}\), \(u_{ttt} = -a^3 u_{xxx}\), …</p>
+    </div>
+    <div>
+      <p style="font-size:.92em">Подставляем \(u_{tt} = a^2 u_{xx}\) в Г-форму (4.2):</p>
+      <div class="eq">\[ u_t + a u_x = a\frac{h}{2}u_{xx} - \frac{\tau}{2}a^2 u_{xx} = a\frac{h}{2}\Bigl(1 - \frac{a\tau}{h}\Bigr)u_{xx}. \]</div>
+      <div class="definition" style="min-height:0">
+        <em>П-форма</em> (параболическая форма) первого дифференциального приближения схемы (2.17):
+        \[ \frac{\partial u}{\partial t} + a\frac{\partial u}{\partial x} = a\frac{h}{2}(1 - \gamma)\frac{\partial^2 u}{\partial x^2}, \qquad \gamma = \frac{a\tau}{h}. \tag{4.4} \]
+        Число \(\gamma\) называется <em>числом Куранта</em>.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6: Что читается в П-форме -->
+<section class="slide">
+  <div class="slide-num">§4.3 · Что говорит П-форма</div>
+  <h2>Читаем П-форму (4.4)</h2>
+  <div class="two-col wide-left">
+    <div>
+      <div class="tiles" style="margin-top:0">
+        <div class="tile" style="grid-template-columns:200px 1fr">
+          <div><div class="h">правая часть</div><div class="t">\(\sim h\)</div></div>
+          <div class="d">Коэффициент \(a h(1-\gamma)/2\) — первого порядка по \(h\): схема первого порядка, как и получено в §2.7.</div>
+        </div>
+        <div class="tile ok" style="grid-template-columns:200px 1fr">
+          <div><div class="h">\(\gamma = 1\)</div><div class="t">правая часть \(= 0\)</div></div>
+          <div class="d">Главный член невязки обращается в нуль: при \(a\tau = h\) уголок переносит профиль <em>точно</em> (задача 9 ДЗ №1).</div>
+        </div>
+        <div class="tile" style="grid-template-columns:200px 1fr">
+          <div><div class="h">\(\gamma < 1\)</div><div class="t">коэффициент \(> 0\)</div></div>
+          <div class="d">Уравнение (4.4) — переноса с добавкой вида \(\nu u_{xx}\), \(\nu > 0\): как в уравнении теплопроводности. Схема «размазывает» профиль.</div>
+        </div>
+        <div class="tile bad" style="grid-template-columns:200px 1fr">
+          <div><div class="h">\(\gamma > 1\)</div><div class="t">коэффициент \(< 0\)</div></div>
+          <div class="d">Добавка вида \(\nu u_{xx}\) с \(\nu < 0\) — «обратная теплопроводность», некорректная задача. Ждём неприятностей: см. §5.</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="note"><span class="lbl">Почему «П»</span>
+        Правая часть (4.4) содержит только \(u_{xx}\) — уравнение <em>параболического</em> типа (как теплопроводность). Отсюда «П-форма». Она удобнее Г-формы: тип и знак коэффициента читаются сразу.
+      </div>
+      <div class="example"><span class="lbl">Забегая вперёд</span>
+        Знак коэффициента при \(u_{xx}\) в П-форме окажется связан с устойчивостью (§5) и с диссипативными свойствами схемы (§6). Сейчас фиксируем только сам факт: п.д.п. «видит» \(\gamma\).
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7: Смысл -->
+<section class="slide">
+  <div class="slide-num">§4.4 · Смысл дифференциального приближения</div>
+  <h2>Промежуточное положение п.д.п.</h2>
+  <div class="two-col wide-left">
+    <div class="figure">
+      <svg viewBox="0 0 560 100" xmlns="http://www.w3.org/2000/svg" style="max-width:640px">
+        <defs><marker id="ar7" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2c2419"/></marker></defs>
+        <rect x="5" y="25" width="150" height="50" rx="6" fill="#fdf6ee" stroke="#b44a2d" stroke-width="1.5"/>
+        <text x="80" y="48" font-family="Source Serif 4,serif" font-size="11" fill="#b44a2d" text-anchor="middle" font-weight="600">Дифф. уравнение</text>
+        <text x="80" y="63" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">u_t + a u_x = 0</text>
+        <rect x="200" y="15" width="160" height="70" rx="6" fill="#e8f4f0" stroke="#1a6b5a" stroke-width="1.5"/>
+        <text x="280" y="35" font-family="Source Serif 4,serif" font-size="10" fill="#1a6b5a" text-anchor="middle" font-weight="600">П-форма п.д.п.</text>
+        <text x="280" y="52" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#6b5d4f" text-anchor="middle">u_t + a u_x = ½ah(1−γ)u_xx</text>
+        <text x="280" y="70" font-family="Source Serif 4,serif" font-size="9" fill="#9a8d7e" text-anchor="middle" font-style="italic">modified equation</text>
+        <rect x="405" y="25" width="150" height="50" rx="6" fill="#e6f1fb" stroke="#3a5ba0" stroke-width="1.5"/>
+        <text x="480" y="48" font-family="Source Serif 4,serif" font-size="11" fill="#3a5ba0" text-anchor="middle" font-weight="600">Разностная схема</text>
+        <text x="480" y="63" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">L_h u_h = f_h</text>
+        <line x1="155" y1="50" x2="198" y2="50" stroke="#2c2419" stroke-width="1.5" marker-end="url(#ar7)"/>
+        <line x1="360" y1="50" x2="403" y2="50" stroke="#2c2419" stroke-width="1.5" marker-end="url(#ar7)"/>
+      </svg>
+      <div class="caption">Первое дифференциальное приближение занимает промежуточное положение между дифференциальным уравнением и разностной схемой.</div>
+    </div>
+    <div>
+      <ul style="font-size:.92em">
+        <li><strong>Дифференциальное представление</strong> схемы — её запись в терминах дифференциальных операторов (полный ряд (4.1) без отбрасывания) — несёт <em>полную</em> информацию о схеме.</li>
+        <li><strong>Дифференциальное приближение</strong> — дифференциальное уравнение; оно несёт информацию и об исходном уравнении (предел при \(\tau, h \to 0\)), и о схеме (коэффициенты при старших производных).</li>
+        <li>Изучать п.д.п. можно методами теории УрЧП: тип, знак «вязкости», характеристики.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 8: Итоги §4 -->
+<section class="slide">
+  <div class="slide-num">§4 · Итоги</div>
+  <h2>Что нужно унести с §4</h2>
+  <div class="two-col">
+    <div>
+      <ol style="font-size:.95em">
+        <li><strong>Уравнение \(L_1 u = 0\)</strong> из алгоритма §2.8 — самостоятельный объект: дифференциальное представление схемы.</li>
+        <li><strong>Г-форма п.д.п.</strong> (4.2): отбросили \(O(\tau^2)\), \(O(h^2)\); гиперболическое уравнение с \(u_{tt}\).</li>
+        <li><strong>П-форма п.д.п.</strong> (4.4): \(u_{tt}\) исключена через дифференциальные следствия; параболическое уравнение с коэффициентом \(a h(1-\gamma)/2\) при \(u_{xx}\); \(\gamma = a\tau/h\) — число Куранта.</li>
+        <li><strong>Смысл</strong>: п.д.п. — modified equation, уравнение, которое схема решает «на самом деле» в главном порядке; промежуточное звено между уравнением и схемой.</li>
+      </ol>
+    </div>
+    <div>
+      <div class="example"><span class="lbl">Как получить п.д.п. для любой схемы</span>
+        <ol style="margin-bottom:0">
+          <li>Разложить схему по Тейлору около базовой точки — \(L_1 u\) (шаг 2 алгоритма §2.8).</li>
+          <li>Отбросить члены выше первого порядка по \(\tau\), \(h\) — Г-форма.</li>
+          <li>Все производные по \(t\) выше первой заменить через дифференциальные следствия — П-форма.</li>
+          <li><strong>Порядок на решении читать по П-форме</strong>: наименьшие степени \(\tau\), \(h\) в правой части. Если правая часть обратилась в нуль тождественно — удержать следующие члены (второе приближение).</li>
+        </ol>
+      </div>
+      <div class="note"><span class="lbl">Дальше</span>
+        Задание на пару — следующие слайды. §5 — методы исследования устойчивости.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 9: Задание на пару — что делать -->
+<section class="slide">
+  <div class="slide-num">§4.5 · Задание на пару</div>
+  <h2>Задание: полная характеристика разностной схемы</h2>
+  <div class="two-col wide-left">
+    <div>
+      <p style="font-size:.9em">Каждая рабочая группа получает <strong>одну</strong> схему (1–5, следующий слайд) для уравнения переноса \(u_t + a u_x = 0\), \(a = \mathrm{const} > 0\). Шаблонов Maple не выдаётся: программу пишет группа. Итог — <strong>выступление</strong> 7–8 минут и рабочий лист Maple.</p>
+      <div class="flow" style="margin-top:.4rem">
+        <div class="step"><span class="n">1</span><div class="title">Шаблон и тип схемы</div><div class="body">Рисунок на плоскости \((x,t)\), слои, явная/неявная, что нужно для старта счёта (§1.13, задача 7 ДЗ №1).</div></div>
+        <div class="step"><span class="n">2</span><div class="title">Операторная запись \(L_h u_h = f_h\)</div><div class="body">Выписать \(L_h\) и \(f_h\) (§2.1).</div></div>
+        <div class="step" style="border-left-color:var(--accent2)"><span class="n" style="background:var(--accent2)">3</span><div class="title">Порядок аппроксимации — прямо по Опр. 2</div><div class="body">Невязка \(\xi_h = L_h U_h - f_h\) по (2.7), ряды Тейлора, \(\xi_h = O(\tau^k) + O(h^m)\); порядок на произвольной функции и на решении (§2.9); через что выражается \(C_1\).</div></div>
+        <div class="step"><span class="n">4</span><div class="title">Г- и П-формы п.д.п.</div><div class="body">Число Куранта; при каком \(\gamma\) главный член обнуляется (§4).</div></div>
+        <div class="step"><span class="n">5</span><div class="title">Закон предельного перехода</div><div class="body">\(\tau = \varkappa h\) и \(\tau = h^2/\mu\): зависит ли аппроксимация (§2.9).</div></div>
+        <div class="step"><span class="n">6</span><div class="title">Карточка схемы</div><div class="body">Итоговая таблица в один экран.</div></div>
+      </div>
+    </div>
+    <div>
+      <div class="note"><span class="lbl">Главное требование</span>
+        Порядок аппроксимации получить <strong>по определению</strong>: составить невязку на проекции точного решения и оценить её норму. Не «по аналогии с уголком», не «по таблице из учебника».
+      </div>
+      <div class="example"><span class="lbl">Как отвечать</span>
+        Каждый пункт — со ссылкой на определение или формулу лекции: «по (2.7)», «Опр. 2», «дифференциальное следствие \(u_{tt} = a^2 u_{xx}\)». После выступления — вопросы «почему» по каждому пункту карточки.
+      </div>
+      <div class="callout" style="font-size:.9em;margin-top:.8rem">
+        Полный текст задания — в конце §4 на странице лекции.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10: Схемы -->
+<section class="slide">
+  <div class="slide-num">§4.5 · Схемы для распределения по группам</div>
+  <h2>Схемы 1–5 (в схемах 3 и 5 \(c \equiv a\))</h2>
+  <table class="sum" style="font-size:.9em">
+    <tr><th style="width:110px">Схема</th><th>Разностное уравнение</th><th style="width:230px">Подсказка к шаблону</th></tr>
+    <tr><td class="c"><strong>1</strong> (крест)</td><td>\(\displaystyle \frac{u_i^{n+1} - u_i^{n-1}}{2\tau} + a\,\frac{u_{i+1}^n - u_{i-1}^n}{2h} = 0\)</td><td>три слоя; чем стартовать?</td></tr>
+    <tr><td class="c"><strong>2</strong></td><td>\(\displaystyle \frac{u_i^{n+1} - u_i^n}{\tau} + \frac{a}{2}\left(\frac{u_i^{n+1} - u_{i-1}^{n+1}}{h} + \frac{u_{i+1}^n - u_i^n}{h}\right) = 0\)</td><td>на слое \(n+1\) два узла</td></tr>
+    <tr><td class="c"><strong>3</strong></td><td>\(\displaystyle \frac{u_i^{n+1} - u_i^n}{\tau} + c\,\frac{u_{i+1}^n - u_{i-1}^n}{2h} = \frac{c^2\tau}{2}\,\frac{u_{i-1}^n - 2u_i^n + u_{i+1}^n}{h^2}\)</td><td>в правой части — множитель \(\tau\)</td></tr>
+    <tr><td class="c"><strong>4</strong></td><td>\(\displaystyle \frac12\left(\frac{u_{i-1}^{n+1} - u_{i-1}^n}{\tau} + \frac{u_i^{n+1} - u_i^n}{\tau}\right) + \frac{a}{2}\left(\frac{u_i^{n+1} - u_{i-1}^{n+1}}{h} + \frac{u_i^n - u_{i-1}^n}{h}\right) = 0\)</td><td>«коробочка»: четыре узла; удобная базовая точка — центр</td></tr>
+    <tr><td class="c"><strong>5</strong></td><td>\(\displaystyle \frac{u_i^{n+1} - u_i^n}{\tau} + \frac{c}{2}\left(\frac{u_i^{n+1} - u_{i-1}^{n+1}}{h} + \frac{u_{i+1}^n - u_i^n}{h}\right) = 0\)</td><td>сравните со схемой 2</td></tr>
+  </table>
+</section>
+
+<!-- 11: Программа и формат -->
+<section class="slide">
+  <div class="slide-num">§4.5 · Программа в Maple и формат сдачи</div>
+  <h2>Программа в Maple — своими руками</h2>
+  <div class="two-col">
+    <div>
+      <div class="example"><span class="lbl">Минимальные требования к листу</span>
+        <ol style="margin-bottom:0">
+          <li>Схема задана как выражение через \(u(x + p h,\; t + q\tau)\) для неизвестной гладкой \(u\): базовую точку и шаги можно менять.</li>
+          <li>Невязка получена разложением в ряд Тейлора по \(h\), \(\tau\) с контролем порядка отброшенных членов и собрана по степеням \(\tau\), \(h\).</li>
+          <li>Порядок на решении — подстановкой \(u = F(x - a t)\) либо явным применением дифференциальных следствий.</li>
+          <li>Г- и П-формы п.д.п. выписаны как уравнения.</li>
+        </ol>
+      </div>
+      <div class="note"><span class="lbl">По желанию</span>
+        Численный эксперимент: расчёт задачи с известным решением на сетках \(h, h/2, h/4\) при фиксированном \(\gamma\), порядок сходимости \(p \approx \log_2(\|z_h\|_C/\|z_{h/2}\|_C)\) по Опр. 1 — и сравнение с порядком аппроксимации (теорема Лакса).
+      </div>
+    </div>
+    <div>
+      <div class="callout">
+        <p style="margin-bottom:.4rem"><strong>Формат выступления</strong></p>
+        <ul style="margin-bottom:0;font-size:.93em">
+          <li>7–8 минут, каждый участник группы докладывает свою часть;</li>
+          <li>лист Maple показывается вживую, не скриншотами;</li>
+          <li>рабочий лист <code>Группа_схемаN.mw</code> (фамилии, учебная группа, номер схемы в первой строке) загружается в личном кабинете как сдача практического задания к §4.</li>
+        </ul>
+      </div>
+      <div class="callout" style="margin-top:.8rem">
+        <p style="margin-bottom:.4rem"><strong>Зачёт задания</strong></p>
+        <ul style="margin-bottom:0;font-size:.93em">
+          <li>обязательно: порядок аппроксимации <em>по определению</em>, с верным ответом о порядке на решении;</li>
+          <li>полнота карточки схемы по пунктам 1–6;</li>
+          <li>ответы на вопросы «почему» после выступления.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     HUD навигации
+     ============================================================ -->
+<div class="hud">
+  <a href="s1-04.html" class="back" title="Полный текст лекции">← полная лекция</a>
+  <div class="center">
+    <button id="btnPrev" onclick="prev()" title="←">◀</button>
+    <span class="counter" id="counter">1 / 12</span>
+    <button id="btnNext" onclick="next()" title="→ / Space">▶</button>
+  </div>
+  <a href="s1-05.html" class="back" title="Следующая лекция">§5 →</a>
+</div>
+
+<script>
+(function(){
+  var slides = Array.from(document.querySelectorAll('.slide'));
+  var counter = document.getElementById('counter');
+  var fill = document.getElementById('progressFill');
+  var i = 0;
+  // Одноразовая обёртка содержимого каждого слайда в .slide-content —
+  // нужна для вертикального/горизонтального центрирования (см. CSS).
+  slides.forEach(function(s){
+    var wrap = document.createElement('div');
+    wrap.className = 'slide-content';
+    while (s.firstChild) wrap.appendChild(s.firstChild);
+    s.appendChild(wrap);
+  });
+  function show(n) {
+    slides[i].classList.remove('active');
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    var s = slides[i];
+    var content = s.querySelector('.slide-content') || s;
+    var animated = [];
+    Array.from(content.children).forEach(function(child){
+      animated.push(child);
+      var innerEq = child.querySelectorAll('.eq');
+      for (var j = 0; j < innerEq.length; j++) animated.push(innerEq[j]);
+    });
+    animated.forEach(function(el, k){
+      el.style.setProperty('--i', k);
+      el.style.animation = 'none';
+    });
+    void s.offsetWidth;
+    animated.forEach(function(el){ el.style.animation = ''; });
+    s.classList.add('active');
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+    fill.style.width = ((i + 1) / slides.length * 100) + '%';
+    history.replaceState(null, '', '#' + (i + 1));
+    document.getElementById('btnPrev').disabled = (i === 0);
+    document.getElementById('btnNext').disabled = (i === slides.length - 1);
+    s.scrollTop = 0;
+  }
+  window.next = function(){ show(i + 1); };
+  window.prev = function(){ show(i - 1); };
+  document.addEventListener('keydown', function(e) {
+    if (/^(INPUT|TEXTAREA)$/i.test((e.target || {}).tagName)) return;
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+    else if (e.key === 'Home') { e.preventDefault(); show(0); }
+    else if (e.key === 'End')  { e.preventDefault(); show(slides.length - 1); }
+    else if (e.key === 'f' || e.key === 'F') {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+    }
+  });
+  // Deep-link через #N
+  var h = parseInt((location.hash || '').replace('#', ''), 10);
+  if (!isNaN(h) && h >= 1 && h <= slides.length) show(h - 1);
+  else show(0);
+
+  window.__slidesShow = show;
+  window.__slidesIndex = function () { return i; };
+})();
+
+// Инструменты: рисование поверх слайдов + экспорт PDF / PPTX
+(function initSlideTools() {
+  function ready() {
+    if (!window.CFDSlideTools) return;
+    window.CFDSlideTools.init({
+      slidesSelector: '.slide',
+      activeClass:    'active',
+      hudSelector:    '.hud',
+      projectName:    'sem1-04-slides',
+      getCurrentIndex: function () { return window.__slidesIndex ? window.__slidesIndex() : 0; },
+      onGoToSlide:     function (n) { if (window.__slidesShow) window.__slidesShow(n); },
+    });
+  }
+  if (window.CFDSlideTools) ready();
+  else window.addEventListener('load', ready);
+})();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/slide-notes.js"></script>
+</body>
+</html>

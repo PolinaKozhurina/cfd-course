@@ -185,6 +185,20 @@ strong{color:var(--text)}
   .slide{position:relative;display:flex!important;page-break-after:always;min-height:100vh;align-items:center;justify-content:center}
   .hud,.progress{display:none}
 }
+
+/* Доп. правила для слайдов разбора ДЗ */
+.two-col.wide-left{grid-template-columns:1.25fr 1fr}
+.note{background:#f8efe1;border-left:3px solid var(--accent);padding:.8rem 1.1rem;border-radius:0 6px 6px 0;margin:.5rem 0 .8rem;font-size:.9em}
+.note .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:.35rem}
+table.sum{border-collapse:collapse;width:100%;font-size:.86em;margin:.6rem 0}
+table.sum th,table.sum td{border:1px solid var(--border);padding:.45rem .7rem;text-align:left;vertical-align:top}
+table.sum th{background:var(--bg2);font-family:'JetBrains Mono',monospace;font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text2);font-weight:500}
+table.sum td.c{text-align:center}
+@media(max-width:900px){.two-col.wide-left{grid-template-columns:1fr}}
+
+/* Колонки не должны расширяться под широкие формулы */
+.two-col > *{min-width:0}
+.eq mjx-container[display="true"]{max-width:100%;overflow-x:auto;overflow-y:hidden}
 </style>
 </head>
 <body>
@@ -1335,16 +1349,157 @@ strong{color:var(--text)}
 </section>
 
 <!-- ============================================================
+     РАЗБОР ДЗ №1 · ЗАДАЧА 2  (слайды 23–27)
+     ============================================================ -->
+
+<!-- 23: Постановка -->
+<section class="slide">
+  <div class="slide-num">Разбор ДЗ №1 · Задача 2 · Постановка</div>
+  <h2>Задача Коши в операторной форме \(A\,u = F\)</h2>
+  <div class="two-col wide-left">
+    <div>
+      <p style="font-size:.92em"><strong>Дано.</strong> Задача Коши (1.3)–(1.4) для уравнения переноса:</p>
+      <div class="eq">\[ \frac{\partial u}{\partial t} + a\,\frac{\partial u}{\partial x} = 0, \qquad (x, t) \in \Omega = \{-\infty < x < \infty,\ 0 < t \le T\}, \tag{1.3} \]</div>
+      <div class="eq">\[ u(x, 0) = u_0(x), \qquad -\infty < x < \infty, \tag{1.4} \]</div>
+      <p style="font-size:.92em">где \(a = \mathrm{const}\), \(u_0\) — заданная функция.</p>
+      <p style="font-size:.92em"><strong>Требуется.</strong> Записать (1.3)–(1.4) в виде операторного уравнения (1.0) \(A\,u = F\), \(A\colon B_1 \to B_2\): указать явно оператор \(A\), правую часть \(F\), место начального условия; предложить две пары пространств \(B_1, B_2\) с нормами — с \(\|\cdot\|_C\) и с \(\|\cdot\|_{L_2}\).</p>
+    </div>
+    <div>
+      <div class="note"><span class="lbl">Ключевое наблюдение</span>
+        Уравнение (1.0) есть равенство <em>двух элементов пространства \(B_2\)</em>. Задача (1.3)–(1.4) накладывает на \(u\) <strong>два</strong> независимых условия: уравнение в \(\Omega\) и условие на прямой \(t = 0\). Следовательно, \(A u\) и \(F\) — <em>пары</em>, а \(B_2\) — произведение двух пространств.
+      </div>
+      <div class="example"><span class="lbl">Почему нельзя иначе</span>
+        Общее решение одного лишь уравнения (1.3) есть \(u = \Phi(x - a t)\) с <em>произвольной</em> \(\Phi \in C^1(\mathbb{R})\). Оператор \(A = \partial_t + a\,\partial_x\) с \(F = 0\) «забывает» (1.4): уравнение \(A u = 0\) имеет бесконечно много решений, \(A\) не инъективен, и вопрос о корректности (§1.5) теряет смысл.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 24: Оператор и правая часть -->
+<section class="slide">
+  <div class="slide-num">Разбор ДЗ №1 · Задача 2 · Оператор \(A\) и правая часть \(F\)</div>
+  <h2>Построение оператора \(A\) и элемента \(F\)</h2>
+  <div class="two-col wide-left">
+    <div>
+      <p style="font-size:.92em">Обозначим \(\bar\Omega = \mathbb{R} \times [0, T]\) — замкнутую полосу, \(\Gamma_0 = \{(x, 0)\colon x \in \mathbb{R}\}\) — её нижнюю границу. Положим</p>
+      <div class="eq">\[ L u := \frac{\partial u}{\partial t} + a\,\frac{\partial u}{\partial x}, \qquad (\gamma_0 u)(x) := u(x, 0), \]</div>
+      <p style="font-size:.92em">где \(L\) — дифференциальный оператор уравнения (1.3), \(\gamma_0\) — <em>оператор следа</em> (сужения) функции на \(\Gamma_0\). Определим</p>
+      <div class="eq">\[ A u := \bigl(L u,\ \gamma_0 u\bigr) = \Bigl(\frac{\partial u}{\partial t} + a\,\frac{\partial u}{\partial x},\ \ u(x,0)\Bigr), \qquad F := \bigl(0,\ u_0\bigr). \]</div>
+      <p style="font-size:.92em">Тогда равенство \(A u = F\) в \(B_2\) есть покомпонентное равенство: \(L u = 0\) в \(\Omega\) и \(\gamma_0 u = u_0\) на \(\Gamma_0\), то есть в точности (1.3)–(1.4). Начальное условие «упаковано» во вторую компоненту \(F\); оператор \(A\) линеен.</p>
+    </div>
+    <div>
+      <div class="note"><span class="lbl">Как это читать</span>
+        <ul style="margin-bottom:0">
+          <li>\(A\) — отображение, которое функции \(u\) ставит в соответствие <em>всё, что о ней утверждает задача</em>: значение \(Lu\) в полосе и значение на нижней границе.</li>
+          <li>\(F\) — <em>всё, что задано извне</em>: правая часть уравнения (здесь нулевая) и начальные данные.</li>
+          <li>Число компонент \(A u\) равно числу условий задачи. Граничных условий по \(x\) нет (\(-\infty < x < \infty\)), поэтому компонент две, а не три.</li>
+        </ul>
+      </div>
+      <div class="note" style="font-size:.86em"><span class="lbl">Замечание: другая упаковка</span>
+        Положив \(u = v + u_0(x)\), получим \(A v = (-a\,u_0'(x),\ 0)\): начальные данные перенесены в правую часть уравнения. Запись допустима (нужно \(u_0 \in C^1\)), но стандартной считается первая: данные остаются данными, а не частью оператора.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 25: Символы -->
+<section class="slide">
+  <div class="slide-num">Разбор ДЗ №1 · Задача 2 · Каждый символ: что это и почему</div>
+  <h2>Запись \(A u = (Lu,\ \gamma_0 u) = (0,\ u_0) = F\) по символам</h2>
+  <table class="sum" style="font-size:.9em">
+    <tr><th style="width:170px">Символ</th><th style="width:34%">Что это</th><th>Почему так, откуда берётся</th></tr>
+    <tr><td>\(u = u(x,t)\)</td><td>искомая функция на замкнутой полосе \(\bar\Omega\)</td><td>решение ищется во всей полосе, включая \(t = 0\), иначе след \(\gamma_0 u\) не определён</td></tr>
+    <tr><td>\(L u = u_t + a u_x\)</td><td>первая компонента \(A u\); функция на \(\bar\Omega\)</td><td>левая часть уравнения (1.3); по условию равна нулю — отсюда \(0\) в первой компоненте \(F\)</td></tr>
+    <tr><td>\(\gamma_0 u = u(x,0)\)</td><td>вторая компонента \(A u\); функция на \(\mathbb{R}\)</td><td>условие (1.4) поставлено не в \(\Omega\), а на \(\Gamma_0\): функцию на \(\mathbb{R}\) нельзя «сложить» с функцией на \(\bar\Omega\), только приписать отдельной компонентой</td></tr>
+    <tr><td>\(F = (0,\ u_0)\)</td><td>данные задачи; элемент \(B_2\)</td><td>всё, что задано извне: правая часть уравнения (здесь нулевая) и начальные данные</td></tr>
+    <tr><td>\(a\)</td><td>скорость переноса, постоянная</td><td>входит в оператор \(L\), а не в данные: это часть «закона», а не «условий»</td></tr>
+    <tr><td>нет третьей компоненты</td><td>граничных условий по \(x\) нет</td><td>\(-\infty < x < \infty\): у полосы нет боковых границ; на отрезке \(0 \le x \le 1\) при \(a > 0\) добавилась бы компонента \(u(0,t) = g(t)\)</td></tr>
+  </table>
+</section>
+
+<!-- 25: Пространства, вариант C -->
+<section class="slide">
+  <div class="slide-num">Разбор ДЗ №1 · Задача 2 · Пространства, вариант 1</div>
+  <h2>Вариант 1: равномерная норма \(\|\cdot\|_C\)</h2>
+  <div class="two-col">
+    <div>
+      <p style="font-size:.9em"><strong>Пространство решений.</strong> Положим</p>
+      <div class="eq">\[ B_1 = C^1(\bar\Omega) = \bigl\{u\colon u,\ u_t,\ u_x \in C(\bar\Omega),\ \text{ограничены}\bigr\}, \]
+\[ \|u\|_1 = \|u\|_{C(\bar\Omega)} = \sup_{\bar\Omega}|u|. \]</div>
+      <p style="font-size:.88em"><em>Почему \(C^1\):</em> чтобы \(A u\) был определён, производные \(u_t\), \(u_x\) должны существовать и быть непрерывными. <em>Почему sup, а не max:</em> полоса \(\bar\Omega\) не ограничена по \(x\); ограниченность включена в определение множества, чтобы норма была конечна. <em>Почему норма не содержит производных:</em> для оценок сходимости (§1.15) достаточно близости самих функций; это та же норма, что и сеточная (1.13).</p>
+    </div>
+    <div>
+      <p style="font-size:.9em"><strong>Пространство данных.</strong> Положим</p>
+      <div class="eq">\[ B_2 = C(\bar\Omega) \times C(\mathbb{R}) \ni F = (f, g), \]
+\[ \|F\|_2 = \|f\|_{C(\bar\Omega)} + \|g\|_{C(\mathbb{R})}. \]</div>
+      <p style="font-size:.88em"><em>Почему произведение:</em> компоненты \(F\) — функции на разных множествах (\(\bar\Omega\) и \(\mathbb{R}\)). <em>Почему сумма норм:</em> стандартная норма на произведении нормированных пространств; аксиомы нормы (Опр. 2 §1.4) проверяются покомпонентно. Вместо суммы допустимы \(\max\) или \(\sqrt{\|f\|^2 + \|g\|^2}\) — все три нормы эквивалентны.</p>
+      <div class="note" style="font-size:.86em"><span class="lbl">Проверка корректности определения \(A\)</span>
+        Для \(u \in C^1(\bar\Omega)\): \(L u \in C(\bar\Omega)\) (сумма непрерывных), \(\gamma_0 u \in C(\mathbb{R})\) (сужение непрерывной). Значит, \(A\colon B_1 \to B_2\) действительно отображает \(B_1\) в \(B_2\), причём линейно.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 26: Пространства, вариант L2 -->
+<section class="slide">
+  <div class="slide-num">Разбор ДЗ №1 · Задача 2 · Пространства, вариант 2</div>
+  <h2>Вариант 2: интегральная норма \(\|\cdot\|_{L_2}\)</h2>
+  <div class="two-col">
+    <div>
+      <p style="font-size:.9em"><strong>Пространство решений.</strong> Множество — те же гладкие функции, но с интегральной нормой:</p>
+      <div class="eq">\[ B_1 = \bigl\{u \in C^1(\bar\Omega)\colon \textstyle\int_\Omega u^2\,dx\,dt < \infty\bigr\}, \]
+\[ \|u\|_1 = \|u\|_{L_2(\Omega)} = \Bigl(\int_0^T\!\!\int_{-\infty}^{\infty} u^2\,dx\,dt\Bigr)^{1/2}. \]</div>
+      <p style="font-size:.88em"><em>Почему множество то же:</em> оператор \(A\) по-прежнему содержит производные, для его применения нужна гладкость. <em>Почему добавлено условие на интеграл:</em> иначе норма может быть бесконечной (полоса не ограничена по \(x\)). <em>Что изменилось:</em> только способ измерять близость — норма «не видит» производных и локальных выбросов, а учитывает среднеквадратичное отклонение.</p>
+    </div>
+    <div>
+      <p style="font-size:.9em"><strong>Пространство данных.</strong></p>
+      <div class="eq">\[ B_2 = L_2(\Omega) \times L_2(\mathbb{R}), \]
+\[ \|F\|_2 = \Bigl(\|f\|^2_{L_2(\Omega)} + \|g\|^2_{L_2(\mathbb{R})}\Bigr)^{1/2}. \]</div>
+      <p style="font-size:.88em"><em>Почему \(L_2\) в обеих компонентах:</em> пара пространств должна быть согласована: если решение измеряется в среднеквадратичном, то и данные — в среднеквадратичном (см. следующий слайд). <em>Почему корень из суммы квадратов:</em> естественная «евклидова» норма на произведении гильбертовых пространств; сумма норм также допустима.</p>
+      <div class="note" style="font-size:.86em"><span class="lbl">Замечание о полноте</span>
+        Пространство \((B_1, \|\cdot\|_{L_2})\) не полно: предел гладких функций в \(L_2\) может быть негладким. Определение ЛНП в §1.4 полноты не требует, и для (1.0) этого достаточно. Пополнение приводит к пространствам Соболева — они упомянуты в §1.4 как \(H^k\).
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 27: Проверка корректности -->
+<section class="slide">
+  <div class="slide-num">Разбор ДЗ №1 · Задача 2 · Почему эти пространства «правильные»</div>
+  <h2>Проверка: в выбранных пространствах задача корректна (§1.5)</h2>
+  <div class="two-col">
+    <div>
+      <p style="font-size:.9em">По §1.6 решение задачи (1.3)–(1.4) есть \(u(x,t) = u_0(x - at)\): начальный профиль переносится вдоль характеристик. Проверим оценку (1.1b) \(\|u\|_1 \le C\,\|F\|_2\) в обоих вариантах.</p>
+      <p style="font-size:.9em"><strong>Вариант 1.</strong> Для любого \(t\) множество значений \(u(\cdot, t)\) совпадает с множеством значений \(u_0\), поэтому</p>
+      <div class="eq">\[ \|u\|_{C(\bar\Omega)} = \sup_{x,t}|u_0(x - at)| = \|u_0\|_{C(\mathbb{R})} \le \|F\|_2, \qquad C = 1. \]</div>
+      <p style="font-size:.9em"><strong>Вариант 2.</strong> Заменой \(y = x - at\) при фиксированном \(t\): \(\int_{\mathbb{R}} u^2(x,t)\,dx = \int_{\mathbb{R}} u_0^2(y)\,dy\). Интегрируя по \(t \in [0,T]\):</p>
+      <div class="eq">\[ \|u\|_{L_2(\Omega)} = \sqrt{T}\,\|u_0\|_{L_2(\mathbb{R})} \le \sqrt{T}\,\|F\|_2, \qquad C = \sqrt{T}. \]</div>
+    </div>
+    <div>
+      <div class="note" style="font-size:.88em"><span class="lbl">Единственность</span>
+        Если \(A u = 0\), то \(u = \Phi(x - at)\) и \(\Phi = \gamma_0 u = 0\), откуда \(u \equiv 0\): оператор \(A\) инъективен. Вместе с существованием решения при любых данных \((f, u_0)\) это даёт условие корректности §1.5 (линейный случай).
+      </div>
+      <div class="example" style="font-size:.88em"><span class="lbl">Почему пары нельзя «смешивать»</span>
+        Пусть \(B_1\) с нормой \(C\), а \(B_2\) — с нормой \(L_2\). Возьмём \(u_0\) — узкий пик высоты \(1\) ширины \(\varepsilon\): \(\|u_0\|_{L_2} = \sqrt{\varepsilon} \to 0\), но \(\|u\|_C = 1\). Оценки \(\|u\|_C \le C\|u_0\|_{L_2}\) с \(C \ne C(\varepsilon)\) нет. Согласованность пары — часть ответа.
+      </div>
+      <div class="callout" style="font-size:.86em;margin-top:.6rem">
+        <strong>Общий случай \(F = (f, u_0)\), \(f \ne 0\):</strong> \(u = u_0(x - at) + \int_0^t f\bigl(x - a(t - s), s\bigr)\,ds\), откуда \(\|u\|_C \le \|u_0\|_C + T\|f\|_C \le \max(1, T)\,\|F\|_2\). Именно для этого в \(F\) нужна и первая компонента.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
      HUD навигации
      ============================================================ -->
 <div class="hud">
   <a href="s1-01.html" class="back" title="Полный текст лекции">← полная лекция</a>
   <div class="center">
     <button id="btnPrev" onclick="prev()" title="←">◀</button>
-    <span class="counter" id="counter">1 / 22</span>
+    <span class="counter" id="counter">1 / 28</span>
     <button id="btnNext" onclick="next()" title="→ / Space">▶</button>
   </div>
-  <a href="s1-02.html" class="back" title="Следующая лекция">§2 →</a>
+  <a href="s1-02-slides.html" class="back" title="Слайды §2">§2 →</a>
 </div>
 
 <script>
@@ -1435,5 +1590,11 @@ strong{color:var(--text)}
   else window.addEventListener('load', ready);
 })();
 </script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/slide-notes.js"></script>
 </body>
 </html>

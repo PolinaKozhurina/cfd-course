@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ru" data-course="sem1">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>§3. Слайды · Теорема Лакса</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<!-- Инструменты слайдов: рисование (сразу) + экспорт PDF/PPTX (по клику подгрузит html2canvas / jsPDF / PptxGenJS) -->
+<script src="../js/slide-tools.js"></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:24px;line-height:1.55;color:var(--text);background:var(--bg);overflow:hidden}
+
+/* Слайд — фиксирован в viewport, контент центрирован по вертикали и горизонтали */
+.slide{position:fixed;inset:0;padding:0;display:none;overflow:auto}
+.slide.active{display:flex;align-items:center;justify-content:center}
+.slide-content{width:100%;max-width:min(96vw, 1600px);margin:auto;padding:1.4rem 1.6rem 2.8rem;box-sizing:border-box}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Поэтапное появление детей активного слайда (JS проставляет --i) */
+.slide.active .slide-content > *{
+  animation: slideStep .38s cubic-bezier(.22,.61,.36,1) both;
+  animation-delay: calc(var(--i, 0) * 85ms);
+}
+@keyframes slideStep{
+  from{opacity:0;transform:translateY(12px)}
+  to  {opacity:1;transform:none}
+}
+
+/* Анимация формул — с эффектом «фокус» (scale + blur → sharp). */
+.slide.active .eq{
+  animation: formulaIn .55s cubic-bezier(.22,.61,.36,1) both;
+  animation-delay: calc(var(--i, 0) * 85ms);
+  transform-origin: center;
+}
+@keyframes formulaIn{
+  0%  {opacity:0;transform:scale(.92) translateY(4px);filter:blur(3.5px)}
+  55% {opacity:1;transform:scale(1.02);filter:blur(0)}
+  100%{opacity:1;transform:scale(1)}
+}
+.slide.active .eq::after{
+  content:'';position:absolute;left:0;right:0;bottom:-6px;height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent) 50%,transparent);
+  transform:scaleX(0);opacity:0;
+  animation: formulaUnderline .55s ease-out both;
+  animation-delay: calc(var(--i, 0) * 85ms + .35s);
+}
+.slide.active .eq{position:relative}
+@keyframes formulaUnderline{
+  0%  {transform:scaleX(0);opacity:0}
+  40% {transform:scaleX(1);opacity:.7}
+  100%{transform:scaleX(1);opacity:0}
+}
+.slide.title.active .slide-content > *{animation:slideStep .55s ease both;animation-delay:calc(var(--i,0) * 140ms)}
+@media (prefers-reduced-motion: reduce){
+  .slide.active .slide-content > *, .slide.active .eq, .slide.active .eq::after{animation:none}
+}
+.slide-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:.6rem}
+h1{font-family:'Playfair Display',serif;font-weight:900;font-size:2.6rem;line-height:1.12;color:var(--text);margin-bottom:1rem;letter-spacing:-.01em}
+h2{font-family:'Playfair Display',serif;font-weight:700;font-size:1.8rem;color:var(--accent);margin-bottom:1.2rem;line-height:1.15}
+h3{font-family:'Source Serif 4',serif;font-weight:700;font-size:1.15rem;color:var(--text);margin:1rem 0 .5rem}
+p{margin-bottom:.9rem}
+ul,ol{margin:0 0 .9rem 1.6rem;line-height:1.65}
+li{margin-bottom:.35rem}
+em{color:var(--accent2)}
+strong{color:var(--text)}
+.eq{margin:1.2rem 0;text-align:center;font-size:1.05em}
+/* Карточки: определение / условие / теорема */
+.definition,.condition,.theorem{position:relative;padding:1rem 1.3rem 1rem 3.2rem;border-radius:6px;margin:1rem 0;border:none;overflow:hidden;min-height:11rem}
+.definition{background:#e7efe8}
+.condition {background:#f2e5d6}
+.theorem   {background:#e0e8f2}
+.definition strong,.condition strong,.theorem strong{color:var(--text)}
+.definition::before,.condition::before,.theorem::before{
+  position:absolute;left:0;top:0;bottom:0;width:2.1rem;
+  display:flex;align-items:center;justify-content:center;
+  writing-mode:vertical-rl;transform:rotate(180deg);
+  font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:500;
+  letter-spacing:.22em;text-transform:uppercase;
+}
+.definition::before{background:#d0dfd4;color:#3d6b5a;content:'Определение'}
+.definition[data-num]::before{content:'Определение ' attr(data-num)}
+.condition::before{background:#e5d1b8;color:#8a5236;content:'Условие'}
+.condition[data-num]::before{content:'Условие ' attr(data-num)}
+.theorem::before{background:#c8d5e6;color:#4a5f88;content:'Теорема'}
+.theorem[data-num]::before{content:'Теорема ' attr(data-num)}
+.definition.compact,.theorem.compact{min-height:0}
+
+/* Голубой боковой блок «Примеры» / замечание */
+.example{background:#e0e8f2;border-left:3px solid #7d95bd;padding:.8rem 1.1rem;border-radius:0 6px 6px 0;margin:.5rem 0 .8rem;font-size:.9em;color:var(--text)}
+.example .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#4a5f88;margin-bottom:.35rem}
+.example ul{margin:.15rem 0 0 1.1rem;font-size:.94em}
+.example li{margin-bottom:.15rem}
+.note{background:#f8efe1;border-left:3px solid var(--accent);padding:.8rem 1.1rem;border-radius:0 6px 6px 0;margin:.5rem 0 .8rem;font-size:.9em}
+.note .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:.35rem}
+@media(max-width:900px){
+  .definition,.condition,.theorem{padding-left:2.6rem}
+  .definition::before,.condition::before,.theorem::before{width:1.8rem;font-size:.56rem;letter-spacing:.18em}
+}
+.figure{margin:1rem auto;text-align:center;max-width:100%}
+.figure svg{max-width:100%;height:auto}
+.figure .caption{font-size:.78rem;color:var(--text2);margin-top:.4rem;font-style:italic}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+.two-col.wide-left{grid-template-columns:1.25fr 1fr}
+.callout{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;font-size:.95em;color:var(--text2)}
+.tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.12em;padding:.2rem .55rem;border-radius:3px;background:#f3e8f9;color:#7b3fa0;margin-right:.4rem;vertical-align:middle}
+
+/* Flow-chart из боксов со стрелками */
+.flow{display:grid;grid-template-columns:1fr;gap:.55rem;margin:1rem 0}
+.flow .step{position:relative;background:#fff;border:1.5px solid var(--border);border-left:5px solid var(--accent);border-radius:8px;padding:.7rem 1rem .7rem 1.2rem;box-shadow:0 2px 8px rgba(44,36,25,.04)}
+.flow .step .n{position:absolute;left:-14px;top:-12px;background:var(--accent);color:#fff;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;padding:.15rem .45rem;border-radius:3px;letter-spacing:.03em}
+.flow .step .title{font-family:'Playfair Display',serif;font-weight:700;font-size:1.05rem;color:var(--text);margin-bottom:.15rem}
+.flow .step .body{font-size:.9rem;color:var(--text2);line-height:1.45}
+.flow .step ul{margin:.25rem 0 0 1.1rem;font-size:.86rem;color:var(--text2)}
+.flow .arrow{text-align:center;color:var(--accent);font-size:1.4rem;line-height:.7;font-weight:700;user-select:none}
+@media(max-width:900px){.flow .step{padding:.55rem .8rem .55rem 1rem}.flow .step .title{font-size:.95rem}}
+
+/* Плитки — сводка понятий */
+.tiles{display:grid;grid-template-columns:1fr;gap:.5rem;margin:1rem 0}
+.tile{background:#fff;border:1px solid var(--border);border-radius:6px;padding:.6rem .9rem;display:grid;grid-template-columns:190px 1fr 1fr;align-items:center;gap:1rem}
+.tile .h{font-family:'JetBrains Mono',monospace;font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
+.tile .t{font-family:'Playfair Display',serif;font-weight:700;font-size:1.02rem;color:var(--text);line-height:1.2}
+.tile .d{font-size:.86rem;color:var(--text2);line-height:1.35}
+.tile.hi{background:#f8efe1}
+.tile.hi .t{color:var(--accent)}
+.tile.hi .h{color:var(--accent)}
+.tile.ok{background:#e7efe8}
+.tile.ok .t{color:var(--accent2)}
+.tile.bad{background:#fbe9e4}
+.tile.bad .t{color:var(--accent)}
+@media(max-width:900px){.tile{grid-template-columns:1fr;gap:.15rem}}
+
+/* Таблица-сводка */
+table.sum{border-collapse:collapse;width:100%;font-size:.86em;margin:.6rem 0}
+table.sum th,table.sum td{border:1px solid var(--border);padding:.45rem .7rem;text-align:left;vertical-align:top}
+table.sum th{background:var(--bg2);font-family:'JetBrains Mono',monospace;font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text2);font-weight:500}
+table.sum td.c{text-align:center}
+
+/* Титульный */
+.slide.title{text-align:center;background:radial-gradient(ellipse at 30% 20%,#fff 0%,var(--bg) 55%,var(--bg2) 100%)}
+.slide.title .slide-content{max-width:1000px}
+.slide.title h1{font-size:3.4rem;margin-bottom:1.5rem;max-width:900px;margin-left:auto;margin-right:auto}
+.slide.title h1 .u{color:var(--accent);border-bottom:4px solid var(--accent);padding-bottom:.15rem}
+.slide.title .sub{font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--text2);margin-bottom:1rem;letter-spacing:.05em}
+.slide.title .course{font-size:.85rem;color:var(--text3);text-transform:uppercase;letter-spacing:.24em;margin-bottom:.6rem}
+.slide.title .badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:.35rem .85rem;border:1.5px solid var(--accent);color:var(--accent);border-radius:20px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:1.4rem}
+
+/* Разделитель между §2 и §3 */
+.slide.section{text-align:center;background:radial-gradient(ellipse at 70% 30%,#fff 0%,var(--bg) 55%,var(--bg2) 100%)}
+.slide.section h1{font-size:3rem}
+
+/* HUD навигации */
+.hud{position:fixed;bottom:0;left:0;right:0;padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to top,rgba(250,248,244,.95),transparent);z-index:100;pointer-events:none}
+.hud > *{pointer-events:auto}
+.hud button{font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:.4rem .9rem;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text2);cursor:pointer;transition:all .12s}
+.hud button:hover{border-color:var(--accent);color:var(--accent);background:var(--bg2)}
+.hud button:disabled{opacity:.35;cursor:default}
+.hud .counter{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);letter-spacing:.06em}
+.hud .center{display:flex;gap:.4rem;align-items:center}
+.hud .back{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);text-decoration:none;padding:.35rem .7rem;border:1px dashed var(--border);border-radius:4px}
+.hud .back:hover{color:var(--accent);border-color:var(--accent)}
+
+/* Прогресс-бар вверху */
+.progress{position:fixed;top:0;left:0;right:0;height:3px;background:var(--bg3);z-index:99}
+.progress .fill{height:100%;background:var(--accent);transition:width .2s ease;width:0%}
+
+@media(min-width:1600px){body{font-size:26px}h1{font-size:3rem}h2{font-size:2rem}}
+@media(max-width:900px){.slide-content{padding:1.6rem 1.2rem 3rem}h1{font-size:1.9rem}h2{font-size:1.4rem}.two-col,.two-col.wide-left{grid-template-columns:1fr}body{font-size:19px}}
+
+@media print{
+  body{overflow:visible;background:#fff}
+  .slide{position:relative;display:flex!important;page-break-after:always;min-height:100vh;align-items:center;justify-content:center}
+  .hud,.progress{display:none}
+}
+
+/* Колонки не должны расширяться под широкие формулы */
+.two-col > *{min-width:0}
+.eq mjx-container[display="true"]{max-width:100%;overflow-x:auto;overflow-y:hidden}
+</style>
+</head>
+<body>
+
+<div class="progress"><div class="fill" id="progressFill"></div></div>
+
+<!-- ============================================================
+     СЛАЙДЫ  (порядок = логика лекции §3)
+     ============================================================ -->
+
+<!-- 1: Титульный -->
+<section class="slide title active">
+  <div class="course">Теория разностных схем</div>
+  <div class="badge">Семестр 1 · Лекция §3</div>
+  <h1>Теорема <span class="u">Лакса</span></h1>
+  <div class="sub">Аппроксимация + устойчивость ⇒ сходимость · Доказательство по этапам</div>
+</section>
+
+<!-- 2: Где мы -->
+<section class="slide">
+  <div class="slide-num">§3 · Место теоремы в курсе</div>
+  <h2>Что уже есть и чего не хватает</h2>
+  <div class="two-col wide-left">
+    <div>
+      <ul style="font-size:.95em">
+        <li><strong>Аппроксимация</strong> (Опр. 2 §2): \(\|\xi_h\| \le C_1 h^p\), проверяется рядами Тейлора — <em>умеем</em>.</li>
+        <li><strong>Устойчивость</strong> (Опр. 3 §2): \(\|u_h - \nu_h\| \le C_2(\|\eta_h\| + \|\eta'_h\|)\) — <em>определили</em>, проверять научимся в §5.</li>
+        <li><strong>Сходимость</strong> (Опр. 1 §2): \(\|u_h - U_h\| \le C h^p\) — <em>цель</em>, по определению не проверяется: в нём стоит неизвестное \(U\).</li>
+      </ul>
+      <p style="font-size:.92em">Теорема Лакса заменяет непроверяемое свойство двумя проверяемыми.</p>
+    </div>
+    <div class="figure">
+      <svg viewBox="0 0 520 200" xmlns="http://www.w3.org/2000/svg" style="max-width:520px">
+        <rect x="10" y="70" width="150" height="60" rx="8" fill="#fdf6ee" stroke="#b44a2d" stroke-width="2"/>
+        <text x="85" y="96" font-family="Playfair Display,serif" font-size="14" fill="#b44a2d" text-anchor="middle" font-weight="700">Аппроксимация</text>
+        <text x="85" y="115" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">‖ξ_h‖ ≤ C₁hᵖ</text>
+        <rect x="185" y="70" width="150" height="60" rx="8" fill="#e8f4f0" stroke="#1a6b5a" stroke-width="2"/>
+        <text x="260" y="96" font-family="Playfair Display,serif" font-size="14" fill="#1a6b5a" text-anchor="middle" font-weight="700">Устойчивость</text>
+        <text x="260" y="115" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">‖u_h−ν_h‖ ≤ C₂(‖η‖+‖η'‖)</text>
+        <rect x="360" y="70" width="150" height="60" rx="8" fill="#e6f1fb" stroke="#3a5ba0" stroke-width="2"/>
+        <text x="435" y="96" font-family="Playfair Display,serif" font-size="14" fill="#3a5ba0" text-anchor="middle" font-weight="700">Сходимость</text>
+        <text x="435" y="115" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">‖u_h − U_h‖ ≤ C hᵖ</text>
+        <text x="172" y="106" font-family="Playfair Display,serif" font-size="22" fill="#2c2419" text-anchor="middle" font-weight="700">+</text>
+        <text x="347" y="106" font-family="Playfair Display,serif" font-size="22" fill="#2c2419" text-anchor="middle" font-weight="700">⇒</text>
+        <path d="M85,65 Q85,20 260,20 Q435,20 435,65" fill="none" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <text x="260" y="15" font-family="Playfair Display,serif" font-size="12" fill="#b44a2d" text-anchor="middle" font-weight="700">Теорема Лакса</text>
+        <text x="260" y="172" font-family="Source Serif 4,serif" font-size="12" fill="#9a8d7e" text-anchor="middle" font-style="italic">C = C₁ · C₂, порядок сходимости = порядок аппроксимации</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- 3: Формулировка -->
+<section class="slide">
+  <div class="slide-num">§3.1 · Формулировка</div>
+  <h2>Теорема Лакса</h2>
+  <div class="two-col wide-left">
+    <div class="theorem" data-num="1">
+      <strong>(Лакс).</strong> Пусть разностная схема \(L_h u_h = f_h\) <em>аппроксимирует</em> дифференциальную задачу \(Lu = f\) на решении \(u\) с порядком \(p\) и <em>устойчива</em>. Тогда решение \(u_h\) разностной задачи <em>сходится</em> к решению дифференциальной задачи \(Lu = f\), причём имеет место оценка
+      \[ \|u_h - U_h\| \;\le\; C_1 C_2\, h^p \;=\; C\, h^p, \tag{3.1} \]
+      где \(U_h\) — проекция точного решения на сетку.
+    </div>
+    <div>
+      <div class="callout">
+        <p style="margin-bottom:.5rem"><strong>Разбираем формулировку по словам</strong></p>
+        <ul style="margin-bottom:0;font-size:.93em">
+          <li><em>аппроксимирует на решении с порядком \(p\)</em> — Опр. 2: \(\|\xi_h\| \le C_1 h^p\);</li>
+          <li><em>устойчива</em> — Опр. 3: \(\|u_h - \nu_h\| \le C_2(\|\eta_h\| + \|\eta'_h\|)\);</li>
+          <li><em>сходится</em> — Опр. 1: \(\|u_h - U_h\| \to 0\); порядок сходимости тот же \(p\);</li>
+          <li>\(C = C_1 C_2\) — постоянная сходимости есть произведение постоянных аппроксимации и устойчивости.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4: Этап 1 -->
+<section class="slide">
+  <div class="slide-num">§3.2 · Доказательство · Этап 1 из 4</div>
+  <h2>Этап 1. Выписываем, что даёт устойчивость</h2>
+  <div class="two-col wide-left">
+    <div>
+      <p style="font-size:.92em">По Определению 3 (§2.4): для <em>любых</em> двух сеточных функций \(u_h\), \(\nu_h\), удовлетворяющих</p>
+      <div class="eq">\[ L_h u_h = f_h + \eta_h, \tag{3.2} \]</div>
+      <div class="eq">\[ L_h \nu_h = f_h + \eta'_h, \tag{3.3} \]</div>
+      <p style="font-size:.92em">где \(\eta_h\), \(\eta'_h\) — малые возмущения правой части, выполняется</p>
+      <div class="eq">\[ \|u_h - \nu_h\| \;\le\; C_2\bigl(\|\eta_h\| + \|\eta'_h\|\bigr), \qquad C_2 \ne C_2(h). \tag{3.4} \]</div>
+    </div>
+    <div>
+      <div class="note"><span class="lbl">Что здесь свободно</span>
+        В определении устойчивости <strong>мы сами выбираем</strong> \(u_h\), \(\nu_h\) и возмущения \(\eta_h\), \(\eta'_h\) — лишь бы (3.2)–(3.3) выполнялись. Всё доказательство — удачный выбор этих четырёх объектов.
+      </div>
+      <div class="example"><span class="lbl">Где используется гипотеза</span>
+        Здесь — <em>устойчивость</em>: даёт неравенство (3.4) с постоянной, не зависящей от \(h\). Аппроксимация пока не нужна.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5: Этап 2 -->
+<section class="slide">
+  <div class="slide-num">§3.2 · Доказательство · Этап 2 из 4</div>
+  <h2>Этап 2. Выбираем \(u_h\) и \(\nu_h\): невязка становится возмущением</h2>
+  <div class="two-col">
+    <div>
+      <p style="font-size:.92em"><strong>Первая функция.</strong> Пусть \(u_h\) — <em>точное решение</em> разностной задачи \(L_h u_h = f_h\). Тогда в (3.2) возмущения нет:</p>
+      <div class="eq">\[ \eta_h = 0. \]</div>
+      <p style="font-size:.92em"><strong>Вторая функция.</strong> Пусть \(\nu_h = U_h\) — <em>проекция точного решения</em> дифференциальной задачи на сетку. Подставим её в (3.3) и вспомним определение невязки (2.7):</p>
+      <div class="eq">\[ \eta'_h \;=\; L_h U_h - f_h \;=\; \xi_h. \tag{3.5} \]</div>
+    </div>
+    <div>
+      <div class="figure">
+        <svg viewBox="0 0 420 210" xmlns="http://www.w3.org/2000/svg" style="max-width:420px">
+          <defs><marker id="ar5" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2c2419"/></marker></defs>
+          <rect x="10" y="20" width="185" height="70" rx="8" fill="#e6f1fb" stroke="#3a5ba0" stroke-width="1.5"/>
+          <text x="102" y="45" font-family="Source Serif 4,serif" font-size="13" fill="#2c2419" text-anchor="middle" font-style="italic">u_h — решение схемы</text>
+          <text x="102" y="66" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0" text-anchor="middle">L_h u_h = f_h,  η_h = 0</text>
+          <rect x="225" y="20" width="185" height="70" rx="8" fill="#e7efe8" stroke="#1a6b5a" stroke-width="1.5"/>
+          <text x="317" y="45" font-family="Source Serif 4,serif" font-size="13" fill="#2c2419" text-anchor="middle" font-style="italic">ν_h = U_h — проекция</text>
+          <text x="317" y="66" font-family="JetBrains Mono,monospace" font-size="11" fill="#1a6b5a" text-anchor="middle">L_h U_h = f_h + ξ_h,  η'_h = ξ_h</text>
+          <line x1="102" y1="90" x2="180" y2="150" stroke="#2c2419" stroke-width="1.5" marker-end="url(#ar5)"/>
+          <line x1="317" y1="90" x2="240" y2="150" stroke="#2c2419" stroke-width="1.5" marker-end="url(#ar5)"/>
+          <rect x="95" y="152" width="230" height="44" rx="8" fill="#fdf6ee" stroke="#b44a2d" stroke-width="1.5"/>
+          <text x="210" y="179" font-family="JetBrains Mono,monospace" font-size="12" fill="#b44a2d" text-anchor="middle" font-weight="600">подставляем в (3.4)</text>
+        </svg>
+      </div>
+      <div class="note"><span class="lbl">Ключевая идея</span>
+        Точное решение, посаженное на сетку, — это «почти решение» схемы: оно удовлетворяет ей с погрешностью \(\xi_h\). Невязка и есть возмущение правой части.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6: Этап 3 -->
+<section class="slide">
+  <div class="slide-num">§3.2 · Доказательство · Этап 3 из 4</div>
+  <h2>Этап 3. Подставляем и получаем оценку через невязку</h2>
+  <div class="two-col wide-left">
+    <div>
+      <p style="font-size:.92em">С выбранными \(u_h\), \(\nu_h = U_h\) система (3.2)–(3.3) принимает вид</p>
+      <div class="eq">\[ L_h u_h = f_h, \tag{3.6} \]</div>
+      <div class="eq">\[ L_h U_h = f_h + \xi_h. \tag{3.7} \]</div>
+      <p style="font-size:.92em">Это в точности (3.2)–(3.3) с \(\eta_h = 0\), \(\eta'_h = \xi_h\). По определению устойчивости, то есть по (3.4):</p>
+      <div class="eq">\[ \|u_h - U_h\| \;\le\; C_2\bigl(\|0\| + \|\xi_h\|\bigr) \;=\; C_2\,\|\xi_h\|. \tag{3.8} \]</div>
+    </div>
+    <div>
+      <div class="note"><span class="lbl">Что получилось</span>
+        Слева — ровно та величина, которая стоит в определении сходимости: разность решения схемы и проекции точного решения. Справа — невязка с постоянной устойчивости. Погрешность решения оценена через погрешность аппроксимации.
+      </div>
+      <div class="example"><span class="lbl">Где использована гипотеза</span>
+        Снова <em>устойчивость</em>: неравенство (3.4) применено к конкретной паре. Аппроксимация ещё не использована — (3.8) верно для любой схемы, лишь бы она была устойчива.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7: Этап 4 -->
+<section class="slide">
+  <div class="slide-num">§3.2 · Доказательство · Этап 4 из 4</div>
+  <h2>Этап 4. Включаем аппроксимацию — получаем сходимость и порядок</h2>
+  <div class="two-col wide-left">
+    <div>
+      <p style="font-size:.92em">По определению аппроксимации (Опр. 2, (2.8)) \(\|\xi_h\| \xrightarrow[h\to 0]{} 0\). Тогда из (3.8)</p>
+      <div class="eq">\[ \|u_h - U_h\| \;\le\; C_2\,\|\xi_h\| \xrightarrow[h \to 0]{} 0 \tag{3.9} \]</div>
+      <p style="font-size:.92em">— это и есть сходимость по Опр. 1. Если, кроме того, аппроксимация имеет порядок \(p\), то есть \(\|\xi_h\| \le C_1 h^p\) по (2.9), то</p>
+      <div class="eq">\[ \|u_h - U_h\| \;\le\; C_2\,\|\xi_h\| \;\le\; C_2\,C_1\,h^p \;=\; C\,h^p. \qquad\blacksquare \tag{3.10} \]</div>
+    </div>
+    <div>
+      <div class="note"><span class="lbl">Что получилось</span>
+        Сходимость порядка \(p\) по Опр. 1 с постоянной \(C = C_1 C_2\), не зависящей от \(h\): \(C_1\) не зависит по Опр. 2, \(C_2\) — по Опр. 3.
+      </div>
+      <div class="example"><span class="lbl">Где использована гипотеза</span>
+        Здесь — <em>аппроксимация</em>, и только здесь: сначала как \(\|\xi_h\| \to 0\), затем как \(\|\xi_h\| \le C_1 h^p\).
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8: Схема доказательства -->
+<section class="slide">
+  <div class="slide-num">§3.2 · Доказательство целиком</div>
+  <h2>Три определения — одна подстановка</h2>
+  <div class="figure">
+    <svg viewBox="0 0 580 220" xmlns="http://www.w3.org/2000/svg" style="max-width:760px">
+      <defs><marker id="ar6" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2c2419"/></marker></defs>
+      <rect x="5" y="10" width="155" height="55" rx="6" fill="#fdf6ee" stroke="#b44a2d" stroke-width="1.5"/>
+      <text x="82" y="30" font-family="Source Serif 4,serif" font-size="12" fill="#b44a2d" text-anchor="middle" font-weight="600">Аппроксимация (этап 4)</text>
+      <text x="82" y="50" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">‖ξ_h‖ ≤ C₁hᵖ</text>
+      <rect x="185" y="10" width="175" height="55" rx="6" fill="#fff" stroke="#9a8d7e" stroke-width="1.5" stroke-dasharray="5,3"/>
+      <text x="272" y="28" font-family="Source Serif 4,serif" font-size="11" fill="#6b5d4f" text-anchor="middle" font-weight="600">Невязка (этап 2)</text>
+      <text x="272" y="48" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle" font-weight="600">ξ_h = L_h U_h − f_h</text>
+      <rect x="390" y="10" width="180" height="55" rx="6" fill="#e8f4f0" stroke="#1a6b5a" stroke-width="1.5"/>
+      <text x="480" y="30" font-family="Source Serif 4,serif" font-size="12" fill="#1a6b5a" text-anchor="middle" font-weight="600">Устойчивость (этапы 1, 3)</text>
+      <text x="480" y="50" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f" text-anchor="middle">‖u_h−ν_h‖ ≤ C₂(‖η‖+‖η'‖)</text>
+      <line x1="82" y1="65" x2="82" y2="90" stroke="#2c2419" stroke-width="1.5" marker-end="url(#ar6)"/>
+      <line x1="272" y1="65" x2="272" y2="90" stroke="#2c2419" stroke-width="1.5" marker-end="url(#ar6)"/>
+      <line x1="480" y1="65" x2="480" y2="90" stroke="#2c2419" stroke-width="1.5" marker-end="url(#ar6)"/>
+      <rect x="5" y="93" width="565" height="55" rx="6" fill="#e6f1fb" stroke="#3a5ba0" stroke-width="1.5"/>
+      <text x="285" y="112" font-family="Source Serif 4,serif" font-size="11" fill="#3a5ba0" text-anchor="middle" font-weight="600">u_h — решение схемы (η = 0),  ν_h = U_h — проекция точного решения (η' = ξ_h)</text>
+      <text x="285" y="133" font-family="JetBrains Mono,monospace" font-size="11" fill="#2c2419" text-anchor="middle" font-weight="600">‖u_h − U_h‖  ≤  C₂ ‖ξ_h‖  ≤  C₂ · C₁ · hᵖ  =  C hᵖ</text>
+      <line x1="285" y1="148" x2="285" y2="168" stroke="#2c2419" stroke-width="1.5" marker-end="url(#ar6)"/>
+      <rect x="185" y="172" width="200" height="40" rx="6" fill="#b44a2d" stroke="none"/>
+      <text x="285" y="197" font-family="Playfair Display,serif" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">Сходимость порядка p</text>
+    </svg>
+    <div class="caption">Невязка из определения аппроксимации подставляется в оценку устойчивости как возмущение правой части при \(\nu_h = U_h\).</div>
+  </div>
+</section>
+
+<!-- 9: Следствия -->
+<section class="slide">
+  <div class="slide-num">§3 · Следствия и замечания</div>
+  <h2>Что следует из теоремы</h2>
+  <div class="two-col">
+    <div>
+      <div class="note"><span class="lbl">Ключевое следствие</span>
+        Для проверки сходимости схемы достаточно проверить два свойства <em>по отдельности</em>:
+        <ul style="margin-bottom:0">
+          <li><strong>аппроксимацию</strong> — обычно просто: ряды Тейлора по алгоритму §2.8;</li>
+          <li><strong>устойчивость</strong> — основная трудность; методам её исследования посвящён §5 и далее.</li>
+        </ul>
+      </div>
+      <div class="example"><span class="lbl">Порядок и постоянная</span>
+        Порядок сходимости равен порядку аппроксимации <em>на решении</em>; постоянная сходимости \(C = C_1 C_2\). Численно измеренный порядок \(\log_2(\|z_h\|/\|z_{h/2}\|)\) должен совпасть с порядком невязки — если нет, схема неустойчива или решение негладкое.
+      </div>
+    </div>
+    <div>
+      <table class="sum">
+        <tr><th>Гипотеза</th><th>Где использована</th><th>Что даёт</th></tr>
+        <tr><td>Устойчивость (Опр. 3)</td><td class="c">этапы 1, 3</td><td>неравенство (3.4) → (3.8) с \(C_2 \ne C_2(h)\)</td></tr>
+        <tr><td>Определение невязки (2.7)</td><td class="c">этап 2</td><td>\(\eta'_h = \xi_h\) при \(\nu_h = U_h\)</td></tr>
+        <tr><td>Аппроксимация (Опр. 2)</td><td class="c">этап 4</td><td>\(\|\xi_h\| \to 0\), затем \(\le C_1 h^p\)</td></tr>
+      </table>
+      <div class="callout" style="margin-top:.6rem;font-size:.9em">
+        <strong>Замечание (обратная теорема).</strong> Для линейных корректно поставленных задач при наличии аппроксимации сходимость <em>равносильна</em> устойчивости — теорема эквивалентности Лакса — Рихтмайера. Мы её не доказываем; нам достаточно прямого утверждения.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10: Итоги -->
+<section class="slide">
+  <div class="slide-num">§3 · Итоги</div>
+  <h2>Что нужно унести с §3</h2>
+  <div class="two-col">
+    <div>
+      <ol style="font-size:.95em">
+        <li><strong>Теорема Лакса</strong>: аппроксимация на решении с порядком \(p\) + устойчивость \(\Rightarrow\) сходимость порядка \(p\), \(\|u_h - U_h\| \le C_1 C_2 h^p\).</li>
+        <li><strong>Идея доказательства</strong>: проекция точного решения — «почти решение» схемы с возмущением правой части, равным невязке; устойчивость переводит невязку в ошибку решения с множителем \(C_2\).</li>
+        <li><strong>Роли гипотез</strong>: устойчивость — этапы 1 и 3, невязка — этап 2, аппроксимация — этап 4.</li>
+        <li><strong>Программа курса</strong>: сходимость не проверяем — проверяем аппроксимацию (§2) и устойчивость (§5).</li>
+      </ol>
+    </div>
+    <div>
+      <div class="example"><span class="lbl">Дальше</span>
+        <ul style="margin-bottom:0">
+          <li><strong>§4.</strong> Первое дифференциальное приближение: уравнение \(L_1 u = 0\) из алгоритма §2.8 как самостоятельный объект — что на самом деле решает схема.</li>
+          <li><strong>Задание на пару</strong> в конце §4: по схеме на группу.</li>
+        </ul>
+      </div>
+      <div class="callout" style="margin-top:.8rem">
+        <p style="margin-bottom:.4rem"><strong>Проверьте себя</strong></p>
+        <ul style="margin-bottom:0;font-size:.92em">
+          <li>Что именно в доказательстве играет роль возмущения \(\eta'_h\)?</li>
+          <li>Почему \(C = C_1 C_2\) не зависит от \(h\)?</li>
+          <li>Может ли схема аппроксимировать задачу и не сходиться? Приведите пример.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     HUD навигации
+     ============================================================ -->
+<div class="hud">
+  <a href="s1-03.html" class="back" title="Полный текст лекции">← полная лекция</a>
+  <div class="center">
+    <button id="btnPrev" onclick="prev()" title="←">◀</button>
+    <span class="counter" id="counter">1 / 10</span>
+    <button id="btnNext" onclick="next()" title="→ / Space">▶</button>
+  </div>
+  <a href="s1-04-slides.html" class="back" title="Следующая лекция">§4 →</a>
+</div>
+
+<script>
+(function(){
+  var slides = Array.from(document.querySelectorAll('.slide'));
+  var counter = document.getElementById('counter');
+  var fill = document.getElementById('progressFill');
+  var i = 0;
+  // Одноразовая обёртка содержимого каждого слайда в .slide-content —
+  // нужна для вертикального/горизонтального центрирования (см. CSS).
+  slides.forEach(function(s){
+    var wrap = document.createElement('div');
+    wrap.className = 'slide-content';
+    while (s.firstChild) wrap.appendChild(s.firstChild);
+    s.appendChild(wrap);
+  });
+  function show(n) {
+    slides[i].classList.remove('active');
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    var s = slides[i];
+    var content = s.querySelector('.slide-content') || s;
+    var animated = [];
+    Array.from(content.children).forEach(function(child){
+      animated.push(child);
+      var innerEq = child.querySelectorAll('.eq');
+      for (var j = 0; j < innerEq.length; j++) animated.push(innerEq[j]);
+    });
+    animated.forEach(function(el, k){
+      el.style.setProperty('--i', k);
+      el.style.animation = 'none';
+    });
+    void s.offsetWidth;
+    animated.forEach(function(el){ el.style.animation = ''; });
+    s.classList.add('active');
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+    fill.style.width = ((i + 1) / slides.length * 100) + '%';
+    history.replaceState(null, '', '#' + (i + 1));
+    document.getElementById('btnPrev').disabled = (i === 0);
+    document.getElementById('btnNext').disabled = (i === slides.length - 1);
+    s.scrollTop = 0;
+  }
+  window.next = function(){ show(i + 1); };
+  window.prev = function(){ show(i - 1); };
+  document.addEventListener('keydown', function(e) {
+    if (/^(INPUT|TEXTAREA)$/i.test((e.target || {}).tagName)) return;
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+    else if (e.key === 'Home') { e.preventDefault(); show(0); }
+    else if (e.key === 'End')  { e.preventDefault(); show(slides.length - 1); }
+    else if (e.key === 'f' || e.key === 'F') {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+    }
+  });
+  // Deep-link через #N
+  var h = parseInt((location.hash || '').replace('#', ''), 10);
+  if (!isNaN(h) && h >= 1 && h <= slides.length) show(h - 1);
+  else show(0);
+
+  window.__slidesShow = show;
+  window.__slidesIndex = function () { return i; };
+})();
+
+// Инструменты: рисование поверх слайдов + экспорт PDF / PPTX
+(function initSlideTools() {
+  function ready() {
+    if (!window.CFDSlideTools) return;
+    window.CFDSlideTools.init({
+      slidesSelector: '.slide',
+      activeClass:    'active',
+      hudSelector:    '.hud',
+      projectName:    'sem1-03-slides',
+      getCurrentIndex: function () { return window.__slidesIndex ? window.__slidesIndex() : 0; },
+      onGoToSlide:     function (n) { if (window.__slidesShow) window.__slidesShow(n); },
+    });
+  }
+  if (window.CFDSlideTools) ready();
+  else window.addEventListener('load', ready);
+})();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/slide-notes.js"></script>
+</body>
+</html>

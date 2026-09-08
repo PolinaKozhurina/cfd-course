@@ -4341,21 +4341,22 @@ function labsFillLabs() {
 async function renderLabsTab() {
   const selC = document.getElementById('labCourse');
   if (selC && selC.options.length === 0) {
-    (window.CFD_COURSES || []).filter(c => (window.CFD_LABS || {})[c.id] && CFD_LABS[c.id].length).forEach(c => {
+    // Все курсы: ключ заметок докладчика нужен и курсам без закрытых лаб (sem1).
+    (window.CFD_COURSES || []).forEach(c => {
       const o = document.createElement('option'); o.value = c.id; o.textContent = c.name; selC.appendChild(o);
     });
     labsFillLabs();
   }
   const cid = selC.value, lab = document.getElementById('labId').value;
   const box = document.getElementById('labSession');
-  if (!cid || !lab) { box.innerHTML = '<div style="color:var(--text3)">Нет закрытых лаб в реестре (js/courses.js → CFD_LABS).</div>'; return; }
+  if (cid) labsRenderNotesKey(cid);
+  if (!cid || !lab) { box.innerHTML = '<div style="color:var(--text3)">У этого курса нет закрытых лаб в реестре (js/courses.js → CFD_LABS); ключ заметок докладчика задаётся ниже.</div>'; if (_labWatchUnsub) { _labWatchUnsub(); _labWatchUnsub = null; } return; }
   box.innerHTML = '<div style="color:var(--text3)">загрузка…</div>';
   if (_labWatchUnsub) { _labWatchUnsub(); _labWatchUnsub = null; }
   const attList = await CFDAttendance.listByCourse(cid);
   attList.sort((x, y) => ((y.date && y.date.toMillis()) || 0) - ((x.date && x.date.toMillis()) || 0));
   _labWatchUnsub = CFDLabs.watchSession(cid, lab, sess => { _labSess = sess; labsRenderSession(cid, lab, sess, attList); labsRenderProgress(cid, lab, sess); });
   labsRenderKey(cid, lab);
-  labsRenderNotesKey(cid);
 }
 
 // Ключ заметок докладчика (один на курс): слайды хранят заметки зашифрованными.
@@ -4363,7 +4364,7 @@ async function labsRenderNotesKey(cid) {
   const box = document.getElementById('notesKeyBox');
   const has = await CFDLabs.hasNotesKey(cid);
   box.innerHTML = '<strong>Ключ заметок докладчика (курс ' + escapeHtml(cid) + '):</strong> ' + (has ? '<span style="color:#1a6b5a">задан ✓</span>' : '<span style="color:#c44">не задан — в режиме докладчика заметок не будет</span>')
-    + ' <span style="color:var(--text3)">(печатает tools/notes_encrypt.py; файл nm/_private/' + escapeHtml(cid) + '-notes.key вне репозитория)</span>'
+    + ' <span style="color:var(--text3)">(печатает tools/notes_encrypt.py; файл &lt;курс&gt;/_private/' + escapeHtml(cid) + '-notes.key вне репозитория)</span>'
     + '<div style="display:flex;gap:.4rem;margin-top:.4rem;flex-wrap:wrap">'
     + '<input id="notesKeyInput" type="password" placeholder="base64-ключ, 44 символа" style="flex:1;min-width:260px;font-family:\'JetBrains Mono\',monospace;font-size:.8rem;padding:.3rem .5rem;border:1px solid var(--border);border-radius:4px">'
     + '<button class="btn btn-sm" onclick="labsSaveNotesKey()">' + (has ? 'Заменить' : 'Сохранить') + '</button>'

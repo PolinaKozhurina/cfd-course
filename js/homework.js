@@ -550,11 +550,14 @@
         if (!snap.exists) return { ok: false, error: "нет сдачи для этого студента" };
         const cur = snap.data();
         const reviewed = (cur.reviewedFiles || []).concat([entry]);
+        // updatedAt здесь намеренно НЕ трогаем: это действие преподавателя,
+        // а не студента. Раньше оно сдвигало updatedAt, и вовремя сданная
+        // работа выглядела просроченной, если её проверяли после дедлайна.
+        // Время проверки пишется отдельно — в reviewedAt.
         await ref.update({
           reviewedFiles: reviewed,
           reviewedAt: nowTs(),
           reviewedBy: me.email,
-          updatedAt: nowTs(),
         });
         return { ok: true };
       } catch (e) { return { ok: false, error: e.message }; }
@@ -573,9 +576,38 @@
             await this.deleteRemoteFile(path);
           }
         } catch (_) {}
-        await ref.update({ reviewedFiles: kept, updatedAt: nowTs() });
+        // updatedAt не трогаем — см. комментарий в addReviewedFile.
+        await ref.update({ reviewedFiles: kept, reviewedAt: nowTs() });
         return { ok: true };
       } catch (e) { return { ok: false, error: e.message }; }
+    },
+
+    // Время сдачи глазами студента: последнее действие самого студента —
+    // загрузка файла или добавление ссылки. Считается по отметкам внутри
+    // files[].uploadedAt и links[].addedAt, а не по updatedAt документа,
+    // потому что updatedAt сдвигали и действия преподавателя (проверка
+    // работы) — из-за этого вовремя сданная работа выглядела просроченной,
+    // если её проверяли после дедлайна. reviewedFiles намеренно не
+    // учитываются: это файлы преподавателя.
+    // Такой расчёт чинит и уже испорченные записи, без миграции данных.
+    // Возвращает миллисекунды или 0, если сдачи нет.
+    studentSubmittedAt: function (sub) {
+      if (!sub) return 0;
+      let ms = 0;
+      const take = function (v) {
+        const t = (typeof v === "string")            ? Date.parse(v)
+                : (v && typeof v.toMillis === "function") ? v.toMillis()
+                : 0;
+        if (t && t > ms) ms = t;
+      };
+      (sub.files || []).forEach(function (f) { take(f.uploadedAt); });
+      (sub.links || []).forEach(function (l) { take(l.addedAt); });
+      if (ms) return ms;
+      // Старые записи, где у файлов нет своих отметок времени.
+      take(sub.submittedAt);
+      if (ms) return ms;
+      take(sub.updatedAt);
+      return ms;
     },
 
     // ==== GRADES ====

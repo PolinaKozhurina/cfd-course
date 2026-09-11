@@ -1905,10 +1905,14 @@ async function renderHwSubmissionsTable(aid) {
         ).join('')
       : '';
     const filesHtml = ((filesPart + linksPart) || '<span style="color:var(--text3);font-style:italic;font-size:.78rem">—</span>') + reviewedPart;
-    const submittedAt = s && s.updatedAt ? new Date(s.updatedAt.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) : '';
+    // Время сдачи и просрочка считаются по действиям студента, а не по
+    // updatedAt документа: проверка работы преподавателем не должна
+    // превращать вовремя сданную работу в просроченную.
+    const subMs = CFDHomework.studentSubmittedAt(s);
+    const submittedAt = subMs ? new Date(subMs).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) : '';
     let lateBadge = '';
-    if (s && s.updatedAt && a.deadlineAt && s.updatedAt.toMillis() > a.deadlineAt.toMillis()) {
-      const diffMin = Math.round((s.updatedAt.toMillis() - a.deadlineAt.toMillis()) / 60000);
+    if (subMs && a.deadlineAt && subMs > a.deadlineAt.toMillis()) {
+      const diffMin = Math.round((subMs - a.deadlineAt.toMillis()) / 60000);
       lateBadge = ' <span class="badge b-fail" title="просрочено на ' + diffMin + ' мин">late</span>';
     }
     let variantCell = '<span style="color:var(--text3);font-size:.72rem">—</span>';
@@ -2116,7 +2120,8 @@ function hwExportSubmissionsCsv(aid) {
   enrolled.forEach(u => {
     const s = subs[u.uid] || {};
     const links = (s.links || []).map(l => l.url).join(' ; ');
-    const submittedAt = s.updatedAt ? new Date(s.updatedAt.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' }) : '';
+    const subMs = CFDHomework.studentSubmittedAt(s);
+    const submittedAt = subMs ? new Date(subMs).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' }) : '';
     const g = grades[u.uid] || {};
     rows.push([u.fio||'', u.email||'', u.studyGroup||'', links, submittedAt, g.grade!==undefined?g.grade:'', g.comment||'']);
   });

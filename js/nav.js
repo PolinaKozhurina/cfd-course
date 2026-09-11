@@ -198,6 +198,7 @@
     ],
     utils: [
       { href: "literature.html", label: "📚 Литература" },
+      { href: "events.html", label: "🗓 Мероприятия" },
       { href: "policy.html", label: "📋 Правила" },
       { href: "profile.html", label: "Профиль" }
     ]

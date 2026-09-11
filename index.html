@@ -458,6 +458,12 @@ body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;
   </div>
 </div>
 
+<!-- EVENTS -->
+<div class="section-label">Конференции и научные школы</div>
+<p style="font-size:.9rem;color:var(--text2);margin:0 0 1rem">Профильные мероприятия, куда можно подать доклад или приехать слушателем. Ниже — ближайшие; полный список со сроками подачи и оргвзносами — в разделе <a href="events.html" style="color:var(--accent)">Мероприятия</a>.</p>
+<div class="cards" id="home-events"></div>
+<div class="section-label" style="margin-top:.2rem"><a href="events.html" style="color:var(--accent);text-decoration:none">→ Все мероприятия, сроки и оргвзносы</a></div>
+
 <!-- INFO -->
 <div class="section-label">Организация обучения</div>
 
@@ -502,10 +508,73 @@ body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;
 
 <!-- FOOTER -->
 <div class="footer">
-  <p>Учебная платформа кафедры №97 «Суперкомпьютерное моделирование» · НИЯУ МИФИ · <a href="literature.html">Литература</a> · <a href="policy.html">Правила курса</a></p>
+  <p>Учебная платформа кафедры №97 «Суперкомпьютерное моделирование» · НИЯУ МИФИ · <a href="literature.html">Литература</a> · <a href="events.html">Мероприятия</a> · <a href="policy.html">Правила курса</a></p>
 </div>
 
 </div>
+
+<!-- Ближайшие мероприятия: данные общие с events.html -->
+<script src="js/events-data.js"></script>
+<script>
+(function () {
+  "use strict";
+  var box = document.getElementById('home-events');
+  if (!box || !window.CFD_EVENTS) return;
+
+  var MONTHS = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  function parse(iso) { var p = String(iso).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  var n = new Date(), NOW = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  function days(to) { return Math.round((to - NOW) / 86400000); }
+  function plural(k, one, few, many) {
+    var a = k % 10, b = k % 100;
+    if (a === 1 && b !== 11) return one;
+    if (a >= 2 && a <= 4 && (b < 10 || b >= 20)) return few;
+    return many;
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function rangeText(s, e) {
+    var d1 = parse(s), d2 = parse(e || s);
+    if (d1.getTime() === d2.getTime()) return d1.getDate() + ' ' + MONTHS[d1.getMonth()];
+    if (d1.getMonth() === d2.getMonth()) return d1.getDate() + '–' + d2.getDate() + ' ' + MONTHS[d1.getMonth()];
+    return d1.getDate() + ' ' + MONTHS[d1.getMonth()] + ' – ' + d2.getDate() + ' ' + MONTHS[d2.getMonth()];
+  }
+
+  var upcoming = window.CFD_EVENTS
+    .filter(function (e) { return days(parse(e.end || e.start)) >= 0; })
+    .sort(function (a, b) { return parse(a.start) - parse(b.start); })
+    .slice(0, 3);
+
+  if (!upcoming.length) {
+    box.innerHTML = '<p style="font-size:.88rem;color:var(--text3)">Предстоящих мероприятий в списке пока нет.</p>';
+    return;
+  }
+
+  box.innerHTML = upcoming.map(function (ev) {
+    // ближайший ещё не прошедший дедлайн — он и есть главное, что нужно не пропустить
+    var nearest = null;
+    (ev.deadlines || []).forEach(function (d) {
+      var left = days(parse(d.date));
+      if (left >= 0 && (nearest === null || left < nearest.left)) nearest = { left: left, label: d.label };
+    });
+
+    var h = '<a href="events.html#' + esc(ev.id) + '" class="card">';
+    h += '<span class="card-tag mesh">' + esc(ev.badge || 'Мероприятие') + '</span>';
+    h += '<h4>' + esc(ev.title) + '</h4>';
+    h += '<p>' + esc(ev.city) + (ev.format ? ' · ' + esc(ev.format) : '') + '</p>';
+    h += '<div class="card-meta"><span>📅 ' + rangeText(ev.start, ev.end) + ' ' + parse(ev.start).getFullYear() + '</span>';
+    if (nearest) {
+      var txt = nearest.left === 0
+        ? 'дедлайн сегодня'
+        : nearest.left + ' ' + plural(nearest.left, 'день', 'дня', 'дней') + ' до дедлайна';
+      h += '<span style="' + (nearest.left <= 14 ? 'color:var(--accent);font-weight:500' : '') + '">⏳ ' + txt + '</span>';
+    }
+    h += '</div></a>';
+    return h;
+  }).join('');
+})();
+</script>
 
 <script>
 function toggleCourse(id) {

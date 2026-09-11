@@ -1,0 +1,160 @@
+/* ============================================================
+   Тёмная тема для страниц вне css/lecture.css
+   ------------------------------------------------------------
+   Лекции семестра 1 и мини-курсов подключают css/lecture.css —
+   там свой блок html.dark. Остальные страницы (главная, профиль,
+   литература, правила, разборы, страницы sem2) объявляют ту же
+   палитру переменных в своём :root, но переопределения для
+   тёмной темы у них не было: переключатель ☾ в шапке менял
+   только саму шапку, а страница оставалась светлой.
+
+   Файл подключается автоматически из js/nav.js — только там,
+   где css/lecture.css отсутствует, чтобы правила не дублировались.
+   Подключение идёт в конец <head>, поэтому эти правила идут
+   позже собственных <style> страницы и выигрывают в каскаде.
+
+   Именам переменных здесь соответствуют светлые значения:
+     --bg #faf8f4  --bg2 #f5f0e8  --bg3 #ede6da
+     --text #2c2419  --text2 #6b5d4f  --text3 #9a8d7e
+     --accent #b44a2d  --accent2 #1a6b5a  --accent3 #3a5ba0
+     --border #d9cfc0  --highlight #fff3cd
+   ============================================================ */
+
+html.dark{
+  --bg:#1b1712; --bg2:#231e18; --bg3:#2c261f;
+  --surface:#231e18; --surface2:#2c261f; --card:#231e18;
+  --text:#ece3d6; --text2:#bcb0a0; --text3:#8d8173;
+  --accent:#e07a52; --accent2:#46b89c; --accent3:#82a0db;
+  --border:#39322a;
+  --code-bg:#14100c; --code-text:#f0e6d8;
+  --sidebar-bg:#14100c; --sidebar-text:#cabfae;
+  --highlight:#3a2f1c;
+  --shadow:rgba(0,0,0,.35);
+  /* акцентные цвета графиков и статусов — светлее, чтобы читались на тёмном */
+  --green:#46b89c; --red:#e8705a; --orange:#d79a3a; --cyan:#82a0db; --pink:#e07a52;
+}
+
+/* Короткие имена той же палитры — их используют страницы sem2
+   (mpi, mesh, unstruct и соседние), где переменные названы иначе. */
+html.dark{
+  --surf:#231e18; --surf2:#2c261f; --surf3:#332c24;
+  --tx:#ece3d6; --tx2:#bcb0a0; --tx3:#8d8173;
+  --ac:#e07a52; --ac2:#46b89c; --ac3:#d79a3a; --ac4:#a78bfa; --ac5:#82a0db;
+  --bd:#39322a; --border2:#39322a; --cbd:#39322a; --cbg:#231e18;
+  --gn:#46b89c; --or:#d79a3a; --blue:#82a0db; --purple:#a78bfa;
+  --muted:#8d8173; --dimmed:#bcb0a0;
+  --wh:#231e18;               /* «белый» здесь — цвет карточки, не бумаги */
+  --sh:0 1px 4px rgba(0,0,0,.4); --sh2:0 2px 12px rgba(0,0,0,.45);
+}
+
+/* Фон страницы и белые карточки. Белый фон в этих вёрстках задан
+   литералом (#fff / white), переменной для него нет, поэтому
+   перечисляем типовые классы карточек явно.
+   !important — из-за sem2/mesh.html, где body жёстко зафиксирован
+   светлым через собственный !important. */
+html.dark body{background:var(--bg) !important;color:var(--text) !important}
+html.dark .card,
+html.dark .box,
+html.dark .panel,
+html.dark .exercise,
+html.dark .hw-card,
+html.dark .book{background:var(--bg2);border-color:var(--border)}
+
+/* Блоки-выноски со светлым литеральным фоном */
+html.dark .theorem{background:#2a2017}
+html.dark .proof{background:#221d17}
+html.dark .remark{background:#15241e}
+html.dark .definition,
+html.dark .algo,
+html.dark .note,
+html.dark .info-box{background:var(--bg2)}
+
+/* Таблицы: полосатые строки и шапка */
+html.dark th{background:var(--bg3);color:var(--text)}
+html.dark tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+html.dark td,html.dark th{border-color:var(--border)}
+
+/* Поля ввода — иначе остаются белыми прямоугольниками */
+html.dark input,html.dark select,html.dark textarea,
+html.dark input[type="text"],html.dark input[type="number"]{
+  background:var(--bg3) !important;color:var(--text) !important;border-color:var(--border) !important
+}
+html.dark input::placeholder,html.dark textarea::placeholder{color:var(--text3)}
+
+/* Модальное окно входа (js/auth.js) — общее для всех страниц,
+   поэтому светлым пятном вылезало вообще везде. */
+html.dark .auth-modal,
+html.dark .auth-box,
+html.dark .modal-content{background:var(--bg2);color:var(--text);border-color:var(--border)}
+html.dark .btn-secondary{background:var(--bg3);color:var(--text);border-color:var(--border)}
+
+/* Цветные плашки-теги: светлые пастельные заливки заменяем на
+   полупрозрачные, чтобы цвет читался, а фон оставался тёмным. */
+html.dark .card-tag,html.dark .lecture-tag,html.dark .badge{background:rgba(255,255,255,.07) !important}
+html.dark .card .card-tag.gas{background:rgba(196,68,68,.18);color:#e8705a}
+html.dark .card .card-tag.inc{background:rgba(26,107,90,.2);color:var(--accent2)}
+html.dark .card .card-tag.mesh{background:rgba(58,91,160,.22);color:var(--accent3)}
+html.dark .card .card-tag.mpi{background:rgba(133,79,11,.25);color:#d79a3a}
+
+/* Выноски. Смысловой цвет сохраняем, но переводим в тёмный тон:
+   зелёные — подсказки, красные — предупреждения, охристые — условия.
+   Цвет текста задаём вместе с фоном: в этих блоках он часто прописан
+   тёмным литералом, и без этого вышло бы тёмное по тёмному.
+   !important — потому что часть страниц (заметно sem2/mesh.html)
+   фиксирует свои светлые цвета через собственный !important. */
+html.dark .kp,html.dark .tip,html.dark .idea,html.dark .remark{background:#15241e !important;color:var(--text) !important}
+html.dark .warn,html.dark .warning,html.dark .callout.hard{background:#2e1c1a !important;color:var(--text) !important}
+html.dark .condition,html.dark .callout,html.dark .marker-rule,html.dark .sd{background:#2a2017 !important;color:var(--text) !important}
+html.dark .example,html.dark .fs,html.dark .fs.hl{background:#1e2430 !important;color:var(--text) !important}
+html.dark .fm,html.dark .cd,html.dark .qc,html.dark .tl,html.dark .rc{background:var(--bg2) !important;color:var(--text) !important;border-color:var(--border) !important}
+
+/* Блоки кода — тёмный фон и светлый текст */
+html.dark pre,html.dark pre.fi,html.dark code{background:var(--code-bg) !important;color:var(--code-text) !important}
+
+/* Рисунки и графики: схемы и кривые нарисованы тёмными чернилами,
+   поэтому под ними намеренно оставляем светлую «бумагу» — иначе
+   линии сливаются с фоном. Так же сделано в css/lecture.css. */
+html.dark .figure svg{background:#f6f1e8;border-radius:6px;padding:.4rem}
+html.dark .figure .caption{color:var(--text2)}
+html.dark .plot,html.dark .plot-box,html.dark .svg-embed,html.dark .dw{
+  background:#f6f1e8;border:1px solid var(--border);border-radius:6px
+}
+
+/* Кнопки-переключатели интерактивных демонстраций (sem2/mesh.html):
+   фон и активное состояние заданы литералами светлой палитры. */
+html.dark .bt{background:var(--bg3) !important;color:var(--text) !important;border-color:var(--border) !important}
+html.dark .bt.on{background:var(--accent) !important;color:#1b1712 !important;border-color:var(--accent) !important}
+
+/* ---- Текст внутри модалки входа (js/auth.js) ---- */
+html.dark .auth-modal h1,html.dark .auth-modal h2,html.dark .auth-modal h3,
+html.dark .auth-modal p,html.dark .auth-modal label,html.dark .auth-modal span{color:var(--text)}
+html.dark .auth-modal .sub,html.dark .auth-modal .switch{color:var(--text2)}
+html.dark .auth-modal a{color:var(--accent)}
+
+/* Кнопки на акцентной заливке: в тёмной теме акцент светлее, поэтому
+   белый текст на нём почти не читается — переводим на тёмный. */
+html.dark .login-btn,html.dark .run-btn,html.dark .btn-primary{
+  background:var(--accent) !important;color:#1b1712 !important;border-color:var(--accent) !important
+}
+
+/* Цвет текста плашек-тегов: тёмные литералы заменяем на светлые тона */
+html.dark .card-tag,html.dark .lecture-tag{color:var(--text2) !important}
+html.dark .card .card-tag.gas,html.dark .lecture-tag.tag-gasdyn{color:#e8705a !important}
+html.dark .card .card-tag.inc,html.dark .lecture-tag.tag-riemann{color:var(--accent2) !important}
+html.dark .card .card-tag.mesh,html.dark .lecture-tag.tag-highorder{color:var(--accent3) !important}
+html.dark .card .card-tag.mpi,html.dark .lecture-tag.tag-props{color:#d79a3a !important}
+html.dark .lecture-tag.tag-basics{color:#c4a2e0 !important}
+html.dark .badge.b-orange{color:#d79a3a !important}
+
+/* Ссылки без собственного класса — иначе остаётся браузерный синий */
+html.dark a:not([class]){color:var(--accent3)}
+
+/* «Бумажные» вставки со схемами и графиками: подложка намеренно светлая,
+   поэтому и текст внутри них держим тёмным — иначе светлое по светлому. */
+html.dark .plot,html.dark .plot *,
+html.dark .plot-box,html.dark .plot-box *,
+html.dark .svg-embed,html.dark .svg-embed *,
+html.dark .dw,html.dark .dw *{color:#2c2419 !important}
+
+/* Бейдж солвера на карточке — белым по светлому акценту не читается */
+html.dark .solver-badge{background:var(--accent) !important;color:#1b1712 !important}

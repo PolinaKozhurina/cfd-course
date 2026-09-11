@@ -13,6 +13,31 @@
     if (/(?:^|[?&])embed=1(?:&|$)/.test(location.search || '')) return;
   } catch (_) {}
 
+  // Тёмная тема для страниц вне css/lecture.css. В lecture.css свой
+  // блок html.dark; страницы без него (главная, профиль, литература,
+  // правила, разборы, sem2) объявляли палитру в своём :root, но
+  // переопределений для тёмной темы не имели — переключатель ☾ менял
+  // только шапку. Подключаем css/dark.css в конец <head>, чтобы его
+  // правила шли после собственных <style> страницы.
+  (function () {
+    try {
+      var links = document.getElementsByTagName('link');
+      for (var i = 0; i < links.length; i++) {
+        if ((links[i].getAttribute('href') || '').indexOf('lecture.css') >= 0) return;
+      }
+      var cur = document.currentScript;
+      if (!cur) {
+        var ss = document.getElementsByTagName('script');
+        for (var j = 0; j < ss.length; j++) if (/\/nav\.js/.test(ss[j].src)) { cur = ss[j]; break; }
+      }
+      if (!cur) return;
+      var l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = cur.src.replace(/js\/nav\.js.*/, 'css/dark.css');
+      document.head.appendChild(l);
+    } catch (_) {}
+  })();
+
   // Подгружаем gating.js рядом (относительно nav.js) — включает
   // блокировку страницы лекции, если у пользователя нет доступа.
   (function () {

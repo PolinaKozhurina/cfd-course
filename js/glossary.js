@@ -1,0 +1,235 @@
+/* Словарик математических терминов.
+ *
+ * Термин в тексте размечается как  <span class="gl" data-gl="ключ">…</span>.
+ * При наведении подчёркивание становится заметнее, по клику (или Enter/Space)
+ * рядом открывается карточка с точным определением. Определения лежат в
+ * CFDGlossary.TERMS — по ключу; поле note указывает, где термин вводится.
+ *
+ * Подключение:  <script src="../js/glossary.js"></script>  в конце страницы.
+ * Формулы в карточке набираются MathJax'ом при первом открытии.
+ */
+(function () {
+  "use strict";
+
+  var TERMS = {
+    "okrestnost": {
+      t: "Окрестность точки",
+      d: "Окрестностью точки \\(a\\in\\mathbb{R}\\) называется любой интервал \\((a-\\delta,\\;a+\\delta)\\) при \\(\\delta>0\\). Для \\(a=\\infty\\) окрестностью называют множество \\(\\{x:\\;|x|>M\\}\\), \\(M>0\\).",
+      n: "математический анализ"
+    },
+    "prokolotaya": {
+      t: "Проколотая окрестность",
+      d: "Окрестность точки \\(a\\), из которой удалена сама точка: \\(\\{x:\\;0<|x-a|<\\delta\\}\\).<br><br>Прокол нужен потому, что речь идёт о пределе при \\(x\\to a\\): значение функции в самой точке \\(a\\) на предел не влияет и может быть вовсе не определено. Именно поэтому в определении символов Ландау стоит \\(0<|x-a|<\\delta\\), а не \\(|x-a|<\\delta\\).",
+      n: "математический анализ"
+    },
+    "rolle": {
+      t: "Теорема Ролля",
+      d: "Пусть \\(g\\) непрерывна на отрезке \\([\\alpha,\\beta]\\), дифференцируема на интервале \\((\\alpha,\\beta)\\) и \\(g(\\alpha)=g(\\beta)\\). Тогда существует точка \\(\\xi\\in(\\alpha,\\beta)\\), в которой \\(g'(\\xi)=0\\).<br><br>Геометрически: у гладкой дуги с равными концами найдётся точка с горизонтальной касательной.",
+      n: "математический анализ"
+    },
+    "lagrange-mvt": {
+      t: "Теорема Лагранжа о конечных приращениях",
+      d: "Пусть \\(f\\) непрерывна на \\([\\alpha,\\beta]\\) и дифференцируема на \\((\\alpha,\\beta)\\). Тогда найдётся \\(\\xi\\in(\\alpha,\\beta)\\) такая, что \\[f(\\beta)-f(\\alpha)=f'(\\xi)\\,(\\beta-\\alpha).\\] Это в точности формула Тейлора (2.5)–(2.6) при \\(n=0\\).",
+      n: "математический анализ"
+    },
+    "supremum": {
+      t: "Супремум (точная верхняя грань)",
+      d: "Наименьшее из чисел, ограничивающих множество \\(E\\subset\\mathbb{R}\\) сверху: \\[\\sup E=\\min\\{c:\\;x\\le c\\ \\text{для всех}\\ x\\in E\\}.\\] В отличие от максимума, супремум существует у любого непустого ограниченного сверху множества, даже если не достигается: \\(\\sup\\{x:\\;x<1\\}=1\\), а максимума у этого множества нет.",
+      n: "математический анализ"
+    },
+    "class-cn": {
+      t: "Класс \\(C^{n}\\)",
+      d: "Запись \\(f\\in C^{n}(I)\\) означает, что на промежутке \\(I\\) функция \\(f\\) имеет производные до порядка \\(n\\) включительно и все они непрерывны.<br><br>\\(C^{0}(I)=C(I)\\) — непрерывные функции; \\(C^{\\infty}(I)\\) — бесконечно дифференцируемые. Включения строгие: \\(C^{\\infty}\\subset\\dots\\subset C^{1}\\subset C^{0}\\).",
+      n: "математический анализ"
+    },
+    "diff-n-times": {
+      t: "Дифференцируемость \\(n\\) раз в точке",
+      d: "Функция \\(f\\) дифференцируема \\(n\\) раз в точке \\(x_0\\), если производные \\(f',\\dots,f^{(n-1)}\\) существуют в некоторой окрестности \\(x_0\\), а \\(f^{(n)}(x_0)\\) существует как предел разностного отношения \\[f^{(n)}(x_0)=\\lim_{x\\to x_0}\\frac{f^{(n-1)}(x)-f^{(n-1)}(x_0)}{x-x_0}.\\] Требование слабее, чем \\(f\\in C^{n}\\): непрерывности \\(f^{(n)}\\) не предполагается.",
+      n: "математический анализ"
+    },
+    "analytic": {
+      t: "Аналитическая функция",
+      d: "Функция аналитична в точке \\(x_0\\), если в некоторой её окрестности представима сходящимся степенным рядом \\(\\sum_k c_k(x-x_0)^k\\).<br><br>Всякая аналитическая функция бесконечно дифференцируема; обратное неверно — см. контрпример \\(e^{-1/x^{2}}\\) в §&nbsp;2.3.",
+      n: "теория функций"
+    },
+    "pole": {
+      t: "Особая точка, полюс",
+      d: "Особая точка — точка, в которой функция не определена или не аналитична. Полюс — особая точка, вблизи которой \\(|f(x)|\\to\\infty\\); например, \\(x=1\\) для \\(1/(1-x)\\).<br><br>Для радиуса сходимости существенны особые точки в <em>комплексной</em> плоскости, даже когда сама функция рассматривается на вещественной оси: у \\(1/(1+25x^{2})\\) это \\(x=\\pm i/5\\).",
+      n: "теория функций комплексного переменного"
+    },
+    "power-series": {
+      t: "Степенной ряд",
+      d: "Ряд вида \\(\\sum_{k\\ge0} c_k\\,(x-x_0)^k\\) с центром в точке \\(x_0\\). Ряд Тейлора — частный случай, в котором \\(c_k=f^{(k)}(x_0)/k!\\).",
+      n: "математический анализ"
+    },
+    "partial-sum": {
+      t: "Частичная сумма ряда",
+      d: "Для ряда \\(\\sum_{k\\ge0}t_k\\) частичной суммой называется конечная сумма \\(S_n=\\sum_{k=0}^{n}t_k\\). Сходимость ряда по определению означает существование конечного предела \\(\\lim_{n\\to\\infty}S_n\\).",
+      n: "математический анализ"
+    },
+    "alternating": {
+      t: "Знакопеременный ряд",
+      d: "Ряд, знаки слагаемых которого чередуются: \\(\\sum_k(-1)^k t_k\\) с \\(t_k>0\\). Такие ряды опасны в вычислениях: близкие по модулю слагаемые разных знаков взаимно уничтожаются, и старшие разряды результата теряются (§&nbsp;2.8).",
+      n: "математический анализ"
+    },
+    "monotone": {
+      t: "Монотонное убывание",
+      d: "Последовательность \\(t_k\\) монотонно убывает, если \\(t_{k+1}\\le t_k\\) при всех \\(k\\).<br><br>В оценке Лейбница требуется монотонное убывание <em>модулей</em> слагаемых, причём начиная с первого члена: для ряда \\(e^{-20}\\) это условие нарушено — там члены сначала растут до \\(4\\cdot10^{7}\\).",
+      n: "математический анализ"
+    },
+    "majorize": {
+      t: "Мажоранта, мажорируется",
+      d: "Говорят, что величина \\(A\\) мажорируется величиной \\(B\\), если \\(|A|\\le B\\); сама \\(B\\) называется мажорантой. Оценка остатка (2.8) — типичный пример: точное значение \\(R_n\\) неизвестно, но оно мажорируется вычислимой величиной.",
+      n: "терминология оценок"
+    },
+    "normed-space": {
+      t: "Линейное нормированное пространство",
+      d: "Линейное пространство \\(X\\) с заданной на нём нормой \\(\\|\\cdot\\|\\colon X\\to[0,\\infty)\\), удовлетворяющей трём аксиомам:<br>1) \\(\\|f\\|=0\\iff f=0\\);<br>2) \\(\\|\\lambda f\\|=|\\lambda|\\,\\|f\\|\\);<br>3) \\(\\|f+g\\|\\le\\|f\\|+\\|g\\|\\) (неравенство треугольника).",
+      n: "функциональный анализ; нормы функций — §&nbsp;2.11"
+    },
+    "subspace": {
+      t: "Конечномерное подпространство",
+      d: "Подмножество \\(V\\subset X\\), замкнутое относительно сложения и умножения на число и обладающее конечным базисом \\(v_1,\\dots,v_m\\); число \\(m=\\dim V\\) называется размерностью.<br><br>Основной пример курса: \\(\\mathcal{P}_n\\) — многочлены степени не выше \\(n\\), \\(\\dim\\mathcal{P}_n=n+1\\).",
+      n: "линейная алгебра"
+    },
+    "dense": {
+      t: "Плотное множество",
+      d: "Множество \\(M\\) плотно в пространстве \\(X\\), если любой элемент \\(X\\) приближается элементами \\(M\\) с любой наперёд заданной точностью: \\[\\forall f\\in X\\;\\forall\\varepsilon>0\\;\\exists g\\in M:\\;\\|f-g\\|<\\varepsilon.\\] Теорема Вейерштрасса утверждает в точности плотность многочленов в \\(C[a,b]\\).",
+      n: "функциональный анализ"
+    },
+    "inner-product": {
+      t: "Скалярное произведение",
+      d: "Симметричная билинейная форма \\(\\langle f,g\\rangle\\), для которой \\(\\langle f,f\\rangle>0\\) при \\(f\\neq0\\). В \\(L_2[a,b]\\): \\[\\langle f,g\\rangle=\\int_a^b f(x)g(x)\\,dx,\\qquad \\|f\\|_{L_2}=\\sqrt{\\langle f,f\\rangle}.\\] Наличие скалярного произведения делает задачу наилучшего приближения линейной.",
+      n: "функциональный анализ"
+    },
+    "ortho-projection": {
+      t: "Ортогональная проекция",
+      d: "Проекцией элемента \\(f\\) на подпространство \\(V\\) называется такой \\(g^{*}\\in V\\), что разность \\(f-g^{*}\\) ортогональна всему \\(V\\): \\(\\langle f-g^{*},v\\rangle=0\\) для всех \\(v\\in V\\).<br><br>Она же — ближайший к \\(f\\) элемент \\(V\\) в норме, порождённой скалярным произведением. Отсюда и линейность задачи наилучшего \\(L_2\\)-приближения (§&nbsp;5).",
+      n: "функциональный анализ"
+    },
+    "binom": {
+      t: "Биномиальный коэффициент",
+      d: "Для целых \\(0\\le k\\le n\\): \\(\\binom{n}{k}=\\dfrac{n!}{k!\\,(n-k)!}\\) — число сочетаний из \\(n\\) по \\(k\\).<br><br>Для произвольного \\(\\alpha\\in\\mathbb{R}\\) обобщается как \\(\\binom{\\alpha}{k}=\\dfrac{\\alpha(\\alpha-1)\\cdots(\\alpha-k+1)}{k!}\\) — в таком виде он входит в биномиальный ряд (2.13).",
+      n: "комбинаторика"
+    },
+    "rounding-unit": {
+      t: "Единица округления \\(u\\)",
+      d: "Граница относительной ошибки округления одного числа: \\(\\mathrm{fl}(x)=x(1+\\varepsilon)\\), \\(|\\varepsilon|\\le u=2^{-p}\\), где \\(p\\) — число значащих двоичных разрядов. Для \\(\\texttt{double}\\): \\(u=2^{-53}\\approx1{,}11\\cdot10^{-16}\\).",
+      n: "вводится в §&nbsp;1.6"
+    },
+    "condition-number": {
+      t: "Число обусловленности",
+      d: "Коэффициент усиления относительной ошибки данных при переходе к результату: если данные заданы с относительной ошибкой \\(\\delta\\), то ответ получается с ошибкой примерно \\(\\kappa\\delta\\).<br><br>Для суммирования \\(\\kappa_{\\text{сум}}=\\sum_k|t_k|\\big/\\bigl|\\sum_k t_k\\bigr|\\). Это свойство <em>задачи</em>, а не алгоритма: плохо обусловленную задачу не спасает никакой метод.",
+      n: "вводится в §&nbsp;1.9"
+    },
+    "backward-stable": {
+      t: "Обратная устойчивость",
+      d: "Алгоритм обратно устойчив, если вычисленный ответ является <em>точным</em> решением задачи с чуть возмущёнными входными данными: \\(\\hat y=f(x+\\Delta x)\\) при малом \\(\\|\\Delta x\\|/\\|x\\|\\).<br><br>Прямая ошибка тогда оценивается как «обратная ошибка, умноженная на число обусловленности»: хороший алгоритм не спасает плохо обусловленную задачу, но и не портит хорошую.",
+      n: "вводится в §&nbsp;1.11"
+    }
+  };
+
+  var CSS =
+    '.gl{border-bottom:1px dashed var(--accent,#b44a2d);cursor:help;transition:background .12s}' +
+    '.gl:hover,.gl:focus{background:rgba(180,74,45,.12);outline:none}' +
+    '.gl::after{content:"?";font-family:\'JetBrains Mono\',monospace;font-size:.62em;vertical-align:super;' +
+    'color:var(--accent,#b44a2d);margin-left:.12em;opacity:.75}' +
+    '.gl-card{position:fixed;z-index:9999;max-width:min(34rem,92vw);max-height:84vh;overflow:auto;' +
+    'background:var(--bg,#faf8f4);' +
+    'border:1px solid var(--border,#d9cfc0);border-left:4px solid var(--accent,#b44a2d);border-radius:8px;' +
+    'box-shadow:0 10px 34px rgba(44,36,25,.22);padding:.9rem 1.1rem;font-size:.92rem;line-height:1.6;' +
+    'color:var(--text,#2c2419)}' +
+    '.gl-card h4{font-family:\'Playfair Display\',serif;font-size:1.02rem;margin:0 0 .45rem;color:var(--accent,#b44a2d)}' +
+    '.gl-card .gl-note{margin-top:.6rem;padding-top:.45rem;border-top:1px dashed var(--border,#d9cfc0);' +
+    'font-family:\'JetBrains Mono\',monospace;font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;' +
+    'color:var(--text3,#9a8d7e)}' +
+    '.gl-card .gl-close{position:absolute;top:.35rem;right:.5rem;border:0;background:none;cursor:pointer;' +
+    'font-size:1.1rem;line-height:1;color:var(--text3,#9a8d7e)}' +
+    '.gl-card .gl-close:hover{color:var(--accent,#b44a2d)}' +
+    'html.dark .gl-card{box-shadow:0 10px 34px rgba(0,0,0,.5)}' +
+    '@media(max-width:700px){.gl-card{left:.5rem!important;right:.5rem!important;max-width:none;' +
+    'top:auto!important;bottom:.5rem}}' +
+    '@media print{.gl::after{display:none}.gl{border-bottom:0}.gl-card{display:none}}';
+
+  var card = null;
+
+  function close() {
+    if (card) { card.remove(); card = null; }
+  }
+
+  function open(el) {
+    var key = el.getAttribute("data-gl");
+    var item = TERMS[key];
+    close();
+    if (!item) { return; }
+    card = document.createElement("div");
+    card.className = "gl-card";
+    card.setAttribute("role", "dialog");
+    card.innerHTML =
+      '<button class="gl-close" type="button" aria-label="Закрыть">&times;</button>' +
+      "<h4>" + item.t + "</h4><div>" + item.d + "</div>" +
+      (item.n ? '<div class="gl-note">' + item.n + "</div>" : "");
+    card.style.visibility = "hidden";
+    document.body.appendChild(card);
+    card.querySelector(".gl-close").addEventListener("click", close);
+
+    // Размер карточки известен только после набора формул — иначе она
+    // вырастает уже после позиционирования и уезжает за край экрана.
+    function place() {
+      if (!card) { return; }
+      var r = el.getBoundingClientRect();
+      var w = card.offsetWidth, hgt = card.offsetHeight;
+      var left = Math.min(Math.max(8, r.left), Math.max(8, window.innerWidth - w - 8));
+      var below = window.innerHeight - r.bottom - 16;
+      var above = r.top - 16;
+      var top;
+      if (hgt <= below) { top = r.bottom + 8; }
+      else if (hgt <= above) { top = r.top - hgt - 8; }
+      else { top = Math.max(8, (window.innerHeight - hgt) / 2); }
+      card.style.left = left + "px";
+      card.style.top = top + "px";
+      card.style.visibility = "";
+    }
+
+    if (window.MathJax && MathJax.typesetPromise) {
+      MathJax.typesetPromise([card]).then(place).catch(place);
+    } else {
+      place();
+    }
+  }
+
+  function init() {
+    if (!document.querySelector(".gl")) { return; }
+    var s = document.createElement("style");
+    s.textContent = CSS;
+    document.head.appendChild(s);
+
+    document.querySelectorAll(".gl").forEach(function (el) {
+      if (!el.hasAttribute("tabindex")) { el.setAttribute("tabindex", "0"); }
+      el.setAttribute("role", "button");
+      var item = TERMS[el.getAttribute("data-gl")];
+      if (item) { el.setAttribute("title", item.t + " — нажмите, чтобы открыть определение"); }
+    });
+
+    document.addEventListener("click", function (e) {
+      var el = e.target.closest ? e.target.closest(".gl") : null;
+      if (el) { e.preventDefault(); open(el); return; }
+      if (card && !e.target.closest(".gl-card")) { close(); }
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { close(); return; }
+      if ((e.key === "Enter" || e.key === " ") && e.target.classList &&
+          e.target.classList.contains("gl")) {
+        e.preventDefault(); open(e.target);
+      }
+    });
+    window.addEventListener("resize", close);
+  }
+
+  window.CFDGlossary = { TERMS: TERMS, open: open, close: close };
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();

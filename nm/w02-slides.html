@@ -83,6 +83,8 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
 .theorem::before{background:#c8d5e6;color:#4a5f88;content:'Теорема'}
 .theorem[data-num]::before{content:'Теорема ' attr(data-num)}
 
+.definition .mini-ex,.condition .mini-ex,.theorem .mini-ex{margin-top:.7rem;padding-top:.5rem;border-top:1px dashed rgba(44,36,25,.25);font-size:.9em}
+.mini-ex b{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--text2);margin-right:.4rem}
 .example{background:#e0e8f2;border-left:3px solid #7d95bd;padding:.8rem 1.1rem;border-radius:0 6px 6px 0;margin:.5rem 0 .8rem;font-size:.9em;color:var(--text)}
 .example .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#4a5f88;margin-bottom:.35rem}
 .example ul{margin:.15rem 0 0 1.1rem;font-size:.94em}
@@ -133,7 +135,9 @@ ol,ul{padding-left:1.2em}
 @media(max-width:900px){.flow .step{padding:.55rem .8rem .55rem 1rem}.flow .step .title{font-size:.95rem}}
 
 .tiles{display:grid;grid-template-columns:1fr;gap:.4rem;margin:.6rem 0}
-.tile{background:#fff;border:1px solid var(--border);border-radius:6px;padding:.4rem .9rem;display:grid;grid-template-columns:7.5em 8.5em 1fr;align-items:center;gap:1rem}
+.tile{background:#fff;border:1px solid var(--border);border-radius:6px;padding:.4rem .9rem;display:grid;grid-template-columns:7.5em minmax(8.5em,max-content) 1fr;align-items:center;gap:1rem}
+.tile>*{min-width:0}
+.tile .t{overflow-x:auto;overflow-y:hidden}
 .tile .h mjx-container{text-transform:none}
 .tile .h{font-family:'JetBrains Mono',monospace;font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
 .tile .t{font-family:'Playfair Display',serif;font-weight:700;font-size:1.02rem;color:var(--text);line-height:1.2}
@@ -201,8 +205,8 @@ ol,ul{padding-left:1.2em}
 
 <!-- 2: План -->
 <section class="slide">
-  <div class="slide-num">§2.0 · Карта занятия</div>
-  <h2>Две половины занятия</h2>
+  <div class="slide-num">§2.0 · План</div>
+  <h2>Содержание занятия</h2>
   <div class="two-col">
     <div class="callout">
       <h3 style="margin-top:0;color:var(--accent)">I. Тейлор: точность в одной точке</h3>
@@ -229,8 +233,8 @@ ol,ul{padding-left:1.2em}
 
 <!-- 3: Мотивация -->
 <section class="slide">
-  <div class="slide-num">§2.0 · Зачем это нужно</div>
-  <h2>Тейлор — язык ошибки метода</h2>
+  <div class="slide-num">§2.0 · Введение</div>
+  <h2>Формула Тейлора как аппарат оценки ошибки метода</h2>
   <p>В §&nbsp;1 разобрана ошибка <em>округления</em>. Сегодня — второй источник: ошибка <em>усечения</em>, расплата за обрыв бесконечного процесса. Она остаётся даже при идеальной арифметике.</p>
   <div class="tiles">
     <div class="tile"><div class="h">роль 1</div><div class="t">вычислять</div><div class="d">значения \(\sin\), \(\exp\), \(\ln\) в библиотеках — отрезки рядов (§&nbsp;2.4–2.8, лаба)</div></div>
@@ -243,22 +247,26 @@ ol,ul{padding-left:1.2em}
 <!-- 4: Ландау -->
 <section class="slide">
   <div class="slide-num">§2.1 · Символы Ландау</div>
-  <h2>Как записывают ошибку метода</h2>
+  <h2>Асимптотические обозначения \(O\) и \(o\)</h2>
   <p>Утверждения об ошибке звучат не как «ошибка равна \(0{,}00317\)», а как «ошибка есть \(O(h^2)\)»: важно не значение, а <em>скорость</em> убывания.</p>
   <div class="definition" data-num="1">
     <div class="eq">\[ f = O(g),\ x\to a \iff \exists\,C&gt;0,\ \delta&gt;0:\ |f(x)| \le C|g(x)|\ \text{при}\ 0&lt;|x-a|&lt;\delta; \tag{2.1} \]</div>
     <div class="eq">\[ f = o(g),\ x\to a \iff \lim_{x\to a} f(x)/g(x) = 0. \tag{2.2} \]</div>
     \(O\) — «не превосходит по порядку», \(o\) — «пренебрежимо мало по сравнению с».
+  
+    <div class="mini-ex"><b>Пример</b>\(3x^2-7x^5=O(x^2)\), \(x^3=o(x^2)\), но \(x^2\neq o(x^2)\) при \(x\to0\).</div>
   </div>
 </section>
 
 <!-- 5: арифметика Ландау -->
 <section class="slide">
-  <div class="slide-num">§2.2 · Многочлен Тейлора</div>
-  <h2>Касание порядка \(n\): \(n+1\) условие на \(n+1\) коэффициент</h2>
+  <div class="slide-num">§2.2 · Постановка</div>
+  <h2>Касание порядка \(n\): число условий и число неизвестных</h2>
   <div class="definition" data-num="2">
     Функции \(f\) и \(g\) <em>касаются в точке \(x_0\) с порядком \(n\)</em>, если
     <div class="eq">\[ f^{(k)}(x_0) = g^{(k)}(x_0),\qquad k = 0,1,\ldots,n. \tag{2.3} \]</div>
+  
+    <div class="mini-ex"><b>Пример</b>\(y=1+x\) касается \(e^x\) в нуле с порядком 1: значение и наклон совпали, кривизна — нет.</div>
   </div>
   <p>Условий ровно \(n+1\), и у многочлена степени не выше \(n\) ровно \(n+1\) коэффициент. Число уравнений совпало с числом неизвестных — решение должно существовать и быть единственным.</p>
 </section>
@@ -266,10 +274,12 @@ ol,ul{padding-left:1.2em}
 <!-- 6b: теорема о многочлене Тейлора -->
 <section class="slide">
   <div class="slide-num">§2.2 · Теорема 1</div>
-  <h2>Многочлен Тейлора — и он единственный</h2>
+  <h2>Существование и единственность многочлена Тейлора</h2>
   <div class="theorem" data-num="1">
     Существует ровно один многочлен степени не выше \(n\), касающийся \(f\) в \(x_0\) с порядком \(n\):
     <div class="eq">\[ P_n(x) = \sum_{k=0}^{n}\frac{f^{(k)}(x_0)}{k!}(x-x_0)^k. \tag{2.4} \]</div>
+  
+    <div class="mini-ex"><b>Пример</b>\(f=\cos x\), \(n=2\): \(P_2=1-x^2/2\), и другого такого многочлена нет.</div>
   </div>
   <p><em>Доказательство.</em> Запишем \(P(x)=\sum_{j=0}^{n} c_j(x-x_0)^j\) и продифференцируем \(k\) раз при \(x=x_0\): члены с \(j&lt;k\) исчезают тождественно, с \(j&gt;k\) — при подстановке; остаётся \(P^{(k)}(x_0)=k!\,c_k\). Условия (2.3) определяют \(c_k\) однозначно. \(\square\)</p>
   <p style="color:var(--text2)">Факториал пришёл из \(\bigl((x-x_0)^k\bigr)^{(k)} = k!\) — и именно он потом обеспечит бесконечный радиус сходимости у \(e^x\), \(\sin\), \(\cos\).</p>
@@ -278,9 +288,9 @@ ol,ul{padding-left:1.2em}
 <!-- 7: рисунок касания -->
 <section class="slide">
   <div class="slide-num">§2.2 · Иллюстрация</div>
-  <h2>Каждое совпавшее условие — плюс один порядок</h2>
+  <h2>Порядок касания и порядок малости ошибки</h2>
   <div class="figure">
-<svg viewBox="0 0 660 208" xmlns="http://www.w3.org/2000/svg" style="max-width:660px" role="img" aria-label="График экспоненты и её многочленов Тейлора нулевой, первой и второй степени в нуле: константа совпадает только значением, касательная — ещё и наклоном, парабола — ещё и кривизной.">
+<svg viewBox="0 0 660 208" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:42rem" role="img" aria-label="График экспоненты и её многочленов Тейлора нулевой, первой и второй степени в нуле: константа совпадает только значением, касательная — ещё и наклоном, парабола — ещё и кривизной.">
   <rect width="660" height="208" fill="#fdf9f3"/>
   <line x1="62" y1="158.8" x2="596" y2="158.8" stroke="#2c2419" stroke-width="1"/>
   <line x1="353.1" y1="26" x2="353.1" y2="196" stroke="#c9bda9" stroke-width="1" stroke-dasharray="4,3"/>
@@ -316,14 +326,15 @@ ol,ul{padding-left:1.2em}
     Пусть \(f\in C^{n}\) на отрезке с концами \(x_0\) и \(x\), а внутри него существует \(f^{(n+1)}\) (непрерывность не нужна). Тогда найдётся \(\xi\) строго между \(x_0\) и \(x\):
     <div class="eq">\[ f(x) = \underbrace{\sum_{k=0}^{n}\frac{f^{(k)}(x_0)}{k!}(x-x_0)^k}_{P_n(x)} + R_n(x), \tag{2.5} \]</div>
     <div class="eq">\[ R_n(x) = \frac{f^{(n+1)}(\xi)}{(n+1)!}(x-x_0)^{n+1}. \tag{2.6} \]</div>
+  
+    <div class="mini-ex"><b>Пример</b>\(n=1\), \(x=0{,}5\): \(0{,}125\le R_1\le0{,}206\), фактически \(R_1=0{,}1487\).</div>
   </div>
-  <p style="color:var(--text2)">При \(n=0\) это теорема Лагранжа о конечных приращениях. Формула Тейлора — её обобщение, и доказывается так же: вспомогательная функция с двумя нулями плюс теорема Ролля.</p>
 </section>
 
 <!-- 9: доказательство 1 -->
 <section class="slide">
-  <div class="slide-num">§2.3 · Рабочая оценка</div>
-  <h2>Точка \(\xi\) неизвестна — и не нужна</h2>
+  <div class="slide-num">§2.3 · Следствие</div>
+  <h2>Оценка остаточного члена сверху</h2>
   <p>\(\xi\) существует, но формулой не задаётся и зависит и от \(x\), и от \(n\). Вычислителю хватает оценки сверху:</p>
   <div class="eq">\[ |R_n(x)| \;\le\; \frac{M_{n+1}}{(n+1)!}\,|x-x_0|^{n+1},\qquad M_{n+1} = \sup_{t\in I}\bigl|f^{(n+1)}(t)\bigr|. \tag{2.7} \]</div>
   <div class="callout">Этим неравенством мы пользуемся до конца курса: §&nbsp;6 — разностные производные, §&nbsp;7 — квадратуры, теория схем — порядок аппроксимации.</div>
@@ -331,8 +342,8 @@ ol,ul{padding-left:1.2em}
 
 <!-- 12: гладкость ≠ разложимость -->
 <section class="slide">
-  <div class="slide-num">§2.3 · Ловушка</div>
-  <h2>Бесконечная гладкость ≠ разложимость в ряд</h2>
+  <div class="slide-num">§2.3 · Контрпример</div>
+  <h2>Бесконечная гладкость не влечёт разложимости в ряд</h2>
   <div class="two-col">
     <div>
       <div class="eq">\[ f(x) = \begin{cases} e^{-1/x^{2}}, & x\ne0,\\ 0, & x=0.\end{cases} \]</div>
@@ -348,7 +359,7 @@ ol,ul{padding-left:1.2em}
 <!-- 13: формы остатка -->
 <section class="slide">
   <div class="slide-num">§2.4 · Классические разложения</div>
-  <h2>Пять разложений, которые надо знать наизусть</h2>
+  <h2>Разложения элементарных функций в точке \(x_0=0\)</h2>
   <div style="display:grid;grid-template-columns:1fr;gap:.35rem;font-size:.82em">
     <div class="callout">\(\displaystyle e^{x} = \sum_{k=0}^{\infty}\frac{x^k}{k!},\qquad x\in\mathbb{R}\) &emsp;<em style="color:var(--text2);font-style:italic">\(R=\infty\)</em></div>
     <div class="callout">\(\displaystyle \sin x = \sum_{k=0}^{\infty}\frac{(-1)^k x^{2k+1}}{(2k+1)!},\quad \cos x = \sum_{k=0}^{\infty}\frac{(-1)^k x^{2k}}{(2k)!},\ \ x\in\mathbb{R}\) &emsp;<em style="color:var(--text2);font-style:italic">\(R=\infty\)</em></div>
@@ -361,7 +372,7 @@ ol,ul{padding-left:1.2em}
 <!-- 15: сходимость e^x -->
 <section class="slide">
   <div class="slide-num">§2.4 · Радиус сходимости</div>
-  <h2>Радиус = расстояние до ближайшей особенности</h2>
+  <h2>Радиус сходимости и особые точки функции</h2>
   <div class="tiles">
     <div class="tile"><div class="h">\(1/(1-x)\)</div><div class="t">радиус 1</div><div class="d">полюс в \(x=1\); при \(|x|=1\) члены \(x^k\) не стремятся к нулю</div></div>
     <div class="tile"><div class="h">\(\ln(1+x)\)</div><div class="t">радиус 1</div><div class="d">особенность в \(x=-1\)</div></div>
@@ -373,27 +384,28 @@ ol,ul{padding-left:1.2em}
 
 <!-- 17: ln 2 -->
 <section class="slide">
-  <div class="slide-num">§2.4 · Ряд ≠ алгоритм</div>
-  <h2>Почему \(\ln 2\) не считают по формуле (2.11)</h2>
+  <div class="slide-num">§2.4 · Скорость сходимости</div>
+  <h2>Сходимость ряда не означает, что им можно считать</h2>
+  <p>Ряд (2.11) при \(x=1\) сходится к \(\ln 2\) — это верно. Посмотрим, во что обходится этим воспользоваться.</p>
   <div class="two-col">
     <div class="example">
-      <span class="lbl">наивно</span>
-      \(\ln 2 = 1 - \tfrac12 + \tfrac13 - \tfrac14 + \dots\)
-      <p style="margin:.5rem 0 0">Ошибка после \(N\) членов \(\sim 1/(N+1)\). Восемь знаков \(\Rightarrow\) \(N\approx10^{8}\) слагаемых — и накопленная ошибка округления (§&nbsp;1.8) съест результат раньше.</p>
+      <span class="lbl">наивный ряд</span>
+      <div class="eq">\[ 1 - \tfrac12 + \tfrac13 - \tfrac14 + \dots \]</div>
+      <p style="margin:0">Члены убывают как \(1/k\), ошибка после \(N\) слагаемых \(\approx 1/(N+1)\).</p>
     </div>
     <div class="example" style="border-left-color:var(--accent2)">
-      <span class="lbl" style="color:var(--accent2)">переписав формулу</span>
-      \(t = \dfrac{z-1}{z+1}\Rightarrow \ln z = 2\Bigl(t+\dfrac{t^3}{3}+\dfrac{t^5}{5}+\dots\Bigr)\)
-      <p style="margin:.5rem 0 0">При \(z=2\) получаем \(t=1/3\), члены убывают как \(3^{-2k}\): восемь знаков за <strong>девять</strong> слагаемых.</p>
+      <span class="lbl" style="color:var(--accent2)">после замены переменной</span>
+      <div class="eq">\[ \ln z = 2\Bigl(t+\tfrac{t^{3}}{3}+\tfrac{t^{5}}{5}+\dots\Bigr) \]</div>
+      <p style="margin:0">При \(z=2\) получаем \(t=\tfrac13\), члены убывают как \(9^{-k}\).</p>
     </div>
   </div>
-  <div class="callout"><strong>Восемь порядков разницы</strong> — и ни одной новой математики. Первое из многих мест курса, где переписывание формулы заменяет рост затрат.</div>
+  <div class="callout"><strong>Слагаемых для восьми верных знаков: около \(10^{8}\) против девяти.</strong> Причём первый способ восьми знаков не даст <em>вообще</em>: \(10^{8}\) сложений накопят ошибку округления (§&nbsp;1.8) раньше, чем ряд сойдётся. Ответ один и тот же, разница только в форме записи.</div>
 </section>
 
 <!-- 18: порядок -->
 <section class="slide">
   <div class="slide-num">§2.5 · Ошибка усечения</div>
-  <h2>Порядок точности = первый отброшенный член</h2>
+  <h2>Порядок ошибки усечения</h2>
   <div class="theorem" data-num="4">
     Для \(f\in C^{n+1}\) в окрестности нуля
     <div class="eq">\[ \bigl|f(x)-P_n(x)\bigr| \le \frac{M_{n+1}}{(n+1)!}|x|^{n+1} = O\!\left(x^{n+1}\right). \tag{2.14} \]</div>
@@ -412,9 +424,9 @@ ol,ul{padding-left:1.2em}
 <!-- 19: график синуса -->
 <section class="slide">
   <div class="slide-num">§2.5 · Иллюстрация</div>
-  <h2>\(P_1, P_3, P_5\) синуса — «прилипают» дольше</h2>
+  <h2>Многочлены Тейлора \(P_1\), \(P_3\), \(P_5\) синуса в нуле</h2>
   <div class="figure">
-<svg viewBox="0 0 800 320" xmlns="http://www.w3.org/2000/svg" style="max-width:800px">
+<svg viewBox="0 0 800 320" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:34rem">
       <line x1="40" y1="160" x2="775" y2="160" stroke="#2c2419" stroke-width="1.2"/>
       <line x1="407" y1="30" x2="407" y2="290" stroke="#2c2419" stroke-width="1.2"/>
       <text x="770" y="152" font-family="JetBrains Mono,monospace" font-size="12" fill="#6b5d4f">x</text>
@@ -435,8 +447,8 @@ ol,ul{padding-left:1.2em}
 
 <!-- 20: оценка остатка -->
 <section class="slide">
-  <div class="slide-num">§2.6 · Оценка остатка</div>
-  <h2>Сколько членов ряда брать</h2>
+  <div class="slide-num">§2.6 · Априорная оценка</div>
+  <h2>Выбор числа членов ряда по оценке (2.7)</h2>
   <div class="example">
     <span class="lbl">Пример: \(\sin x\) с гарантией \(10^{-8}\) при \(|x|\le1\)</span>
     Все \(|f^{(n+1)}|\le1\), значит \(M_{n+1}\le1\) и из (2.7): \((n+1)!\ge10^{8}\).
@@ -448,8 +460,8 @@ ol,ul{padding-left:1.2em}
 
 <!-- 21: Лейбниц -->
 <section class="slide">
-  <div class="slide-num">§2.6 · Критерий остановки</div>
-  <h2>Оценка Лейбница: остаток ≤ первый отброшенный член</h2>
+  <div class="slide-num">§2.6 · Апостериорный критерий</div>
+  <h2>Оценка Лейбница для знакопеременного ряда</h2>
   <div class="theorem" data-num="5">
     Если \(t_k&gt;0\) монотонно убывают и \(t_k\to0\), то ряд \(\sum(-1)^k t_k\) сходится и
     <div class="eq">\[ |S - S_n| \;\le\; t_{n+1}. \tag{2.15} \]</div>
@@ -470,7 +482,7 @@ ol,ul{padding-left:1.2em}
 <!-- 22: как не надо -->
 <section class="slide">
   <div class="slide-num">§2.7 · Реализация</div>
-  <h2>Как <em>не</em> надо считать отрезок ряда</h2>
+  <h2>Прямое вычисление членов ряда и его дефекты</h2>
   <p>Наивный цикл, вычисляющий \(x^k\) и \(k!\) по отдельности, плох тремя способами:</p>
   <div class="tiles">
     <div class="tile"><div class="h">дорого</div><div class="t">\(O(n^2)\) операций</div><div class="d">\(k\)-й член стоит \(O(k)\); при \(n=10^4\) в цикле по миллиону точек это уже приговор</div></div>
@@ -481,8 +493,8 @@ ol,ul{padding-left:1.2em}
 
 <!-- 23: рекуррентность и Горнер -->
 <section class="slide">
-  <div class="slide-num">§2.7 · Рекуррентность и Горнер</div>
-  <h2>Два правильных способа</h2>
+  <div class="slide-num">§2.7 · Реализация</div>
+  <h2>Рекуррентное вычисление членов и схема Горнера</h2>
   <div class="two-col">
     <div>
       <h3 style="color:var(--accent2)">Коэффициенты связаны формулой → рекуррентность</h3>
@@ -502,9 +514,9 @@ ol,ul{padding-left:1.2em}
 <!-- 24: e^-20 диаграмма -->
 <section class="slide">
   <div class="slide-num">§2.8 · Потеря значимости</div>
-  <h2>\(e^{-20}\): промежуточные величины на 16 порядков больше ответа</h2>
+  <h2>Знакопеременное суммирование ряда для \(e^{-20}\)</h2>
   <div class="figure">
-<svg viewBox="0 0 620 218" xmlns="http://www.w3.org/2000/svg" style="max-width:620px" role="img" aria-label="Столбчатая диаграмма модулей членов ряда для e в степени минус двадцать: члены растут до величины порядка 4·10^7 при k=20, затем убывают; сумма ряда, равная 2·10^-9, показана далеко внизу.">
+<svg viewBox="0 0 620 218" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:38rem" role="img" aria-label="Столбчатая диаграмма модулей членов ряда для e в степени минус двадцать: члены растут до величины порядка 4·10^7 при k=20, затем убывают; сумма ряда, равная 2·10^-9, показана далеко внизу.">
   <rect width="620" height="218" fill="#fdf9f3"/>
   <g stroke="#e8e0d4" stroke-width="0.5">
     <line x1="56" y1="36" x2="600" y2="36"/><line x1="56" y1="73.6" x2="600" y2="73.6"/><line x1="56" y1="111.3" x2="600" y2="111.3"/><line x1="56" y1="148.9" x2="600" y2="148.9"/><line x1="56" y1="186.6" x2="600" y2="186.6"/>
@@ -531,8 +543,8 @@ ol,ul{padding-left:1.2em}
 
 <!-- 25: обусловленность суммы -->
 <section class="slide">
-  <div class="slide-num">§2.8 · Диагноз и лечение</div>
-  <h2>Число обусловленности суммирования всё объясняет</h2>
+  <div class="slide-num">§2.8 · Обусловленность</div>
+  <h2>Обусловленность задачи суммирования и устойчивая формула</h2>
   <div class="eq">\[ \kappa_{\text{сум}} = \frac{\sum_k|t_k|}{\bigl|\sum_k t_k\bigr|} = \frac{e^{20}}{e^{-20}} = e^{40} \approx 2{,}35\cdot10^{17},
   \qquad u\cdot\kappa_{\text{сум}} \approx 26. \tag{2.19} \]</div>
   <p>Априорная оценка предсказывает <em>полное</em> отсутствие верных цифр — и эксперимент это подтверждает.</p>
@@ -545,8 +557,8 @@ ol,ul{padding-left:1.2em}
 
 <!-- 26: разностная производная -->
 <section class="slide">
-  <div class="slide-num">§2.9 · Тейлор как инструмент</div>
-  <h2>Разностные производные выводятся в две строки</h2>
+  <div class="slide-num">§2.9 · Приложение</div>
+  <h2>Вывод разностных производных из формулы Тейлора</h2>
   <div class="two-col">
     <div>
       <div class="eq">\[ f(x+h) = f(x) + hf'(x) + \tfrac{h^2}{2}f''(\xi) \]</div>
@@ -564,7 +576,7 @@ ol,ul{padding-left:1.2em}
 <!-- 27: трапеции и Эйлер -->
 <section class="slide">
   <div class="slide-num">§2.10 · Несколько переменных</div>
-  <h2>Градиент и гессиан — те же первые три члена</h2>
+  <h2>Формула Тейлора для функции нескольких переменных</h2>
   <p style="font-size:.94em">Подставив \(\varphi(s) = f(\mathbf{x}_0 + s\mathbf{h})\), \(s\in[0,1]\), в одномерную формулу, получаем</p>
   <div class="eq" style="font-size:.95em">\[ f(\mathbf{x}_0+\mathbf{h}) = f(\mathbf{x}_0) + \nabla f(\mathbf{x}_0)^{\!\top}\mathbf{h} + \tfrac12\,\mathbf{h}^{\!\top} H(\mathbf{x}_0)\,\mathbf{h} + o\bigl(\|\mathbf{h}\|^{2}\bigr). \tag{2.21} \]</div>
   <div class="two-col">
@@ -575,13 +587,15 @@ ol,ul{padding-left:1.2em}
 
 <!-- 29: переход ко второй половине -->
 <section class="slide">
-  <div class="slide-num">§2.11 · Смена постановки</div>
-  <h2>Тейлор точен в точке — а если нужен весь отрезок?</h2>
-  <p>\(P_5\) синуса даёт \(10^{-10}\) около нуля и никуда не годится при \(x=4\). Вся точность вложена в окрестность одной точки. Для таблицы значений или замены функции под интегралом это бессмысленно.</p>
+  <div class="slide-num">§2.11 · Постановка</div>
+  <h2>От приближения в точке к приближению на отрезке</h2>
+  <p>\(P_5\) синуса даёт \(10^{-10}\) около нуля и никуда не годится при \(x=4\): вся точность вложена в окрестность одной точки.</p>
   <div class="definition" data-num="5">
     \(X\) — нормированное пространство функций, \(V\subset X\) — конечномерное подпространство. <em>Наилучшее приближение</em> \(g^{*}\in V\):
     <div class="eq">\[ \|f-g^{*}\| = \inf_{g\in V}\|f-g\| =: E_V(f). \tag{2.22} \]</div>
     Для \(V=\mathcal{P}_n\) пишут \(E_n(f)\).
+  
+    <div class="mini-ex"><b>Пример</b>\(e^{x}\) на \([-1,1]\), \(\mathcal{P}_4\): \(E_4=5{,}47\cdot10^{-4}\) в \(C\) и \(4{,}70\cdot10^{-4}\) в \(L_2\) — на разных многочленах.</div>
   </div>
   <div class="callout">Три независимых выбора: <em>что</em> приближаем, <em>чем</em> приближаем и <em>в какой норме</em>. Ответ зависит от каждого.</div>
 </section>
@@ -589,7 +603,7 @@ ol,ul{padding-left:1.2em}
 <!-- 30: нормы -->
 <section class="slide">
   <div class="slide-num">§2.12 · Нормы функций</div>
-  <h2>Выбор нормы — это выбор того, что считать большой ошибкой</h2>
+  <h2>Нормы \(C\), \(L_2\), \(L_1\) и сравнение их на одной функции</h2>
   <div class="two-col">
     <div>
       <div class="eq" style="font-size:.9em">\[ \|f\|_{C} = \max_{[a,b]}|f| \tag{2.24} \]</div>
@@ -609,12 +623,14 @@ ol,ul{padding-left:1.2em}
 
 <!-- 31: существование -->
 <section class="slide">
-  <div class="slide-num">§2.13 · Вейерштрасс</div>
-  <h2>Многочлены плотны в \(C[a,b]\)</h2>
+  <div class="slide-num">§2.13 · Теорема 6</div>
+  <h2>Теорема Вейерштрасса о плотности многочленов</h2>
   <div class="theorem" data-num="6">
     <em>Вейерштрасс, 1885.</em> Для любой \(f\in C[a,b]\) и любого \(\varepsilon&gt;0\) найдётся многочлен \(P\):
     <div class="eq">\[ \|f-P\|_{C} = \max_{x\in[a,b]}|f(x)-P(x)| &lt; \varepsilon. \tag{2.28} \]</div>
     Эквивалентно: \(E_n(f)\to0\) для любой непрерывной \(f\).
+  
+    <div class="mini-ex"><b>Пример</b>Даже \(|x|\) приближается сколь угодно точно — но \(E_n\approx0{,}28/n\), то есть очень медленно.</div>
   </div>
   <p>Прежде чем искать <em>оптимальный</em> многочлен, надо знать, что многочлены вообще на что-то способны. Теорема отвечает: способны на всё — вопрос лишь в степени.</p>
 </section>
@@ -622,7 +638,7 @@ ol,ul{padding-left:1.2em}
 <!-- 33: Бернштейн -->
 <section class="slide">
   <div class="slide-num">§2.13 · Границы применимости</div>
-  <h2>Что теорема Вейерштрасса <em>не</em> обещает</h2>
+  <h2>Что теорема Вейерштрасса не утверждает</h2>
   <div class="two-col">
     <div class="callout" style="border-left:3px solid var(--accent)">
       <strong style="color:var(--accent)">Ничего о степени.</strong> Оценка (2.34) даёт для многочленов Бернштейна лишь \(O(1/n)\), причём с <em>насыщением</em>: даже для бесконечно гладкой \(f\) быстрее не будет. Точность \(10^{-8}\) потребовала бы \(n\sim10^{8}\).
@@ -637,33 +653,39 @@ ol,ul{padding-left:1.2em}
 
 <!-- 35: минимакс и МНК -->
 <section class="slide">
-  <div class="slide-num">§2.14 · Два оптимума</div>
-  <h2>Минимакс и МНК: два способа быть лучшим</h2>
+  <div class="slide-num">§2.14 · Два критерия</div>
+  <h2>Минимаксное приближение и приближение по методу наименьших квадратов</h2>
   <div class="two-col">
     <div class="definition" data-num="9" style="min-height:auto">
       <em>минимаксное приближение</em>
       <div class="eq">\[ P^{*}_n = \arg\min_{P\in\mathcal{P}_n}\ \max_{x\in[a,b]}|f(x)-P(x)| \tag{2.30} \]</div>
-      Задача нелинейная; строится итерациями <em>алгоритма Ремеза</em>. Гарантия точности всюду.
-    </div>
+      Нелинейная задача; итерации Ремеза. Гарантия точности всюду.
+    
+    <div class="mini-ex"><b>Пример</b>\(e^{x}\), \(n=4\): \(\|f-P^{*}_4\|_C=5{,}47\cdot10^{-4}\).</div>
+  </div>
     <div class="definition" data-num="10" style="min-height:auto">
       <em>приближение по МНК</em>
       <div class="eq">\[ Q^{*}_n = \arg\min_{Q\in\mathcal{P}_n}\int_a^b\bigl(f-Q\bigr)^{2}dx \tag{2.31} \]</div>
-      Задача <em>линейная</em>: нормальные уравнения или проекция на ортогональный базис (§&nbsp;5). Дёшево и устойчиво.
-    </div>
+      <em>Линейная</em> задача: проекция на ортогональный базис (§&nbsp;5).
+    
+    <div class="mini-ex"><b>Пример</b>\(e^{x}\), \(n=4\): \(\|f-Q^{*}_4\|_{L_2}=4{,}70\cdot10^{-4}\).</div>
   </div>
-  <div class="callout">На практике часто берут третий вариант — <em>интерполяцию в чебышёвских узлах</em> (§&nbsp;4): почти минимакс (проигрыш — логарифмический множитель), а строится за одну линейную операцию.</div>
+  </div>
+  <div class="callout">Третий вариант, самый ходовой, — <em>интерполяция в чебышёвских узлах</em> (§&nbsp;4): почти минимакс, но за одну линейную операцию.</div>
 </section>
 
 <!-- 36: альтернанс -->
 <section class="slide">
-  <div class="slide-num">§2.14 · Альтернанс</div>
-  <h2>Чебышёв: ошибка наилучшего приближения «размазана» поровну</h2>
+  <div class="slide-num">§2.14 · Теорема 7</div>
+  <h2>Теорема Чебышёва об альтернансе</h2>
   <div class="theorem" data-num="7" style="min-height:auto">
     \(P\in\mathcal{P}_n\) наилучшее в \(\|\cdot\|_C\) \(\iff\) существуют \(n+2\) точки, где ошибка достигает максимума по модулю и чередует знак:
     <div class="eq">\[ e(x_i) = (-1)^{i}\sigma\|f-P\|_{C},\qquad i=0,\ldots,n+1. \tag{2.32} \]</div>
+  
+    <div class="mini-ex"><b>Пример</b>При \(n=4\) точек альтернанса шесть — ровно столько экстремумов на рисунке ниже.</div>
   </div>
   <div class="figure">
-<svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" style="max-width:620px" role="img" aria-label="Кривая ошибки наилучшего равномерного приближения многочленом третьей степени: она касается уровней плюс E и минус E поочерёдно в пяти точках.">
+<svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:24rem" role="img" aria-label="Кривая ошибки наилучшего равномерного приближения многочленом третьей степени: она касается уровней плюс E и минус E поочерёдно в пяти точках.">
   <rect width="620" height="230" fill="#fdf9f3"/>
   <line x1="45" y1="110" x2="595" y2="110" stroke="#2c2419" stroke-width="1"/>
   <line x1="45" y1="55" x2="595" y2="55" stroke="#b44a2d" stroke-width="1.3" stroke-dasharray="6,4"/>
@@ -687,24 +709,26 @@ ol,ul{padding-left:1.2em}
 <!-- 37: Джексон -->
 <section class="slide">
   <div class="slide-num">§2.14 · Скорость сходимости</div>
-  <h2>Насколько быстро \(E_n(f)\to0\) — решает гладкость</h2>
+  <h2>Модуль непрерывности и теоремы Джексона</h2>
   <div class="definition" data-num="11" style="min-height:auto">
     <em>модуль непрерывности:</em> \(\ \omega(f;\delta) = \sup\{|f(u)-f(v)| : |u-v|\le\delta\}\). &nbsp;(2.33)
+  
+    <div class="mini-ex"><b>Пример</b>\(\omega(|x|;\delta)=\delta\), а \(\omega(\sqrt{x};\delta)=\sqrt{\delta}\) — убывает медленнее.</div>
   </div>
   <div class="theorem" data-num="8" style="min-height:auto">
     <em>Джексон.</em> \(\ E_n(f) \le c\,\omega(f;1/n)\); &nbsp; для \(f\in C^{k}\): \(\ E_n(f) \le c_k\|f^{(k)}\|_{C}/n^{k}\); &nbsp; для аналитической \(f\): \(E_n(f)=O(\rho^{-n})\), \(\rho&gt;1\). &nbsp;(2.34)–(2.35)
   </div>
   <div class="example">
     <span class="lbl">цена одного излома</span>
-    У \(f=|x|\) на \([-1,1]\) модуль непрерывности \(\omega(\delta)=\delta\), и \(n\,E_n(|x|)\to\beta\approx0{,}2802\) (Бернштейн). Точность \(10^{-4}\) требует \(n\approx2800\) — против \(n=6\) у \(e^{x}\).
+    У \(f=|x|\) на \([-1,1]\) модуль непрерывности \(\omega(\delta)=\delta\), и \(n\,E_n(|x|)\to\beta\approx0{,}2802\) (Бернштейн). Точность \(10^{-4}\) требует \(n\approx2800\) — против \(n=5\) у \(e^{x}\).
     <p style="margin:.5rem 0 0">Один излом обходится в тысячи степеней — отсюда <em>сплайны</em> в §&nbsp;4.</p>
   </div>
 </section>
 
 <!-- 38: сравнение -->
 <section class="slide">
-  <div class="slide-num">§2.15 · Тейлор против наилучшего</div>
-  <h2>\(f=e^{x}\) на \([-1,1]\), степень 4: четыре многочлена</h2>
+  <div class="slide-num">§2.15 · Сравнение</div>
+  <h2>Четыре приближения \(e^{x}\) многочленом четвёртой степени</h2>
   <div class="tiles">
     <div class="tile"><div class="h">Тейлора в нуле</div><div class="t">\(\|e\|_C = 9{,}95\cdot10^{-3}\)</div><div class="d">\(\|e\|_{L_2} = 3{,}67\cdot10^{-3}\) · даром: производные в одной точке · <strong>в 18 раз хуже минимакса</strong></div></div>
     <div class="tile"><div class="h">чебышёвские узлы</div><div class="t">\(\|e\|_C = 6{,}40\cdot10^{-4}\)</div><div class="d">\(\|e\|_{L_2} = 5{,}40\cdot10^{-4}\) · 5 значений \(f\), одна линейная задача · отстаёт от идеала на 17&nbsp;%</div></div>
@@ -717,7 +741,7 @@ ol,ul{padding-left:1.2em}
 <!-- 39: итоги 1 -->
 <section class="slide">
   <div class="slide-num">§2.16 · Итоги (1/2)</div>
-  <h2>Что унести с занятия: Тейлор</h2>
+  <h2>Итоги: формула Тейлора и её применение</h2>
   <ol style="font-size:.94em">
     <li><strong>\(O\) и \(o\)</strong> — язык порядка ошибки; «\(O(h^p)\)» проверяется удвоением шага.</li>
     <li><strong>Многочлен Тейлора</strong> (2.4) — единственный многочлен степени \(n\), касающийся \(f\) с порядком \(n\).</li>
@@ -735,7 +759,7 @@ ol,ul{padding-left:1.2em}
 <!-- 40: итоги 2 -->
 <section class="slide">
   <div class="slide-num">§2.16 · Итоги (2/2)</div>
-  <h2>Что унести с занятия: наилучшее приближение</h2>
+  <h2>Итоги: наилучшее приближение</h2>
   <ol start="11" style="font-size:.96em">
     <li><strong>Задача наилучшего приближения</strong> (2.22): «оптимально» зависит от нормы. \(C\) даёт минимакс, \(L_2\) — МНК.</li>
     <li><strong>Существование</strong> — всегда (теорема&nbsp;8, компактность шара в конечномерном \(V\)). <strong>Единственность</strong> — в \(L_2\) и в \(C\), но не обязательно в \(L_1\).</li>

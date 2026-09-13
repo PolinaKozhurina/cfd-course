@@ -284,6 +284,19 @@
       const user = await currentUserPromise();
       if (!user) { showMsg("🔒 Войдите на сайт", "Лабораторная доступна только записанным на курс студентам во время занятия."); return; }
 
+      // Преподаватель курса (и superadmin) видит лабу всегда — он не отмечает
+      // сам себя присутствующим, и сеанс его в allowedUids не содержит.
+      const supers = (typeof ADMIN_EMAILS !== "undefined")
+        ? (Array.isArray(ADMIN_EMAILS) ? ADMIN_EMAILS : [ADMIN_EMAILS]) : [];
+      let isCourseAdmin = supers.indexOf(user.email) !== -1;
+      if (!isCourseAdmin) {
+        try {
+          const u = await db.collection("users").doc(user.uid).get();
+          const mc = (u.exists && Array.isArray(u.data().managedCourses)) ? u.data().managedCourses : [];
+          isCourseAdmin = !!(u.exists && u.data().isAdmin) && mc.indexOf(opts.cid) !== -1;
+        } catch (e) {}
+      }
+
       let mounted = false, unsub = null;
       const tryOpen = async () => {
         // Следующая лаба открывается только после зачёта по предыдущей.
@@ -291,9 +304,7 @@
         if (prev) {
           const pp = await API.loadProgress(user.uid, opts.cid, prev.id);
           if (!API.passed(pp, prev)) {
-            let isAdmin = false;
-            try { const u = await db.collection("users").doc(user.uid).get(); isAdmin = !!(u.exists && u.data().isAdmin); } catch (e) {}
-            if (!isAdmin) {
+            if (!isCourseAdmin) {
               showMsg("🔒 Сначала предыдущая лаба", "Эта лаба откроется после того, как преподаватель зачтёт «" + prev.title + "» (сделано " + ((pp && pp.done) || 0) + " из " + (prev.total || "?") + ", ориентир для зачёта — " + (prev.pass || "?") + "). <a href=\"" + prev.id + "-lab.html\" style=\"color:#b44a2d\">Перейти к ней →</a>");
               return;
             }
@@ -327,7 +338,8 @@
 
       // Следим за сеансом: закрыли — прячем сразу.
       unsub = API.watchSession(opts.cid, opts.lab, sess => {
-        const allowed = !!(sess && sess.open && Array.isArray(sess.allowedUids) && sess.allowedUids.indexOf(user.uid) !== -1);
+        const allowed = isCourseAdmin
+          || !!(sess && sess.open && Array.isArray(sess.allowedUids) && sess.allowedUids.indexOf(user.uid) !== -1);
         if (mounted && !allowed) {
           mounted = false;
           if (typeof opts.onClosed === "function") opts.onClosed();

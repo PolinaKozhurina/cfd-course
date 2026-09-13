@@ -144,41 +144,60 @@
     return { open: true, reason: "ok", releasedAt: releasedAt, role: "student" };
   }
 
+  // Палитра экранов доступа. Цвета не берутся из переменных страницы:
+  // блокировщик показывается и на страницах, где своей палитры нет.
+  const GATE_CSS =
+    ".gating-loader{background:#faf8f4;color:#9a8d7e}" +
+    ".gating-blocker{background:#faf8f4}" +
+    ".gating-card{max-width:520px;background:#fff;border:1px solid #d9cfc0;border-radius:12px;" +
+    "padding:2rem;text-align:center;box-shadow:0 8px 30px rgba(44,36,25,.08)}" +
+    ".gating-card h2{font-family:Playfair Display,serif;font-size:1.8rem;font-weight:900;" +
+    "color:#b44a2d;margin-bottom:.5rem}" +
+    ".gating-card p{color:#6b5d4f;margin-bottom:1rem}" +
+    ".gating-card .gate-btn{display:inline-block;font-family:JetBrains Mono,monospace;font-size:.85rem;" +
+    "padding:.5rem 1.2rem;border-radius:6px;background:#b44a2d;color:#fff;text-decoration:none}" +
+    "html.dark .gating-loader{background:#1b1712;color:#8d8173}" +
+    "html.dark .gating-blocker{background:#1b1712}" +
+    "html.dark .gating-card{background:#231e18;border-color:#39322a;box-shadow:0 8px 30px rgba(0,0,0,.5)}" +
+    "html.dark .gating-card h2{color:#e07a52}" +
+    "html.dark .gating-card p{color:#bcb0a0}" +
+    "html.dark .gating-card .gate-btn{background:#e07a52;color:#1b1712}";
+
   // ---------- Оверлей на странице лекции ----------
   function showBlocker(access) {
     // Прячем контент, добавляем свой оверлей.
     const style = document.createElement("style");
-    style.textContent = "html.gated body>*{display:none!important}html.gated body>.gating-blocker{display:flex!important}";
+    style.textContent = "html.gated body>*{display:none!important}html.gated body>.gating-blocker{display:flex!important}" + GATE_CSS;
     document.head.appendChild(style);
     document.documentElement.classList.add("gated");
     const b = document.createElement("div");
     b.className = "gating-blocker";
-    b.style.cssText = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#faf8f4;font-family:Source Serif 4,Georgia,serif;padding:2rem;z-index:99999";
+    b.style.cssText = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-family:Source Serif 4,Georgia,serif;padding:2rem;z-index:99999";
     let msg = "";
     if (access.reason === "not-logged") {
-      msg = "<h2 style=\"font-family:Playfair Display,serif;font-size:1.8rem;font-weight:900;color:#b44a2d;margin-bottom:.5rem\">🔒 Войдите на сайт</h2>"
-          + "<p style=\"color:#6b5d4f;margin-bottom:1rem\">Эта лекция доступна только записанным на курс студентам.</p>";
+      msg = "<h2>🔒 Войдите на сайт</h2>"
+          + "<p>Эта лекция доступна только записанным на курс студентам.</p>";
     } else if (access.reason === "not-enrolled") {
-      msg = "<h2 style=\"font-family:Playfair Display,serif;font-size:1.8rem;font-weight:900;color:#b44a2d;margin-bottom:.5rem\">✋ Запишитесь на курс</h2>"
-          + "<p style=\"color:#6b5d4f;margin-bottom:1rem\">Материалы курса открываются только записанным студентам.</p>";
+      msg = "<h2>✋ Запишитесь на курс</h2>"
+          + "<p>Материалы курса открываются только записанным студентам.</p>";
     } else if (access.reason === "admin-only") {
-      msg = "<h2 style=\"font-family:Playfair Display,serif;font-size:1.8rem;font-weight:900;color:#b44a2d;margin-bottom:.5rem\">🔒 Только для преподавателя</h2>"
-          + "<p style=\"color:#6b5d4f;margin-bottom:1rem\">Эта страница доступна только администраторам курса.</p>";
+      msg = "<h2>🔒 Только для преподавателя</h2>"
+          + "<p>Эта страница доступна только администраторам курса.</p>";
     } else if (access.reason === "not-released") {
       if (access.releasedAt) {
         const when = new Date(access.releasedAt.toMillis()).toLocaleString("ru-RU", { timeZone: "Europe/Moscow", dateStyle: "long", timeStyle: "short" }) + " МСК";
-        msg = "<h2 style=\"font-family:Playfair Display,serif;font-size:1.8rem;font-weight:900;color:#b44a2d;margin-bottom:.5rem\">⏳ Лекция ещё не открыта</h2>"
-            + "<p style=\"color:#6b5d4f;margin-bottom:1rem\">Откроется <strong>" + when + "</strong>.</p>";
+        msg = "<h2>⏳ Лекция ещё не открыта</h2>"
+            + "<p>Откроется <strong>" + when + "</strong>.</p>";
       } else {
-        msg = "<h2 style=\"font-family:Playfair Display,serif;font-size:1.8rem;font-weight:900;color:#b44a2d;margin-bottom:.5rem\">🔒 Лекция пока закрыта</h2>"
-            + "<p style=\"color:#6b5d4f;margin-bottom:1rem\">Преподаватель откроет её позднее — следите за расписанием.</p>";
+        msg = "<h2>🔒 Лекция пока закрыта</h2>"
+            + "<p>Преподаватель откроет её позднее — следите за расписанием.</p>";
       }
     }
     // Найти путь к главной (index.html) относительно текущей страницы.
     const upToRoot = location.pathname.replace(/\/[^\/]*$/, "/").replace(/\/[^\/]+\//g, "../").replace(/^\.\.\//, "");
-    b.innerHTML = "<div style=\"max-width:520px;background:#fff;border:1px solid #d9cfc0;border-radius:12px;padding:2rem;text-align:center;box-shadow:0 8px 30px rgba(44,36,25,.08)\">"
+    b.innerHTML = "<div class=\"gating-card\">"
                 + msg
-                + "<a href=\"../index.html\" style=\"display:inline-block;font-family:JetBrains Mono,monospace;font-size:.85rem;padding:.5rem 1.2rem;border-radius:6px;background:#b44a2d;color:#fff;text-decoration:none\">На главную</a>"
+                + "<a href=\"../index.html\" class=\"gate-btn\">На главную</a>"
                 + "</div>";
     document.body.appendChild(b);
   }
@@ -210,14 +229,15 @@
     style.textContent = "html.gating-checking body>*{visibility:hidden!important}"
                       + "html.gated body>*{display:none!important}"
                       + "html.gated body>.gating-blocker,"
-                      + "html.gating-checking body>.gating-loader{display:flex!important;visibility:visible!important}";
+                      + "html.gating-checking body>.gating-loader{display:flex!important;visibility:visible!important}"
+                      + GATE_CSS;
     document.head.appendChild(style);
     document.documentElement.classList.add("gating-checking");
     // Лёгкий лоадер, чтобы страница не была совсем пустой во время проверки.
     const loader = document.createElement("div");
     loader.className = "gating-loader";
     loader.style.cssText = "position:fixed;inset:0;display:none;align-items:center;justify-content:center;"
-                         + "background:#faf8f4;font-family:'JetBrains Mono',monospace;font-size:.85rem;color:#9a8d7e;z-index:99998";
+                         + "font-family:'JetBrains Mono',monospace;font-size:.85rem;z-index:99998";
     loader.textContent = "…проверка доступа к лекции";
     // Добавим loader после того как body появится
     if (document.body) document.body.appendChild(loader);

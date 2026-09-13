@@ -275,10 +275,23 @@
     // opts: { cid, lab, encUrl, mount: Element, onReady(remoteProgress), onClosed() }
     mountLab: async function (opts) {
       const mount = opts.mount;
+      // Заглушки лабы — классами, иначе тёмная тема их не достаёт.
+      if (!document.getElementById("lab-msg-css")) {
+        const st = document.createElement("style");
+        st.id = "lab-msg-css";
+        st.textContent =
+          ".lab-msg{margin:2rem auto;max-width:560px;background:#fff;border:1px solid #d9cfc0;" +
+          "border-radius:12px;padding:1.6rem 2rem;text-align:center;box-shadow:0 8px 30px rgba(44,36,25,.08)}" +
+          ".lab-msg h2{font-family:Playfair Display,serif;font-size:1.5rem;font-weight:900;color:#b44a2d;margin:0 0 .5rem}" +
+          ".lab-msg p{color:#6b5d4f;margin:0;font-size:.95rem}" +
+          "html.dark .lab-msg{background:#231e18;border-color:#39322a;box-shadow:0 8px 30px rgba(0,0,0,.5)}" +
+          "html.dark .lab-msg h2{color:#e07a52}" +
+          "html.dark .lab-msg p{color:#bcb0a0}";
+        document.head.appendChild(st);
+      }
       const showMsg = (title, text) => {
-        mount.innerHTML = '<div style="margin:2rem auto;max-width:560px;background:#fff;border:1px solid #d9cfc0;border-radius:12px;padding:1.6rem 2rem;text-align:center;box-shadow:0 8px 30px rgba(44,36,25,.08)">'
-          + '<h2 style="font-family:Playfair Display,serif;font-size:1.5rem;font-weight:900;color:#b44a2d;margin:0 0 .5rem">' + title + '</h2>'
-          + '<p style="color:#6b5d4f;margin:0;font-size:.95rem">' + text + '</p></div>';
+        mount.innerHTML = '<div class="lab-msg">'
+          + '<h2>' + title + '</h2><p>' + text + '</p></div>';
       };
       showMsg("…", "проверка доступа к лабораторной");
       const user = await currentUserPromise();

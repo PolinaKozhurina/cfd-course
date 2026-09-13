@@ -6,6 +6,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Админ-панель — CFD Course</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+// Тема — до первой отрисовки, иначе панель моргает белым.
+try { if (localStorage.getItem('cfd-theme') === 'dark') document.documentElement.classList.add('dark'); } catch (e) {}
+</script>
 <style>
 :root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--shadow:rgba(44,36,25,.06)}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -15,7 +19,7 @@ body{font-family:'Source Serif 4',Georgia,serif;font-size:16px;line-height:1.6;c
 .nav-links{display:flex;gap:.3rem;flex-wrap:wrap}
 .nav-links a{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text2);text-decoration:none;padding:.3rem .55rem;border-radius:4px;transition:all .15s}
 .nav-links a:hover{background:var(--bg3);color:var(--text)}
-.nav-links a.active{background:var(--accent);color:#fff}
+.nav-links a.active{background:var(--accent);color:var(--on-accent,#fff)}
 .wrap{max-width:1360px;margin:0 auto;padding:1.6rem 1.8rem}
 h1{font-family:'Playfair Display',serif;font-size:1.7rem;font-weight:700;margin-bottom:.3rem;letter-spacing:-.01em}
 .sub{color:var(--text2);font-size:.9rem;margin-bottom:1.5rem}
@@ -25,7 +29,7 @@ h1{font-family:'Playfair Display',serif;font-size:1.7rem;font-weight:700;margin-
 .tab.active{color:var(--accent);background:transparent;border-bottom-color:var(--accent);font-weight:600}
 .panel{display:none}
 .panel.active{display:block}
-.card{background:#fff;border:1px solid var(--border);border-radius:6px;padding:1rem 1.2rem;margin-bottom:1rem;overflow-x:auto;box-shadow:0 1px 3px var(--shadow)}
+.card{background:var(--card,#fff);border:1px solid var(--border);border-radius:6px;padding:1rem 1.2rem;margin-bottom:1rem;overflow-x:auto;box-shadow:0 1px 3px var(--shadow)}
 .card h3{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;margin-bottom:.5rem}
 table{width:100%;border-collapse:collapse;font-size:.85rem}
 thead th{background:transparent;text-align:left;padding:8px 10px;border:0;border-bottom:2px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;font-weight:600}
@@ -33,15 +37,15 @@ tbody tr{transition:background .1s}
 tbody tr:hover{background:var(--bg2)}
 td{padding:6px 10px;border:0;border-bottom:1px solid var(--border);vertical-align:middle}
 .badge{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:2px 6px;border-radius:3px;white-space:nowrap}
-.b-admin{background:#fde8e8;color:#c44}
-.b-student{background:#e6f1fb;color:var(--accent3)}
-.b-pass{background:#e8f4f0;color:var(--accent2)}
-.b-fail{background:#fde8e8;color:#c44}
+.b-admin{background:var(--pale-red,#fde8e8);color:var(--st-red,#c44)}
+.b-student{background:var(--pale-blue,#e6f1fb);color:var(--accent3)}
+.b-pass{background:var(--pale-green,#e8f4f0);color:var(--accent2)}
+.b-fail{background:var(--pale-red,#fde8e8);color:var(--st-red,#c44)}
 .b-pending{background:var(--bg3);color:var(--text3)}
-.b-group{background:#faeeda;color:#854f0b}
-select,input[type="text"],input[type="number"]{font-family:'JetBrains Mono',monospace;font-size:.8rem;padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text)}
+.b-group{background:var(--pale-amber,#faeeda);color:var(--st-amber,#854f0b)}
+select,input[type="text"],input[type="number"]{font-family:'JetBrains Mono',monospace;font-size:.8rem;padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--card,#fff);color:var(--text)}
 select:focus,input:focus{outline:none;border-color:var(--accent)}
-.btn{font-family:'JetBrains Mono',monospace;font-size:.75rem;padding:4px 12px;border-radius:4px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text);transition:all .15s}
+.btn{font-family:'JetBrains Mono',monospace;font-size:.75rem;padding:4px 12px;border-radius:4px;cursor:pointer;border:1px solid var(--border);background:var(--card,#fff);color:var(--text);transition:all .15s}
 .btn:hover{background:var(--bg2)}
 .btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
 .btn-primary:hover{background:#9a3d24}
@@ -51,11 +55,11 @@ select:focus,input:focus{outline:none;border-color:var(--accent)}
 .row-num{color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:.72rem;margin-right:.3rem;min-width:1.6em;display:inline-block;text-align:right}
 .row-actions .row-act{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-decoration:none;color:var(--text2);padding:0 2px;transition:color .12s}
 .row-actions .row-act:hover{text-decoration:underline}
-.row-actions .row-act-enroll{color:#1a6b5a}
+.row-actions .row-act-enroll{color:var(--st-green,#1a6b5a)}
 .row-actions .row-act-enroll:hover{color:#0d4a3d}
-.row-actions .row-act-verify{color:#3a5ba0}
+.row-actions .row-act-verify{color:var(--accent3,#3a5ba0)}
 .row-actions .row-act-verify:hover{color:#243c73}
-.row-actions .row-act-del{color:#b44a2d}
+.row-actions .row-act-del{color:var(--accent,#b44a2d)}
 .row-actions .row-act-del:hover{color:#7d2f18}
 .row-actions .row-sep{color:var(--border);margin:0 .15rem;font-family:'JetBrains Mono',monospace;font-size:.7rem;user-select:none}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1.5rem}
@@ -69,6 +73,42 @@ select:focus,input:focus{outline:none;border-color:var(--accent)}
 .comment-input{width:100%;font-size:.8rem;padding:4px 8px;border:1px solid var(--border);border-radius:4px;margin-top:4px;font-family:'Source Serif 4',serif}
 .export-bar{display:flex;gap:.5rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap}
 .search{width:200px}
+</style>
+
+<link rel="stylesheet" href="css/dark.css">
+<style>
+/* ---- Тёмная тема: цвета, специфичные для админ-панели ----
+   Значения объявлены только здесь: в светлой теме переменные не
+   определены и в вёрстке срабатывает запасной литерал var(--x, #...). */
+html.dark{
+  --pale-red:rgba(232,112,90,.16);
+  --pale-blue:rgba(130,160,219,.16);
+  --pale-green:rgba(70,184,156,.14);
+  --pale-amber:rgba(215,154,58,.16);
+  --pale-cream:#2c261f;
+  --track:#332c24;              /* дорожка полосы прогресса */
+  --st-red:#e8705a;
+  --st-amber:#d79a3a;
+  --st-green:#46b89c;
+  --on-accent:#1b1712;          /* текст поверх акцентной заливки */
+}
+html.dark .nav-links a.active{color:var(--on-accent)}
+html.dark .tab.active{background:transparent}
+html.dark tbody tr:hover{background:var(--bg3)}
+html.dark .stat{background:var(--bg2)}
+html.dark .card{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.4)}
+/* .panel в общем файле получает фон карточки, но здесь это просто
+   контейнер вкладки — возвращаем прозрачность. */
+html.dark .panel{background:transparent;border:0}
+html.dark .btn{background:var(--bg3);color:var(--text);border-color:var(--border)}
+html.dark .btn:hover{background:var(--bg2)}
+html.dark .row-actions .row-act-enroll{color:var(--accent2)}
+html.dark .row-actions .row-act-verify{color:var(--accent3)}
+html.dark .row-actions .row-act-del{color:var(--accent)}
+
+.theme-btn{background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;
+  font-size:.75rem;line-height:1;padding:.3rem .45rem;color:var(--text2);margin-left:.4rem}
+.theme-btn:hover{background:var(--bg3);color:var(--text)}
 </style>
 
 <script>
@@ -90,9 +130,30 @@ document.addEventListener('DOMContentLoaded', function() {
     <a href="profile.html">Профиль</a>
     <a href="checklist.html">Зачёт</a>
     <a href="review.html">Проверка</a>
-    <a href="#" id="adminNavLogout" onclick="event.preventDefault();adminLogout()" style="color:#c44;margin-left:auto" title="Выйти из аккаунта">выйти</a>
+    <a href="#" id="adminNavLogout" onclick="event.preventDefault();adminLogout()" style="color:var(--st-red,#c44);margin-left:auto" title="Выйти из аккаунта">выйти</a>
+    <button class="theme-btn" id="adminThemeBtn" onclick="adminTheme()" aria-label="Переключить тему" title="Светлая / тёмная тема">☾</button>
   </div>
 </nav>
+
+<script>
+function adminTheme() {
+  var dark = document.documentElement.classList.toggle('dark');
+  try { localStorage.setItem('cfd-theme', dark ? 'dark' : 'light'); } catch (e) {}
+  adminThemeIcon();
+}
+function adminThemeIcon() {
+  var b = document.getElementById('adminThemeBtn');
+  if (b) b.textContent = document.documentElement.classList.contains('dark') ? '☀' : '☾';
+}
+adminThemeIcon();
+// Панель открывается и внутри iframe на профиле: там переключатель свой,
+// в шапке родителя. Событие storage долетает до всех вкладок и фреймов.
+window.addEventListener('storage', function (e) {
+  if (e.key !== 'cfd-theme') return;
+  document.documentElement.classList.toggle('dark', e.newValue === 'dark');
+  adminThemeIcon();
+});
+</script>
 
 <script>
 function adminLogout() {
@@ -138,7 +199,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
   <div id="adminHeaderInfo" style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:var(--text2)">
     <span id="adminRoleLabel" style="padding:3px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600"></span>
     <span id="adminScopeLabel"></span>
-    <button onclick="adminLogout()" title="Выйти из аккаунта" style="font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:3px 10px;border-radius:4px;background:#fde8e8;color:#c44;border:1px solid #f5c4c4;cursor:pointer">выйти</button>
+    <button onclick="adminLogout()" title="Выйти из аккаунта" style="font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:3px 10px;border-radius:4px;background:var(--pale-red,#fde8e8);color:var(--st-red,#c44);border:1px solid #f5c4c4;cursor:pointer">выйти</button>
   </div>
 </div>
 <p class="sub" id="adminSub">Управление студентами, группами и результатами</p>
@@ -152,7 +213,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
 
 <div class="tabs">
   <button class="tab active" onclick="showTab('students')">Студенты</button>
-  <button class="tab" onclick="showTab('enrollments')">Заявки на курсы <span id="enrollTabBadge" style="display:none;min-width:16px;height:16px;border-radius:8px;background:#c44;color:#fff;font-size:.6rem;font-weight:700;font-family:JetBrains Mono,monospace;align-items:center;justify-content:center;padding:0 4px;margin-left:2px;vertical-align:middle"></span></button>
+  <button class="tab" onclick="showTab('enrollments')">Заявки на курсы <span id="enrollTabBadge" style="display:none;min-width:16px;height:16px;border-radius:8px;background:var(--st-red,#c44);color:var(--on-accent,#fff);font-size:.6rem;font-weight:700;font-family:JetBrains Mono,monospace;align-items:center;justify-content:center;padding:0 4px;margin-left:2px;vertical-align:middle"></span></button>
   <button class="tab" onclick="showTab('workgroups')">Рабочие группы</button>
   <button class="tab" onclick="showTab('homework');renderHomeworkTab()">ДЗ</button>
   <button class="tab" onclick="showTab('attendance');renderAttendanceTab()">Посещаемость</button>
@@ -165,7 +226,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
   <button class="tab" onclick="showTab('tasks')" style="display:none">Задания</button>
   <button class="tab" onclick="showTab('grades');renderGrades()">Оценки</button>
   <button class="tab" onclick="showTab('github')">GitHub-проверка</button>
-  <button class="tab" onclick="showTab('messages')" id="tabBtnMessages">Сообщения <span id="msgTabBadge" style="display:none;min-width:16px;height:16px;border-radius:8px;background:#c44;color:#fff;font-size:.6rem;font-weight:700;font-family:JetBrains Mono,monospace;align-items:center;justify-content:center;padding:0 4px;margin-left:2px;vertical-align:middle"></span></button>
+  <button class="tab" onclick="showTab('messages')" id="tabBtnMessages">Сообщения <span id="msgTabBadge" style="display:none;min-width:16px;height:16px;border-radius:8px;background:var(--st-red,#c44);color:var(--on-accent,#fff);font-size:.6rem;font-weight:700;font-family:JetBrains Mono,monospace;align-items:center;justify-content:center;padding:0 4px;margin-left:2px;vertical-align:middle"></span></button>
 </div>
 
 <!-- TAB 1: Students -->
@@ -285,7 +346,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
 
   <!-- Модалка «сдачи и оценки» -->
   <div id="hwSubsWrap" class="hw-subs-modal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.45);align-items:flex-start;justify-content:center;overflow:auto;padding:2rem 1rem">
-    <div class="hw-subs-card" style="background:#fff;border-radius:10px;width:1100px;max-width:98%;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2)">
+    <div class="hw-subs-card" style="background:var(--card,#fff);border-radius:10px;width:1100px;max-width:98%;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2)">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.5rem">
         <h3 id="hwSubsTitle" style="margin:0">Сдачи</h3>
         <button onclick="hwCloseSubs()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text3)">×</button>
@@ -309,7 +370,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
 
   <!-- Форма создания/редактирования -->
   <div id="hwFormWrap" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
-    <div style="background:#fff;border-radius:10px;width:640px;max-width:92%;max-height:88vh;overflow:auto;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2)">
+    <div style="background:var(--card,#fff);border-radius:10px;width:640px;max-width:92%;max-height:88vh;overflow:auto;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2)">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.6rem">
         <h3 style="margin:0" id="hwFormTitle">Новое ДЗ</h3>
         <button onclick="hwCloseForm()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text3)">×</button>
@@ -319,10 +380,10 @@ if (location.search.indexOf('embedded=1') !== -1) {
       <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2);display:block;margin-top:.5rem">Название</label>
       <input type="text" id="hwFormTitleInput" placeholder="ДЗ №1. Задача Римана" style="width:100%">
       <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2);display:block;margin-top:.5rem">Описание (условие текстом)</label>
-      <textarea id="hwFormDesc" rows="5" placeholder="Постановка задачи, требования к решению, критерии…" style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:6px 10px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text)"></textarea>
+      <textarea id="hwFormDesc" rows="5" placeholder="Постановка задачи, требования к решению, критерии…" style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:6px 10px;border:1px solid var(--border);border-radius:4px;background:var(--card,#fff);color:var(--text)"></textarea>
       <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2);display:block;margin-top:.5rem">Дедлайн (МСК)</label>
       <div style="display:flex;gap:.5rem;align-items:center">
-        <input type="datetime-local" id="hwFormDeadline" style="font-family:'JetBrains Mono',monospace;font-size:.85rem;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text)">
+        <input type="datetime-local" id="hwFormDeadline" style="font-family:'JetBrains Mono',monospace;font-size:.85rem;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:var(--card,#fff);color:var(--text)">
         <label style="display:inline-flex;align-items:center;gap:.3rem;font-size:.78rem;color:var(--text2);cursor:pointer">
           <input type="checkbox" id="hwFormStrict"> строгий (не принимать после)
         </label>
@@ -351,7 +412,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
 
 <!-- Модалка «Права admin» — курсы/учебные группы чекбоксами -->
 <div id="adminScopeWrap" style="display:none;position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
-  <div style="background:#fff;border-radius:10px;width:520px;max-width:96%;max-height:88vh;overflow:auto;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2);font-family:'Source Serif 4',Georgia,serif">
+  <div style="background:var(--card,#fff);border-radius:10px;width:520px;max-width:96%;max-height:88vh;overflow:auto;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2);font-family:'Source Serif 4',Georgia,serif">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.5rem">
       <h3 id="adminScopeTitle" style="margin:0;font-family:'Playfair Display',serif;font-size:1.1rem">Права admin</h3>
       <button onclick="adminScopeClose()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text3)">×</button>
@@ -410,7 +471,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
     <select id="labId" onchange="renderLabsTab()" style="font-family:'JetBrains Mono',monospace;font-size:.85rem"></select>
   </div>
   <p style="font-size:.8rem;color:var(--text2);margin:0 0 .8rem">Задания лабы зашифрованы; студент получает ключ, только когда сеанс открыт и его uid в списке допущенных. Отметьте присутствующих на вкладке «Посещаемость», затем нажмите «Открыть для отмеченных». Кнопка «Закрыть» мгновенно прячет лабу у всех. Следующая лаба открывается студенту только после того, как вы зачтёте предыдущую (кнопка «Зачесть» в таблице ниже); число задач автопроверки — ориентир, не решение.</p>
-  <div id="labSession" style="border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;margin-bottom:.8rem;background:#fff"></div>
+  <div id="labSession" style="border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;margin-bottom:.8rem;background:var(--card,#fff)"></div>
   <div id="labKeyBox" style="border:1px dashed var(--border);border-radius:8px;padding:.6rem 1rem;margin-bottom:.8rem;font-size:.82rem"></div>
   <div id="labProgress" style="border-top:1px solid var(--border);padding-top:.6rem"></div>
   <div id="notesKeyBox" style="border:1px dashed var(--border);border-radius:8px;padding:.6rem 1rem;margin-top:1rem;font-size:.82rem"></div>
@@ -418,7 +479,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
 
 <!-- Модалка «Новое / редактирование занятия» -->
 <div id="attFormWrap" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
-  <div style="background:#fff;border-radius:10px;width:720px;max-width:95%;max-height:90vh;overflow:auto;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2)">
+  <div style="background:var(--card,#fff);border-radius:10px;width:720px;max-width:95%;max-height:90vh;overflow:auto;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2)">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.5rem">
       <h3 id="attFormTitle" style="margin:0;font-family:'Playfair Display',serif">Новое занятие</h3>
       <button onclick="attCloseForm()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text3)">×</button>
@@ -434,11 +495,11 @@ if (location.search.indexOf('embedded=1') !== -1) {
       </div>
       <div>
         <label style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text3)">Дата и время (МСК)</label>
-        <input type="datetime-local" id="attFormDate" style="width:100%;font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:#fff">
+        <input type="datetime-local" id="attFormDate" style="width:100%;font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:var(--card,#fff)">
       </div>
     </div>
     <label style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text3)">Тема (необязательно)</label>
-    <input type="text" id="attFormTitle_" placeholder="§1 · Основные понятия разностной схемы" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text);font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;margin-bottom:.6rem">
+    <input type="text" id="attFormTitle_" placeholder="§1 · Основные понятия разностной схемы" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:4px;background:var(--card,#fff);color:var(--text);font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;margin-bottom:.6rem">
 
     <div id="attFormStudents" style="border:1px solid var(--border);border-radius:6px;padding:.5rem .7rem;max-height:45vh;overflow:auto;font-size:.85rem"></div>
 
@@ -480,7 +541,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
 
   <!-- Модалка «Расписание массово» -->
   <div id="gateSchedWrap" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
-    <div style="background:#fff;border-radius:10px;width:460px;max-width:96%;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2)">
+    <div style="background:var(--card,#fff);border-radius:10px;width:460px;max-width:96%;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2)">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.5rem">
         <h3 style="margin:0;font-family:'Playfair Display',serif;font-size:1.1rem">Массовое расписание</h3>
         <button onclick="document.getElementById('gateSchedWrap').style.display='none'" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text3)">×</button>
@@ -575,8 +636,8 @@ if (location.search.indexOf('embedded=1') !== -1) {
       <input type="password" id="ghToken" placeholder="ghp_..." style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:4px 8px;border:1px solid var(--border);border-radius:4px;width:300px" oninput="localStorage.setItem('gh_token',this.value)">
       <span style="font-size:.7rem;color:var(--text2)">(5000 req/hr вместо 60)</span>
     </div>
-    <button class="action-btn" onclick="runGithubCheck()" id="btnGhCheck" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 20px;font-family:'Source Serif 4',serif;font-weight:600;cursor:pointer">▶ Проверить все группы</button>
-      <button class="action-btn" onclick="runPlagiarismCheck()" id="btnPlagCheck" style="background:var(--accent3);color:#fff;border:none;border-radius:6px;padding:8px 20px;font-family:'Source Serif 4',serif;font-weight:600;cursor:pointer">🔍 Анти-плагиат</button>
+    <button class="action-btn" onclick="runGithubCheck()" id="btnGhCheck" style="background:var(--accent);color:var(--on-accent,#fff);border:none;border-radius:6px;padding:8px 20px;font-family:'Source Serif 4',serif;font-weight:600;cursor:pointer">▶ Проверить все группы</button>
+      <button class="action-btn" onclick="runPlagiarismCheck()" id="btnPlagCheck" style="background:var(--accent3);color:var(--on-accent,#fff);border:none;border-radius:6px;padding:8px 20px;font-family:'Source Serif 4',serif;font-weight:600;cursor:pointer">🔍 Анти-плагиат</button>
       <span id="ghStatus" style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text2);align-self:center"></span>
     </div>
     <div id="ghResults"></div>
@@ -586,30 +647,30 @@ if (location.search.indexOf('embedded=1') !== -1) {
 
 <!-- TAB: Messages -->
 <div id="tab-messages" class="panel">
-  <div style="display:flex;gap:0;height:520px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff">
+  <div style="display:flex;gap:0;height:520px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--card,#fff)">
     <!-- Chat list sidebar -->
     <div style="width:280px;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--bg2)">
       <div style="padding:8px;border-bottom:1px solid var(--border)">
-        <input type="text" id="chatSearchInput" placeholder="Поиск..." oninput="filterChatList()" style="width:100%;font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:#fff">
+        <input type="text" id="chatSearchInput" placeholder="Поиск..." oninput="filterChatList()" style="width:100%;font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:var(--card,#fff)">
       </div>
       <div style="padding:4px 8px;display:flex;gap:4px;border-bottom:1px solid var(--border)">
-        <button class="btn btn-sm" id="chatFilterAll" onclick="setChatFilter('all')" style="font-size:.65rem;flex:1;background:var(--accent);color:#fff;border-color:var(--accent)">Все</button>
+        <button class="btn btn-sm" id="chatFilterAll" onclick="setChatFilter('all')" style="font-size:.65rem;flex:1;background:var(--accent);color:var(--on-accent,#fff);border-color:var(--accent)">Все</button>
         <button class="btn btn-sm" id="chatFilterGroup" onclick="setChatFilter('group')" style="font-size:.65rem;flex:1">Группы</button>
         <button class="btn btn-sm" id="chatFilterDm" onclick="setChatFilter('dm')" style="font-size:.65rem;flex:1">Личные</button>
       </div>
       <div id="chatListBody" style="flex:1;overflow-y:auto"></div>
       <div style="padding:5px 6px;border-top:1px solid var(--border);display:flex;gap:4px">
         <button class="btn btn-sm" onclick="sendToAllGroups()" style="flex:1;font-size:.68rem">📢 Всем</button>
-        <button class="btn btn-sm" onclick="adminStartNewDm()" style="flex:1;font-size:.68rem;background:var(--accent3);color:#fff;border-color:var(--accent3)">+ Личный чат</button>
+        <button class="btn btn-sm" onclick="adminStartNewDm()" style="flex:1;font-size:.68rem;background:var(--accent3);color:var(--on-accent,#fff);border-color:var(--accent3)">+ Личный чат</button>
       </div>
     </div>
     <!-- Chat window -->
     <div style="flex:1;display:flex;flex-direction:column">
       <div id="adminChatHeader" style="background:var(--bg2);padding:.5rem .8rem;font-size:.82rem;font-weight:600;border-bottom:1px solid var(--border);min-height:36px">Выберите чат</div>
-      <div id="adminChatBody" style="flex:1;overflow-y:auto;padding:.8rem;background:#fff"></div>
+      <div id="adminChatBody" style="flex:1;overflow-y:auto;padding:.8rem;background:var(--card,#fff)"></div>
       <div id="adminChatInputWrap" style="display:none;gap:.4rem;padding:.5rem .8rem;border-top:1px solid var(--border);background:var(--bg2);align-items:flex-end">
         <div style="position:relative;flex:1;display:flex;align-items:center">
-          <input type="text" id="adminChatInput" placeholder="Написать сообщение..." onkeydown="if(event.key==='Enter')sendCurrentChat()" style="flex:1;font-family:'Source Serif 4',Georgia,serif;font-size:.88rem;padding:6px 32px 6px 10px;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text)">
+          <input type="text" id="adminChatInput" placeholder="Написать сообщение..." onkeydown="if(event.key==='Enter')sendCurrentChat()" style="flex:1;font-family:'Source Serif 4',Georgia,serif;font-size:.88rem;padding:6px 32px 6px 10px;border:1px solid var(--border);border-radius:5px;background:var(--card,#fff);color:var(--text)">
           <button onclick="toggleAdminEmoji()" style="position:absolute;right:4px;background:none;border:none;cursor:pointer;font-size:1.1rem;line-height:1" title="Эмодзи">😊</button>
         </div>
         <button class="btn btn-primary" onclick="sendCurrentChat()">→</button>
@@ -1166,7 +1227,7 @@ function updateStats() {
       if (sgs.length) parts.push('учебные МИФИ: <strong>' + sgs.join(', ') + '</strong>');
       if (wgs.length) parts.push('legacy-рабочие: <strong>' + wgs.map(g=>g.replace('group_','№')).join(', ') + '</strong>');
       if (parts.length === 0) {
-        scopeEl.innerHTML = '<span style="color:#c44">курсы не назначены — обратитесь к главному администратору</span>';
+        scopeEl.innerHTML = '<span style="color:var(--st-red,#c44)">курсы не назначены — обратитесь к главному администратору</span>';
         subEl.textContent = 'У вас пока нет ни одного курса в managedCourses. Пока это так, вы не видите заявок и не можете править данные.';
       } else {
         scopeEl.innerHTML = '<span>' + parts.join(' · ') + '</span>';
@@ -1364,7 +1425,7 @@ function renderStudents() {
     const rows = users.map((u, i) => studentRowHtml(u, viewerIsSuperAdmin, showLegacyAssign, i + 1, isAdminsBlock)).join('');
     const summaryIcon = isAdminsBlock ? '⚙' : '📁';
     const summaryStyle = isAdminsBlock
-      ? 'cursor:pointer;font-weight:700;padding:.4rem .6rem;background:#f6ecdc;border:1px solid #dcc79c;color:#8a5236;border-radius:6px;font-family:JetBrains Mono,monospace;font-size:.82rem'
+      ? 'cursor:pointer;font-weight:700;padding:.4rem .6rem;background:var(--pale-cream,#f6ecdc);border:1px solid #dcc79c;color:var(--accent,#8a5236);border-radius:6px;font-family:JetBrains Mono,monospace;font-size:.82rem'
       : 'cursor:pointer;font-weight:700;padding:.4rem .6rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-family:JetBrains Mono,monospace;font-size:.82rem';
     return '<details style="margin-bottom:.6rem">'
       +   '<summary style="' + summaryStyle + '">'
@@ -1420,13 +1481,13 @@ function studentRowHtml(u, viewerIsSuperAdmin, showLegacyAssign, num, isAdminsBl
     }).join('') + '</div>';
   })();
   const roleHtml = (() => {
-    if (isSuperAdmin(u.email)) return '<span class="badge" style="background:#faeeda;color:#854f0b;font-weight:700">главный</span>';
+    if (isSuperAdmin(u.email)) return '<span class="badge" style="background:var(--pale-amber,#faeeda);color:var(--st-amber,#854f0b);font-weight:700">главный</span>';
     if (viewerIsSuperAdmin && isAdm) {
       const cs = Array.isArray(u.managedCourses) && u.managedCourses.length ? u.managedCourses.join(',') : '';
       const sg = Array.isArray(u.managedStudyGroups) && u.managedStudyGroups.length ? u.managedStudyGroups.join(',') : '';
       const scope = [cs && ('курсы: '+cs), sg && ('МИФИ: '+sg)].filter(Boolean).join(' · ') || '(нет курсов)';
       return '<span class="badge b-admin" style="cursor:pointer" title="Снять права" onclick="toggleAdmin(\'' + u.uid + '\',\'' + u.email + '\',false)">admin ✕</span>' +
-             ' <span class="badge" style="background:#e6f1fb;color:#3a5ba0;cursor:pointer;font-size:.62rem" title="Изменить курсы/группы" onclick="editManagedGroups(\'' + u.uid + '\',\'' + u.email + '\')">'+ scope +' ⚙</span>';
+             ' <span class="badge" style="background:var(--pale-blue,#e6f1fb);color:var(--accent3,#3a5ba0);cursor:pointer;font-size:.62rem" title="Изменить курсы/группы" onclick="editManagedGroups(\'' + u.uid + '\',\'' + u.email + '\')">'+ scope +' ⚙</span>';
     }
     if (viewerIsSuperAdmin && !isAdm) return '<span class="badge b-student" style="cursor:pointer" title="Назначить админом" onclick="toggleAdmin(\'' + u.uid + '\',\'' + u.email + '\',true)">student →</span>';
     if (isAdm) return '<span class="badge b-admin">admin</span>';
@@ -1440,11 +1501,11 @@ function studentRowHtml(u, viewerIsSuperAdmin, showLegacyAssign, num, isAdminsBl
         : '<span style="color:var(--text3);font-size:.65rem">—</span>');
   return `<tr>
     <td style="text-align:center"><input type="checkbox" class="bulk-cb-student" data-uid="${u.uid}" onchange="bulkUpdateStudentsCount()"></td>
-    <td style="min-width:240px;white-space:nowrap"><span class="row-num">${num || ''}.</span><input type="text" value="${esc(u.fio || '')}" placeholder="ФИО" id="fio-${u.uid}" onchange="saveUserField('${u.uid}','fio',this.value)" style="font-weight:600;font-size:.82rem;width:calc(100% - 2.2em);min-width:200px;box-sizing:border-box;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'Source Serif 4',serif;background:#fff;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></td>
+    <td style="min-width:240px;white-space:nowrap"><span class="row-num">${num || ''}.</span><input type="text" value="${esc(u.fio || '')}" placeholder="ФИО" id="fio-${u.uid}" onchange="saveUserField('${u.uid}','fio',this.value)" style="font-weight:600;font-size:.82rem;width:calc(100% - 2.2em);min-width:200px;box-sizing:border-box;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'Source Serif 4',serif;background:var(--card,#fff);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></td>
     <td style="font-size:.82rem;word-break:break-all">${esc(u.email || '—')}</td>
     <td>${isAdminsBlock
         ? '<span style="color:var(--text3);font-size:.78rem;font-style:italic">—</span>'
-        : `<input type="text" value="${esc(u.studyGroup || '')}" placeholder="Б22-505" id="sg-${u.uid}" onchange="saveUserField('${u.uid}','studyGroup',this.value)" style="font-size:.82rem;width:76px;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'JetBrains Mono',monospace;background:#fff;color:var(--text)">`}</td>
+        : `<input type="text" value="${esc(u.studyGroup || '')}" placeholder="Б22-505" id="sg-${u.uid}" onchange="saveUserField('${u.uid}','studyGroup',this.value)" style="font-size:.82rem;width:76px;border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-family:'JetBrains Mono',monospace;background:var(--card,#fff);color:var(--text)">`}</td>
     <td>${workGroupsHtml}</td>
     <td style="text-align:center">${u.approved ? '<span class="badge b-pass" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', false)">✓</span>' : '<span class="badge b-fail" style="cursor:pointer" onclick="toggleApprove(\''+u.uid+'\', true)">✗</span>'}</td>
     <td style="text-align:center">${roleHtml}</td>
@@ -1670,8 +1731,8 @@ function hwRenderCard(a) {
     ? new Date(a.deadlineAt.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) + ' МСК'
     : 'без дедлайна';
   const strictBadge = a.strictDeadline ? '<span class="badge b-fail" title="Не принимается после дедлайна">строгий</span>' : '';
-  const modeBadge = a.mode === 'personal' ? '<span class="badge" style="background:#e6f1fb;color:#3a5ba0">personal</span>' : '<span class="badge b-group">common</span>';
-  return '<div class="card" style="padding:.7rem 1rem;margin-bottom:.5rem;background:#fff">'
+  const modeBadge = a.mode === 'personal' ? '<span class="badge" style="background:var(--pale-blue,#e6f1fb);color:var(--accent3,#3a5ba0)">personal</span>' : '<span class="badge b-group">common</span>';
+  return '<div class="card" style="padding:.7rem 1rem;margin-bottom:.5rem;background:var(--card,#fff)">'
     + '<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:.5rem;margin-bottom:.3rem">'
     + '<strong style="font-family:\'Playfair Display\',serif;font-size:1rem">' + hwEscape(a.title) + '</strong>'
     + modeBadge + strictBadge
@@ -1737,7 +1798,7 @@ function hwAddVariant() {
     + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--accent)">Вариант ' + (idx+1) + '</span>'
     + '<button class="btn btn-sm" onclick="this.parentElement.parentElement.remove();hwRenumberVariants()">убрать</button>'
     + '</div>'
-    + '<textarea data-vtext rows="2" placeholder="Формулировка варианта…" style="width:100%;font-family:\'Source Serif 4\',serif;font-size:.85rem;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text)"></textarea>'
+    + '<textarea data-vtext rows="2" placeholder="Формулировка варианта…" style="width:100%;font-family:\'Source Serif 4\',serif;font-size:.85rem;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:var(--card,#fff);color:var(--text)"></textarea>'
     + '<input type="file" data-vfiles multiple style="margin-top:.3rem;font-size:.78rem">';
   list.appendChild(row);
 }
@@ -1886,7 +1947,7 @@ async function renderHwSubmissionsTable(aid) {
             ? '<a href="'+f.url+'" target="_blank" style="color:var(--accent3);margin-right:.25rem;font-size:.78rem">📎 '+hwEscape(f.name)+'</a>'
             : '<button onclick="hwAdminDownload(\''+encodeURIComponent(f.path)+'\',\''+nameEsc+'\')" style="background:none;border:none;color:var(--accent3);cursor:pointer;padding:0;margin-right:.25rem;font-size:.78rem;text-decoration:underline">📎 '+hwEscape(f.name)+'</button>';
           const annot = isPdf
-            ? ' <button onclick="hwOpenAnnotator(\''+aid+'\',\''+u.uid+'\','+fi+')" title="Проверить: пометки маркером и вернуть студенту" style="background:#fdf9f0;border:1px solid #c8bfa8;color:#5a4a2a;cursor:pointer;padding:1px 5px;margin-right:.4rem;font-size:.72rem;border-radius:3px">✏️ Проверить</button>'
+            ? ' <button onclick="hwOpenAnnotator(\''+aid+'\',\''+u.uid+'\','+fi+')" title="Проверить: пометки маркером и вернуть студенту" style="background:var(--pale-cream,#fdf9f0);border:1px solid #c8bfa8;color:var(--st-amber,#5a4a2a);cursor:pointer;padding:1px 5px;margin-right:.4rem;font-size:.72rem;border-radius:3px">✏️ Проверить</button>'
             : '';
           return dl + annot;
         }).join('')
@@ -1901,7 +1962,7 @@ async function renderHwSubmissionsTable(aid) {
     const linksPart = (s && s.links && s.links.length)
       ? s.links.map((l, li) =>
           '<a href="'+l.url+'" target="_blank" style="color:var(--accent3);margin-right:.25rem;font-size:.78rem" title="'+hwEscape(l.url)+'">🔗 '+hwEscape(l.name || l.url)+'</a>'
-          + ' <button onclick="hwOpenAnnotatorLink(\''+aid+'\',\''+u.uid+'\','+li+')" title="Проверить: скачать PDF по ссылке, пометки маркером и вернуть студенту" style="background:#fdf9f0;border:1px solid #c8bfa8;color:#5a4a2a;cursor:pointer;padding:1px 5px;margin-right:.4rem;font-size:.72rem;border-radius:3px">✏️ Проверить</button>'
+          + ' <button onclick="hwOpenAnnotatorLink(\''+aid+'\',\''+u.uid+'\','+li+')" title="Проверить: скачать PDF по ссылке, пометки маркером и вернуть студенту" style="background:var(--pale-cream,#fdf9f0);border:1px solid #c8bfa8;color:var(--st-amber,#5a4a2a);cursor:pointer;padding:1px 5px;margin-right:.4rem;font-size:.72rem;border-radius:3px">✏️ Проверить</button>'
         ).join('')
       : '';
     const filesHtml = ((filesPart + linksPart) || '<span style="color:var(--text3);font-style:italic;font-size:.78rem">—</span>') + reviewedPart;
@@ -2299,11 +2360,11 @@ function renderWorkgroupsTab() {
            + (isStaroste ? '★ ' : '')
            + '<strong>' + label + '</strong>'
            + (email ? ' <span style="color:var(--text3);font-size:.7rem">' + email + '</span>' : '')
-           + ' <button title="Выкинуть из группы" onclick="adminKickMember(\''+gid+'\',\''+uid+'\')" style="background:none;border:none;color:#c44;cursor:pointer;font-size:.85rem;line-height:1;padding:0 2px">×</button>'
+           + ' <button title="Выкинуть из группы" onclick="adminKickMember(\''+gid+'\',\''+uid+'\')" style="background:none;border:none;color:var(--st-red,#c44);cursor:pointer;font-size:.85rem;line-height:1;padding:0 2px">×</button>'
            + '</span>';
     }).join('');
     const canDelete = uids.length <= 1;
-    return '<div class="card" style="padding:.7rem 1rem;background:#fff">'
+    return '<div class="card" style="padding:.7rem 1rem;background:var(--card,#fff)">'
       + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin-bottom:.4rem">'
       + '<span style="font-family:\'Playfair Display\',serif;font-weight:700;font-size:.95rem">' + (course ? course.short : cid) + ' · Группа №' + (g.groupIndex || gid.replace(/^.*_group_/,'')) + '</span>'
       + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3)">' + uids.length + ' / ' + (g.maxSize || 3) + '</span>'
@@ -2699,7 +2760,7 @@ function renderGrades() {
     const pct = Math.round(done / total * 100);
     const col = pct >= 80 ? '#1a6b5a' : (pct >= 40 ? '#854f0b' : '#c44');
     return `<div style="display:flex;align-items:center;gap:.4rem" title="Сдал ${done} ДЗ из ${total}">
-      <div style="flex:1;background:#ede6da;border-radius:3px;height:8px;min-width:60px">
+      <div style="flex:1;background:var(--track,#ede6da);border-radius:3px;height:8px;min-width:60px">
         <div style="background:${col};height:100%;border-radius:3px;width:${pct}%"></div>
       </div>
       <span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:${col};font-weight:700;white-space:nowrap">${done}/${total} · ${pct}%</span>
@@ -2781,7 +2842,7 @@ function renderGrades() {
       for (const gk of groupKeys) {
         const users = groups[gk].slice().sort((a, b) => (a.fio||a.email).localeCompare(b.fio||b.email));
         const gLabel = gk === '__no-group__' ? '(без рабочей группы)' : ('Группа ' + gk.replace('group_', '№'));
-        out += `<details open style="margin-bottom:.35rem;background:#fff;border:1px solid var(--border);border-radius:5px">
+        out += `<details open style="margin-bottom:.35rem;background:var(--card,#fff);border:1px solid var(--border);border-radius:5px">
           <summary style="cursor:pointer;padding:.4rem .7rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2)">
             📂 ${gLabel} <span style="color:var(--text3);margin-left:.3rem">— ${users.length} студ.</span>
           </summary>
@@ -3563,7 +3624,7 @@ async function runGithubCheck() {
     if (r.error) {
       container.innerHTML += `<div class="card" style="border-left:4px solid #e8b8b8;margin-bottom:.8rem;padding:.8rem 1rem">
         <strong>${gid.replace('group_','Группа ')}</strong> — <a href="${g.repoUrl}" target="_blank">${r.repo||g.repoUrl}</a>
-        <br><span style="color:#c44">Ошибка: ${r.error}</span></div>`;
+        <br><span style="color:var(--st-red,#c44)">Ошибка: ${r.error}</span></div>`;
       done++;
       continue;
     }
@@ -3574,13 +3635,13 @@ async function runGithubCheck() {
     
     let resultsHtml = '';
     if (r.results.missing.length > 0) {
-      resultsHtml = '<div style="font-size:.78rem;color:#c44;margin-top:.3rem"><strong>Не найдены:</strong> ' +
+      resultsHtml = '<div style="font-size:.78rem;color:var(--st-red,#c44);margin-top:.3rem"><strong>Не найдены:</strong> ' +
         r.results.missing.map(m => m.path + '/' + m.files.join(', ')).join('; ') + '</div>';
     }
     
     let missingHtml = '';
     if (r.missingMarkers.length > 0) {
-      missingHtml = '<div style="font-size:.78rem;color:#c44;margin-top:.3rem"><strong>Нет маркеров:</strong> ' +
+      missingHtml = '<div style="font-size:.78rem;color:var(--st-red,#c44);margin-top:.3rem"><strong>Нет маркеров:</strong> ' +
         r.missingMarkers.join(', ') + '</div>';
     }
     
@@ -3591,15 +3652,15 @@ async function runGithubCheck() {
       const txtPassed = [];
       for (const tc of r.txtChecks) {
         if (tc.status === 'missing') {
-          txtIssues.push(`<span style="color:#c44">${tc.file}: отсутствует</span>`);
+          txtIssues.push(`<span style="color:var(--st-red,#c44)">${tc.file}: отсутствует</span>`);
         } else if (tc.status === 'error') {
-          txtIssues.push(`<span style="color:#c44">${tc.file}: ошибка чтения</span>`);
+          txtIssues.push(`<span style="color:var(--st-red,#c44)">${tc.file}: ошибка чтения</span>`);
         } else if (tc.checks) {
           for (const ch of tc.checks) {
             if (ch.status === 'not_found') {
-              txtIssues.push(`<span style="color:#854f0b">${ch.name}: значение не найдено в файле</span>`);
+              txtIssues.push(`<span style="color:var(--st-amber,#854f0b)">${ch.name}: значение не найдено в файле</span>`);
             } else if (ch.status === 'fail') {
-              txtIssues.push(`<span style="color:#c44">${ch.name}: ${ch.value} (ожид. ${ch.expected}, отклонение ${ch.err})</span>`);
+              txtIssues.push(`<span style="color:var(--st-red,#c44)">${ch.name}: ${ch.value} (ожид. ${ch.expected}, отклонение ${ch.err})</span>`);
             } else {
               txtPassed.push(`${ch.name}: ${ch.value} ✓`);
             }
@@ -3611,7 +3672,7 @@ async function runGithubCheck() {
           txtIssues.join('<br>') + '</div>';
       }
       if (txtPassed.length > 0) {
-        txtHtml += '<div style="font-size:.78rem;color:#1a6b5a;margin-top:.2rem">' +
+        txtHtml += '<div style="font-size:.78rem;color:var(--st-green,#1a6b5a);margin-top:.2rem">' +
           txtPassed.join(' · ') + '</div>';
       }
     }
@@ -3727,7 +3788,7 @@ async function runPlagiarismCheck() {
         badge = '<span class="badge b-fail" style="font-size:.75rem">⚠️ подозрительно</span>';
         color = '#fde8e8';
       } else if (p.similarity > 0.65) {
-        badge = '<span class="badge" style="font-size:.75rem;background:#fff3cd;color:#854f0b">внимание</span>';
+        badge = '<span class="badge" style="font-size:.75rem;background:var(--pale-amber,#fff3cd);color:var(--st-amber,#854f0b)">внимание</span>';
         color = '#fffbeb';
       } else {
         badge = '<span class="badge b-pass" style="font-size:.75rem">ок</span>';
@@ -3836,9 +3897,9 @@ function renderChatList() {
   function chatRowHtml(c) {
     const isActive = c.type===_currentChatMode && c.id===_currentChatId;
     const icon = c.type==='group'?'👥':'✉️';
-    const unreadBadge = c.unread>0?'<span style="min-width:16px;height:16px;border-radius:8px;background:#c44;color:#fff;font-size:.58rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;font-family:JetBrains Mono,monospace">'+c.unread+'</span>':'';
+    const unreadBadge = c.unread>0?'<span style="min-width:16px;height:16px;border-radius:8px;background:var(--st-red,#c44);color:var(--on-accent,#fff);font-size:.58rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;font-family:JetBrains Mono,monospace">'+c.unread+'</span>':'';
     const time = c.lastTime?new Date(c.lastTime*1000).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-    let h = '<div onclick="openChat(\''+c.type+'\',\''+c.id+'\')" style="padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--border);'+(isActive?'background:#fff;':'')+'transition:background .1s">';
+    let h = '<div onclick="openChat(\''+c.type+'\',\''+c.id+'\')" style="padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--border);'+(isActive?'background:var(--card,#fff);':'')+'transition:background .1s">';
     h += '<div style="display:flex;justify-content:space-between;align-items:center">';
     h += '<span style="font-size:.82rem;font-weight:600">'+icon+' '+c.label+'</span>';
     h += '<span style="display:flex;align-items:center;gap:4px">'+unreadBadge+'<span style="font-size:.6rem;color:var(--text3)">'+time+'</span></span></div>';
@@ -3864,7 +3925,7 @@ function renderChatList() {
 
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
   function folderSummary(icon, title, count, unread) {
-    const b = unread>0 ? ' <span style="min-width:16px;height:16px;border-radius:8px;background:#c44;color:#fff;font-size:.58rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;font-family:JetBrains Mono,monospace">'+unread+'</span>' : '';
+    const b = unread>0 ? ' <span style="min-width:16px;height:16px;border-radius:8px;background:var(--st-red,#c44);color:var(--on-accent,#fff);font-size:.58rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;font-family:JetBrains Mono,monospace">'+unread+'</span>' : '';
     return '<summary style="cursor:pointer;padding:6px 10px;font-size:.75rem;font-weight:700;background:var(--bg2);border-bottom:1px solid var(--border);font-family:JetBrains Mono,monospace;color:var(--text2);display:flex;align-items:center;justify-content:space-between;gap:4px;list-style:none">'
       + '<span>'+icon+' '+esc(title)+' <span style="color:var(--text3);font-weight:400">('+count+')</span></span>'+b+'</summary>';
   }
@@ -3927,13 +3988,13 @@ function renderGroupMsgs(snap,gid) {
     var date=m.createdAt?new Date(m.createdAt.seconds*1000).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
     var isA=m.role==='admin',align=isA?'flex-end':'flex-start',bg=isA?'#e6f1fb':'#f5f0e8',border=isA?'#3a5ba0':'#d9cfc0';
     var name=m.authorFio||m.authorEmail||'';
-    var roleTag=isA?'<span style="font-size:.6rem;background:#fde8e8;color:#c44;padding:1px 4px;border-radius:3px;font-weight:700;margin-left:4px">Admin</span>':'';
-    var delBtn=isA?' <button onclick="delGrpMsg(\''+gid+'\',\''+doc.id+'\')" style="font-size:.62rem;color:#c44;background:none;border:none;cursor:pointer;opacity:.6">✕</button>':'';
+    var roleTag=isA?'<span style="font-size:.6rem;background:var(--pale-red,#fde8e8);color:var(--st-red,#c44);padding:1px 4px;border-radius:3px;font-weight:700;margin-left:4px">Admin</span>':'';
+    var delBtn=isA?' <button onclick="delGrpMsg(\''+gid+'\',\''+doc.id+'\')" style="font-size:.62rem;color:var(--st-red,#c44);background:none;border:none;cursor:pointer;opacity:.6">✕</button>':'';
     var readHtml='';
     if(isA){var rBy=m.readBy||{},rList=Object.values(rBy),rc=rList.length;
       if(rc===0){readHtml='<div style="text-align:right;font-size:.6rem;color:#9a8d7e;margin-top:2px">✓ отправлено</div>';}
       else{var avs='';rList.forEach(function(r){var ini=getInitials(r.fio||r.email),colors=['#1a6b5a','#3a5ba0','#854f0b','#7c3aed','#b44a2d'],c=colors[Math.abs((r.fio||r.email||'').length)%colors.length];avs+='<span title="'+(r.fio||r.email)+'" style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:'+c+';color:#fff;font-size:.5rem;font-weight:700;font-family:JetBrains Mono,monospace;border:1.5px solid #fff;margin-left:-3px">'+ini+'</span>';});
-        readHtml='<div style="display:flex;align-items:center;gap:3px;margin-top:2px;justify-content:flex-end"><span style="font-size:.6rem;color:#1a6b5a">✓✓ '+(rc>=studentCount?'все':rc+'/'+studentCount)+'</span><span style="display:inline-flex;margin-left:2px">'+avs+'</span></div>';}
+        readHtml='<div style="display:flex;align-items:center;gap:3px;margin-top:2px;justify-content:flex-end"><span style="font-size:.6rem;color:var(--st-green,#1a6b5a)">✓✓ '+(rc>=studentCount?'все':rc+'/'+studentCount)+'</span><span style="display:inline-flex;margin-left:2px">'+avs+'</span></div>';}
     }
     html+='<div style="display:flex;justify-content:'+align+';margin-bottom:5px"><div style="max-width:75%;background:'+bg+';border:1px solid '+border+';border-radius:8px;padding:5px 9px;font-size:.84rem">';
     html+='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:1px"><strong style="font-size:.75rem">'+name+roleTag+'</strong><span style="font-size:.62rem;color:var(--text3);white-space:nowrap">'+date+delBtn+'</span></div>';
@@ -3978,9 +4039,9 @@ function renderDmMsgs(snap,dmId){
     var m=doc.data(),date=m.createdAt?new Date(m.createdAt.seconds*1000).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
     var isMine=me&&m.authorUid===me.uid,align=isMine?'flex-end':'flex-start',bg=isMine?'#e6f1fb':'#f5f0e8',border=isMine?'#3a5ba0':'#d9cfc0';
     var name=m.authorFio||m.authorEmail||'';
-    var delBtn=isMine?' <button onclick="delDmMsg(\''+dmId+'\',\''+doc.id+'\')" style="font-size:.62rem;color:#c44;background:none;border:none;cursor:pointer;opacity:.6">✕</button>':'';
+    var delBtn=isMine?' <button onclick="delDmMsg(\''+dmId+'\',\''+doc.id+'\')" style="font-size:.62rem;color:var(--st-red,#c44);background:none;border:none;cursor:pointer;opacity:.6">✕</button>':'';
     var readHtml='';
-    if(isMine){readHtml=m.readAt?'<div style="text-align:right;font-size:.58rem;color:#1a6b5a;margin-top:2px">✓✓ прочитано '+new Date(m.readAt).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</div>':'<div style="text-align:right;font-size:.58rem;color:#9a8d7e;margin-top:2px">✓ отправлено</div>';}
+    if(isMine){readHtml=m.readAt?'<div style="text-align:right;font-size:.58rem;color:var(--st-green,#1a6b5a);margin-top:2px">✓✓ прочитано '+new Date(m.readAt).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</div>':'<div style="text-align:right;font-size:.58rem;color:#9a8d7e;margin-top:2px">✓ отправлено</div>';}
     // Track unread from student
     if(!isMine && !m.readAt) unreadIds.push(doc.id);
     html+='<div style="display:flex;justify-content:'+align+';margin-bottom:5px"><div style="max-width:75%;background:'+bg+';border:1px solid '+border+';border-radius:8px;padding:5px 9px;font-size:.84rem">';
@@ -4036,7 +4097,7 @@ function adminStartNewDm() {
   modal.onclick = function(e){ if(e.target===modal) modal.remove(); };
 
   var box = document.createElement('div');
-  box.style.cssText = 'background:#fff;border-radius:10px;width:380px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,.2);overflow:hidden';
+  box.style.cssText = 'background:var(--card,#fff);border-radius:10px;width:380px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,.2);overflow:hidden';
 
   var header = '<div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">' +
     '<strong style="font-size:.9rem;font-family:Playfair Display,serif">Новый личный чат</strong>' +
@@ -4153,7 +4214,7 @@ async function renderGatingTab(force) {
     lectures = await window.CFDGating.listCourseLectures(cid);
     releases = await window.CFDGating.getReleasesForCourse(cid);
   } catch (e) {
-    document.getElementById('gateTableWrap').innerHTML = '<p style="color:#c44">Ошибка: ' + (e.message || e) + '</p>';
+    document.getElementById('gateTableWrap').innerHTML = '<p style="color:var(--st-red,#c44)">Ошибка: ' + (e.message || e) + '</p>';
     return;
   }
   _gatingState.lectures = lectures;
@@ -4368,7 +4429,7 @@ async function renderLabsTab() {
 async function labsRenderNotesKey(cid) {
   const box = document.getElementById('notesKeyBox');
   const has = await CFDLabs.hasNotesKey(cid);
-  box.innerHTML = '<strong>Ключ заметок докладчика (курс ' + escapeHtml(cid) + '):</strong> ' + (has ? '<span style="color:#1a6b5a">задан ✓</span>' : '<span style="color:#c44">не задан — в режиме докладчика заметок не будет</span>')
+  box.innerHTML = '<strong>Ключ заметок докладчика (курс ' + escapeHtml(cid) + '):</strong> ' + (has ? '<span style="color:var(--st-green,#1a6b5a)">задан ✓</span>' : '<span style="color:var(--st-red,#c44)">не задан — в режиме докладчика заметок не будет</span>')
     + ' <span style="color:var(--text3)">(печатает tools/notes_encrypt.py; файл &lt;курс&gt;/_private/' + escapeHtml(cid) + '-notes.key вне репозитория)</span>'
     + '<div style="display:flex;gap:.4rem;margin-top:.4rem;flex-wrap:wrap">'
     + '<input id="notesKeyInput" type="password" placeholder="base64-ключ, 44 символа" style="flex:1;min-width:260px;font-family:\'JetBrains Mono\',monospace;font-size:.8rem;padding:.3rem .5rem;border:1px solid var(--border);border-radius:4px">'
@@ -4393,8 +4454,8 @@ function labsRenderSession(cid, lab, sess, attList) {
   const allowed = (sess && Array.isArray(sess.allowedUids)) ? sess.allowedUids : [];
   const when = (ts) => ts ? new Date(ts.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) : '';
   const status = open
-    ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;background:#e8f4f0;color:#1a6b5a;padding:.2rem .6rem;border-radius:4px">● ОТКРЫТА</span> <span style="font-size:.8rem;color:var(--text2)">допущено ' + allowed.length + (sess.openedAt ? ' · с ' + when(sess.openedAt) + ' МСК' : '') + (sess.title ? ' · ' + escapeHtml(sess.title) : '') + '</span>'
-    : '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;background:#fde8e8;color:#c44;padding:.2rem .6rem;border-radius:4px">○ ЗАКРЫТА</span>' + (sess && sess.closedAt ? ' <span style="font-size:.8rem;color:var(--text3)">закрыта ' + when(sess.closedAt) + ' МСК</span>' : '');
+    ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;background:var(--pale-green,#e8f4f0);color:var(--st-green,#1a6b5a);padding:.2rem .6rem;border-radius:4px">● ОТКРЫТА</span> <span style="font-size:.8rem;color:var(--text2)">допущено ' + allowed.length + (sess.openedAt ? ' · с ' + when(sess.openedAt) + ' МСК' : '') + (sess.title ? ' · ' + escapeHtml(sess.title) : '') + '</span>'
+    : '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;background:var(--pale-red,#fde8e8);color:var(--st-red,#c44);padding:.2rem .6rem;border-radius:4px">○ ЗАКРЫТА</span>' + (sess && sess.closedAt ? ' <span style="font-size:.8rem;color:var(--text3)">закрыта ' + when(sess.closedAt) + ' МСК</span>' : '');
   // По умолчанию — сегодняшнее занятие (по МСК; если несколько — последнее по времени).
   // Если сегодня занятий нет: у открытого сеанса — его занятие, иначе самое свежее.
   const mskDay = (ms) => new Date(ms).toLocaleDateString('ru-RU', { timeZone: 'Europe/Moscow' });
@@ -4407,7 +4468,7 @@ function labsRenderSession(cid, lab, sess, attList) {
     const isToday = a.date && mskDay(a.date.toMillis()) === today;
     return '<option value="' + a.id + '"' + (a.id === defaultId ? ' selected' : '') + '>' + (isToday ? 'сегодня · ' : '') + d + ' · ' + escapeHtml(a.studyGroup || '') + (a.title ? ' · ' + escapeHtml(a.title) : '') + ' · присутствует ' + p.present + '</option>';
   }).join('');
-  const noToday = todays.length ? '' : '<span style="font-size:.78rem;color:#854f0b">Занятия на сегодня нет — </span><button class="btn btn-sm" onclick="labsNewTodayAttendance()">+ создать занятие на сегодня</button>';
+  const noToday = todays.length ? '' : '<span style="font-size:.78rem;color:var(--st-amber,#854f0b)">Занятия на сегодня нет — </span><button class="btn btn-sm" onclick="labsNewTodayAttendance()">+ создать занятие на сегодня</button>';
   box.innerHTML =
     '<div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;margin-bottom:.6rem">' + status + '</div>'
     + '<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">'
@@ -4486,7 +4547,7 @@ async function labsClose() {
 async function labsRenderKey(cid, lab) {
   const box = document.getElementById('labKeyBox');
   const has = await CFDLabs.hasKey(cid, lab);
-  box.innerHTML = '<strong>Ключ шифрования:</strong> ' + (has ? '<span style="color:#1a6b5a">задан ✓</span>' : '<span style="color:#c44">не задан — лабу открыть нельзя</span>')
+  box.innerHTML = '<strong>Ключ шифрования:</strong> ' + (has ? '<span style="color:var(--st-green,#1a6b5a)">задан ✓</span>' : '<span style="color:var(--st-red,#c44)">не задан — лабу открыть нельзя</span>')
     + ' <span style="color:var(--text3)">(ключ печатает tools/lab_encrypt.py; хранится в nm/_private/*.key вне репозитория)</span>'
     + '<div style="display:flex;gap:.4rem;margin-top:.4rem;flex-wrap:wrap">'
     + '<input id="labKeyInput" type="password" placeholder="base64-ключ, 44 символа" style="flex:1;min-width:260px;font-family:\'JetBrains Mono\',monospace;font-size:.8rem;padding:.3rem .5rem;border:1px solid var(--border);border-radius:4px">'
@@ -4527,12 +4588,12 @@ async function labsRenderProgress(cid, lab, sess) {
     + rows.map(r => '<div style="display:grid;grid-template-columns:1fr 90px 140px 70px 110px 120px 52px;gap:.6rem;align-items:center;padding:.35rem 0;border-bottom:1px dotted var(--border);font-size:.85rem">'
       + '<div>' + escapeHtml(r.fio) + (r.allowed ? '' : ' <span style="font-size:.7rem;color:var(--text3)">(не в списке)</span>') + '</div>'
       + '<div style="color:var(--text3);font-size:.75rem">' + escapeHtml(r.sg) + '</div>'
-      + '<div style="height:8px;background:#e6dfd0;border-radius:4px;overflow:hidden"><div style="height:100%;width:' + r.pct + '%;background:' + (r.reached ? '#3d6b5a' : '#3a5ba0') + '"></div></div>'
+      + '<div style="height:8px;background:var(--track,#e6dfd0);border-radius:4px;overflow:hidden"><div style="height:100%;width:' + r.pct + '%;background:' + (r.reached ? '#3d6b5a' : '#3a5ba0') + '"></div></div>'
       + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;text-align:right;color:' + (r.reached ? '#3d6b5a' : 'inherit') + '" title="' + (r.reached ? 'порог достигнут' : 'порог не достигнут') + '">' + r.done + '/' + r.total + '</div>'
       + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3);text-align:right">' + r.upd + '</div>'
       + '<div style="text-align:right">' + (r.accepted
-          ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.7rem;color:#1a6b5a">✓ зачтено</span> <button class="btn btn-sm" title="Снять зачёт" onclick="labsSetAccepted(\'' + r.uid + '\', false)">×</button>'
-          : '<button class="btn btn-sm" style="' + (r.reached ? 'border-color:#1a6b5a;color:#1a6b5a' : '') + '" onclick="labsSetAccepted(\'' + r.uid + '\', true)">Зачесть</button>')
+          ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.7rem;color:var(--st-green,#1a6b5a)">✓ зачтено</span> <button class="btn btn-sm" title="Снять зачёт" onclick="labsSetAccepted(\'' + r.uid + '\', false)">×</button>'
+          : '<button class="btn btn-sm" style="' + (r.reached ? 'border-color:var(--st-green,#1a6b5a);color:var(--st-green,#1a6b5a)' : '') + '" onclick="labsSetAccepted(\'' + r.uid + '\', true)">Зачесть</button>')
       + '</div>'
       + '<div style="text-align:right">' + (r.hasCode ? '<button class="btn btn-sm" title="Показать код студента" onclick="labsShowCode(\'' + r.uid + '\')">Код</button>' : '') + '</div>'
       + '</div>').join('');
@@ -4600,28 +4661,28 @@ async function labsShowCode(uid) {
     wrap.addEventListener('click', e => { if (e.target === wrap) wrap.style.display = 'none'; });
     document.body.appendChild(wrap);
   }
-  const head = '<div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:.6rem;position:sticky;top:0;background:#fff;padding:.2rem 0;z-index:1">'
-    + '<div><strong>' + escapeHtml(u.fio || u.email || uid) + '</strong> <span style="color:var(--text3);font-size:.8rem">· ' + escapeHtml(info.title || p.labId) + ' · ' + (p.done || 0) + '/' + (p.total || info.total || '?') + (p.accepted ? ' · <span style="color:#1a6b5a">зачтено</span>' : '') + '</span></div>'
+  const head = '<div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:.6rem;position:sticky;top:0;background:var(--card,#fff);padding:.2rem 0;z-index:1">'
+    + '<div><strong>' + escapeHtml(u.fio || u.email || uid) + '</strong> <span style="color:var(--text3);font-size:.8rem">· ' + escapeHtml(info.title || p.labId) + ' · ' + (p.done || 0) + '/' + (p.total || info.total || '?') + (p.accepted ? ' · <span style="color:var(--st-green,#1a6b5a)">зачтено</span>' : '') + '</span></div>'
     + '<button class="btn btn-sm" onclick="document.getElementById(\'labCodeWrap\').style.display=\'none\'">закрыть</button></div>';
-  wrap.innerHTML = '<div style="background:#fff;border-radius:10px;max-width:1100px;width:100%;padding:1rem 1.2rem;box-shadow:0 10px 40px rgba(0,0,0,.25)">' + head + '<div style="color:var(--text3);font-style:italic">загрузка условий…</div></div>';
+  wrap.innerHTML = '<div style="background:var(--card,#fff);border-radius:10px;max-width:1100px;width:100%;padding:1rem 1.2rem;box-shadow:0 10px 40px rgba(0,0,0,.25)">' + head + '<div style="color:var(--text3);font-style:italic">загрузка условий…</div></div>';
   wrap.style.display = 'flex';
 
   const body = await labsLoadBody(p.courseId, p.labId);
   const ids = body ? body.order.filter(id => id in code).concat(Object.keys(code).filter(id => !(id in body.tasks)).sort()) : Object.keys(code).sort();
-  const mark = id => { const t = tasks[id]; return t === 'ok' ? '<span style="color:#1a6b5a;font-weight:600">✓ автопроверка пройдена</span>' : (t === 'err' ? '<span style="color:#c44;font-weight:600">✗ последний запуск не прошёл</span>' : '<span style="color:var(--text3)">не запускалось</span>'); };
+  const mark = id => { const t = tasks[id]; return t === 'ok' ? '<span style="color:var(--st-green,#1a6b5a);font-weight:600">✓ автопроверка пройдена</span>' : (t === 'err' ? '<span style="color:var(--st-red,#c44);font-weight:600">✗ последний запуск не прошёл</span>' : '<span style="color:var(--text3)">не запускалось</span>'); };
   const blocks = ids.map(id => {
     const t = body && body.tasks[id];
     const c = labsCodeHtml(code[id], t ? t.skeleton : '');
-    const cond = t ? '<div style="font-size:.86rem;line-height:1.5;padding:.6rem .8rem;background:#e7efe8;border-radius:6px 6px 0 0">' + t.html + '</div>' : '<div style="font-size:.8rem;color:var(--text3);padding:.3rem .8rem">' + escapeHtml(id) + '</div>';
+    const cond = t ? '<div style="font-size:.86rem;line-height:1.5;padding:.6rem .8rem;background:var(--pale-green,#e7efe8);border-radius:6px 6px 0 0">' + t.html + '</div>' : '<div style="font-size:.8rem;color:var(--text3);padding:.3rem .8rem">' + escapeHtml(id) + '</div>';
     return '<div style="margin:1rem 0;border:1px solid var(--border);border-radius:6px;overflow:hidden">' + cond
-      + '<div style="display:flex;gap:1rem;align-items:center;font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text2);padding:.3rem .8rem;background:#f3efe7">' + escapeHtml(id) + ' · ' + mark(id) + (c.same ? ' · <span style="color:#854f0b">не начато: код совпадает со скелетом</span>' : ' · <span style="color:#3d6b5a">подсвечены строки, которых нет в скелете</span>') + '</div>'
+      + '<div style="display:flex;gap:1rem;align-items:center;font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text2);padding:.3rem .8rem;background:var(--pale-cream,#f3efe7)">' + escapeHtml(id) + ' · ' + mark(id) + (c.same ? ' · <span style="color:var(--st-amber,#854f0b)">не начато: код совпадает со скелетом</span>' : ' · <span style="color:var(--st-green,#3d6b5a)">подсвечены строки, которых нет в скелете</span>') + '</div>'
       + '<pre style="margin:0;padding:.6rem .8rem;background:#1e1e1e;color:#e8e6e3;font-size:.78rem;line-height:1.4;overflow:auto;max-height:420px;white-space:pre">' + c.html + '</pre></div>';
   });
   const notStarted = body ? body.order.filter(id => !(id in code)) : [];
   wrap.firstChild.innerHTML = head
     + (blocks.length ? blocks.join('') : '<div style="color:var(--text3);font-style:italic">Код не сохранён.</div>')
     + (notStarted.length ? '<div style="font-size:.8rem;color:var(--text3);margin-top:.6rem">Не открывались: ' + notStarted.map(escapeHtml).join(', ') + '</div>' : '')
-    + (body ? '' : '<div style="font-size:.8rem;color:#c44;margin-top:.6rem">Условия не загружены (нет ключа лабы или файла заданий) — показан только код.</div>');
+    + (body ? '' : '<div style="font-size:.8rem;color:var(--st-red,#c44);margin-top:.6rem">Условия не загружены (нет ключа лабы или файла заданий) — показан только код.</div>');
   if (body) { try { await labsEnsureMathJax(); if (window.MathJax && window.MathJax.typesetPromise) await window.MathJax.typesetPromise([wrap]); } catch (e) {} }
 }
 
@@ -4731,7 +4792,7 @@ async function attRenderList() {
       + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.85rem;font-weight:600;text-align:right;color:' + (p.percent == null ? 'var(--text3)' : (p.percent >= 70 ? '#3d6b5a' : '#b44a2d')) + '">' + pctText + '</div>'
       + '<div style="display:flex;gap:.3rem;justify-content:flex-end">'
         + '<button class="btn btn-sm" onclick="attOpenEditForm(\'' + a.id + '\')" title="Редактировать">✎</button>'
-        + '<button class="btn btn-sm" style="color:#c44" onclick="attDelete(\'' + a.id + '\')" title="Удалить">×</button>'
+        + '<button class="btn btn-sm" style="color:var(--st-red,#c44)" onclick="attDelete(\'' + a.id + '\')" title="Удалить">×</button>'
       + '</div>'
       + '</div>';
   }).join('');
@@ -4812,13 +4873,13 @@ async function attFormLoadStudents(preselectRecords) {
     return '<div style="display:grid;grid-template-columns:2em 1fr auto auto auto;gap:.5rem;align-items:center;padding:.35rem 0;border-bottom:1px dotted var(--border)">'
       + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3);text-align:right">' + (idx + 1) + '.</div>'
       + '<div>' + escapeHtml(u.fio || u.email || u.uid) + ' <span style="color:var(--text3);font-size:.78rem">' + escapeHtml(u.email || '') + '</span></div>'
-      + '<label style="display:inline-flex;align-items:center;gap:.2rem;font-size:.82rem;cursor:pointer;color:#3d6b5a">'
+      + '<label style="display:inline-flex;align-items:center;gap:.2rem;font-size:.82rem;cursor:pointer;color:var(--st-green,#3d6b5a)">'
         + '<input type="radio" name="att_' + u.uid + '" value="present" ' + (cur === 'present' ? 'checked' : '') + '> ✅'
       + '</label>'
-      + '<label style="display:inline-flex;align-items:center;gap:.2rem;font-size:.82rem;cursor:pointer;color:#8a6e2a">'
+      + '<label style="display:inline-flex;align-items:center;gap:.2rem;font-size:.82rem;cursor:pointer;color:var(--st-amber,#8a6e2a)">'
         + '<input type="radio" name="att_' + u.uid + '" value="excused" ' + (cur === 'excused' ? 'checked' : '') + '> 🟡'
       + '</label>'
-      + '<label style="display:inline-flex;align-items:center;gap:.2rem;font-size:.82rem;cursor:pointer;color:#b44a2d">'
+      + '<label style="display:inline-flex;align-items:center;gap:.2rem;font-size:.82rem;cursor:pointer;color:var(--accent,#b44a2d)">'
         + '<input type="radio" name="att_' + u.uid + '" value="absent" ' + (cur === 'absent' ? 'checked' : '') + '> ❌'
       + '</label>'
       + '</div>';

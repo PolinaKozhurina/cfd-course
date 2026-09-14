@@ -4,9 +4,8 @@
 <meta charset="UTF-8">
 <link rel="icon" href="../favicon.ico" type="image/x-icon">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>§6. Диссипативные и дисперсионные свойства</title>
+<title>§6. Слайды · Диссипативные и дисперсионные свойства</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/lecture.css">
 <script>
 window.MathJax = {
   tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
@@ -14,61 +13,196 @@ window.MathJax = {
 };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<script src="../js/slide-tools.js"></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:27px;line-height:1.55;color:var(--text);background:var(--bg);overflow:hidden}
+.slide{position:fixed;inset:0;padding:0;display:none;overflow:auto}
+.slide.active{display:flex;align-items:center;justify-content:center}
+.slide-content{width:100%;max-width:min(96vw, 1600px);margin:auto;padding:1.4rem 1.6rem 2.8rem;box-sizing:border-box}
+.slide.active .slide-content > *{animation: slideStep .38s cubic-bezier(.22,.61,.36,1) both;animation-delay: calc(var(--i, 0) * 85ms);}
+@keyframes slideStep{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.slide.active .eq{animation: formulaIn .55s cubic-bezier(.22,.61,.36,1) both;animation-delay: calc(var(--i, 0) * 85ms);transform-origin: center;}
+@keyframes formulaIn{0%{opacity:0;transform:scale(.92) translateY(4px);filter:blur(3.5px)}55%{opacity:1;transform:scale(1.02);filter:blur(0)}100%{opacity:1;transform:scale(1)}}
+.slide.active .eq::after{content:'';position:absolute;left:0;right:0;bottom:-6px;height:2px;background:linear-gradient(90deg,transparent,var(--accent) 50%,transparent);transform:scaleX(0);opacity:0;animation: formulaUnderline .55s ease-out both;animation-delay: calc(var(--i, 0) * 85ms + .35s);}
+.slide.active .eq{position:relative}
+@keyframes formulaUnderline{0%{transform:scaleX(0);opacity:0}40%{transform:scaleX(1);opacity:.7}100%{transform:scaleX(1);opacity:0}}
+.slide.title.active .slide-content > *{animation:slideStep .55s ease both;animation-delay:calc(var(--i,0) * 140ms)}
+@media (prefers-reduced-motion: reduce){.slide.active .slide-content > *, .slide.active .eq, .slide.active .eq::after{animation:none}}
+.slide-num{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--text3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:.6rem}
+h1{font-family:'Playfair Display',serif;font-weight:900;font-size:2.6rem;line-height:1.12;color:var(--text);margin-bottom:1rem;letter-spacing:-.01em}
+h2{font-family:'Playfair Display',serif;font-weight:700;font-size:1.8rem;color:var(--accent);margin-bottom:1.2rem;line-height:1.15}
+h3{font-family:'Source Serif 4',serif;font-weight:700;font-size:1.15rem;color:var(--text);margin:1rem 0 .5rem}
+p{margin-bottom:.9rem}
+ul,ol{margin:0 0 .9rem 1.6rem;line-height:1.65}
+li{margin-bottom:.35rem}
+em{color:var(--accent2)}
+strong{color:var(--text)}
+.eq{margin:1.2rem 0;text-align:center;font-size:1.05em}
+.lead{color:var(--text2);font-size:.95em}
+.bridge{border-top:1px dashed var(--border);padding-top:.5rem;margin-top:.4rem;font-size:.9em;color:var(--text2)}
+.definition,.condition,.theorem{position:relative;padding:1rem 1.3rem 1rem 3.2rem;border-radius:6px;margin:1rem 0;border:none;overflow:hidden;min-height:11rem}
+.definition{background:#e7efe8}
+.condition {background:#f2e5d6}
+.theorem   {background:#e0e8f2}
+.definition strong,.condition strong,.theorem strong{color:var(--text)}
+.definition::before,.condition::before,.theorem::before{position:absolute;left:0;top:0;bottom:0;width:2.1rem;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase;}
+.definition::before{background:#d0dfd4;color:#3d6b5a;content:'Определение'}
+.definition[data-num]::before{content:'Определение ' attr(data-num)}
+.condition::before{background:#e5d1b8;color:#8a5236;content:'Условие'}
+.condition[data-num]::before{content:'Условие ' attr(data-num)}
+.theorem::before{background:#c8d5e6;color:#4a5f88;content:'Теорема'}
+.theorem[data-num]::before{content:'Теорема ' attr(data-num)}
+.definition.compact,.theorem.compact,.condition.compact{min-height:0}
+.example{background:#e0e8f2;border-left:3px solid #7d95bd;padding:.8rem 1.1rem;border-radius:0 6px 6px 0;margin:.5rem 0 .8rem;font-size:1em;color:var(--text)}
+.example .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#4a5f88;margin-bottom:.35rem}
+.example ul,.example ol{margin:.15rem 0 0 1.1rem;font-size:.94em}
+.example li{margin-bottom:.15rem}
+.note{background:#f8efe1;border-left:3px solid var(--accent);padding:.8rem 1.1rem;border-radius:0 6px 6px 0;margin:.5rem 0 .8rem;font-size:1em}
+.note .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:.35rem}
+@media(max-width:900px){.definition,.condition,.theorem{padding-left:2.6rem}.definition::before,.condition::before,.theorem::before{width:1.8rem;font-size:.56rem;letter-spacing:.18em}}
+.figure{margin:1rem auto;text-align:center;max-width:100%}
+.figure svg{max-width:100%;height:auto}
+.figure .caption{font-size:.92rem;color:var(--text2);margin-top:.4rem;font-style:italic}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+.two-col.wide-left{grid-template-columns:1.25fr 1fr}
+.two-col.wide-right{grid-template-columns:1fr 1.25fr}
+.callout{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;font-size:1em;color:var(--text2)}
+.flow{display:grid;grid-template-columns:1fr;gap:.55rem;margin:1rem 0}
+.flow .step{position:relative;background:#fff;border:1.5px solid var(--border);border-left:5px solid var(--accent);border-radius:8px;padding:.7rem 1rem .7rem 1.2rem;box-shadow:0 2px 8px rgba(44,36,25,.04)}
+.flow .step .n{position:absolute;left:-14px;top:-12px;background:var(--accent);color:#fff;font-family:'JetBrains Mono',monospace;font-size:.76rem;font-weight:700;padding:.15rem .45rem;border-radius:3px;letter-spacing:.03em}
+.flow .step .title{font-family:'Playfair Display',serif;font-weight:700;font-size:1.05rem;color:var(--text);margin-bottom:.15rem}
+.flow .step .body{font-size:1rem;color:var(--text2);line-height:1.45}
+.tiles{display:grid;grid-template-columns:1fr;gap:.5rem;margin:1rem 0}
+.tile{background:#fff;border:1px solid var(--border);border-radius:6px;padding:.6rem .9rem;display:grid;grid-template-columns:190px 1fr;align-items:center;gap:1rem}
+.tile .h{font-family:'JetBrains Mono',monospace;font-size:.76rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
+.tile .t{font-family:'Playfair Display',serif;font-weight:700;font-size:1.1rem;color:var(--text);line-height:1.2}
+.tile .d{font-size:.95rem;color:var(--text2);line-height:1.35}
+.tile.hi{background:#f8efe1}.tile.hi .t{color:var(--accent)}.tile.hi .h{color:var(--accent)}
+.tile.ok{background:#e7efe8}.tile.ok .t{color:var(--accent2)}
+.tile.bad{background:#fbe9e4}.tile.bad .t{color:var(--accent)}
+@media(max-width:900px){.tile{grid-template-columns:1fr;gap:.15rem}}
+table.sum{border-collapse:collapse;width:100%;font-size:.95em;margin:.6rem 0}
+table.sum th,table.sum td{border:1px solid var(--border);padding:.45rem .7rem;text-align:left;vertical-align:top}
+table.sum th{background:var(--bg2);font-family:'JetBrains Mono',monospace;font-size:.76rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text2);font-weight:500}
+table.sum td.c{text-align:center}
+.slide.title{text-align:center;background:radial-gradient(ellipse at 30% 20%,#fff 0%,var(--bg) 55%,var(--bg2) 100%)}
+.slide.title .slide-content{max-width:1000px}
+.slide.title h1{font-size:3.4rem;margin-bottom:1.5rem;max-width:900px;margin-left:auto;margin-right:auto}
+.slide.title h1 .u{color:var(--accent);border-bottom:4px solid var(--accent);padding-bottom:.15rem}
+.slide.title .sub{font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--text2);margin-bottom:1rem;letter-spacing:.05em}
+.slide.title .course{font-size:.85rem;color:var(--text3);text-transform:uppercase;letter-spacing:.24em;margin-bottom:.6rem}
+.slide.title .badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:.35rem .85rem;border:1.5px solid var(--accent);color:var(--accent);border-radius:20px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:1.4rem}
+.slide.section{text-align:center;background:radial-gradient(ellipse at 70% 30%,#fff 0%,var(--bg) 55%,var(--bg2) 100%)}
+.slide.section h1{font-size:3rem}
+.hud{position:fixed;bottom:0;left:0;right:0;padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to top,rgba(250,248,244,.95),transparent);z-index:100;pointer-events:none}
+.hud > *{pointer-events:auto}
+.hud button{font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:.4rem .9rem;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text2);cursor:pointer;transition:all .12s}
+.hud button:hover{border-color:var(--accent);color:var(--accent);background:var(--bg2)}
+.hud button:disabled{opacity:.35;cursor:default}
+.hud .counter{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);letter-spacing:.06em}
+.hud .center{display:flex;gap:.4rem;align-items:center}
+.hud .back{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);text-decoration:none;padding:.35rem .7rem;border:1px dashed var(--border);border-radius:4px}
+.hud .back:hover{color:var(--accent);border-color:var(--accent)}
+.progress{position:fixed;top:0;left:0;right:0;height:3px;background:var(--bg3);z-index:99}
+.progress .fill{height:100%;background:var(--accent);transition:width .2s ease;width:0%}
+@media(min-width:1800px){body{font-size:29px}h1{font-size:3rem}h2{font-size:2rem}}
+@media(max-width:900px){.slide-content{padding:1.6rem 1.2rem 3rem}h1{font-size:1.9rem}h2{font-size:1.4rem}.two-col,.two-col.wide-left,.two-col.wide-right{grid-template-columns:1fr}body{font-size:19px}}
+@media print{body{overflow:visible;background:#fff}.slide{position:relative;display:flex!important;page-break-after:always;min-height:100vh;align-items:center;justify-content:center}.hud,.progress{display:none}}
+.two-col > *{min-width:0}
+.two-col > .figure{width:100%}
+code{font-family:'JetBrains Mono',monospace;font-size:.88em;background:#f1ece3;padding:.05em .3em;border-radius:3px}
+.eq mjx-container[display="true"]{max-width:100%;overflow-x:auto;overflow-y:hidden}
+</style>
 </head>
 <body>
-<script src="../js/nav.js"></script>
 
-<nav class="sidebar">
-  <h2>§6 Дисперсия</h2>
-  <div class="g">Содержание</div>
-  <a href="#dissipation">Диссипативная поверхность</a>
-  <a href="#dispersion">Дисперсионное соотношение</a>
-  <a href="#phase">Фазовая скорость</a>
-  <a href="#normal-anom">Нормальная / аномальная</a>
-  <a href="#properties">Общие свойства</a>
-  <a href="#model">Модельная задача</a>
-  <a href="#fourier">Разложение Фурье</a>
-  <a href="#results">Результаты расчётов</a>
-  <a href="#examples">Примеры дисс./дисп.</a>
-  <a href="#interactive">Интерактивный расчёт</a>
-  <div class="sep"></div>
-  <div class="g">Навигация</div>
-  <a href="s1-05a.html">← §5а Энергетический метод</a>
-  <a href="s1-07.html">→ §7 Неопр. коэффициенты</a>
-</nav>
+<div class="progress"><div class="fill" id="progressFill"></div></div>
 
-<div class="main">
-<div class="main-inner">
-<span class="lecture-tag tag-basics">Основы</span>
-<div class="lecture-num">§6 · Семестр 1</div>
-<div style="display:flex;align-items:baseline;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
-  <h1 style="margin:0">Диссипативные и&nbsp;дисперсионные свойства разностных схем</h1>
-  <a href="s1-06-slides.html" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.4rem .8rem;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none;white-space:nowrap">▶ Слайды</a>
-</div>
+<!-- 1 -->
+<section class="slide title active">
+  <div class="course">Теория разностных схем</div>
+  <div class="badge">Семестр 1 · Лекция §6</div>
+  <h1>Диссипативные и дисперсионные <span class="u">свойства</span> разностных схем</h1>
+  <div class="sub">Модуль и аргумент множителя перехода · Диссипативная и дисперсионная поверхности · Нормальная и аномальная дисперсия · Перенос профилей</div>
+</section>
 
-<p>В прошлом параграфе было введено понятие оператора перехода и рассмотрен метод исследования на устойчивость с помощью гармоник. Остановимся на не менее важных свойствах схемы, которые также тесно связаны с обсуждаемым оператором.</p>
+<!-- 2 -->
+<section class="slide">
+  <div class="slide-num">§6 · От устойчивости к качеству</div>
+  <h2>Множитель перехода — два числа на каждую гармонику</h2>
+  <p class="lead">В §5 множитель перехода понадобился ради одного неравенства \(|\lambda| \le 1\). Но это комплексное число: модуль и аргумент. Устойчивость говорит лишь, что амплитуды не растут; качество решения зависит от того, <em>насколько</em> они убывают и <em>как</em> сдвигается фаза.</p>
+  <div class="two-col">
+    <div class="tile ok" style="grid-template-columns:1fr"><div><div class="h">модуль</div><div class="t">\(|q|\) — изменение амплитуды за шаг</div><div class="d">\(|q| < 1\): гармоника затухает — <strong>численная диссипация</strong>.</div></div></div>
+    <div class="tile" style="grid-template-columns:1fr"><div><div class="h">аргумент</div><div class="t">\(\arg q\) — сдвиг фазы за шаг</div><div class="d">Определяет скорость гармоники; зависимость скорости от \(k\) — <strong>численная дисперсия</strong>.</div></div></div>
+  </div>
+  <div class="note" style="font-size:.9em"><span class="lbl">Соглашения §6</span>
+    Гармоника \(e^{i(\omega t - kx)}\) — волна, бегущая вправо со скоростью \(\omega/k\); множитель перехода за шаг \(q = e^{i\omega\tau}\). Для «уголка» \(q = 1 - r + r\,e^{ikh}\), \(r = c\tau/h\), \(kh \in [-\pi, \pi]\). Знак в показателе противоположен §5 (другое направление волны); модуль тот же.
+  </div>
+  <p class="bridge">Начнём с модуля.</p>
+</section>
 
-<h2 id="dissipation">Диссипативная поверхность</h2>
+<!-- 3 -->
+<section class="slide">
+  <div class="slide-num">§6.1 · Модуль множителя перехода</div>
+  <h2>Модуль множителя перехода схемы «уголок»</h2>
+  <p class="lead">Выделим вещественную и мнимую части \(q = 1 - r + r\,e^{ikh}\) и вычислим модуль:</p>
+  <div class="eq">\[ |q| = \sqrt{\bigl((1-r) + r\cos kh\bigr)^2 + r^2\sin^2 kh} \;=\; \sqrt{1 - 4r(1 - r)\sin^2\frac{kh}{2}}. \tag{6.1} \]</div>
+  <div class="two-col">
+    <div class="example"><span class="lbl">Вывод второй формы</span>
+      Раскрывая скобки: \((1-r)^2 + r^2 + 2r(1-r)\cos kh\); так как \((1-r)^2 + r^2 = 1 - 2r(1-r)\), получаем \(1 - 2r(1-r)(1 - \cos kh)\), а \(1 - \cos kh = 2\sin^2(kh/2)\).
+    </div>
+    <div class="note"><span class="lbl">Что видно</span>
+      Поправка к единице — произведение \(r(1-r)\) и \(\sin^2(kh/2)\): первый множитель нуль при \(r = 0, 1\) и максимален при \(r = 1/2\); второй — нуль при \(kh = 0\) и единица при \(kh = \pi\).
+    </div>
+  </div>
+  <p class="bridge">Модуль \(|q|\) — функция двух переменных: числа Куранта \(r\) и приведённого волнового числа \(kh \in [-\pi, \pi]\). Он показывает, как меняется амплитуда бегущей волны за шаг.</p>
+</section>
 
-<p>После несложных преобразований <span class="gl" data-gl="transition-operator">множителя перехода</span> получим:</p>
+<!-- 4 -->
+<section class="slide">
+  <div class="slide-num">§6.1 · Диссипация</div>
+  <h2>Область устойчивости и численная диссипация</h2>
+  <div class="two-col">
+    <div>
+      <p class="lead">Если модуль перехода не превосходит единицы, амплитуда волны не возрастает. Если это верно для всех \(kh \in [-\pi, \pi]\) при данном \(r\), то \(r\) принадлежит <em>области устойчивости</em>. Из (6.1): \(|q| \le 1\ \forall kh \iff r(1-r) \ge 0\), то есть</p>
+      <div class="eq">\[ r \in [0, 1]. \]</div>
+      <div class="definition compact">
+        Если в области устойчивости модуль перехода любой волны равен единице, дискретный оператор называется <em>бездиссипативным</em>; в противном случае имеет место <em>численная диссипация</em>.
+      </div>
+    </div>
+    <div>
+      <div class="example"><span class="lbl">«Уголок»</span>
+        Диссипативен при \(0 < r < 1\); бездиссипативен лишь при \(r = 1\) (точный сдвиг \(u_m^{n+1} = u_{m-1}^n\)).
+      </div>
+      <div class="note"><span class="lbl">Крайний случай</span>
+        \(r = \tfrac12\), \(kh = \pi\): \(|q|^2 = 1 - 4\cdot\tfrac14\cdot 1 = 0\). Самая короткая волна — «пила» — исчезает за <em>один</em> шаг: \(u_m^{n+1} = \tfrac12(u_m^n + u_{m-1}^n)\), а у пилы соседние значения противоположны.
+      </div>
+    </div>
+  </div>
+  <p class="bridge">Чтобы увидеть диссипацию сразу для всех волн, изобразим \(|q|\) как функцию \(kh\) при нескольких \(r\).</p>
+</section>
 
-<div class="eq">\[
-|\lambda| = |1 - r + r\exp(ikh)| = \sqrt{\bigl((1-r) + r\cos(kh)\bigr)^2 + r^2\sin^2(kh)} = \sqrt{1 - 4r(1-r)\sin^2\frac{kh}{2}}.
-\tag{6.1}
-\]</div>
-
-<div class="exercise">
-<strong>Упражнение.</strong> Получите это выражение.
-</div>
-
-<p>Модуль множителя перехода \(|q|\) является функцией от <span class="gl" data-gl="courant-number">числа Куранта–Фридрихса–Леви</span> \(r\) и приведённого волнового числа \(kh\), изменяющегося в пределах от \(-\pi\) до \(\pi\): \(-\pi \le kh \le \pi\). Он показывает, как изменяется амплитуда бегущей волны при переходе на следующий слой. Если модуль перехода меньше или равен единице, то амплитуда волны не возрастает. Если для заданного \(r\) амплитуды всех волн при \(-\pi \le kh \le \pi\) не возрастают, то говорят, что данное число \(r\) принадлежит области устойчивости дискретного оператора. Опираясь на (6.1) можно показать, что область устойчивости разностной схемы «уголок» представляет собой единичный отрезок \(r \in [0, 1]\).</p>
-
-<p>Если в области устойчивости модуль перехода любой волны равен единице, то дискретный оператор называется <em>бездиссипативным</em>, в противном случае имеет место <em><span class="gl" data-gl="dissipation-numerical">численная диссипация</span></em>.</p>
-
-<p>Диссипативные свойства дискретного оператора для всех приведённых волновых чисел наиболее наглядно можно представить в виде двумерной поверхности \(|q| = f(r, kh)\). Для схемы «уголок» сечения диссипативной поверхности при нескольких значениях \(r \in [0, 1]\) изображены на рис.&nbsp;1а (по оси абсцисс — приведённое волновое число \(kh\), по чётности показана половина \(kh \in [0, \pi]\); по оси ординат — модуль перехода). Видно, что модуль перехода стремится к единице для длинноволновых гармоник, для которых \(kh \approx 0\), и равен единице на границе области устойчивости, при \(r = 1\), \(-\pi \le kh \le \pi\); сильнее всего затухают короткие волны при \(r = 0.5\).</p>
-
-<div class="figure">
-<svg viewBox='0 0 560 360' xmlns='http://www.w3.org/2000/svg' style='max-width:560px'>
+<!-- 5 -->
+<section class="slide">
+  <div class="slide-num">§6.1 · Диссипативная поверхность</div>
+  <h2>Диссипативная поверхность «уголка»: сечения \(|q|(kh)\) при разных \(r\)</h2>
+  <div class="two-col wide-right">
+    <div>
+      <p class="lead">Диссипативные свойства для всех волновых чисел наглядно представляет поверхность \(|q| = f(r, kh)\) над прямоугольником \(r \in [0,1]\), \(kh \in [-\pi, \pi]\). Справа — её сечения при фиксированных \(r\) (по чётности показана половина \(kh \in [0, \pi]\)).</p>
+      <div class="example" style="font-size:.9em"><span class="lbl">Как читать</span>
+        <ul style="margin-bottom:0">
+          <li>Все кривые выходят из \(|q| = 1\) при \(kh = 0\): длинные волны не затухают.</li>
+          <li>\(r = 1\): горизонтальная прямая — диссипации нет.</li>
+          <li>\(r = 0.5\): самое сильное затухание, \(|q| = 0\) при \(kh = \pi\).</li>
+          <li>Кривые \(r\) и \(1 - r\) совпадают — симметрия (6.1).</li>
+        </ul>
+      </div>
+    </div>
+    <div class="figure">
+      <svg viewBox='0 0 560 360' xmlns='http://www.w3.org/2000/svg' style='max-width:560px'>
 <line x1='62' y1='312.0' x2='532' y2='312.0' stroke='#ede6da' stroke-width='1'/>
 <text x='54' y='316.0' font-family='JetBrains Mono,monospace' font-size='11' fill='#6b5d4f' text-anchor='end'>0</text>
 <line x1='62' y1='243.0' x2='532' y2='243.0' stroke='#ede6da' stroke-width='1'/>
@@ -115,42 +249,85 @@ window.MathJax = {
 <text x='444' y='124' font-family='JetBrains Mono,monospace' font-size='11' fill='#2c2419'>r = 1</text>
 <text x='68' y='36' font-family='Source Serif 4,serif' font-size='12' fill='#2c2419' font-weight='600'></text>
 </svg>
-<div class="caption">Рис. 1а. Сечения диссипативной поверхности схемы «уголок»: \(|q(r, kh)|\) при \(r = 0.1, 0.3, 0.5, 0.7, 0.9, 1\). Кривые для \(r\) и \(1 - r\) совпадают.</div>
-</div>
+      <div class="caption">Модуль множителя перехода \(|q(r, kh)|\) схемы «уголок».</div>
+    </div>
+  </div>
+  <p class="bridge">Модуль отвечает за амплитуду. Теперь — аргумент: он определяет скорость гармоники.</p>
+</section>
 
-<h2 id="dispersion">Дисперсионное соотношение</h2>
+<!-- 6 -->
+<section class="slide">
+  <div class="slide-num">§6.2 · Дисперсионное соотношение</div>
+  <h2>Дисперсионное соотношение: частота через множитель перехода</h2>
+  <p class="lead">Множитель перехода за шаг \(\tau\) есть \(q = e^{i\omega\tau}\). Логарифмируя,</p>
+  <div class="eq" style="font-size:.92em">\[ q = e^{i\omega\tau} = r\,e^{ikh} + (1 - r) \quad\Longrightarrow\quad \omega = -\frac{i}{\tau}\ln\bigl[r\,e^{ikh} + (1 - r)\bigr] = \frac{1}{\tau}\arg q \;-\; \frac{i}{\tau}\ln|q|. \tag{6.2} \]</div>
+  <div class="two-col">
+    <div class="example"><span class="lbl">Частота комплексная</span>
+      <ul style="margin-bottom:0">
+        <li>\(\mathrm{Re}\,\omega = \arg q/\tau\) — настоящая частота: сдвиг фазы за шаг равен \(\arg q\).</li>
+        <li>\(\mathrm{Im}\,\omega = -\ln|q|/\tau \ge 0\) — затухание: \(|e^{i\omega\tau}| = |q|\).</li>
+      </ul>
+    </div>
+    <div class="note"><span class="lbl">Точное уравнение</span>
+      Подстановка \(e^{i(\omega t - kx)}\) в \(u_t + cu_x = 0\) даёт \(\omega = ck\): частота вещественна (нет затухания) и линейна по \(k\) (все гармоники бегут со скоростью \(c\)).
+    </div>
+  </div>
+  <p class="bridge">Скорость гармоники — отношение частоты к волновому числу. Сравним её с точной.</p>
+</section>
 
-<p>Из (6.1) также следует дисперсионное соотношение:</p>
+<!-- 7 -->
+<section class="slide">
+  <div class="slide-num">§6.3 · Фазовая скорость</div>
+  <h2>Приведённая фазовая скорость</h2>
+  <p class="lead">Поверхность постоянной фазы \(\omega t - kx = \mathrm{const}\) движется со скоростью \(\omega/k\) — <em>фазовой скоростью</em>. Отнесём её к скорости \(c\) точного уравнения:</p>
+  <div class="eq">\[ \gamma(r, kh) = \frac{\mathrm{Re}\,\omega}{kc} = \frac{\arg\bigl[r\,e^{ikh} + (1 - r)\bigr]}{\tau k c} = \frac{\arg\bigl[r\,e^{ikh} + (1 - r)\bigr]}{r\cdot kh}, \qquad \tau k c = \frac{c\tau}{h}\,kh = r\,kh. \]</div>
+  <div class="two-col">
+    <div class="example"><span class="lbl">Точное уравнение</span>
+      \(\omega = ck\), фазовая скорость \(c\) для всех \(k\): \(\gamma \equiv 1\). Все гармоники бегут вместе, профиль переносится без искажений.
+    </div>
+    <div class="definition compact">
+      Зависимость фазовой скорости от длины волны называется <em>дисперсией</em>. У схемы \(\gamma = \gamma(r, kh)\) зависит от \(kh\) — это <em>численная дисперсия</em>.
+    </div>
+  </div>
+  <p class="bridge">Гармоника может отставать от точной (\(\gamma < 1\)) или опережать её (\(\gamma > 1\)). У этих случаев есть имена.</p>
+</section>
 
-<div class="eq">\[
-q = \exp(i\omega\tau) = r \cdot \exp(ikh) + (1-r) \quad \Rightarrow \quad \omega = -\frac{i}{\tau}\ln\bigl[r \cdot \exp(ikh) + (1-r)\bigr] = \frac{1}{\tau}\arg q - \frac{i}{\tau}\ln|q|.
-\tag{6.2}
-\]</div>
+<!-- 8 -->
+<section class="slide">
+  <div class="slide-num">§6.4 · Нормальная и аномальная дисперсия</div>
+  <h2>Нормальная и аномальная дисперсия</h2>
+  <div class="definition compact" data-num="1">
+    Если приведённая фазовая скорость принимает значения меньше единицы, дисперсия называется «<em>нормальной</em>», в обратном случае — «<em>аномальной</em>».
+  </div>
+  <div class="two-col">
+    <div class="tile" style="grid-template-columns:1fr"><div><div class="h">γ &lt; 1 · нормальная</div><div class="t">Гармоника отстаёт от эталонной</div><div class="d">Короткие волны (они несут резкие фронты) отстают: паразитные осцилляции появляются <strong>позади</strong> фронта.</div></div></div>
+    <div class="tile hi" style="grid-template-columns:1fr"><div><div class="h">γ &gt; 1 · аномальная</div><div class="t">Гармоника опережает эталонную</div><div class="d">Короткие волны убегают вперёд: осцилляции-«предвестники» появляются <strong>перед</strong> фронтом.</div></div></div>
+  </div>
+  <p style="font-size:.93em">«Эталонная» гармоника — та же волна, перенесённая точным уравнением со скоростью \(c\). Термины заимствованы из оптики.</p>
+  <p class="bridge">Какой из двух случаев реализуется у «уголка», зависит от \(r\). Построим дисперсионную поверхность.</p>
+</section>
 
-<p>Частота \(\omega\) оказывается комплексной: её вещественная часть \(\arg q/\tau\) — истинная частота (сдвиг фазы за шаг равен \(\arg q\)), а мнимая часть \(-\ln|q|/\tau \ge 0\) описывает затухание, поскольку \(|e^{i\omega\tau}| = |q|\). Так один множитель перехода несёт и диссипацию, и дисперсию.</p>
-
-<h2 id="phase">Приведённая <span class="gl" data-gl="phase-velocity">фазовая скорость</span></h2>
-
-<p>Из дисперсионного соотношения получается выражение для приведённой фазовой скорости бегущих волн (берётся вещественная часть частоты; \(\tau k c = r\cdot kh\)):</p>
-
-<div class="eq">\[
-\gamma(r, kh) = \frac{\mathrm{Re}\,\omega}{kc} = \frac{1}{\tau kc}\arg\bigl[r \cdot \exp(ikh) + (1-r)\bigr] = \frac{1}{r \cdot kh}\arg\bigl[r \cdot \exp(ikh) + (1-r)\bigr].
-\]</div>
-
-<p>Приведённая фазовая скорость бегущих волн, описываемых исходным дифференциальным оператором, не зависит от номера гармоники и равна единице. Как ранее уже отмечалось, зависимость фазовой скорости от длины волны называется <em><span class="gl" data-gl="dispersion-numerical">дисперсией</span></em>.</p>
-
-<h2 id="normal-anom">Нормальная и аномальная дисперсия</h2>
-
-<div class="definition">
-<strong>Определение 1.</strong> Если приведённая фазовая скорость принимает значения меньше единицы, то дисперсия называется «<em>нормальной</em>», в обратном случае — «<em>аномальной</em>».
-</div>
-
-<p>В случае нормальной дисперсии гармоника отстаёт от «эталонной» гармоники, двигающейся с фазовой скоростью \(c\), в случае аномальной дисперсии — опережает её.</p>
-
-<p>Дисперсионные свойства дискретного оператора представляются его «дисперсионной поверхностью». На рис.&nbsp;1б приведены сечения дисперсионной поверхности разностного оператора «уголок» при нескольких значениях \(r \in [0, 1]\): по оси абсцисс — приведённое волновое число \(kh\), по оси ординат — приведённая фазовая скорость \(\gamma\). Дисперсия стремится к нулю, что соответствует стремлению \(\gamma\) к единице, для длинноволновых гармоник, для которых \(kh \approx 0\), и на границе области устойчивости, при \(r = 1\), \(-\pi \le kh \le \pi\).</p>
-
-<div class="figure">
-<svg viewBox='0 0 560 360' xmlns='http://www.w3.org/2000/svg' style='max-width:560px'>
+<!-- 9 -->
+<section class="slide">
+  <div class="slide-num">§6.4 · Дисперсионная поверхность</div>
+  <h2>Дисперсионная поверхность «уголка»: сечения \(\gamma(kh)\) при разных \(r\)</h2>
+  <div class="two-col wide-right">
+    <div>
+      <p class="lead">Дисперсионные свойства представляет поверхность \(\gamma = \gamma(r, kh)\). Справа — её сечения при фиксированных \(r\).</p>
+      <div class="example" style="font-size:.9em"><span class="lbl">Как читать</span>
+        <ul style="margin-bottom:0">
+          <li>Все кривые стремятся к \(\gamma = 1\) при \(kh \to 0\): длинные волны бегут с правильной скоростью.</li>
+          <li>\(r = 1\): \(\gamma \equiv 1\) — точный перенос.</li>
+          <li>\(r = 0.5\): тоже \(\gamma \equiv 1\) — дисперсии нет, хотя диссипация максимальна.</li>
+          <li>\(r < 0.5\): \(\gamma < 1\) — <em>нормальная</em>; \(r > 0.5\): \(\gamma > 1\) — <em>аномальная</em>.</li>
+        </ul>
+      </div>
+      <div class="note" style="font-size:.88em"><span class="lbl">Почему при \(r = 1/2\) дисперсии нет</span>
+        \(q = \tfrac12(1 + e^{ikh}) = e^{ikh/2}\cos\tfrac{kh}{2}\), и \(\arg q = kh/2\) при \(|kh| < \pi\); \(\gamma = 1\).
+      </div>
+    </div>
+    <div class="figure">
+      <svg viewBox='0 0 560 360' xmlns='http://www.w3.org/2000/svg' style='max-width:560px'>
 <line x1='62' y1='312.0' x2='532' y2='312.0' stroke='#ede6da' stroke-width='1'/>
 <text x='54' y='316.0' font-family='JetBrains Mono,monospace' font-size='11' fill='#6b5d4f' text-anchor='end'>0</text>
 <line x1='62' y1='215.3' x2='532' y2='215.3' stroke='#ede6da' stroke-width='1'/>
@@ -195,85 +372,104 @@ q = \exp(i\omega\tau) = r \cdot \exp(ikh) + (1-r) \quad \Rightarrow \quad \omega
 <text x='444' y='124' font-family='JetBrains Mono,monospace' font-size='11' fill='#2c2419'>r = 1</text>
 <text x='68' y='36' font-family='Source Serif 4,serif' font-size='12' fill='#2c2419' font-weight='600'></text>
 </svg>
-<div class="caption">Рис. 1б. Сечения дисперсионной поверхности схемы «уголок»: \(\gamma(r, kh)\). При \(r = 0.5\) и \(r = 1\) дисперсии нет; при \(r < 0.5\) она нормальная, при \(r > 0.5\) — аномальная.</div>
-</div>
+      <div class="caption">Приведённая фазовая скорость \(\gamma(r, kh)\) схемы «уголок».</div>
+    </div>
+  </div>
+  <p class="bridge">Обе поверхности касаются единичной плоскости при \(kh \to 0\). Порядок касания — не случайность.</p>
+</section>
 
-<h2 id="properties">Общие свойства диссипации и дисперсии</h2>
+<!-- 10 -->
+<section class="slide">
+  <div class="slide-num">§6.5 · Общие свойства</div>
+  <h2>Касание единичной плоскости и связь с дифференциальным приближением</h2>
+  <p class="lead">Стремление к нулю диссипации и дисперсии длинноволновых гармоник — общее свойство всех аппроксимирующих операторов; <em>характер касания</em> единичной плоскости определяется порядком аппроксимации. Для «уголка» при \(kh \to 0\):</p>
+  <div class="eq" style="font-size:.95em">\[ |q|^2 = 1 - r(1 - r)\,(kh)^2 + O\bigl((kh)^4\bigr), \qquad \gamma = 1 - \frac{(1 - r)(1 - 2r)}{6}\,(kh)^2 + O\bigl((kh)^4\bigr). \]</div>
+  <div class="two-col">
+    <div class="example"><span class="lbl">Связь с §4</span>
+      Дифференциальное приближение «уголка» до третьего порядка:
+      \[ u_t + cu_x = \frac{ch}{2}(1 - r)\,u_{xx} - \frac{ch^2}{6}(1 - r)(1 - 2r)\,u_{xxx} + \dots \]
+      Член с \(u_{xx}\) (схемная вязкость) — диссипация; член с \(u_{xxx}\) — дисперсия, с тем же множителем \((1-r)(1-2r)\).
+    </div>
+    <div class="note"><span class="lbl">Что читается по знакам</span>
+      \(r < 1/2\): коэффициент при \((kh)^2\) в \(\gamma\) отрицателен — нормальная дисперсия. \(r = 1/2\): дисперсионный член исчезает. \(r = 1\): исчезают оба — точный перенос.
+    </div>
+  </div>
+  <p class="bridge">Тот факт, что при \(r = 1\) все гармоники не диссипируют и не диспергируют, имеет важное практическое следствие.</p>
+</section>
 
-<p>Стремление к нулю дисперсии и диссипации длинноволновых гармоник является общим свойством всех дискретных операторов, аппроксимирующих исходный дифференциальный оператор. Характер касания дисперсионных и диссипативных поверхностей единичной плоскости определяется порядком аппроксимации разностного оператора. Тот факт, что при \(r = 1\) все гармоники не диссипируют и не диспергируют, говорит о том, что разностный оператор при данном числе Куранта переносит начальный профиль без каких-либо искажений.</p>
+<!-- 11 -->
+<section class="slide">
+  <div class="slide-num">§6.5 · Канал высокой точности</div>
+  <h2>Канал высокой точности и итог по схеме «уголок»</h2>
+  <div class="two-col">
+    <div>
+      <p class="lead">При \(r = 1\) все гармоники не диссипируют и не диспергируют: оператор переносит начальный профиль без искажений. Из непрерывности поверхностей следует, что в некоторой окрестности \(r = 1\) точность аномально высока — это <em>канал высокой точности</em> дискретного оператора.</p>
+      <div class="note"><span class="lbl">Практическое правило</span>
+        Если устойчивость позволяет, считать с числом Куранта, близким к единице.
+      </div>
+    </div>
+    <div>
+      <table class="sum" style="font-size:.88em">
+        <tr><th>\(r\)</th><th>Диссипация</th><th>Дисперсия</th></tr>
+        <tr><td class="c">\(0 < r < \tfrac12\)</td><td>есть</td><td>нормальная (\(\gamma < 1\))</td></tr>
+        <tr><td class="c">\(r = \tfrac12\)</td><td>максимальная</td><td>нет</td></tr>
+        <tr><td class="c">\(\tfrac12 < r < 1\)</td><td>есть</td><td>аномальная (\(\gamma > 1\))</td></tr>
+        <tr><td class="c">\(r = 1\)</td><td>нет</td><td>нет — точный перенос</td></tr>
+      </table>
+      <div class="example" style="font-size:.9em"><span class="lbl">Итого</span>
+        Диссипативная и дисперсионная поверхности дают полное представление о свойствах схемы и позволяют <em>предсказывать</em> поведение решения на разных начальных данных.
+      </div>
+    </div>
+  </div>
+  <p class="bridge">Проверим предсказания расчётом: перенесём гладкий и разрывный профили.</p>
+</section>
 
-<p>Из непрерывности дисперсионной и диссипативной поверхностей следует, что в некоторой окрестности этого числа точность численного решения также будет аномально высокой и эту область можно назвать «<em>каналом высокой точности</em>» дискретного оператора.</p>
+<!-- 12 -->
+<section class="slide">
+  <div class="slide-num">§6.6 · Модельная задача</div>
+  <h2>Модельная задача: два начальных профиля</h2>
+  <p class="lead">Периодическая задача на \(x \in [0, 2\pi]\):</p>
+  <div class="eq" style="font-size:.95em">\[ \frac{\partial u}{\partial t} + c\frac{\partial u}{\partial x} = 0, \quad c = 1, \qquad u(x, 0) = f(x), \qquad u(0, t) = u(2\pi, t). \tag{6.3} \]</div>
+  <div class="two-col">
+    <div class="example"><span class="lbl">Гладкое условие — двойной гауссиан</span>
+      \[ f(x) = e^{-(x - x_1)^2/\Delta^2} + e^{-(x - x_2)^2/\Delta^2}, \tag{6.4} \]
+      \(x_1 = 0.5\pi\), \(x_2 = 0.7\pi\), \(\Delta = 0.1\pi\). В спектре преобладают длинные волны.
+    </div>
+    <div class="note"><span class="lbl">Разрывное условие — ступенька</span>
+      \[ f(x) = \begin{cases} 1, & 0.2\pi \le x \le 0.4\pi, \\ 0, & \text{иначе}. \end{cases} \tag{6.5} \]
+      Содержит все гармоники, включая самые короткие: по ней видны и диссипация, и дисперсия.
+    </div>
+  </div>
+  <p style="font-size:.93em">Сетка: \(N = 100\) интервалов, \(h = 2\pi/N = 0.02\pi\); начальные данные проецируются на узлы (6.6).</p>
+  <p class="bridge">Чтобы связать расчёт с поверхностями, разложим начальные данные по гармоникам.</p>
+</section>
 
-<p>Из рис.&nbsp;1б видно, что дисперсия схемы «уголок» при \(r < 0.5\) является нормальной, а при \(r > 0.5\) — аномальной. При \(r = 0.5\) дисперсия отсутствует.</p>
+<!-- 13 -->
+<section class="slide">
+  <div class="slide-num">§6.7 · Разложение Фурье</div>
+  <h2>Разложение начальных данных и принцип суперпозиции</h2>
+  <p class="lead">Сеточные начальные данные разложим в конечный ряд Фурье:</p>
+  <div class="eq" style="font-size:.93em">\[ f_n = \sum_{k=0}^{N} a_k\,e^{-i(kh)\,n}, \qquad a_k = \frac{1}{N+1}\sum_{n=1}^{N+1} f_n\,e^{i(kh)\,n}. \tag{6.7, 6.8} \]</div>
+  <div class="two-col">
+    <div class="example"><span class="lbl">Суперпозиция</span>
+      Схема линейна, гармоники — собственные функции оператора перехода, поэтому через \(n\) шагов
+      \[ u_m^{n} = \sum_{k} a_k\,q_k^{\,n}\,e^{-i(kh)\,m}: \]
+      каждая гармоника затухает как \(|q_k|^n\) и сдвигается по фазе на \(n\arg q_k\) — независимо от остальных.
+    </div>
+    <div class="note"><span class="lbl">Что предсказывают поверхности</span>
+      В начальный момент гармоники подогнаны друг к другу; затем каждая живёт по своему месту на диссипативной и дисперсионной поверхностях, и «пакет» начинает разъезжаться. Полная картина зависит от \(r\).
+    </div>
+  </div>
+  <p class="bridge">Расчёт до одного и того же момента времени при трёх числах Куранта.</p>
+</section>
 
-<div class="remark">
-<strong>Итого для схемы «уголок»:</strong> Диссипативная и дисперсионная поверхности дают полное представление о свойствах разностной схемы, позволяют предсказывать поведение дискретного решения на разных начальных условиях.
-</div>
-
-<h2 id="model">Модельная задача</h2>
-
-<p>Рассмотрим модельную задачу с периодическими начальными условиями на отрезке \(x \in [0, 2\pi]\):</p>
-
-<div class="eq">\[
-\frac{\partial u}{\partial t} + c\frac{\partial u}{\partial x} = 0, \quad c = 1, \quad t \in [0, \infty),
-\tag{6.3}
-\]</div>
-
-<p>\(u(x, 0) = f(x)\), \(x \in [0, 2\pi]\), \(u(0, t) = u(2\pi, t)\),</p>
-
-<p>и двумя видами начальных условий — достаточно гладкими и разрывными.</p>
-
-<p>В качестве гладкого начального условия возьмём «двойной гауссиан» с параметрами:</p>
-
-<div class="eq">\[
-f(x) = \exp\!\left[-\frac{(x - x_1)^2}{\Delta^2}\right] + \exp\!\left[-\frac{(x - x_2)^2}{\Delta^2}\right],
-\tag{6.4}
-\]</div>
-
-<p>\(x_1 = 0.5\pi\), \(x_2 = 0.7\pi\), \(\Delta = 0.1\pi\),</p>
-
-<p>а в качестве разрывного — «ступеньку»:</p>
-
-<div class="eq">\[
-f(x) = \begin{cases} 1, & 0.2\pi \le x \le 0.4\pi, \\ 0, & (0 \le x \le 0.2\pi) \cup (0.4\pi < x \le 2\pi). \end{cases}
-\tag{6.5}
-\]</div>
-
-<h2 id="fourier">Разложение Фурье начальных данных</h2>
-
-<p>Аппроксимируем дифференциальную задачу (6.3)–(6.5) разностной схемой «уголок». Разобьём отрезок \(x \in [0, 2\pi]\) на \(N = 100\) равных интервалов с шагом \(h = 2\pi/N = 0.02\pi\) и спроецируем на неё начальные данные (6.4)–(6.5):</p>
-
-<div class="eq">\[
-f_i^{(1)} = \exp\!\left\{-\frac{[(i-1)h - x_1]^2}{(0.1\pi)^2}\right\} + \exp\!\left\{-\frac{[(i-1)h - x_2]^2}{(0.1\pi)^2}\right\},
-\tag{6.6}
-\]</div>
-
-<div class="eq">\[
-f_i^{(2)} = \begin{cases} 1, & 11 \le i \le 21, \\ 0, & (1 \le i \le 11) \cup (21 < i \le 101). \end{cases}
-\]</div>
-
-<p>Разложим эти сеточные функции в ряд Фурье:</p>
-
-<div class="eq">\[
-f_n^{(m)} = \sum_{k=0}^{N} a_k^{(m)} \cdot \exp[-i(kh) \cdot n], \quad m = 1, 2, \quad n = 1, \ldots, N+1,
-\tag{6.7}
-\]</div>
-
-<p>где коэффициенты разложения определяются по формуле:</p>
-
-<div class="eq">\[
-a_k^{(m)} = \frac{1}{N+1} \sum_{n=1}^{N+1} f_n^{(m)} \cdot \exp[i(kh) \cdot n].
-\tag{6.8}
-\]</div>
-
-<h2 id="results">Результаты расчётов</h2>
-
-<p>В начальный момент времени все гармоники разложения (6.7) подогнаны друг к другу так, что в сумме составляют начальные данные. В последующие моменты времени каждая гармоника будет уменьшаться в амплитуде в соответствии с её местом на диссипативной поверхности, и распространяться со своей фазовой скоростью, определяемой дисперсионной поверхностью, так что «пакет» гармоник начнёт разъезжаться. Полная картина будет ещё зависеть от числа Куранта–Фридрихса–Леви \(r\).</p>
-
-<p>Из рис.&nbsp;1а видно, что наибольшая диссипация высоких гармоник имеет место при \(r = 0.5\). На рис.&nbsp;4 приведены результаты расчёта переноса начальных профилей (6.4)–(6.5), рассчитанные по схеме «уголок» при разных числах Куранта, до одного и того же момента времени. Чёрной линией показано аналитическое решение дифференциальной задачи, цветными — решения, рассчитанные по разностной схеме при \(r = 0.3\), \(0.5\), \(0.9\); пунктиром — начальный профиль.</p>
-
-<div class="figure">
-<svg viewBox='0 0 560 250' xmlns='http://www.w3.org/2000/svg' style='max-width:560px'>
+<!-- 14 -->
+<section class="slide">
+  <div class="slide-num">§6.8 · Результаты расчётов</div>
+  <h2>Перенос профилей схемой «уголок» при \(r = 0.3,\ 0.5,\ 0.9\)</h2>
+  <div class="two-col">
+    <div class="figure">
+      <svg viewBox='0 0 560 250' xmlns='http://www.w3.org/2000/svg' style='max-width:560px'>
 <line x1='40' y1='183.7' x2='540' y2='183.7' stroke='#ede6da'/>
 <text x='34' y='187.7' font-family='JetBrains Mono,monospace' font-size='10' fill='#6b5d4f' text-anchor='end'>0</text>
 <line x1='40' y1='123.1' x2='540' y2='123.1' stroke='#ede6da'/>
@@ -303,7 +499,9 @@ a_k^{(m)} = \frac{1}{N+1} \sum_{n=1}^{N+1} f_n^{(m)} \cdot \exp[i(kh) \cdot n].
 <text x='74' y='93.5' font-family='JetBrains Mono,monospace' font-size='9.5' fill='#2c2419'>уголок, r = 0.9</text>
 <text x='534' y='34' font-family='Source Serif 4,serif' font-size='12' fill='#2c2419' font-weight='600' text-anchor='end'>Двойной гауссиан, перенос на 60 ячеек</text>
 </svg>
-<svg viewBox='0 0 560 250' xmlns='http://www.w3.org/2000/svg' style='max-width:560px'>
+    </div>
+    <div class="figure">
+      <svg viewBox='0 0 560 250' xmlns='http://www.w3.org/2000/svg' style='max-width:560px'>
 <line x1='40' y1='183.7' x2='540' y2='183.7' stroke='#ede6da'/>
 <text x='34' y='187.7' font-family='JetBrains Mono,monospace' font-size='10' fill='#6b5d4f' text-anchor='end'>0</text>
 <line x1='40' y1='123.1' x2='540' y2='123.1' stroke='#ede6da'/>
@@ -333,302 +531,157 @@ a_k^{(m)} = \frac{1}{N+1} \sum_{n=1}^{N+1} f_n^{(m)} \cdot \exp[i(kh) \cdot n].
 <text x='74' y='93.5' font-family='JetBrains Mono,monospace' font-size='9.5' fill='#2c2419'>уголок, r = 0.9</text>
 <text x='534' y='34' font-family='Source Serif 4,serif' font-size='12' fill='#2c2419' font-weight='600' text-anchor='end'>Ступенька, перенос на 60 ячеек</text>
 </svg>
-<div class="caption">Рис. 4. Перенос двойного гауссиана и ступеньки схемой «уголок» на 60 ячеек (одно и то же время \(T = 60h/c\)) при трёх числах Куранта; сетка \(N = 200\). Гладкий профиль переносится узнаваемо при всех \(r\); у ступеньки размазаны фронты, при \(r = 0.3\) виден «хвост» позади (нормальная дисперсия), при \(r = 0.9\) фронт круче всего (канал высокой точности).</div>
-</div>
-
-<h2 id="examples">Примеры диссипации и дисперсии</h2>
-
-<h3>Пример диссипации</h3>
-<p>Рассмотрим гармонику с приведённым волновым числом \(kh = \pi\) (максимальная частота на сетке) и число Куранта \(r = 0.5\). Из формулы (6.1):</p>
-<div class="eq">\[
-|\lambda| = \sqrt{(1 - 0.5 + 0.5\cos\pi)^2 + \sin^2\pi} = \sqrt{(1 - 0.5 - 0.5)^2 + 0} = 0.
-\]</div>
-<p>Через один шаг по времени амплитуда высокочастотной гармоники обращается в ноль — полная диссипация. Это максимальная диссипация среди всех \(r \in [0,1]\). Для длинных волн (\(kh \approx 0\)) при любом \(r\): \(|\lambda| \approx 1\) — диссипация мала.</p>
-
-<div class="remark">
-<strong>Физический смысл:</strong> Диссипация — это «размазывание» решения. Высокочастотные компоненты (мелкие детали) подавляются первыми. Это приводит к сглаживанию фронтов ударных волн и потере мелкомасштабных структур.
-</div>
-
-<h3>Пример нормальной дисперсии (\(r = 0.3\))</h3>
-<p>При \(r = 0.3\) для гармоники с \(kh = \pi/2\):</p>
-<div class="eq">\[
-\lambda = 1 - 0.3 + 0.3 e^{i\pi/2} = 0.7 + 0.3i, \qquad \arg(\lambda) = \arctan(0.3/0.7) \approx 0.405.
-\]</div>
-<p>Численная фазовая скорость: \(\gamma = \arg(\lambda)/(r \cdot kh) = 0.405/(0.3 \cdot \pi/2) \approx 0.86 < 1\). Гармоника <strong>отстаёт</strong> от точного решения — это <em>нормальная</em> дисперсия.</p>
-
-<h3>Пример аномальной дисперсии (\(r = 0.8\))</h3>
-<p>При \(r = 0.8\) для той же гармоники \(kh = \pi/2\):</p>
-<div class="eq">\[
-\lambda = 0.2 + 0.8i, \qquad \gamma = \arctan(0.8/0.2)/(0.8 \cdot \pi/2) \approx 1.326/1.257 \approx 1.05 > 1.
-\]</div>
-<p>Гармоника <strong>опережает</strong> точное решение — это <em>аномальная</em> дисперсия. Проявляется в виде «предвестников» (осцилляций перед фронтом).</p>
-
-<div class="remark">
-<strong>Физический смысл дисперсии:</strong> В точном уравнении переноса все гармоники движутся с одинаковой скоростью \(c\). В разностной схеме каждая гармоника имеет свою фазовую скорость. Из-за этого начальный профиль «расплывается»: гармоники разъезжаются, порождая осцилляции и искажения формы.
-</div>
-
-<h2 id="interactive">Интерактивный расчёт переноса</h2>
-<p>Сравнение схем первого порядка (уголок, сильная диссипация) и второго порядка (Лакс–Вендрофф, слабая диссипация но дисперсия). Нажмите «Старт» для анимации пошагового расчёта.</p>
-
-<div id="solver-container" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.2rem;margin:1.5rem 0">
-<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:end">
-  <div style="display:flex;flex-direction:column;gap:3px">
-    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Начальные условия</label>
-    <select id="ic-type" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)">
-      <option value="gaussian">Гауссиан</option>
-      <option value="step">Ступенька</option>
-      <option value="triangle">Треугольник</option>
-      <option value="sine">Синус</option>
-    </select>
+    </div>
   </div>
-  <div style="display:flex;flex-direction:column;gap:3px">
-    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Схема</label>
-    <select id="scheme-type" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)">
-      <option value="both">Обе (сравнение)</option>
-      <option value="upwind">Только уголок (1-й порядок)</option>
-      <option value="lw">Только Лакс-Вендрофф (2-й порядок)</option>
-    </select>
+  <div class="two-col" style="font-size:.88em">
+    <div class="example"><span class="lbl">Гладкий профиль</span>
+      Состоит из длинных волн (\(|q| \approx 1\), \(\gamma \approx 1\)): переносится узнаваемо при всех \(r\). Сильнее всего теряет амплитуду при \(r = 0.5\); при \(r = 0.9\) почти без потерь.
+    </div>
+    <div class="note"><span class="lbl">Ступенька</span>
+      Фронты размазаны — диссипация коротких волн. При \(r = 0.3\) — «хвост» позади (нормальная дисперсия), при \(r = 0.9\) фронт круче и чуть опережает (аномальная, канал высокой точности).
+    </div>
   </div>
-  <div style="display:flex;flex-direction:column;gap:3px">
-    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Число Куранта r = <span id="r-val">0.80</span></label>
-    <input type="range" id="r-slider" min="5" max="95" value="80" style="width:140px">
+  <p class="bridge">Проверим эти наблюдения числами для отдельных гармоник.</p>
+</section>
+
+<!-- 15 -->
+<section class="slide">
+  <div class="slide-num">§6.9 · Численные примеры</div>
+  <h2>Три гармоники в числах</h2>
+  <div class="flow">
+    <div class="step" style="border-left-color:var(--accent2)"><span class="n" style="background:var(--accent2)">1</span><div class="title">Диссипация: \(kh = \pi\), \(r = 0.5\)</div><div class="body">\(|q| = \sqrt{(1 - 0.5 + 0.5\cos\pi)^2 + 0.25\sin^2\pi} = \sqrt{(1 - 0.5 - 0.5)^2} = 0\). Амплитуда самой короткой волны обращается в нуль за один шаг — максимальная диссипация. Для длинных волн \(|q| \approx 1\) при любом \(r\).</div></div>
+    <div class="step"><span class="n">2</span><div class="title">Нормальная дисперсия: \(r = 0.3\), \(kh = \pi/2\)</div><div class="body">\(q = 0.7 + 0.3i\), \(\arg q = \arctan(0.3/0.7) \approx 0.405\); \(\;\gamma = 0.405/(0.3\cdot\pi/2) \approx 0.86 < 1\) — гармоника <strong>отстаёт</strong> от точного решения.</div></div>
+    <div class="step" style="border-left-color:var(--accent3)"><span class="n" style="background:var(--accent3)">3</span><div class="title">Аномальная дисперсия: \(r = 0.8\), \(kh = \pi/2\)</div><div class="body">\(q = 0.2 + 0.8i\), \(\arg q = \arctan 4 \approx 1.326\); \(\;\gamma = 1.326/(0.8\cdot\pi/2) \approx 1.326/1.257 \approx 1.05 > 1\) — гармоника <strong>опережает</strong>: «предвестники» перед фронтом.</div></div>
   </div>
-  <div style="display:flex;flex-direction:column;gap:3px">
-    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)">Всего шагов: <span id="steps-val">100</span></label>
-    <input type="range" id="steps-slider" min="20" max="300" value="100" style="width:100px">
+  <p class="bridge">Свяжем числа с тем, что видно на графиках решения.</p>
+</section>
+
+<!-- 16 -->
+<section class="slide">
+  <div class="slide-num">§6.9 · Физический смысл</div>
+  <h2>Физический смысл диссипации и дисперсии</h2>
+  <div class="two-col">
+    <div class="tile ok" style="grid-template-columns:1fr"><div><div class="h">диссипация</div><div class="t">«Размазывание» решения</div><div class="d">Высокочастотные компоненты — мелкие детали — подавляются первыми: сглаживаются фронты, теряются мелкомасштабные структуры. В терминах §4 — схемная вязкость \(\frac{ch}{2}(1-r)u_{xx}\).</div></div></div>
+    <div class="tile hi" style="grid-template-columns:1fr"><div><div class="h">дисперсия</div><div class="t">«Разъезжание» гармоник</div><div class="d">В точном уравнении все гармоники движутся со скоростью \(c\); в схеме каждая — со своей. Профиль искажается, появляются осцилляции: позади фронта при нормальной дисперсии, перед ним — при аномальной.</div></div></div>
   </div>
-  <button id="run-btn" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 18px;font-family:'Source Serif 4',serif;font-size:.88rem;font-weight:600;cursor:pointer">▶ Старт</button>
-  <button id="stop-btn" style="background:#6b5d4f;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer;display:none">⏸ Стоп</button>
-</div>
-<div style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2);margin-bottom:.4rem">Шаг: <span id="step-num">0</span></div>
-<canvas id="plot-canvas" width="900" height="320" style="width:100%;height:auto;background:#fff;border-radius:6px;border:1px solid var(--border)"></canvas>
-<div id="legend-row" style="display:flex;gap:1.5rem;justify-content:center;margin-top:.5rem;font-size:.78rem;color:var(--text2);font-family:'JetBrains Mono',monospace;flex-wrap:wrap">
-  <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:2px;background:#9a8d7e"></span> точное решение</span>
-  <span id="leg-up" style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:2px;background:#b44a2d"></span> уголок (1-й порядок)</span>
-  <span id="leg-lw" style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:2px;background:#3a5ba0"></span> Лакс–Вендрофф (2-й порядок)</span>
-</div>
-<div id="analysis-text" style="margin-top:.8rem;padding:.8rem;background:#fff;border:1px solid var(--border);border-radius:6px;font-size:.88rem;display:none"></div>
+  <div class="note" style="font-size:.9em"><span class="lbl">Схемы второго порядка</span>
+    У схемы Лакса–Вендроффа диссипация мала, и дисперсия проявляется в полную силу — осцилляциями около ступеньки. Интерактивный расчёт «уголок против Лакса–Вендроффа» при разных \(r\) и профилях — на странице лекции §6.
+  </div>
+  <p class="bridge">Подведём итог.</p>
+</section>
+
+<!-- 17 -->
+<section class="slide">
+  <div class="slide-num">§6 · Итоги</div>
+  <h2>Итоги §6</h2>
+  <div class="two-col">
+    <div>
+      <ol style="font-size:.92em">
+        <li><strong>Модуль</strong> \(|q(r, kh)|\) (6.1) — амплитуда за шаг; \(|q| < 1\) — численная диссипация; область устойчивости «уголка» \(r \in [0,1]\), максимум диссипации при \(r = \tfrac12\), нет при \(r = 1\).</li>
+        <li><strong>Дисперсионное соотношение</strong> (6.2): \(\omega = \arg q/\tau - (i/\tau)\ln|q|\); фазовая скорость \(\gamma = \arg q/(r\,kh)\); точное уравнение — \(\gamma \equiv 1\).</li>
+        <li><strong>Нормальная</strong> (\(\gamma < 1\), \(r < \tfrac12\)) и <strong>аномальная</strong> (\(\gamma > 1\), \(r > \tfrac12\)) дисперсия; при \(r = \tfrac12\) и \(r = 1\) дисперсии нет.</li>
+        <li><strong>Касание</strong> единичной плоскости при \(kh \to 0\) — порядок аппроксимации; коэффициенты при \(u_{xx}\), \(u_{xxx}\) в п.д.п. — те же множители.</li>
+        <li><strong>Суперпозиция</strong>: поверхности предсказывают перенос любого профиля; канал высокой точности у \(r = 1\).</li>
+      </ol>
+    </div>
+    <div>
+      <div class="example"><span class="lbl">Ключевой вывод</span>
+        Гладкие профили переносятся хорошо даже при умеренной диссипации; разрывные требуют выбора числа Куранта, минимизирующего размазывание и осцилляции.
+      </div>
+      <div class="note"><span class="lbl">Дальше</span>
+        §7 — метод неопределённых коэффициентов: как строить схемы с нужными свойствами. §8 — консервативность и монотонность.
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="hud">
+  <a href="s1-06.html" class="back" title="Полный текст лекции">← полная лекция</a>
+  <div class="center">
+    <button id="btnPrev" onclick="prev()" title="←">◀</button>
+    <span class="counter" id="counter">1 / 17</span>
+    <button id="btnNext" onclick="next()" title="→ / Space">▶</button>
+  </div>
+  <a href="s1-07.html" class="back" title="Следующая лекция">§7 →</a>
 </div>
 
 <script>
 (function(){
-  var N = 200, L = 2*Math.PI, h = L/N;
-  var animId = null, animStep = 0, animTarget = 0;
-  var u1 = null, u2 = null, u0 = null;
-
-  function ic(type) {
-    var u = new Float64Array(N);
-    for (var i=0; i<N; i++) {
-      var x = i*h;
-      if (type==='gaussian') u[i] = Math.exp(-((x-Math.PI)*(x-Math.PI))/(0.1*Math.PI*0.1*Math.PI));
-      else if (type==='step') u[i] = (x >= 0.3*Math.PI && x <= 0.7*Math.PI) ? 1 : 0;
-      else if (type==='triangle') { var w = 0.4*Math.PI; u[i] = Math.max(0, 1 - Math.abs(x - Math.PI)/w); }
-      else if (type==='sine') u[i] = 0.5*(1 + Math.sin(2*x));
-    }
-    return u;
+  var slides = Array.from(document.querySelectorAll('.slide'));
+  var counter = document.getElementById('counter');
+  var fill = document.getElementById('progressFill');
+  var i = 0;
+  slides.forEach(function(s){
+    var wrap = document.createElement('div');
+    wrap.className = 'slide-content';
+    while (s.firstChild) wrap.appendChild(s.firstChild);
+    s.appendChild(wrap);
+  });
+  function show(n) {
+    slides[i].classList.remove('active');
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    var s = slides[i];
+    var content = s.querySelector('.slide-content') || s;
+    var animated = [];
+    Array.from(content.children).forEach(function(child){
+      animated.push(child);
+      var innerEq = child.querySelectorAll('.eq');
+      for (var j = 0; j < innerEq.length; j++) animated.push(innerEq[j]);
+    });
+    animated.forEach(function(el, k){
+      el.style.setProperty('--i', k);
+      el.style.animation = 'none';
+    });
+    void s.offsetWidth;
+    animated.forEach(function(el){ el.style.animation = ''; });
+    s.classList.add('active');
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+    fill.style.width = ((i + 1) / slides.length * 100) + '%';
+    history.replaceState(null, '', '#' + (i + 1));
+    document.getElementById('btnPrev').disabled = (i === 0);
+    document.getElementById('btnNext').disabled = (i === slides.length - 1);
+    s.scrollTop = 0;
   }
-
-  // One step of upwind (1st order)
-  function stepUpwind(u, r) {
-    var v = new Float64Array(N);
-    for (var i=0; i<N; i++) v[i] = (1-r)*u[i] + r*u[(i-1+N)%N];
-    return v;
-  }
-
-  // One step of Lax-Wendroff (2nd order)
-  function stepLW(u, r) {
-    var v = new Float64Array(N);
-    for (var i=0; i<N; i++) {
-      var im = (i-1+N)%N, ip = (i+1)%N;
-      v[i] = u[i] - 0.5*r*(u[ip]-u[im]) + 0.5*r*r*(u[ip]-2*u[i]+u[im]);
-    }
-    return v;
-  }
-
-  function exactShift(u0arr, r, steps) {
-    var shift = r*steps*h;
-    var ue = new Float64Array(N);
-    for (var i=0; i<N; i++) {
-      var xs = ((i*h - shift) % L + L) % L;
-      var j = Math.floor(xs/h), frac = xs/h - j;
-      ue[i] = (1-frac)*u0arr[j%N] + frac*u0arr[(j+1)%N];
-    }
-    return ue;
-  }
-
-  function draw(u1arr, u2arr, ueArr, step, r, type) {
-    var canvas = document.getElementById('plot-canvas');
-    if (!canvas) return;
-    var ctx = canvas.getContext('2d');
-    var W = canvas.width, H = canvas.height;
-    ctx.clearRect(0,0,W,H);
-    var scheme = document.getElementById('scheme-type').value;
-    var showUp = (scheme === 'both' || scheme === 'upwind');
-    var showLW = (scheme === 'both' || scheme === 'lw');
-    var mn = -0.15, mx = 1.25;
-    for (var i=0;i<N;i++) {
-      if (showUp) { mn = Math.min(mn, u1arr[i]); mx = Math.max(mx, u1arr[i]); }
-      if (showLW) { mn = Math.min(mn, u2arr[i]); mx = Math.max(mx, u2arr[i]); }
-    }
-    var pad = (mx-mn)*0.1; mn -= pad; mx += pad;
-    var px = 45, py = 15, pw = W-65, ph = H-45;
-
-    // Grid
-    ctx.strokeStyle = '#ede6da'; ctx.lineWidth = 0.5;
-    for (var g=0; g<=5; g++) {
-      var gy = py + ph*(1 - g/5);
-      ctx.beginPath(); ctx.moveTo(px,gy); ctx.lineTo(px+pw,gy); ctx.stroke();
-      ctx.fillStyle='#9a8d7e'; ctx.font='9px JetBrains Mono'; ctx.textAlign='right';
-      ctx.fillText((mn + (mx-mn)*g/5).toFixed(2), px-4, gy+3);
-    }
-    function xp(i) { return px + pw*i/N; }
-    function yp(v) { return py + ph*(1 - (v-mn)/(mx-mn)); }
-
-    // Exact (gray)
-    ctx.strokeStyle = '#9a8d7e'; ctx.lineWidth = 2.5; ctx.setLineDash([6,3]);
-    ctx.beginPath();
-    for (var i=0; i<N; i++) { i===0 ? ctx.moveTo(xp(i),yp(ueArr[i])) : ctx.lineTo(xp(i),yp(ueArr[i])); }
-    ctx.stroke(); ctx.setLineDash([]);
-
-    // Upwind (red) — only if selected
-    if (showUp){
-      ctx.strokeStyle = '#b44a2d'; ctx.lineWidth = 2;
-      ctx.beginPath();
-      for (var i=0; i<N; i++) { i===0 ? ctx.moveTo(xp(i),yp(u1arr[i])) : ctx.lineTo(xp(i),yp(u1arr[i])); }
-      ctx.stroke();
-    }
-
-    // Lax-Wendroff (blue) — only if selected
-    if (showLW){
-      ctx.strokeStyle = '#3a5ba0'; ctx.lineWidth = 2;
-      ctx.beginPath();
-      for (var i=0; i<N; i++) { i===0 ? ctx.moveTo(xp(i),yp(u2arr[i])) : ctx.lineTo(xp(i),yp(u2arr[i])); }
-      ctx.stroke();
-    }
-
-    // Axes labels
-    ctx.fillStyle='#6b5d4f'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
-    ctx.fillText('0', px, py+ph+15); ctx.fillText('π', px+pw/2, py+ph+15); ctx.fillText('2π', px+pw, py+ph+15);
-    ctx.fillText('r='+r.toFixed(2)+' | шаг '+step+' | '+{gaussian:'Гауссиан',step:'Ступенька',triangle:'Треугольник',sine:'Синус'}[type], px+pw/2, py+ph+32);
-    document.getElementById('step-num').textContent = step;
-  }
-
-  function analyze(type, r, steps) {
-    var el = document.getElementById('analysis-text');
-    var scheme = document.getElementById('scheme-type').value;
-    var txt = '<strong>Наблюдения:</strong><br>';
-    if (scheme === 'upwind' || scheme === 'both'){
-      txt += '<span style="color:#b44a2d">■ Уголок (1-й порядок)</span> — сильная <em>диссипация</em>: профиль размазывается, амплитуда падает. ';
-      if (r < 0.4) txt += 'При r='+r.toFixed(2)+' диссипация максимальна для средних частот. ';
-      else if (r > 0.9) txt += 'При r≈1 диссипация минимальна (почти точный перенос). ';
-      txt += 'Дисперсии почти нет — нет осцилляций.<br>';
-    }
-    if (scheme === 'lw' || scheme === 'both'){
-      txt += '<span style="color:#3a5ba0">■ Лакс–Вендрофф (2-й порядок)</span> — малая диссипация (амплитуда сохраняется лучше), но видна <em>дисперсия</em>: ';
-      if (type === 'step' || type === 'triangle')
-        txt += 'осцилляции перед и за фронтом — гармоники движутся с разными скоростями, «пакет» разъезжается. ';
-      else
-        txt += 'при гладких условиях дисперсия мала, но при ступеньке/треугольнике будет хорошо видна. ';
-      if (r > 0.5 && (type==='step'||type==='triangle'))
-        txt += 'При r>0.5 дисперсия <em>аномальная</em>: осцилляции <em>перед</em> фронтом (предвестники). ';
-      else if (type==='step'||type==='triangle')
-        txt += 'При r<0.5 дисперсия <em>нормальная</em>: осцилляции <em>за</em> фронтом. ';
-    }
-    el.innerHTML = txt;
-    el.style.display = '';
-  }
-
-  function runAnim() {
-    var type = document.getElementById('ic-type').value;
-    var r = parseInt(document.getElementById('r-slider').value)/100;
-    animTarget = parseInt(document.getElementById('steps-slider').value);
-    document.getElementById('r-val').textContent = r.toFixed(2);
-    document.getElementById('steps-val').textContent = animTarget;
-    // Reset
-    if (animId) { cancelAnimationFrame(animId); animId = null; }
-    u0 = ic(type); u1 = new Float64Array(u0); u2 = new Float64Array(u0); animStep = 0;
-    document.getElementById('run-btn').style.display = 'none';
-    document.getElementById('stop-btn').style.display = '';
-    function frame() {
-      if (animStep >= animTarget) {
-        analyze(type, r, animStep);
-        document.getElementById('run-btn').style.display = '';
-        document.getElementById('stop-btn').style.display = 'none';
-        return;
-      }
-      u1 = stepUpwind(u1, r);
-      u2 = stepLW(u2, r);
-      animStep++;
-      var ue = exactShift(u0, r, animStep);
-      draw(u1, u2, ue, animStep, r, type);
-      animId = requestAnimationFrame(frame);
-    }
-    frame();
-  }
-
-  function stopAnim() {
-    if (animId) { cancelAnimationFrame(animId); animId = null; }
-    document.getElementById('run-btn').style.display = '';
-    document.getElementById('stop-btn').style.display = 'none';
-    var type = document.getElementById('ic-type').value;
-    var r = parseInt(document.getElementById('r-slider').value)/100;
-    analyze(type, r, animStep);
-  }
-
-  document.getElementById('run-btn').addEventListener('click', runAnim);
-  document.getElementById('stop-btn').addEventListener('click', stopAnim);
-  document.getElementById('r-slider').addEventListener('input', function(){ document.getElementById('r-val').textContent = (this.value/100).toFixed(2); });
-  document.getElementById('steps-slider').addEventListener('input', function(){ document.getElementById('steps-val').textContent = this.value; });
-  document.getElementById('scheme-type').addEventListener('change', function(){
-    var s = this.value;
-    document.getElementById('leg-up').style.display = (s==='both'||s==='upwind') ? '' : 'none';
-    document.getElementById('leg-lw').style.display = (s==='both'||s==='lw') ? '' : 'none';
-    // Redraw current frame with new selector
-    if (u1 && u2 && u0){
-      var type = document.getElementById('ic-type').value;
-      var r = parseInt(document.getElementById('r-slider').value)/100;
-      var ue = exactShift(u0, r, animStep);
-      draw(u1, u2, ue, animStep, r, type);
+  window.next = function(){ show(i + 1); };
+  window.prev = function(){ show(i - 1); };
+  document.addEventListener('keydown', function(e) {
+    if (/^(INPUT|TEXTAREA)$/i.test((e.target || {}).tagName)) return;
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+    else if (e.key === 'Home') { e.preventDefault(); show(0); }
+    else if (e.key === 'End')  { e.preventDefault(); show(slides.length - 1); }
+    else if (e.key === 'f' || e.key === 'F') {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
     }
   });
-
-  // Initial static draw
-  setTimeout(function(){
-    u0 = ic('gaussian'); u1 = new Float64Array(u0); u2 = new Float64Array(u0);
-    draw(u1, u2, u0, 0, 0.8, 'gaussian');
-  }, 100);
+  var h = parseInt((location.hash || '').replace('#', ''), 10);
+  if (!isNaN(h) && h >= 1 && h <= slides.length) show(h - 1);
+  else show(0);
+  window.__slidesShow = show;
+  window.__slidesIndex = function () { return i; };
+})();
+(function initSlideTools() {
+  function ready() {
+    if (!window.CFDSlideTools) return;
+    window.CFDSlideTools.init({
+      slidesSelector: '.slide',
+      activeClass:    'active',
+      hudSelector:    '.hud',
+      projectName:    'sem1-06-slides',
+      getCurrentIndex: function () { return window.__slidesIndex ? window.__slidesIndex() : 0; },
+      onGoToSlide:     function (n) { if (window.__slidesShow) window.__slidesShow(n); },
+    });
+  }
+  if (window.CFDSlideTools) ready();
+  else window.addEventListener('load', ready);
 })();
 </script>
-
-<div class="remark">
-<strong>Ключевой вывод:</strong> Диссипативная и дисперсионная поверхности полностью характеризуют поведение разностной схемы на различных начальных данных. Гладкие профили (гауссиан) хорошо переносятся даже при умеренной диссипации, тогда как разрывные профили (ступенька) требуют точного выбора числа Куранта для минимизации осцилляций и размазывания.
-</div>
-
-<div class="lecture-nav">
-<a href="s1-05a.html" class="nav-prev">← §5а. Энергетический метод</a>
-<a href="s1-07.html" class="nav-next">§7. Метод неопределённых коэффициентов →</a>
-</div>
-</div>
-</div>
-
-<div class="comments-wrap">
-<div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">
-<h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
-<div id="comments-list"><p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p></div>
-<div id="comment-form" style="display:none;margin-top:.8rem">
-<textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
-<button onclick="window._postComment()" style="margin-top:.4rem;background:#b44a2d;color:#fff;border:none;padding:6px 18px;border-radius:5px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer">Отправить</button>
-</div>
-<div id="comment-login"><p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p></div>
-</div>
-</div>
-
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
 <script src="../js/auth.js"></script>
-<script src="../js/comments.js"></script>
-<script src="../js/glossary.js"></script>
+<script src="../js/slide-notes.js"></script>
 </body>
 </html>

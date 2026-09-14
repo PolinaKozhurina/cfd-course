@@ -93,6 +93,7 @@
               { href: "sem1/s1-03.html", label: "§3 Теорема Лакса" },
               { href: "sem1/s1-04.html", label: "§4 Дифф. приближение" },
               { href: "sem1/s1-05.html", label: "§5 Устойчивость" },
+              { href: "sem1/s1-05a.html", label: "§5а Энергетический метод" },
               { href: "sem1/s1-06.html", label: "§6 Дисперсия" }
           ]},
           { title: "Свойства схем", items: [

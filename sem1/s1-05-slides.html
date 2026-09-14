@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <link rel="icon" href="../favicon.ico" type="image/x-icon">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>§5. Слайды · Методы исследования устойчивости</title>
+<title>§5. Слайды · Спектральный признак устойчивости</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/slides-sem1.css">
 <script>
 window.MathJax = {
   tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
@@ -13,466 +14,419 @@ window.MathJax = {
 };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
-<!-- Инструменты слайдов: рисование (сразу) + экспорт PDF/PPTX (по клику подгрузит html2canvas / jsPDF / PptxGenJS) -->
 <script src="../js/slide-tools.js"></script>
-<style>
-:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0}
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%}
-body{font-family:'Source Serif 4',Georgia,serif;font-size:27px;line-height:1.55;color:var(--text);background:var(--bg);overflow:hidden}
-.slide{position:fixed;inset:0;padding:0;display:none;overflow:auto}
-.slide.active{display:flex;align-items:center;justify-content:center}
-.slide-content{width:100%;max-width:min(96vw, 1600px);margin:auto;padding:1.4rem 1.6rem 2.8rem;box-sizing:border-box}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.slide.active .slide-content > *{animation: slideStep .38s cubic-bezier(.22,.61,.36,1) both;animation-delay: calc(var(--i, 0) * 85ms);}
-@keyframes slideStep{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-.slide.active .eq{animation: formulaIn .55s cubic-bezier(.22,.61,.36,1) both;animation-delay: calc(var(--i, 0) * 85ms);transform-origin: center;}
-@keyframes formulaIn{0%{opacity:0;transform:scale(.92) translateY(4px);filter:blur(3.5px)}55%{opacity:1;transform:scale(1.02);filter:blur(0)}100%{opacity:1;transform:scale(1)}}
-.slide.active .eq::after{content:'';position:absolute;left:0;right:0;bottom:-6px;height:2px;background:linear-gradient(90deg,transparent,var(--accent) 50%,transparent);transform:scaleX(0);opacity:0;animation: formulaUnderline .55s ease-out both;animation-delay: calc(var(--i, 0) * 85ms + .35s);}
-.slide.active .eq{position:relative}
-@keyframes formulaUnderline{0%{transform:scaleX(0);opacity:0}40%{transform:scaleX(1);opacity:.7}100%{transform:scaleX(1);opacity:0}}
-.slide.title.active .slide-content > *{animation:slideStep .55s ease both;animation-delay:calc(var(--i,0) * 140ms)}
-@media (prefers-reduced-motion: reduce){.slide.active .slide-content > *, .slide.active .eq, .slide.active .eq::after{animation:none}}
-.slide-num{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--text3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:.6rem}
-h1{font-family:'Playfair Display',serif;font-weight:900;font-size:2.6rem;line-height:1.12;color:var(--text);margin-bottom:1rem;letter-spacing:-.01em}
-h2{font-family:'Playfair Display',serif;font-weight:700;font-size:1.8rem;color:var(--accent);margin-bottom:1.2rem;line-height:1.15}
-h3{font-family:'Source Serif 4',serif;font-weight:700;font-size:1.15rem;color:var(--text);margin:1rem 0 .5rem}
-p{margin-bottom:.9rem}
-ul,ol{margin:0 0 .9rem 1.6rem;line-height:1.65}
-li{margin-bottom:.35rem}
-em{color:var(--accent2)}
-strong{color:var(--text)}
-.eq{margin:1.2rem 0;text-align:center;font-size:1.05em}
-.lead{color:var(--text2);font-size:.95em}
-.bridge{border-top:1px dashed var(--border);padding-top:.5rem;margin-top:.4rem;font-size:.9em;color:var(--text2)}
-.definition,.condition,.theorem{position:relative;padding:1rem 1.3rem 1rem 3.2rem;border-radius:6px;margin:1rem 0;border:none;overflow:hidden;min-height:11rem}
-.definition{background:#e7efe8}
-.condition {background:#f2e5d6}
-.theorem   {background:#e0e8f2}
-.definition strong,.condition strong,.theorem strong{color:var(--text)}
-.definition::before,.condition::before,.theorem::before{position:absolute;left:0;top:0;bottom:0;width:2.1rem;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase;}
-.definition::before{background:#d0dfd4;color:#3d6b5a;content:'Определение'}
-.definition[data-num]::before{content:'Определение ' attr(data-num)}
-.condition::before{background:#e5d1b8;color:#8a5236;content:'Условие'}
-.condition[data-num]::before{content:'Условие ' attr(data-num)}
-.theorem::before{background:#c8d5e6;color:#4a5f88;content:'Теорема'}
-.theorem[data-num]::before{content:'Теорема ' attr(data-num)}
-.definition.compact,.theorem.compact,.condition.compact{min-height:0}
-.example{background:#e0e8f2;border-left:3px solid #7d95bd;padding:.8rem 1.1rem;border-radius:0 6px 6px 0;margin:.5rem 0 .8rem;font-size:1em;color:var(--text)}
-.example .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#4a5f88;margin-bottom:.35rem}
-.example ul,.example ol{margin:.15rem 0 0 1.1rem;font-size:.94em}
-.example li{margin-bottom:.15rem}
-.note{background:#f8efe1;border-left:3px solid var(--accent);padding:.8rem 1.1rem;border-radius:0 6px 6px 0;margin:.5rem 0 .8rem;font-size:1em}
-.note .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:.35rem}
-@media(max-width:900px){.definition,.condition,.theorem{padding-left:2.6rem}.definition::before,.condition::before,.theorem::before{width:1.8rem;font-size:.56rem;letter-spacing:.18em}}
-.figure{margin:1rem auto;text-align:center;max-width:100%}
-.figure svg{max-width:100%;height:auto}
-.figure .caption{font-size:.92rem;color:var(--text2);margin-top:.4rem;font-style:italic}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
-.two-col.wide-left{grid-template-columns:1.25fr 1fr}
-.callout{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;font-size:1em;color:var(--text2)}
-.tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.12em;padding:.2rem .55rem;border-radius:3px;background:#f3e8f9;color:#7b3fa0;margin-right:.4rem;vertical-align:middle}
-.flow{display:grid;grid-template-columns:1fr;gap:.55rem;margin:1rem 0}
-.flow .step{position:relative;background:#fff;border:1.5px solid var(--border);border-left:5px solid var(--accent);border-radius:8px;padding:.7rem 1rem .7rem 1.2rem;box-shadow:0 2px 8px rgba(44,36,25,.04)}
-.flow .step .n{position:absolute;left:-14px;top:-12px;background:var(--accent);color:#fff;font-family:'JetBrains Mono',monospace;font-size:.76rem;font-weight:700;padding:.15rem .45rem;border-radius:3px;letter-spacing:.03em}
-.flow .step .title{font-family:'Playfair Display',serif;font-weight:700;font-size:1.05rem;color:var(--text);margin-bottom:.15rem}
-.flow .step .body{font-size:1rem;color:var(--text2);line-height:1.45}
-.tiles{display:grid;grid-template-columns:1fr;gap:.5rem;margin:1rem 0}
-.tile{background:#fff;border:1px solid var(--border);border-radius:6px;padding:.6rem .9rem;display:grid;grid-template-columns:190px 1fr;align-items:center;gap:1rem}
-.tile .h{font-family:'JetBrains Mono',monospace;font-size:.76rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
-.tile .t{font-family:'Playfair Display',serif;font-weight:700;font-size:1.1rem;color:var(--text);line-height:1.2}
-.tile .d{font-size:.95rem;color:var(--text2);line-height:1.35}
-.tile.hi{background:#f8efe1}.tile.hi .t{color:var(--accent)}.tile.hi .h{color:var(--accent)}
-.tile.ok{background:#e7efe8}.tile.ok .t{color:var(--accent2)}
-.tile.bad{background:#fbe9e4}.tile.bad .t{color:var(--accent)}
-@media(max-width:900px){.tile{grid-template-columns:1fr;gap:.15rem}}
-table.sum{border-collapse:collapse;width:100%;font-size:.95em;margin:.6rem 0}
-table.sum th,table.sum td{border:1px solid var(--border);padding:.45rem .7rem;text-align:left;vertical-align:top}
-table.sum th{background:var(--bg2);font-family:'JetBrains Mono',monospace;font-size:.76rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text2);font-weight:500}
-table.sum td.c{text-align:center}
-.slide.title{text-align:center;background:radial-gradient(ellipse at 30% 20%,#fff 0%,var(--bg) 55%,var(--bg2) 100%)}
-.slide.title .slide-content{max-width:1000px}
-.slide.title h1{font-size:3.4rem;margin-bottom:1.5rem;max-width:900px;margin-left:auto;margin-right:auto}
-.slide.title h1 .u{color:var(--accent);border-bottom:4px solid var(--accent);padding-bottom:.15rem}
-.slide.title .sub{font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--text2);margin-bottom:1rem;letter-spacing:.05em}
-.slide.title .course{font-size:.85rem;color:var(--text3);text-transform:uppercase;letter-spacing:.24em;margin-bottom:.6rem}
-.slide.title .badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:.35rem .85rem;border:1.5px solid var(--accent);color:var(--accent);border-radius:20px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:1.4rem}
-.slide.section{text-align:center;background:radial-gradient(ellipse at 70% 30%,#fff 0%,var(--bg) 55%,var(--bg2) 100%)}
-.slide.section h1{font-size:3rem}
-.hud{position:fixed;bottom:0;left:0;right:0;padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to top,rgba(250,248,244,.95),transparent);z-index:100;pointer-events:none}
-.hud > *{pointer-events:auto}
-.hud button{font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:.4rem .9rem;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text2);cursor:pointer;transition:all .12s}
-.hud button:hover{border-color:var(--accent);color:var(--accent);background:var(--bg2)}
-.hud button:disabled{opacity:.35;cursor:default}
-.hud .counter{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);letter-spacing:.06em}
-.hud .center{display:flex;gap:.4rem;align-items:center}
-.hud .back{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);text-decoration:none;padding:.35rem .7rem;border:1px dashed var(--border);border-radius:4px}
-.hud .back:hover{color:var(--accent);border-color:var(--accent)}
-.progress{position:fixed;top:0;left:0;right:0;height:3px;background:var(--bg3);z-index:99}
-.progress .fill{height:100%;background:var(--accent);transition:width .2s ease;width:0%}
-@media(min-width:1800px){body{font-size:29px}h1{font-size:3rem}h2{font-size:2rem}}
-@media(max-width:900px){.slide-content{padding:1.6rem 1.2rem 3rem}h1{font-size:1.9rem}h2{font-size:1.4rem}.two-col,.two-col.wide-left{grid-template-columns:1fr}body{font-size:19px}}
-@media print{body{overflow:visible;background:#fff}.slide{position:relative;display:flex!important;page-break-after:always;min-height:100vh;align-items:center;justify-content:center}.hud,.progress{display:none}}
-.two-col > *{min-width:0}
-.two-col > .figure{width:100%}
-code{font-family:'JetBrains Mono',monospace;font-size:.88em;background:#f1ece3;padding:.05em .3em;border-radius:3px}
-.eq mjx-container[display="true"]{max-width:100%;overflow-x:auto;overflow-y:hidden}
-</style>
 </head>
 <body>
-
 <div class="progress"><div class="fill" id="progressFill"></div></div>
 
-<!-- 1: Титульный -->
+<!-- 1 -->
 <section class="slide title active">
   <div class="course">Теория разностных схем</div>
   <div class="badge">Семестр 1 · Лекция §5</div>
-  <h1>Методы исследования <span class="u">устойчивости</span></h1>
-  <div class="sub">Спектральный признак · Гармоники · Множитель перехода · Условие Неймана · Схема «уголок»</div>
+  <h1>Спектральный признак <span class="u">устойчивости</span></h1>
+  <div class="sub">Оператор перехода · Гармоники · Характеристическое уравнение · Условие Неймана · Пять схем</div>
 </section>
 
-<!-- 2: Что нужно проверить -->
+<!-- 2 -->
 <section class="slide">
-  <div class="slide-num">§5 · Напоминание</div>
-  <h2>Что именно нужно проверить</h2>
-  <p class="lead">В §2 устойчивость определена, в §3 теорема Лакса сделала её решающим свойством: аппроксимация и устойчивость вместе дают сходимость. Осталось научиться устойчивость <em>проверять</em>.</p>
+  <div class="slide-num">§5.1 · Что нужно проверить</div>
+  <h2>Устойчивость по начальным данным — что именно надо доказать</h2>
+  <p class="lead">В §2 устойчивость определена, в §3 теорема Лакса сделала её решающей: аппроксимация + устойчивость = сходимость. Для эволюционных задач, где решение считается послойно, удобна форма:</p>
+  <div class="eq">\[ \|u^{n}\| \le C\,\|u^{0}\| \qquad\text{при всех } n = 0, 1, \dots, N = T/\tau, \qquad C \ne C(h, \tau, n). \tag{5.1} \]</div>
+  <div class="two-col">
+    <div class="note"><span class="lbl">Трудность</span>Неравенство должно выполняться при <strong>всех</strong> начальных данных, <strong>всех</strong> сетках и с <strong>одной</strong> постоянной. Проверять «в лоб» — значит решить задачу для всех данных сразу.</div>
+    <div class="example"><span class="lbl">Идея</span>Найти для оператора, переводящего решение со слоя на слой, базис из собственных функций и проследить за каждой: её поведение описывается одним числом.</div>
+  </div>
+  <p class="bridge">Для линейных схем с постоянными коэффициентами такие собственные функции известны заранее — это гармоники. Начнём с оператора перехода.</p>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+  <div class="slide-num">§5.2 · Оператор перехода</div>
+  <h2>Оператор перехода и его перестановочность со сдвигом</h2>
+  <div class="definition" data-num="1">
+    Оператор \(S\), обеспечивающий переход решения с предыдущего временного слоя на следующий, \(u^{n+1} = S\,u^{n}\), называется <em>оператором перехода</em> двухслойной схемы. Для неявной схемы \(B_1u^{n+1} = B_0u^n\) это \(S = B_1^{-1}B_0\).
+  </div>
   <div class="two-col">
     <div>
-      <div class="definition compact" data-num="4 §2">
-        Семейство схем \(L_h u_h = f_h\) <em>устойчиво</em> (корректно), если решение существует, единственно и
-        \[ \|u_h\| \le C\,\|f_h\|, \qquad C \ne C(h). \]
-      </div>
+      <p class="lead">Пусть сетка бесконечна (или периодична), а коэффициенты схемы одинаковы во всех узлах. Тогда \(S\) <em>перестановочен со сдвигом</em> \(T\colon u_m \mapsto u_{m+1}\): всё равно, сдвинуть функцию до применения схемы или после,</p>
+      <div class="eq">\[ ST = TS. \]</div>
     </div>
-    <div>
-      <div class="note"><span class="lbl">Трудность</span>
-        Неравенство должно выполняться при <strong>всех</strong> правых частях и <strong>всех</strong> сетках, с одной постоянной \(C\). Проверять его непосредственно — значит решать задачу для всех данных сразу.
-      </div>
-      <div class="example"><span class="lbl">Идея</span>
-        Найти для оператора перехода \(u^{n} \mapsto u^{n+1}\) собственные функции и проследить за каждой из них отдельно.
-      </div>
+    <div class="example"><span class="lbl">Собственные функции сдвига</span>
+      \[ T\,e^{i\alpha m} = e^{i\alpha(m+1)} = e^{i\alpha}\cdot e^{i\alpha m}. \]
+      Экспонента \(e^{i\alpha m}\) — собственная функция сдвига с собственным числом \(e^{i\alpha}\).
     </div>
   </div>
-  <p class="bridge">Для линейных схем с постоянными коэффициентами такие собственные функции известны заранее — это гармоники.</p>
+  <p class="bridge">Операторы, перестановочные со сдвигом, наследуют его собственные функции — это и есть лемма, на которой держится весь метод.</p>
 </section>
 
-<!-- 3: Идея спектрального метода -->
+<!-- 4 -->
 <section class="slide">
-  <div class="slide-num">§5.1 · Спектральный признак устойчивости</div>
-  <h2>Идея: следить не за решением, а за собственными функциями оператора перехода</h2>
-  <div class="two-col wide-left">
-    <div>
-      <div class="definition compact" data-num="1">
-        <strong>Оператор перехода</strong> — оператор, обеспечивающий переход решения с предыдущего временного слоя на следующий: \(u^{n+1} = S\,u^{n}\).
-      </div>
-      <p class="lead">Если коэффициенты схемы одинаковы во всех узлах, а границ нет, то \(S\) перестановочен со сдвигом по сетке \(u_m \mapsto u_{m+1}\). Собственные функции сдвига — экспоненты \(e^{i\alpha m}\); значит, они же — собственные функции \(S\):</p>
-      <div class="eq">\[ S\,e^{i\alpha m} = \lambda(\alpha)\,e^{i\alpha m}. \]</div>
+  <div class="slide-num">§5.2 · Лемма о гармониках</div>
+  <h2>Лемма 1: гармоники — собственные функции оператора перехода</h2>
+  <div class="lemma" data-num="1">
+    Пусть \(S\) — линейный оператор на сеточных функциях, перестановочный со сдвигом: \(ST = TS\). Тогда для каждого \(\alpha\) функция \(e_\alpha = \{e^{i\alpha m}\}\) — собственная функция \(S\): \(S e_\alpha = \lambda(\alpha)\,e_\alpha\).
+  </div>
+  <div class="two-col">
+    <div class="proof"><strong>Доказательство.</strong> Положим \(v = Se_\alpha\). Тогда
+      \[ Tv = TSe_\alpha = STe_\alpha = S(e^{i\alpha}e_\alpha) = e^{i\alpha}\,v, \]
+      то есть \(v\) — собственная функция сдвига с тем же числом \(e^{i\alpha}\). Но уравнение \(v_{m+1} = e^{i\alpha}v_m\) задаёт \(v\) с точностью до множителя: \(v_m = v_0e^{i\alpha m}\). Значит \(v = \lambda e_\alpha\). □
     </div>
     <div>
-      <div class="example"><span class="lbl">Что даёт</span>
-        Действие \(S\) на гармонику — умножение на число \(\lambda(\alpha)\). Поведение решения за \(n\) шагов сводится к степеням \(\lambda^n\): вопрос об устойчивости становится вопросом о модуле \(|\lambda|\).
-      </div>
-      <div class="note"><span class="lbl">Область применения</span>
-        Явные и неявные схемы, системы уравнений (\(\lambda\) — матрица), несколько пространственных переменных (\(\alpha\) — вектор). Самый распространённый метод в силу простоты.
-      </div>
+      <p class="small">На сетке \(x_m = mh\), \(t_n = n\tau\) непрерывная гармоника \(e^{i\omega t + ikx}\) принимает вид</p>
+      <div class="eq">\[ u_m^n = \lambda^n e^{i\alpha m}, \qquad \lambda = e^{i\omega\tau}, \quad \alpha = kh. \tag{5.2} \]</div>
+      <div class="definition compact" data-num="2" style="min-height:0">Функция (5.2) — <em>гармоника</em> с приведённым волновым числом \(\alpha\); собственное число \(\lambda(\alpha)\), для которого \(u_m^{n+1} = \lambda u_m^n\), — <em>множитель перехода</em>.</div>
     </div>
   </div>
-  <p class="bridge">Но простота куплена ценой жёстких предположений — назовём их явно, прежде чем идти дальше.</p>
+  <p class="bridge">Единственное, что использовано, — \(ST = TS\). Без постоянных коэффициентов и без отсутствия границ леммы нет; это отправная точка §5а.</p>
 </section>
 
-<!-- 4: Границы применимости -->
+<!-- 5 -->
 <section class="slide">
-  <div class="slide-num">§5.1 · Границы применимости</div>
-  <h2>Предположения метода гармоник</h2>
-  <p class="lead">Метод гармоник допускает использование только для <strong>однородных</strong> уравнений с <strong>постоянными</strong> коэффициентами <strong>без учёта краевых условий</strong>. За каждым словом — своя причина.</p>
-  <div class="tiles">
-    <div class="tile"><div class="h">линейность</div><div><div class="t">Принцип суперпозиции</div><div class="d">Решение разлагается на гармоники, и за каждой следят отдельно — только для линейных однородных схем.</div></div></div>
-    <div class="tile"><div class="h">коэффициенты</div><div><div class="t">Постоянные по \(x\) и \(t\)</div><div class="d">Иначе оператор перехода не перестановочен со сдвигом, и \(e^{i\alpha m}\) — не его собственная функция.</div></div></div>
-    <div class="tile"><div class="h">границы</div><div><div class="t">Бесконечная или периодическая сетка</div><div class="d">Гармоника не удовлетворяет условию \(u = 0\) на границе; краевые условия метод не видит.</div></div></div>
-    <div class="tile hi"><div class="h">результат</div><div><div class="t">Условие необходимое</div><div class="d">Оно получено для одного специального класса данных; о достаточности — отдельный разговор.</div></div></div>
-  </div>
-  <p class="bridge">Задачи с переменными коэффициентами и краевыми условиями потребуют другого инструмента — энергетического метода §5а. А пока введём гармоники на сетке.</p>
-</section>
-
-<!-- 5: Гармоника на сетке -->
-<section class="slide">
-  <div class="slide-num">§5.2 · Гармоники</div>
-  <h2>Гармоника на сетке</h2>
-  <div class="two-col wide-left">
-    <div>
-      <p class="lead">Для непрерывных аргументов гармоника — \(u = e^{i\omega t + ikx}\), \(k\) вещественно. На сетке \(x_m = mh\), \(t_n = n\tau\):</p>
-      <div class="eq">\[ u_m^n = e^{i\omega\tau\,n}\,e^{ikh\,m} = \lambda^n\,e^{i\alpha m}, \qquad \lambda = e^{i\omega\tau},\quad \alpha = kh. \tag{5.1} \]</div>
-      <p style="font-size:.95em">\(\alpha\) — <strong>приведённое волновое число</strong>: от \(0\) (постоянная по \(x\) функция) до \(2\pi\); значение \(\alpha = \pi\) — самая короткая волна, различимая на сетке.</p>
-    </div>
+  <div class="slide-num">§5.2–5.3 · Гармоники на сетке. Правило подстановки</div>
+  <h2>Какие бывают гармоники и как их подставлять</h2>
+  <div class="two-col wide-right">
     <div class="figure">
-      <svg viewBox="0 0 420 250" xmlns="http://www.w3.org/2000/svg" style="max-width:420px">
-        <text x="12" y="20" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0">α = π/4 — длинная волна</text>
-        <line x1="20" y1="70" x2="400" y2="70" stroke="#d9cfc0"/>
-        <polyline points="30,30 76,42 122,70 168,98 214,110 260,98 306,70 352,42 398,30" fill="none" stroke="#3a5ba0" stroke-width="1.5" stroke-dasharray="4,3"/>
-        <g fill="#3a5ba0"><circle cx="30" cy="30" r="4"/><circle cx="76" cy="42" r="4"/><circle cx="122" cy="70" r="4"/><circle cx="168" cy="98" r="4"/><circle cx="214" cy="110" r="4"/><circle cx="260" cy="98" r="4"/><circle cx="306" cy="70" r="4"/><circle cx="352" cy="42" r="4"/><circle cx="398" cy="30" r="4"/></g>
-        <text x="12" y="150" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d">α = π — «пила», волна длиной 2h</text>
-        <line x1="20" y1="200" x2="400" y2="200" stroke="#d9cfc0"/>
-        <polyline points="30,160 76,240 122,160 168,240 214,160 260,240 306,160 352,240 398,160" fill="none" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
-        <g fill="#b44a2d"><circle cx="30" cy="160" r="4"/><circle cx="76" cy="240" r="4"/><circle cx="122" cy="160" r="4"/><circle cx="168" cy="240" r="4"/><circle cx="214" cy="160" r="4"/><circle cx="260" cy="240" r="4"/><circle cx="306" cy="160" r="4"/><circle cx="352" cy="240" r="4"/><circle cx="398" cy="160" r="4"/></g>
+      <svg viewBox="0 0 420 210" xmlns="http://www.w3.org/2000/svg">
+        <text x="12" y="16" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0">α = π/4 — длинная волна</text>
+        <line x1="20" y1="60" x2="400" y2="60" stroke="#d9cfc0"/>
+        <polyline points="30,24 76,34 122,60 168,86 214,96 260,86 306,60 352,34 398,24" fill="none" stroke="#3a5ba0" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <g fill="#3a5ba0"><circle cx="30" cy="24" r="4"/><circle cx="76" cy="34" r="4"/><circle cx="122" cy="60" r="4"/><circle cx="168" cy="86" r="4"/><circle cx="214" cy="96" r="4"/><circle cx="260" cy="86" r="4"/><circle cx="306" cy="60" r="4"/><circle cx="352" cy="34" r="4"/><circle cx="398" cy="24" r="4"/></g>
+        <text x="12" y="130" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d">α = π — «пила», длина волны 2h</text>
+        <line x1="20" y1="170" x2="400" y2="170" stroke="#d9cfc0"/>
+        <polyline points="30,140 76,200 122,140 168,200 214,140 260,200 306,140 352,200 398,140" fill="none" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <g fill="#b44a2d"><circle cx="30" cy="140" r="4"/><circle cx="76" cy="200" r="4"/><circle cx="122" cy="140" r="4"/><circle cx="168" cy="200" r="4"/><circle cx="214" cy="140" r="4"/><circle cx="260" cy="200" r="4"/><circle cx="306" cy="140" r="4"/><circle cx="352" cy="200" r="4"/><circle cx="398" cy="140" r="4"/></g>
       </svg>
-      <div class="caption">Вещественные части гармоник \(\cos(\alpha m)\) в узлах сетки.</div>
+      <div class="caption">\(\alpha \in [-\pi, \pi]\): значения \(\alpha\) и \(\alpha + 2\pi\) на сетке неразличимы.</div>
+    </div>
+    <div>
+      <p class="lead">Значение гармоники в узле шаблона \((m + p,\ n + s)\):</p>
+      <div class="eq">\[ u_{m+p}^{\,n+s} = \underbrace{\lambda^n e^{i\alpha m}}_{\text{общий множитель}}\cdot\lambda^{s}e^{i\alpha p}. \tag{5.3} \]</div>
+      <div class="example"><span class="lbl">Шпаргалка</span>
+        \(u_m^{n+1} \to \lambda\), \(u_m^{n-1} \to \lambda^{-1}\), \(u_{m-1}^n \to e^{-i\alpha}\), \(u_{m+1}^n \to e^{i\alpha}\), \(u_{m-1}^{n+1} \to \lambda e^{-i\alpha}\).
+      </div>
     </div>
   </div>
-  <p class="bridge">Подставим (5.1) в схему: множитель \(e^{i\alpha m}\) сократится, и останется уравнение на \(\lambda\).</p>
+  <p class="bridge">После сокращения общего множителя остаётся алгебраическое уравнение на \(\lambda\) — характеристическое.</p>
 </section>
 
-<!-- 6: Множитель перехода -->
+<!-- 6 -->
 <section class="slide">
-  <div class="slide-num">§5.3 · Множитель перехода</div>
-  <h2>Множитель перехода и характеристическое уравнение</h2>
-  <p class="lead">Подстановка \(u_m^n = \lambda^n e^{i\alpha m}\) в разностную схему даёт соотношение между \(\lambda\) и \(\alpha\) — <em>характеристическое (дисперсионное) уравнение</em> \(\lambda = \lambda(\alpha)\). Величина \(\lambda\), вообще говоря комплексная, называется <strong>множителем (коэффициентом) перехода</strong>.</p>
+  <div class="slide-num">§5.3 · Характеристическое уравнение</div>
+  <h2>Характеристическое уравнение и алгоритм</h2>
+  <div class="definition" data-num="3">
+    Соотношение \(\lambda = \lambda(\alpha)\), получаемое подстановкой гармоники (5.2) в схему и сокращением общего множителя, называется <em>характеристическим (дисперсионным) уравнением</em>. Для двухслойной схемы оно линейно по \(\lambda\), для трёхслойной — квадратное.
+  </div>
+  <div class="two-col wide-left">
+    <div class="flow">
+      <div class="step"><span class="n">1</span><div class="title">Безразмерные параметры</div><div class="body">\(r = a\tau/h\) для переноса, \(\varkappa = \tau/h^2\) для теплопроводности.</div></div>
+      <div class="step"><span class="n">2</span><div class="title">Подстановка по правилу (5.3)</div><div class="body">Каждое \(u_{m+p}^{n+s}\) заменить на \(\lambda^se^{i\alpha p}\).</div></div>
+      <div class="step"><span class="n">3</span><div class="title">Сократить и решить относительно \(\lambda\)</div><div class="body">Для неявных схем — разделить на коэффициент при \(\lambda\).</div></div>
+      <div class="step"><span class="n">4</span><div class="title">Вычислить \(|\lambda|^2\)</div><div class="body">\(e^{\pm i\alpha} = \cos\alpha \pm i\sin\alpha\), \(1 - \cos\alpha = 2\sin^2\frac{\alpha}{2}\), \(e^{i\alpha} - e^{-i\alpha} = 2i\sin\alpha\).</div></div>
+    </div>
+    <div>
+      <p class="small">Из (5.2) \(u_m^{n} = \lambda^n u_m^{0}\), где \(u_m^0 = e^{i\alpha m}\) — начальное условие. Значит,</p>
+      <div class="eq">\[ \max_m |u_m^n| = |\lambda|^n\,\max_m |u_m^0|. \tag{5.4} \]</div>
+      <div class="note"><span class="lbl">Готовая оценка</span>Равенство (5.4) — это оценка решения через начальные данные для одной гармоники. Осталось сопоставить её с требованием (5.1).</div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="slide">
+  <div class="slide-num">§5.4 · Вывод условия Неймана</div>
+  <h2>От оценки (5.1) к условию на \(\lambda\)</h2>
+  <p class="lead">Возьмём в (5.1) норму \(\|u^n\| = \max_m|u_m^n|\) и подставим гармонику. По (5.4) требование (5.1) для неё означает</p>
+  <div class="eq">\[ |\lambda(\alpha)|^n \le C \qquad\text{при всех } n = 0, 1, \dots, N = T/\tau \text{ и всех } \alpha. \tag{5.5} \]</div>
   <div class="two-col">
     <div>
-      <p style="font-size:.95em">Смысл названия ясен из равенств</p>
-      <div class="eq">\[ u_m^{n} = \lambda^{n}e^{i\alpha m}, \qquad u_m^{n+1} = \lambda^{n+1}e^{i\alpha m} \quad\Rightarrow\quad u_m^{n+1} = \lambda\,u_m^{n}. \]</div>
+      <p class="small">Число шагов \(N = T/\tau \to \infty\) при \(\tau \to 0\). При \(n = N\):</p>
+      <div class="eq">\[ |\lambda| \le C^{1/N} = C^{\tau/T} = e^{(\tau/T)\ln C} \le 1 + C_1\tau. \]</div>
+      <p class="small">Обратно, \((1 + C_1\tau)^{T/\tau} \le e^{C_1T}\) — ограничено. Итак, (5.5) равносильно</p>
+      <div class="eq">\[ |\lambda(\alpha)| \le 1 + C_1\tau \quad\text{при всех } \alpha. \tag{5.6} \]</div>
     </div>
-    <div>
-      <p style="font-size:.95em">Функция \(u_m^0 = e^{i\alpha m}\) — начальное условие; из (5.1) \(u_m^n = \lambda^n u_m^0\), откуда</p>
-      <div class="eq">\[ \max_m |u_m^n| = |\lambda|^n \max_m |u_m^0|. \tag{5.2} \]</div>
-    </div>
-  </div>
-  <p class="bridge">Равенство (5.2) — это готовая оценка решения через начальные данные. Сопоставим её с определением устойчивости.</p>
-</section>
-
-<!-- 7: Вывод условия Неймана -->
-<section class="slide">
-  <div class="slide-num">§5.4 · Необходимое условие устойчивости</div>
-  <h2>Вывод условия Неймана</h2>
-  <p class="lead">Воспользуемся вторым определением устойчивости и введём нормы через максимум:</p>
-  <div class="eq">\[ \|u^{(h)}\|_{U_h} \le C\,\|f^{(h)}\|_{F_h}, \qquad \|u^{(h)}\|_{U_h} = \max_{m,n}|u_m^n|, \qquad \|f^{(h)}\|_{F_h} = \max_m |u_m^0|. \tag{5.3, 5.4} \]</div>
-  <div class="two-col">
-    <div>
-      <p style="font-size:.95em">Из (5.2)–(5.4): для устойчивости во всяком случае необходимо, чтобы при всех \(n = 0, 1, \dots, N\) и всех гармониках \(0 \le \alpha \le 2\pi\)</p>
-      <div class="eq">\[ |\lambda(\alpha)|^n \le C. \]</div>
-    </div>
-    <div>
-      <p style="font-size:.95em">Число шагов \(N = T/\tau\), то есть \(n \sim 1/\tau\). Тогда \(|\lambda| \le C^{\tau/T} = e^{(\tau/T)\ln C}\), и</p>
-      <div class="eq">\[ |\lambda(\alpha)| \le 1 + C\tau. \tag{5.5} \]</div>
+    <div class="theorem" data-num="1">
+      Если схема с постоянными коэффициентами устойчива по начальным данным в норме \(\max|u_m^n|\) на бесконечной сетке, то множитель перехода каждой гармоники удовлетворяет (5.6) с постоянной, не зависящей от \(\tau, h, \alpha\). Неравенство (5.6) — <em>необходимое спектральное условие устойчивости (условие Неймана)</em>.
     </div>
   </div>
-  <p class="bridge">Неравенство (5.5) — <strong>необходимое спектральное условие устойчивости (условие Неймана)</strong>: гармоники ограничены по модулю при \(\tau \to 0\), \(n \to \infty\).</p>
+  <p class="bridge">Условие получено проверкой (5.1) на <strong>одном</strong> классе данных — гармониках. Поэтому оно необходимое: нарушено для одной гармоники — схема неустойчива.</p>
 </section>
 
-<!-- 8: Геометрия -->
+<!-- 8 -->
 <section class="slide">
   <div class="slide-num">§5.4 · Геометрический смысл</div>
   <h2>Кривая \(\lambda(\alpha)\) должна лежать в единичном круге</h2>
   <div class="two-col">
     <div>
-      <p class="lead">При \(\alpha\), пробегающем \([0, 2\pi]\), точка \(\lambda(\alpha)\) описывает в комплексной плоскости замкнутую кривую. Условие (5.5) означает, что она не выходит из круга радиуса \(1 + C\tau\).</p>
-      <div class="note"><span class="lbl">На практике</span>
-        Неравенство (5.5) заменяют условием
-        \[ |\lambda(\alpha)| \le 1 \quad\text{при всех } \alpha. \]
-        Запас \(C\tau\) нужен лишь тогда, когда само дифференциальное уравнение допускает растущие решения.
-      </div>
+      <p class="lead">При \(\alpha\), пробегающем \([-\pi, \pi]\), точка \(\lambda(\alpha)\) описывает замкнутую кривую в комплексной плоскости; (5.6) означает, что она не выходит из круга радиуса \(1 + C_1\tau\). На практике требуют</p>
+      <div class="eq">\[ |\lambda(\alpha)| \le 1 \qquad\text{при всех } \alpha. \tag{5.7} \]</div>
+      <div class="note"><span class="lbl">Когда нужен запас \(C_1\tau\)</span>Только если само уравнение допускает растущие решения (\(u_t + au_x = u\)): тогда любая схема обязана давать \(|\lambda| = 1 + \tau + O(\tau^2)\). Для переноса без младших членов (5.7) — естественное требование.</div>
+      <p class="small">Множество значений параметра (например, \(r\)), при которых верно (5.7), — <strong>область устойчивости</strong> схемы.</p>
     </div>
     <div class="figure">
-      <svg viewBox="0 0 340 300" xmlns="http://www.w3.org/2000/svg" style="max-width:340px">
-        <line x1="20" y1="150" x2="320" y2="150" stroke="#d9cfc0" stroke-width="1"/>
-        <line x1="170" y1="285" x2="170" y2="15" stroke="#d9cfc0" stroke-width="1"/>
+      <svg viewBox="0 0 340 300" xmlns="http://www.w3.org/2000/svg" style="max-width:19rem">
+        <line x1="20" y1="150" x2="320" y2="150" stroke="#d9cfc0"/><line x1="170" y1="285" x2="170" y2="15" stroke="#d9cfc0"/>
         <text x="300" y="142" font-family="Source Serif 4,serif" font-size="12" fill="#6b5d4f" font-style="italic">Re λ</text>
         <text x="176" y="22" font-family="Source Serif 4,serif" font-size="12" fill="#6b5d4f" font-style="italic">Im λ</text>
         <circle cx="170" cy="150" r="110" fill="rgba(26,107,90,0.06)" stroke="#1a6b5a" stroke-width="2" stroke-dasharray="6,3"/>
         <text x="60" y="54" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a">|λ| = 1</text>
         <circle cx="203" cy="150" r="77" fill="none" stroke="#b44a2d" stroke-width="2.2"/>
-        <circle cx="203" cy="150" r="3" fill="#b44a2d"/>
-        <text x="196" y="170" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">1−r</text>
+        <circle cx="203" cy="150" r="3" fill="#b44a2d"/><text x="196" y="170" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">1−r</text>
         <text x="200" y="245" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">λ(α), r = 0.7</text>
         <circle cx="170" cy="150" r="2.5" fill="#2c2419"/>
-        <text x="158" y="166" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f">0</text>
-        <circle cx="280" cy="150" r="4" fill="#3a5ba0"/>
-        <text x="262" y="138" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">α = 0</text>
-        <circle cx="126" cy="150" r="4" fill="#3a5ba0"/>
-        <text x="96" y="138" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">α = π</text>
+        <circle cx="280" cy="150" r="4" fill="#3a5ba0"/><text x="262" y="138" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">α = 0</text>
+        <circle cx="126" cy="150" r="4" fill="#3a5ba0"/><text x="96" y="138" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">α = π</text>
       </svg>
-      <div class="caption">Схема «уголок», \(r = 0.7\): окружность радиуса \(r\) с центром \(1 - r\) внутри единичного круга.</div>
+      <div class="caption">Схема «уголок», \(r = 0.7\): окружность радиуса \(r\) с центром \(1 - r\).</div>
     </div>
   </div>
-  <p class="bridge">Применим признак к схеме «уголок» и получим эту окружность явно.</p>
+  <p class="bridge">Пять схем по алгоритму. Первая — «уголок».</p>
 </section>
 
-<!-- 9: Пример — подстановка -->
+<!-- 9 -->
 <section class="slide">
-  <div class="slide-num">§5.5 · Пример: схема «уголок»</div>
-  <h2>Пример: схема «уголок» для \(u_t + a u_x = 0\), \(a > 0\)</h2>
-  <p class="lead">Явная схема с несимметричной аппроксимацией \(u_x\) разностью назад:</p>
-  <div class="eq">\[ \frac{u_m^{n+1} - u_m^n}{\tau} + a\,\frac{u_m^n - u_{m-1}^n}{h} = 0 \qquad\Longleftrightarrow\qquad u_m^{n+1} = (1 - r)\,u_m^n + r\,u_{m-1}^n, \quad r = \frac{a\tau}{h}. \]</div>
+  <div class="slide-num">§5.5 · Пример 1: схема «уголок»</div>
+  <h2>Пример 1. Схема «уголок»: подстановка</h2>
+  <p class="lead">Уравнение \(u_t + au_x = 0\), \(a > 0\). Явная схема с разностью назад, разрешённая относительно верхнего слоя:</p>
+  <div class="eq">\[ \frac{u_m^{n+1} - u_m^n}{\tau} + a\,\frac{u_m^n - u_{m-1}^n}{h} = 0 \quad\Longleftrightarrow\quad u_m^{n+1} = (1 - r)\,u_m^n + r\,u_{m-1}^n, \qquad r = \frac{a\tau}{h}. \tag{5.8} \]</div>
   <div class="two-col">
     <div>
-      <p style="font-size:.95em">Подставляем гармонику; у каждого узла шаблона — свой множитель:</p>
-      <div class="eq" style="font-size:.95em">\[ u_m^{n+1} \to \lambda^{n+1}e^{i\alpha m}, \qquad u_{m-1}^{n} \to \lambda^{n}e^{i\alpha m}\,e^{-i\alpha}. \]</div>
+      <span class="stage">шаги 2–3 · подстановка и сокращение</span>
+      <div class="eq" style="font-size:.95em">\[ \lambda^{n+1}e^{i\alpha m} = (1 - r)\lambda^n e^{i\alpha m} + r\lambda^n e^{i\alpha m}e^{-i\alpha} \]</div>
+      <div class="eq">\[ \Longrightarrow\qquad \lambda = 1 - r + r\,e^{-i\alpha}. \tag{5.9} \]</div>
     </div>
-    <div>
-      <p style="font-size:.95em">Сокращаем общий множитель \(\lambda^n e^{i\alpha m}\) и получаем характеристическое уравнение</p>
-      <div class="eq">\[ \lambda = 1 - r + r\,e^{-i\alpha}. \]</div>
-    </div>
+    <div class="example"><span class="lbl">Что за кривая</span>К точке \(1 - r\) прибавляется вектор длины \(r\), поворачивающийся вместе с \(\alpha\): окружность радиуса \(r\) с центром \(1 - r\). При \(\alpha = 0\) она проходит через \(\lambda = 1\), при \(\alpha = \pi\) — через \(1 - 2r\).</div>
   </div>
-  <p class="bridge">Это уравнение окружности радиуса \(r\) с центром в точке \(1 - r\): к точке \(1 - r\) прибавляется вектор длины \(r\), поворачивающийся вместе с \(\alpha\).</p>
+  <p class="bridge">Шаг 4 — модуль. Здесь пригодится формула \(1 - \cos\alpha = 2\sin^2(\alpha/2)\).</p>
 </section>
 
-<!-- 10: Окружность и условие r ≤ 1 -->
+<!-- 10 -->
 <section class="slide">
-  <div class="slide-num">§5.5 · Условие Неймана для «уголка»</div>
-  <h2>Окружность внутри единичного круга \(\iff\) \(0 \le r \le 1\)</h2>
+  <div class="slide-num">§5.5 · Пример 1: модуль и область устойчивости</div>
+  <h2>Уголок: \(|\lambda|^2\) и условие \(0 \le r \le 1\)</h2>
   <div class="two-col wide-left">
     <div>
-      <p class="lead">Выделим вещественную и мнимую части и вычислим модуль:</p>
-      <div class="eq" style="font-size:.93em">\[ |\lambda|^2 = (1 - r + r\cos\alpha)^2 + r^2\sin^2\alpha = 1 - 2r(1 - r)(1 - \cos\alpha). \]</div>
-      <p style="font-size:.95em">Так как \(1 - \cos\alpha \ge 0\), неравенство \(|\lambda| \le 1\) при всех \(\alpha\) равносильно \(r(1 - r) \ge 0\):</p>
-      <div class="eq">\[ 0 \le r = \frac{a\tau}{h} \le 1. \]</div>
-      <p style="font-size:.95em">Условие Неймана выполняется при \(r \le 1\), что совпадает с <em>критерием Куранта</em>.</p>
+      <span class="stage">шаг 4 · модуль</span>
+      <p class="small">\(\lambda = (1 - r + r\cos\alpha) - i\,r\sin\alpha\), поэтому</p>
+      <div class="eq" style="font-size:.95em">\[ |\lambda|^2 = (1 - r + r\cos\alpha)^2 + r^2\sin^2\alpha = 1 - 2r(1 - r)(1 - \cos\alpha) = 1 - 4r(1 - r)\sin^2\frac{\alpha}{2}. \tag{5.10} \]</div>
+      <p class="small">Так как \(\sin^2(\alpha/2) \in [0, 1]\) и достигает единицы при \(\alpha = \pi\), условие \(|\lambda| \le 1\) при всех \(\alpha\) равносильно \(r(1 - r) \ge 0\):</p>
+      <div class="eq">\[ 0 \le r = \frac{a\tau}{h} \le 1 \qquad\text{— критерий Куранта.} \tag{5.11} \]</div>
+      <p class="small">При \(r > 1\) наибольший модуль у «пилы»: \(|\lambda(\pi)| = |1 - 2r| > 1\), она растёт как \(|1 - 2r|^n\).</p>
     </div>
     <div class="figure">
-      <svg viewBox="0 0 340 300" xmlns="http://www.w3.org/2000/svg" style="max-width:340px">
-        <line x1="10" y1="150" x2="330" y2="150" stroke="#d9cfc0" stroke-width="1"/>
-        <line x1="170" y1="290" x2="170" y2="10" stroke="#d9cfc0" stroke-width="1"/>
+      <svg viewBox="0 0 340 300" xmlns="http://www.w3.org/2000/svg" style="max-width:17rem">
+        <line x1="10" y1="150" x2="330" y2="150" stroke="#d9cfc0"/><line x1="170" y1="290" x2="170" y2="10" stroke="#d9cfc0"/>
         <circle cx="170" cy="150" r="110" fill="rgba(26,107,90,0.06)" stroke="#1a6b5a" stroke-width="2" stroke-dasharray="6,3"/>
-        <circle cx="203" cy="150" r="77" fill="none" stroke="#1a6b5a" stroke-width="2.2"/>
-        <text x="215" y="90" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a">r = 0.7</text>
-        <circle cx="148" cy="150" r="132" fill="none" stroke="#b44a2d" stroke-width="2.2" stroke-dasharray="8,5"/>
-        <text x="22" y="50" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">r = 1.2</text>
-        <circle cx="16" cy="150" r="4" fill="#b44a2d"/>
-        <text x="20" y="170" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">1−2r = −1.4</text>
-        <circle cx="280" cy="150" r="4" fill="#3a5ba0"/>
-        <text x="256" y="138" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">λ = 1</text>
+        <circle cx="203" cy="150" r="77" fill="none" stroke="#1a6b5a" stroke-width="2.2"/><text x="215" y="90" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a">r = 0.7</text>
+        <circle cx="148" cy="150" r="132" fill="none" stroke="#b44a2d" stroke-width="2.2" stroke-dasharray="8,5"/><text x="22" y="50" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">r = 1.2</text>
+        <circle cx="16" cy="150" r="4" fill="#b44a2d"/><text x="20" y="170" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">1−2r = −1.4</text>
+        <circle cx="280" cy="150" r="4" fill="#3a5ba0"/><text x="256" y="138" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">λ = 1</text>
         <circle cx="170" cy="150" r="2.5" fill="#2c2419"/>
       </svg>
-      <div class="caption">При \(r = 1.2\) точка \(\alpha = \pi\) выходит из круга: «пила» растёт как \(1.4^n\).</div>
+      <div class="caption">При \(r = 1.2\) точка \(\alpha = \pi\) выходит из круга.</div>
     </div>
   </div>
-  <p class="bridge">Число \(r\) уже встречалось в §4 как число Куранта; у условия \(r \le 1\) есть и наглядный геометрический смысл.</p>
 </section>
 
-<!-- 11: Критерий Куранта -->
+<!-- 11 -->
 <section class="slide">
-  <div class="slide-num">§5.5 · Критерий Куранта</div>
-  <h2>Геометрический смысл: область зависимости</h2>
+  <div class="slide-num">§5.5 · Условие Куранта — геометрия</div>
+  <h2>Почему \(r \le 1\): область зависимости</h2>
   <div class="two-col">
     <div>
-      <p class="lead">Точное значение \(u(x_m, t_{n+1})\) определяется значением на слое \(t_n\) в основании характеристики \(x = x_m - a\tau\). Разностное значение \(u_m^{n+1}\) — значениями в узлах шаблона \(x_{m-1}\), \(x_m\).</p>
-      <div class="note"><span class="lbl">Условие Куранта–Фридрихса–Леви</span>
-        Основание характеристики должно попадать в шаблон: \(x_m - a\tau \ge x_{m-1}\), то есть \(a\tau \le h\), \(r \le 1\). Иначе схема не получает информацию, от которой зависит точное решение.
-      </div>
+      <p class="lead">Точное значение \(u(x_m, t_{n+1})\) определяется значением на слое \(t_n\) в основании характеристики \(x = x_m - a\tau\). Разностное \(u_m^{n+1}\) — значениями в узлах шаблона \(x_{m-1}\), \(x_m\).</p>
+      <div class="note"><span class="lbl">Условие Куранта–Фридрихса–Леви</span>Область зависимости схемы должна содержать область зависимости уравнения: \(x_m - a\tau \ge x_{m-1}\), то есть \(a\tau \le h\). Иначе схема не получает информацию, от которой зависит точное решение.</div>
+      <p class="small">Нейман — алгебра, КФЛ — геометрия; для «уголка» они совпали. В общем случае КФЛ грубее (пример 3).</p>
     </div>
     <div class="figure">
-      <svg viewBox="0 0 440 240" xmlns="http://www.w3.org/2000/svg" style="max-width:440px">
+      <svg viewBox="0 0 440 230" xmlns="http://www.w3.org/2000/svg">
         <line x1="20" y1="180" x2="420" y2="180" stroke="#d9cfc0"/><line x1="20" y1="70" x2="420" y2="70" stroke="#d9cfc0"/>
-        <text x="8" y="184" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">tₙ</text>
-        <text x="8" y="74" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">tₙ₊₁</text>
-        <!-- left: r<1 -->
-        <g>
-          <circle cx="80" cy="180" r="5" fill="#3a5ba0"/><circle cx="170" cy="180" r="5" fill="#3a5ba0"/><circle cx="170" cy="70" r="5" fill="#b44a2d"/>
-          <line x1="80" y1="180" x2="170" y2="180" stroke="#3a5ba0" stroke-width="3"/>
-          <line x1="170" y1="70" x2="170" y2="180" stroke="#b44a2d" stroke-width="1.5"/>
-          <line x1="170" y1="70" x2="110" y2="180" stroke="#1a6b5a" stroke-width="2" stroke-dasharray="5,4"/>
-          <circle cx="110" cy="180" r="4" fill="#1a6b5a"/>
-          <text x="70" y="205" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">x₍ₘ₋₁₎</text>
-          <text x="160" y="205" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">xₘ</text>
-          <text x="90" y="225" font-family="Source Serif 4,serif" font-size="12" fill="#1a6b5a">r &lt; 1: основание в шаблоне</text>
-        </g>
-        <!-- right: r>1 -->
-        <g>
-          <circle cx="300" cy="180" r="5" fill="#3a5ba0"/><circle cx="390" cy="180" r="5" fill="#3a5ba0"/><circle cx="390" cy="70" r="5" fill="#b44a2d"/>
-          <line x1="300" y1="180" x2="390" y2="180" stroke="#3a5ba0" stroke-width="3"/>
-          <line x1="390" y1="70" x2="390" y2="180" stroke="#b44a2d" stroke-width="1.5"/>
-          <line x1="390" y1="70" x2="262" y2="180" stroke="#b44a2d" stroke-width="2" stroke-dasharray="5,4"/>
-          <circle cx="262" cy="180" r="4" fill="#b44a2d"/>
-          <text x="290" y="205" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">x₍ₘ₋₁₎</text>
-          <text x="380" y="205" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">xₘ</text>
-          <text x="290" y="225" font-family="Source Serif 4,serif" font-size="12" fill="#b44a2d">r &gt; 1: вне шаблона</text>
-        </g>
+        <text x="6" y="184" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">tₙ</text><text x="2" y="74" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">tₙ₊₁</text>
+        <circle cx="80" cy="180" r="5" fill="#3a5ba0"/><circle cx="170" cy="180" r="5" fill="#3a5ba0"/><circle cx="170" cy="70" r="5" fill="#b44a2d"/>
+        <line x1="80" y1="180" x2="170" y2="180" stroke="#3a5ba0" stroke-width="3"/><line x1="170" y1="70" x2="170" y2="180" stroke="#b44a2d" stroke-width="1.5"/>
+        <line x1="170" y1="70" x2="110" y2="180" stroke="#1a6b5a" stroke-width="2" stroke-dasharray="5,4"/><circle cx="110" cy="180" r="4" fill="#1a6b5a"/>
+        <text x="70" y="205" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">x₍ₘ₋₁₎</text><text x="160" y="205" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">xₘ</text>
+        <text x="80" y="225" font-family="Source Serif 4,serif" font-size="12" fill="#1a6b5a">r &lt; 1: основание в шаблоне</text>
+        <circle cx="300" cy="180" r="5" fill="#3a5ba0"/><circle cx="390" cy="180" r="5" fill="#3a5ba0"/><circle cx="390" cy="70" r="5" fill="#b44a2d"/>
+        <line x1="300" y1="180" x2="390" y2="180" stroke="#3a5ba0" stroke-width="3"/><line x1="390" y1="70" x2="390" y2="180" stroke="#b44a2d" stroke-width="1.5"/>
+        <line x1="390" y1="70" x2="262" y2="180" stroke="#b44a2d" stroke-width="2" stroke-dasharray="5,4"/><circle cx="262" cy="180" r="4" fill="#b44a2d"/>
+        <text x="290" y="205" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">x₍ₘ₋₁₎</text><text x="380" y="205" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">xₘ</text>
+        <text x="290" y="225" font-family="Source Serif 4,serif" font-size="12" fill="#b44a2d">r &gt; 1: вне шаблона</text>
         <text x="150" y="40" font-family="Source Serif 4,serif" font-size="12" fill="#1a6b5a" font-style="italic">характеристика x − at = const</text>
       </svg>
     </div>
   </div>
-  <p class="bridge">Условие Неймана получено алгебраически, условие Куранта — геометрически; для «уголка» они совпали. Проверьте признак на схеме, у которой шаблон «смотрит» в другую сторону.</p>
+  <p class="bridge">Проверим признак на схеме, у которой шаблон «смотрит» в другую сторону.</p>
 </section>
 
-<!-- 12: Упражнение -->
+<!-- 12 -->
 <section class="slide">
-  <div class="slide-num">§5.6 · Упражнение</div>
-  <h2>Упражнение: схема с разностью вперёд</h2>
-  <p class="lead">Найдите характеристическое уравнение и определите область устойчивости для схемы</p>
-  <div class="eq">\[ \frac{u_m^{n+1} - u_m^n}{\tau} + a\,\frac{u_{m+1}^n - u_m^n}{h} = 0, \qquad a > 0. \]</div>
+  <div class="slide-num">§5.6 · Пример 2: разность вперёд</div>
+  <h2>Пример 2. Разность вперёд: абсолютная неустойчивость</h2>
+  <div class="eq">\[ \frac{u_m^{n+1} - u_m^n}{\tau} + a\,\frac{u_{m+1}^n - u_m^n}{h} = 0 \quad\Longleftrightarrow\quad u_m^{n+1} = (1 + r)\,u_m^n - r\,u_{m+1}^n. \tag{5.12} \]</div>
   <div class="two-col">
-    <div class="example"><span class="lbl">План</span>
-      <ol style="margin-bottom:0">
-        <li>Разрешить схему относительно \(u_m^{n+1}\), выразить через \(r = a\tau/h\).</li>
-        <li>Подставить \(u_m^n = \lambda^n e^{i\alpha m}\); у узла \(m + 1\) множитель \(e^{+i\alpha}\).</li>
-        <li>Описать кривую \(\lambda(\alpha)\) и найти, при каких \(r\) она лежит в единичном круге.</li>
-      </ol>
+    <div>
+      <p class="small">Узлу \((m+1, n)\) отвечает \(e^{+i\alpha}\): \(\lambda = 1 + r - r\,e^{i\alpha}\) — окружность радиуса \(r\) с центром \(1 + r\).</p>
+      <div class="eq" style="font-size:.95em">\[ |\lambda|^2 = (1 + r - r\cos\alpha)^2 + r^2\sin^2\alpha = 1 + 4r(1 + r)\sin^2\frac{\alpha}{2} \ge 1, \tag{5.13} \]</div>
+      <p class="small">строго больше единицы при \(\alpha \ne 0\) и любом \(r > 0\). Условие Неймана нарушено при всех \(\tau, h\): схема <strong>абсолютно неустойчива</strong>.</p>
     </div>
-    <div class="note"><span class="lbl">Проверьте себя</span>
-      Сопоставьте ответ с условием Куранта–Фридрихса–Леви: куда «смотрит» шаблон и откуда приходит характеристика при \(a > 0\)?
+    <div>
+      <div class="note"><span class="lbl">Геометрия</span>При \(a > 0\) характеристика приходит в узел <em>слева</em>, а шаблон берёт информацию <em>справа</em>: условие КФЛ нарушено при любом \(r\).</div>
+      <div class="example"><span class="lbl">Правило</span>При \(a < 0\) картина зеркальна: устойчива именно разность вперёд при \(|a|\tau/h \le 1\). Разность берётся <strong>против потока</strong>.</div>
     </div>
   </div>
-  <p class="bridge">Итог упражнения покажет, что спектральный признак чувствителен не только к величине шага, но и к направлению шаблона.</p>
+  <p class="bridge">А если взять симметричную разность — не «за» и не «против»?</p>
 </section>
 
-<!-- 13: Необходимое, не достаточное -->
+<!-- 13 -->
 <section class="slide">
-  <div class="slide-num">§5.7 · Необходимое и достаточное</div>
+  <div class="slide-num">§5.7 · Пример 3: центральная разность</div>
+  <h2>Пример 3. Центральная разность: КФЛ выполнено, схема неустойчива</h2>
+  <div class="eq">\[ \frac{u_m^{n+1} - u_m^n}{\tau} + a\,\frac{u_{m+1}^n - u_{m-1}^n}{2h} = 0 \quad\Longleftrightarrow\quad u_m^{n+1} = u_m^n - \frac{r}{2}\bigl(u_{m+1}^n - u_{m-1}^n\bigr). \tag{5.14} \]</div>
+  <div class="two-col">
+    <div>
+      <p class="small">Множители узлов \(m \pm 1\) равны \(e^{\pm i\alpha}\), и \(e^{i\alpha} - e^{-i\alpha} = 2i\sin\alpha\):</p>
+      <div class="eq">\[ \lambda = 1 - i\,r\sin\alpha, \qquad |\lambda|^2 = 1 + r^2\sin^2\alpha \ge 1. \tag{5.15} \]</div>
+      <p class="small">Абсолютно неустойчива — хотя при \(r \le 1\) условие КФЛ выполнено: основание характеристики лежит в \([x_{m-1}, x_{m+1}]\).</p>
+    </div>
+    <div>
+      <div class="note"><span class="lbl">Мораль</span>КФЛ — необходимое условие, но не достаточное; спектральный признак точнее.</div>
+      <div class="example"><span class="lbl">Причина (§4)</span>П-форма п.д.п.: \(u_t + au_x = -\dfrac{a^2\tau}{2}u_{xx} + \dots\) — <em>отрицательная</em> схемная вязкость, «антидиффузия», раскачивающая короткие волны. В §5а (разбор 3): \(\|u^{n+1}\|^2 = \|u^n\|^2 + \tau^2a^2\|u_{\mathring x}\|^2\).</div>
+    </div>
+  </div>
+  <p class="bridge">Неявные схемы ведут себя иначе — пример 4.</p>
+</section>
+
+<!-- 14 -->
+<section class="slide">
+  <div class="slide-num">§5.8 · Пример 4: неявный «уголок»</div>
+  <h2>Пример 4. Неявный «уголок»: безусловная устойчивость</h2>
+  <div class="eq">\[ \frac{u_m^{n+1} - u_m^n}{\tau} + a\,\frac{u_m^{n+1} - u_{m-1}^{n+1}}{h} = 0 \quad\Longleftrightarrow\quad (1 + r)\,u_m^{n+1} - r\,u_{m-1}^{n+1} = u_m^n. \tag{5.16} \]</div>
+  <div class="two-col">
+    <div>
+      <p class="small">Узлу \((m-1, n+1)\) отвечает \(\lambda e^{-i\alpha}\): \((1 + r)\lambda - r\lambda e^{-i\alpha} = 1\), откуда</p>
+      <div class="eq" style="font-size:.95em">\[ \lambda = \frac{1}{1 + r - r\,e^{-i\alpha}}, \qquad |\lambda|^2 = \frac{1}{1 + 4r(1 + r)\sin^2\frac{\alpha}{2}} \le 1 \tag{5.17} \]</div>
+      <p class="small">при всех \(r > 0\) (знаменатель — выражение (5.13)). Условие Неймана выполнено при любых \(\tau, h\).</p>
+    </div>
+    <div>
+      <div class="note"><span class="lbl">Почему</span>В неявной схеме \(u_m^{n+1}\) связано уравнением со всеми узлами верхнего слоя левее \(m\): область зависимости бесконечна, КФЛ выполнено при любом \(r\).</div>
+      <div class="example"><span class="lbl">Цена</span>Система уравнений на каждом шаге; для переноса при \(a > 0\) — «бегущий счёт» слева направо при заданном \(u_0^{n+1}\).</div>
+    </div>
+  </div>
+  <p class="bridge">Метод не привязан к уравнению переноса. Пример 5 — уравнение теплопроводности и целое семейство схем сразу.</p>
+</section>
+
+<!-- 15 -->
+<section class="slide">
+  <div class="slide-num">§5.9 · Пример 5: схема с весами</div>
+  <h2>Пример 5. Уравнение теплопроводности, семейство схем с весом \(\sigma\)</h2>
+  <div class="eq" style="font-size:.95em">\[ \frac{u_m^{n+1} - u_m^n}{\tau} = \sigma\,\frac{u_{m+1}^{n+1} - 2u_m^{n+1} + u_{m-1}^{n+1}}{h^2} + (1 - \sigma)\,\frac{u_{m+1}^{n} - 2u_m^{n} + u_{m-1}^{n}}{h^2}, \qquad \sigma \in [0, 1]. \tag{5.18} \]</div>
+  <div class="two-col">
+    <div>
+      <p class="small">\(\sigma = 0\) — явная, \(\sigma = 1\) — неявная, \(\sigma = \tfrac12\) — Кранк–Николсон. Параметр \(\varkappa = \tau/h^2\). Вторая разность на гармонике даёт множитель</p>
+      <div class="eq" style="font-size:.95em">\[ e^{i\alpha} - 2 + e^{-i\alpha} = -4\sin^2\frac{\alpha}{2}. \]</div>
+      <p class="small">Обозначим \(s = \varkappa\sin^2(\alpha/2) \in [0, \varkappa]\).</p>
+    </div>
+    <div>
+      <p class="small">Подстановка: \(\lambda - 1 = -4s\bigl(\sigma\lambda + 1 - \sigma\bigr)\), откуда</p>
+      <div class="eq">\[ \lambda = \frac{1 - 4(1 - \sigma)s}{1 + 4\sigma s}. \tag{5.19} \]</div>
+      <div class="example"><span class="lbl">Заметьте</span>Множитель вещественный — схема симметрична по \(x\); осталось найти, когда \(-1 \le \lambda \le 1\).</div>
+    </div>
+  </div>
+</section>
+
+<!-- 16 -->
+<section class="slide">
+  <div class="slide-num">§5.9 · Пример 5: условие устойчивости</div>
+  <h2>Схема с весами: \(\sigma \ge \tfrac12 - \tfrac{h^2}{4\tau}\)</h2>
+  <div class="two-col">
+    <div>
+      <p class="small"><strong>\(\lambda \le 1\)</strong> — всегда: числитель (5.19) не больше знаменателя при \(s \ge 0\).</p>
+      <p class="small"><strong>\(\lambda \ge -1\)</strong> ⟺ \(1 - 4(1 - \sigma)s \ge -1 - 4\sigma s\) ⟺ \(4s(1 - 2\sigma) \le 2\).</p>
+      <ul class="small">
+        <li>\(\sigma \ge \tfrac12\): левая часть неположительна — верно при всех \(s\): <strong>безусловная устойчивость</strong>.</li>
+        <li>\(\sigma < \tfrac12\): нужно \(s \le \dfrac{1}{2(1 - 2\sigma)}\) при всех \(s \le \varkappa\), то есть \(\varkappa(1 - 2\sigma) \le \tfrac12\).</li>
+      </ul>
+      <div class="eq">\[ \sigma \ge \frac12 - \frac{h^2}{4\tau}; \qquad \sigma = 0:\ \ \tau \le \frac{h^2}{2}. \tag{5.20} \]</div>
+    </div>
+    <div>
+      <div class="example"><span class="lbl">Та же схема — вторым методом</span>Здесь (5.20) получено как <em>необходимое</em> условие для задачи без границ. В §5а (разбор 4) оно же будет получено энергетическим методом как <em>достаточное</em> — для краевой задачи \(u_0 = u_N = 0\). Совпадение означает: ответ найден точно.</div>
+      <div class="note"><span class="lbl">Итог</span>Неявная схема и схема Кранка–Николсон устойчивы при любых \(\tau, h\); явная — при \(\tau \le h^2/2\).</div>
+    </div>
+  </div>
+  <p class="bridge">Все пять схем были двухслойными. У трёхслойной характеристическое уравнение квадратное — и корней два.</p>
+</section>
+
+<!-- 17 -->
+<section class="slide">
+  <div class="slide-num">§5.10 · Трёхслойная схема «крест»</div>
+  <h2>Трёхслойная схема: квадратное характеристическое уравнение</h2>
+  <div class="eq">\[ \frac{u_m^{n+1} - u_m^{n-1}}{2\tau} + a\,\frac{u_{m+1}^n - u_{m-1}^n}{2h} = 0 \tag{5.21} \]</div>
+  <div class="two-col">
+    <div>
+      <p class="small">Узлу \((m, n-1)\) отвечает \(\lambda^{-1}\). После умножения на \(\lambda\):</p>
+      <div class="eq" style="font-size:.95em">\[ \lambda^2 + 2i\,r\sin\alpha\,\lambda - 1 = 0, \qquad \lambda_{1,2} = -i\,r\sin\alpha \pm \sqrt{1 - r^2\sin^2\alpha}. \tag{5.22} \]</div>
+      <p class="small">При \(r \le 1\) корень вещественный и \(|\lambda_{1,2}|^2 = (1 - r^2\sin^2\alpha) + r^2\sin^2\alpha = 1\): оба корня на единичной окружности — устойчива и <em>бездиссипативна</em>. При \(r > 1\) и \(\alpha = \pi/2\): \(\lambda_{1,2} = -i(r \pm \sqrt{r^2 - 1})\), один корень по модулю больше 1.</p>
+    </div>
+    <div>
+      <div class="note"><span class="lbl">Два корня — два решения</span>Гармоника трёхслойной схемы: \(c_1\lambda_1^n + c_2\lambda_2^n\); условие Неймана — для <strong>каждого</strong> корня.</div>
+      <div class="example"><span class="lbl">Реальный и паразитный</span>\(\lambda_1 \to 1\) при \(\alpha \to 0\) — реальный корень, аппроксимирует точный множитель. \(\lambda_2 \to -1\) — паразитный: эволюция рассогласования двух стартовых слоёв. Подробнее — упражнения §6.</div>
+    </div>
+  </div>
+  <p class="bridge">Кратные корни на единичной окружности дают член \(n\lambda^n\): условие \(|\lambda| \le 1\) уже не гарантирует ограниченности. Пора сказать точно, когда условие Неймана достаточно.</p>
+</section>
+
+<!-- 18 -->
+<section class="slide">
+  <div class="slide-num">§5.11 · Границы и достаточность</div>
   <h2>Когда условия Неймана достаточно, а когда — нет</h2>
   <div class="two-col">
     <div>
-      <div class="example"><span class="lbl">Достаточно</span>
-        Скалярная двухслойная схема, постоянные коэффициенты, периодическая сетка, норма \(L_2\): по равенству Парсеваля
-        \[ \|u^n\|^2 = \sum_\alpha |c_\alpha|^2\,|\lambda(\alpha)|^{2n} \le \max_\alpha|\lambda|^{2n}\,\|u^0\|^2, \]
-        и из \(|\lambda| \le 1\) следует \(\|u^n\| \le \|u^0\|\).
+      <div class="theorem" data-num="2">Пусть двухслойная схема с постоянными коэффициентами рассматривается на периодической сетке из \(N\) узлов и \(|\lambda(\alpha)| \le 1\) при всех \(\alpha\). Тогда \(\|u^n\| \le \|u^0\|\) в сеточной норме \(L_2\).</div>
+      <div class="proof small"><strong>Доказательство.</strong> Гармоники \(\alpha_k = 2\pi k/N\) — ортогональный базис; \(u^0 = \sum c_ke_{\alpha_k}\), по лемме 1 \(u^n = \sum c_k\lambda(\alpha_k)^ne_{\alpha_k}\), и по равенству Парсеваля
+        \[ \|u^n\|^2 = \sum_k|c_k|^2|\lambda(\alpha_k)|^{2n}\|e_{\alpha_k}\|^2 \le \max_k|\lambda(\alpha_k)|^{2n}\,\|u^0\|^2. \]
       </div>
     </div>
     <div>
-      <div class="note"><span class="lbl">Недостаточно</span>
+      <div class="note"><span class="lbl">Требования метода (лемма 1)</span>Линейность и однородность; постоянные коэффициенты; отсутствие границ. Иначе гармоники — не собственные функции.</div>
+      <div class="example"><span class="lbl">Недостаточно</span>
         <ul style="margin-bottom:0">
-          <li><strong>Системы</strong>: \(\lambda\) — матрица; при недиагонализуемой матрице \(\|\lambda^n\|\) растёт, хотя все собственные числа по модулю \(\le 1\).</li>
-          <li><strong>Многослойные схемы</strong>: кратный корень на единичной окружности даёт рост \(n\lambda^n\).</li>
-          <li><strong>Границы, переменные коэффициенты</strong>: гармоник-собственных функций нет вовсе.</li>
+          <li><strong>Системы</strong>: \(\lambda\) — матрица; при недиагонализуемой матрице \(\|G^n\|\) растёт (условия Крайса).</li>
+          <li><strong>Многослойные схемы</strong> с кратными корнями на окружности: рост \(n\lambda^n\).</li>
+          <li><strong>Границы, переменные коэффициенты</strong>: метод не формулируется.</li>
+          <li>Теорема 2 говорит только о норме \(L_2\), не о \(C\).</li>
         </ul>
       </div>
     </div>
   </div>
-  <p class="bridge">Инструмент, дающий <em>достаточные</em> условия и работающий с границами и переменными коэффициентами, — энергетический метод (§5а).</p>
+  <p class="bridge">Инструмент, дающий <strong>достаточные</strong> условия и работающий с границами и переменными коэффициентами, — энергетический метод (§5а).</p>
 </section>
 
-<!-- 14: Итоги -->
+<!-- 19 -->
 <section class="slide">
-  <div class="slide-num">§5 · Итоги</div>
-  <h2>Итоги §5</h2>
+  <div class="slide-num">§5.12 · Итоги</div>
+  <h2>Итоги §5: шесть схем</h2>
+  <table class="sum">
+    <tr><th>Схема</th><th>\(\lambda(\alpha)\)</th><th>\(|\lambda|^2\)</th><th>Область устойчивости</th></tr>
+    <tr><td>«Уголок», явная</td><td>\(1 - r + re^{-i\alpha}\)</td><td>\(1 - 4r(1-r)\sin^2\frac{\alpha}{2}\)</td><td>\(0 \le r \le 1\)</td></tr>
+    <tr><td>Разность вперёд, явная</td><td>\(1 + r - re^{i\alpha}\)</td><td>\(1 + 4r(1+r)\sin^2\frac{\alpha}{2}\)</td><td>пуста</td></tr>
+    <tr><td>Центральная, явная</td><td>\(1 - ir\sin\alpha\)</td><td>\(1 + r^2\sin^2\alpha\)</td><td>пуста</td></tr>
+    <tr><td>Неявный «уголок»</td><td>\(\bigl(1 + r - re^{-i\alpha}\bigr)^{-1}\)</td><td>\(\bigl(1 + 4r(1+r)\sin^2\frac{\alpha}{2}\bigr)^{-1}\)</td><td>все \(r > 0\)</td></tr>
+    <tr><td>Теплопроводность, вес \(\sigma\)</td><td>\(\dfrac{1 - 4(1-\sigma)s}{1 + 4\sigma s}\)</td><td>\(\lambda^2\)</td><td>\(\sigma \ge \tfrac12 - \tfrac{h^2}{4\tau}\)</td></tr>
+    <tr><td>«Крест», трёхслойная</td><td>\(-ir\sin\alpha \pm \sqrt{1 - r^2\sin^2\alpha}\)</td><td>\(1\) при \(r \le 1\)</td><td>\(0 \le r \le 1\)</td></tr>
+  </table>
   <div class="two-col">
-    <div>
-      <ol style="font-size:.95em">
-        <li><strong>Спектральный признак</strong>: гармоники — собственные функции оператора перехода линейной схемы с постоянными коэффициентами без границ.</li>
-        <li><strong>Гармоника на сетке</strong> \(u_m^n = \lambda^n e^{i\alpha m}\), \(\alpha = kh \in [0, 2\pi]\).</li>
-        <li><strong>Множитель перехода</strong> \(\lambda(\alpha)\) из характеристического уравнения; \(\max|u^n| = |\lambda|^n\max|u^0|\).</li>
-        <li><strong>Условие Неймана</strong> \(|\lambda| \le 1 + C\tau\), на практике \(|\lambda| \le 1\): кривая \(\lambda(\alpha)\) в единичном круге. Необходимое условие.</li>
-        <li><strong>Уголок</strong>: \(\lambda = 1 - r + re^{-i\alpha}\), устойчивость при \(0 \le r \le 1\) — критерий Куранта.</li>
-      </ol>
-    </div>
-    <div>
-      <div class="example"><span class="lbl">Порядок исследования схемы</span>
-        <ol style="margin-bottom:0">
-          <li>Разрешить схему относительно верхнего слоя, ввести \(r = a\tau/h\).</li>
-          <li>Подставить гармонику: узлу \((m + p,\ n + q)\) отвечает множитель \(\lambda^q e^{i\alpha p}\).</li>
-          <li>Сократить общий множитель — характеристическое уравнение.</li>
-          <li>Вычислить \(|\lambda|^2\) как функцию \(\alpha\); потребовать \(\le 1\) при всех \(\alpha\).</li>
-          <li>Описать область устойчивости в терминах \(r\) (и других параметров).</li>
-        </ol>
-      </div>
-    </div>
+    <div class="example"><span class="lbl">Порядок действий</span>Проверить применимость → разрешить схему, ввести \(r\) или \(\varkappa\) → подставить гармонику по (5.3) → найти \(\lambda\) (все корни) и \(|\lambda|^2\) → потребовать \(|\lambda| \le 1\) при всех \(\alpha\) (худшая гармоника — «пила» или \(\alpha = \pi/2\)).</div>
+    <div class="note"><span class="lbl">Помнить</span>Условие необходимое; для скалярных двухслойных схем в \(L_2\) — и достаточное (теорема 2).</div>
   </div>
-  <p class="bridge">Дальше: §5а — энергетический метод (достаточные условия, краевые условия, переменные коэффициенты); §6 — что говорят \(|\lambda|\) и \(\arg\lambda\) о качестве решения устойчивой схемы.</p>
 </section>
 
-<!-- 15: Далее -->
+<!-- 20 -->
 <section class="slide section">
   <h1>Далее</h1>
-  <div class="two-col" style="text-align:left;max-width:1300px;margin:0 auto">
-    <div class="tile ok" style="grid-template-columns:1fr"><div><div class="t">§5а. Энергетический метод</div><div class="d">Оценка нормы решения целиком: сеточный закон сохранения энергии. Достаточные условия; краевые условия и переменные коэффициенты.</div></div></div>
-    <div class="tile" style="grid-template-columns:1fr"><div><div class="t">§6. Диссипация и дисперсия</div><div class="d">Что говорят \(|\lambda(\alpha)|\) и \(\arg\lambda(\alpha)\) о качестве устойчивой схемы: размазывание и фазовые ошибки.</div></div></div>
+  <div class="two-col" style="text-align:left;max-width:52rem;margin:0 auto">
+    <div class="tile ok" style="grid-template-columns:1fr"><div><div class="t">§5а. Энергетический метод</div><div class="d">Те же схемы — вторым методом. Достаточные условия; краевые условия и переменные коэффициенты.</div></div></div>
+    <div class="tile" style="grid-template-columns:1fr"><div><div class="t">§6. Диссипация и дисперсия</div><div class="d">Модуль и аргумент \(\lambda(\alpha)\) как паспорт схемы: поверхности, тесты, атлас.</div></div></div>
   </div>
 </section>
 
@@ -480,7 +434,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.88em;background:#f1ece3;p
   <a href="s1-05.html" class="back" title="Полный текст лекции">← полная лекция</a>
   <div class="center">
     <button id="btnPrev" onclick="prev()" title="←">◀</button>
-    <span class="counter" id="counter">1 / 15</span>
+    <span class="counter" id="counter">1 / 20</span>
     <button id="btnNext" onclick="next()" title="→ / Space">▶</button>
   </div>
   <a href="s1-05a-slides.html" class="back" title="Следующая лекция">§5а →</a>
@@ -492,27 +446,13 @@ code{font-family:'JetBrains Mono',monospace;font-size:.88em;background:#f1ece3;p
   var counter = document.getElementById('counter');
   var fill = document.getElementById('progressFill');
   var i = 0;
-  slides.forEach(function(s){
-    var wrap = document.createElement('div');
-    wrap.className = 'slide-content';
-    while (s.firstChild) wrap.appendChild(s.firstChild);
-    s.appendChild(wrap);
-  });
+  slides.forEach(function(s){ var wrap = document.createElement('div'); wrap.className = 'slide-content'; while (s.firstChild) wrap.appendChild(s.firstChild); s.appendChild(wrap); });
   function show(n) {
     slides[i].classList.remove('active');
     i = Math.max(0, Math.min(slides.length - 1, n));
-    var s = slides[i];
-    var content = s.querySelector('.slide-content') || s;
-    var animated = [];
-    Array.from(content.children).forEach(function(child){
-      animated.push(child);
-      var innerEq = child.querySelectorAll('.eq');
-      for (var j = 0; j < innerEq.length; j++) animated.push(innerEq[j]);
-    });
-    animated.forEach(function(el, k){
-      el.style.setProperty('--i', k);
-      el.style.animation = 'none';
-    });
+    var s = slides[i], content = s.querySelector('.slide-content') || s, animated = [];
+    Array.from(content.children).forEach(function(child){ animated.push(child); var innerEq = child.querySelectorAll('.eq'); for (var j = 0; j < innerEq.length; j++) animated.push(innerEq[j]); });
+    animated.forEach(function(el, k){ el.style.setProperty('--i', k); el.style.animation = 'none'; });
     void s.offsetWidth;
     animated.forEach(function(el){ el.style.animation = ''; });
     s.classList.add('active');
@@ -526,36 +466,21 @@ code{font-family:'JetBrains Mono',monospace;font-size:.88em;background:#f1ece3;p
   window.next = function(){ show(i + 1); };
   window.prev = function(){ show(i - 1); };
   document.addEventListener('keydown', function(e) {
-    if (/^(INPUT|TEXTAREA)$/i.test((e.target || {}).tagName)) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/i.test((e.target || {}).tagName)) return;
     if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
     else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
     else if (e.key === 'Home') { e.preventDefault(); show(0); }
     else if (e.key === 'End')  { e.preventDefault(); show(slides.length - 1); }
-    else if (e.key === 'f' || e.key === 'F') {
-      if (document.fullscreenElement) document.exitFullscreen();
-      else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
-    }
+    else if (e.key === 'f' || e.key === 'F') { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); }
   });
   var h = parseInt((location.hash || '').replace('#', ''), 10);
-  if (!isNaN(h) && h >= 1 && h <= slides.length) show(h - 1);
-  else show(0);
+  if (!isNaN(h) && h >= 1 && h <= slides.length) show(h - 1); else show(0);
   window.__slidesShow = show;
   window.__slidesIndex = function () { return i; };
 })();
 (function initSlideTools() {
-  function ready() {
-    if (!window.CFDSlideTools) return;
-    window.CFDSlideTools.init({
-      slidesSelector: '.slide',
-      activeClass:    'active',
-      hudSelector:    '.hud',
-      projectName:    'sem1-05-slides',
-      getCurrentIndex: function () { return window.__slidesIndex ? window.__slidesIndex() : 0; },
-      onGoToSlide:     function (n) { if (window.__slidesShow) window.__slidesShow(n); },
-    });
-  }
-  if (window.CFDSlideTools) ready();
-  else window.addEventListener('load', ready);
+  function ready() { if (!window.CFDSlideTools) return; window.CFDSlideTools.init({ slidesSelector: '.slide', activeClass: 'active', hudSelector: '.hud', projectName: 'sem1-05-slides', getCurrentIndex: function () { return window.__slidesIndex ? window.__slidesIndex() : 0; }, onGoToSlide: function (n) { if (window.__slidesShow) window.__slidesShow(n); } }); }
+  if (window.CFDSlideTools) ready(); else window.addEventListener('load', ready);
 })();
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>

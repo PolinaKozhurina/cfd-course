@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <link rel="icon" href="../favicon.ico" type="image/x-icon">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>§5. Слайды · Спектральный признак устойчивости</title>
+<title>§5. Слайды · Диссипативные и дисперсионные свойства</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/slides-sem1.css">
 <script>
@@ -15,6 +15,7 @@ window.MathJax = {
 </script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
 <script src="../js/slide-tools.js"></script>
+<style>.figure img{max-height:54vh;width:auto}.two-col .figure img{max-height:58vh}</style>
 </head>
 <body>
 <div class="progress"><div class="fill" id="progressFill"></div></div>
@@ -23,410 +24,659 @@ window.MathJax = {
 <section class="slide title active">
   <div class="course">Теория разностных схем</div>
   <div class="badge">Семестр 1 · Лекция §5</div>
-  <h1>Спектральный признак <span class="u">устойчивости</span></h1>
-  <div class="sub">Оператор перехода · Гармоники · Характеристическое уравнение · Условие Неймана · Пять схем</div>
+  <h1>Диссипативные и дисперсионные <span class="u">свойства</span>. Паспорт схемы</h1>
+  <div class="sub">Бегущие волны · Модуль и аргумент множителя перехода · Поверхности · Связь с п.д.п. · Тесты · «Уголок» и Лакс–Вендрофф</div>
 </section>
 
 <!-- 2 -->
 <section class="slide">
-  <div class="slide-num">§5.1 · Что нужно проверить</div>
-  <h2>Устойчивость по начальным данным — что именно надо доказать</h2>
-  <p class="lead">В §2 устойчивость определена, в §3 теорема Лакса сделала её решающей: аппроксимация + устойчивость = сходимость. Для эволюционных задач, где решение считается послойно, удобна форма:</p>
-  <div class="eq">\[ \|u^{n}\| \le C\,\|u^{0}\| \qquad\text{при всех } n = 0, 1, \dots, N = T/\tau, \qquad C \ne C(h, \tau, n). \tag{5.1} \]</div>
+  <div class="slide-num">§5 · От устойчивости к качеству</div>
+  <h2>Два числа на каждую гармонику. План: паспорт схемы</h2>
   <div class="two-col">
-    <div class="note"><span class="lbl">Трудность</span>Неравенство должно выполняться при <strong>всех</strong> начальных данных, <strong>всех</strong> сетках и с <strong>одной</strong> постоянной. Проверять «в лоб» — значит решить задачу для всех данных сразу.</div>
-    <div class="example"><span class="lbl">Идея</span>Найти для оператора, переводящего решение со слоя на слой, базис из собственных функций и проследить за каждой: её поведение описывается одним числом.</div>
+    <div>
+      <p class="lead">Устойчивость говорит лишь, что амплитуды не растут. Качество решения зависит от того, <em>насколько</em> они убывают и <em>как</em> сдвигается фаза. Обе характеристики — в множителе перехода:</p>
+      <div class="tile ok" style="grid-template-columns:1fr"><div><div class="h">модуль</div><div class="t">\(|q|\) — изменение амплитуды за шаг</div><div class="d">\(|q| < 1\): гармоника затухает — <strong>численная диссипация</strong></div></div></div>
+      <div class="tile" style="grid-template-columns:1fr;margin-top:.4rem"><div><div class="h">аргумент</div><div class="t">\(\arg q\) — сдвиг фазы за шаг</div><div class="d">определяет скорость гармоники; зависимость скорости от \(k\) — <strong>численная дисперсия</strong></div></div></div>
+    </div>
+    <div class="flow" style="margin-top:0">
+      <div class="step"><span class="n">1</span><div class="title">Схема, шаблон, происхождение</div><div class="body">интерполяция вдоль характеристики</div></div>
+      <div class="step"><span class="n">2</span><div class="title">Дифференциальное приближение</div><div class="body">§4 → знаки \(\nu\), \(\beta\)</div></div>
+      <div class="step"><span class="n">3</span><div class="title">Характеристическое уравнение</div><div class="body">\(q(r, kh)\), область устойчивости</div></div>
+      <div class="step"><span class="n">4</span><div class="title">Диссипативная и дисперсионная поверхности</div><div class="body">\(|q|\), \(\gamma\) над \(r \times kh\)</div></div>
+      <div class="step"><span class="n">5</span><div class="title">Тестовые расчёты</div><div class="body">ступенька и гауссиан при CFL 0.25, 0.5, 0.75</div></div>
+    </div>
   </div>
-  <p class="bridge">Для линейных схем с постоянными коэффициентами такие собственные функции известны заранее — это гармоники. Начнём с оператора перехода.</p>
+  <p class="bridge">Паспорт — структура атласа Головизнина–Соловьёва [1]. Начнём с бегущих волн.</p>
 </section>
 
 <!-- 3 -->
 <section class="slide">
-  <div class="slide-num">§5.2 · Оператор перехода</div>
-  <h2>Оператор перехода и его перестановочность со сдвигом</h2>
-  <div class="definition" data-num="1">
-    Оператор \(S\), обеспечивающий переход решения с предыдущего временного слоя на следующий, \(u^{n+1} = S\,u^{n}\), называется <em>оператором перехода</em> двухслойной схемы. Для неявной схемы \(B_1u^{n+1} = B_0u^n\) это \(S = B_1^{-1}B_0\).
-  </div>
+  <div class="slide-num">§5.1 · Бегущие волны</div>
+  <h2>Бегущие волны и множитель перехода</h2>
+  <p class="lead">У уравнения \(u_t + cu_x = 0\) есть решения-волны \(u = De^{i(\omega t - kx)}\): подстановка даёт \(\omega = ck\) — все волны бегут вправо со скоростью \(c\). На сетке \(x_j = jh\), \(t_n = n\tau\):</p>
+  <div class="eq">\[ u_j^n = D\exp\{i(\omega n\tau - kh\,j)\} = D\,q^{\,n}e^{-ikh\,j}, \qquad q = e^{i\omega\tau}. \tag{5.2} \]</div>
   <div class="two-col">
+    <div class="definition" data-num="1">Число \(q = e^{i\omega\tau}\), на которое умножается бегущая волна при переходе на следующий слой, \(u_j^{n+1} = q\,u_j^n\), — <em>множитель перехода</em>; \(kh \in [-\pi, \pi]\) — <em>приведённое волновое число</em>.</div>
     <div>
-      <p class="lead">Пусть сетка бесконечна (или периодична), а коэффициенты схемы одинаковы во всех узлах. Тогда \(S\) <em>перестановочен со сдвигом</em> \(T\colon u_m \mapsto u_{m+1}\): всё равно, сдвинуть функцию до применения схемы или после,</p>
-      <div class="eq">\[ ST = TS. \]</div>
-    </div>
-    <div class="example"><span class="lbl">Собственные функции сдвига</span>
-      \[ T\,e^{i\alpha m} = e^{i\alpha(m+1)} = e^{i\alpha}\cdot e^{i\alpha m}. \]
-      Экспонента \(e^{i\alpha m}\) — собственная функция сдвига с собственным числом \(e^{i\alpha}\).
+      <p class="small">Узлу шаблона \((j + p,\ n + m)\) отвечает</p>
+      <div class="eq" style="font-size:.95em">\[ u_{j+p}^{\,n+m} = \underbrace{D\,q^ne^{-ikhj}}_{\text{общий множитель}}\cdot q^{\,m}e^{-ikh\,p}. \tag{5.3} \]</div>
+      <div class="definition compact" data-num="2" style="min-height:0">Уравнение на \(q\), остающееся после сокращения общего множителя, — <em>характеристическое уравнение</em> схемы: \(q = q(r, kh)\).</div>
     </div>
   </div>
-  <p class="bridge">Операторы, перестановочные со сдвигом, наследуют его собственные функции — это и есть лемма, на которой держится весь метод.</p>
+  <p class="bridge">Знак в показателе — соглашение атласа (волна вправо); в §6 было \(e^{i\alpha m}\). На модуль это не влияет.</p>
 </section>
 
 <!-- 4 -->
 <section class="slide">
-  <div class="slide-num">§5.2 · Лемма о гармониках</div>
-  <h2>Лемма 1: гармоники — собственные функции оператора перехода</h2>
-  <div class="lemma" data-num="1">
-    Пусть \(S\) — линейный оператор на сеточных функциях, перестановочный со сдвигом: \(ST = TS\). Тогда для каждого \(\alpha\) функция \(e_\alpha = \{e^{i\alpha m}\}\) — собственная функция \(S\): \(S e_\alpha = \lambda(\alpha)\,e_\alpha\).
-  </div>
+  <div class="slide-num">§5.1 · Пример: «уголок»</div>
+  <h2>Уголок: характеристическое уравнение и модуль</h2>
   <div class="two-col">
-    <div class="proof"><strong>Доказательство.</strong> Положим \(v = Se_\alpha\). Тогда
-      \[ Tv = TSe_\alpha = STe_\alpha = S(e^{i\alpha}e_\alpha) = e^{i\alpha}\,v, \]
-      то есть \(v\) — собственная функция сдвига с тем же числом \(e^{i\alpha}\). Но уравнение \(v_{m+1} = e^{i\alpha}v_m\) задаёт \(v\) с точностью до множителя: \(v_m = v_0e^{i\alpha m}\). Значит \(v = \lambda e_\alpha\). □
+    <div>
+      <p class="small">Схема \(u_j^{n+1} = (1 - r)\,u_j^n + r\,u_{j-1}^n\), \(r = c\tau/h\). По (5.3): узлу \((j, n+1)\) — \(q\), узлу \((j, n)\) — \(1\), узлу \((j-1, n)\) — \(e^{+ikh}\):</p>
+      <div class="eq">\[ q = (1 - r) + r\,e^{ikh}. \tag{5.5} \]</div>
+      <p class="small">Окружность радиуса \(r\) с центром \(1 - r\) — та же, что в §6.</p>
     </div>
     <div>
-      <p class="small">На сетке \(x_m = mh\), \(t_n = n\tau\) непрерывная гармоника \(e^{i\omega t + ikx}\) принимает вид</p>
-      <div class="eq">\[ u_m^n = \lambda^n e^{i\alpha m}, \qquad \lambda = e^{i\omega\tau}, \quad \alpha = kh. \tag{5.2} \]</div>
-      <div class="definition compact" data-num="2" style="min-height:0">Функция (5.2) — <em>гармоника</em> с приведённым волновым числом \(\alpha\); собственное число \(\lambda(\alpha)\), для которого \(u_m^{n+1} = \lambda u_m^n\), — <em>множитель перехода</em>.</div>
+      <p class="small">\(q = (1 - r + r\cos kh) + i\,r\sin kh\), откуда</p>
+      <div class="eq" style="font-size:.9em">\[ |q| = \sqrt{(1 - r + r\cos kh)^2 + r^2\sin^2 kh} \]</div><div class="eq" style="font-size:.9em">\[ = \sqrt{1 - 4r(1 - r)\sin^2\frac{kh}{2}}. \tag{5.6} \]</div>
+      <div class="example"><span class="lbl">Вторая форма</span>\((1-r)^2 + r^2 + 2r(1-r)\cos kh\), и \((1-r)^2 + r^2 = 1 - 2r(1-r)\); далее \(1 - \cos kh = 2\sin^2(kh/2)\). Поправка к единице — произведение множителя по \(r\) и множителя по длине волны.</div>
     </div>
   </div>
-  <p class="bridge">Единственное, что использовано, — \(ST = TS\). Без постоянных коэффициентов и без отсутствия границ леммы нет; это отправная точка §5а.</p>
+  <p class="bridge">Модуль — это амплитуда за шаг. Отсюда — область устойчивости и понятие диссипации.</p>
 </section>
 
 <!-- 5 -->
 <section class="slide">
-  <div class="slide-num">§5.2–5.3 · Гармоники на сетке. Правило подстановки</div>
-  <h2>Какие бывают гармоники и как их подставлять</h2>
-  <div class="two-col wide-right">
-    <div class="figure">
-      <svg viewBox="0 0 420 210" xmlns="http://www.w3.org/2000/svg">
-        <text x="12" y="16" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0">α = π/4 — длинная волна</text>
-        <line x1="20" y1="60" x2="400" y2="60" stroke="#d9cfc0"/>
-        <polyline points="30,24 76,34 122,60 168,86 214,96 260,86 306,60 352,34 398,24" fill="none" stroke="#3a5ba0" stroke-width="1.5" stroke-dasharray="4,3"/>
-        <g fill="#3a5ba0"><circle cx="30" cy="24" r="4"/><circle cx="76" cy="34" r="4"/><circle cx="122" cy="60" r="4"/><circle cx="168" cy="86" r="4"/><circle cx="214" cy="96" r="4"/><circle cx="260" cy="86" r="4"/><circle cx="306" cy="60" r="4"/><circle cx="352" cy="34" r="4"/><circle cx="398" cy="24" r="4"/></g>
-        <text x="12" y="130" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d">α = π — «пила», длина волны 2h</text>
-        <line x1="20" y1="170" x2="400" y2="170" stroke="#d9cfc0"/>
-        <polyline points="30,140 76,200 122,140 168,200 214,140 260,200 306,140 352,200 398,140" fill="none" stroke="#b44a2d" stroke-width="1.5" stroke-dasharray="4,3"/>
-        <g fill="#b44a2d"><circle cx="30" cy="140" r="4"/><circle cx="76" cy="200" r="4"/><circle cx="122" cy="140" r="4"/><circle cx="168" cy="200" r="4"/><circle cx="214" cy="140" r="4"/><circle cx="260" cy="200" r="4"/><circle cx="306" cy="140" r="4"/><circle cx="352" cy="200" r="4"/><circle cx="398" cy="140" r="4"/></g>
-      </svg>
-      <div class="caption">\(\alpha \in [-\pi, \pi]\): значения \(\alpha\) и \(\alpha + 2\pi\) на сетке неразличимы.</div>
-    </div>
+  <div class="slide-num">§5.2 · Область устойчивости. Диссипация</div>
+  <h2>Область устойчивости и численная диссипация</h2>
+  <div class="two-col">
     <div>
-      <p class="lead">Значение гармоники в узле шаблона \((m + p,\ n + s)\):</p>
-      <div class="eq">\[ u_{m+p}^{\,n+s} = \underbrace{\lambda^n e^{i\alpha m}}_{\text{общий множитель}}\cdot\lambda^{s}e^{i\alpha p}. \tag{5.3} \]</div>
-      <div class="example"><span class="lbl">Шпаргалка</span>
-        \(u_m^{n+1} \to \lambda\), \(u_m^{n-1} \to \lambda^{-1}\), \(u_{m-1}^n \to e^{-i\alpha}\), \(u_{m+1}^n \to e^{i\alpha}\), \(u_{m-1}^{n+1} \to \lambda e^{-i\alpha}\).
-      </div>
+      <div class="definition" data-num="3">Число Куранта \(r\) принадлежит <em>области устойчивости</em>, если амплитуды всех волн не возрастают: \(|q(r, kh)| \le 1\) при всех \(kh \in [-\pi, \pi]\).</div>
+      <p class="small">Из (5.6): \(|q| \le 1\ \forall kh \iff r(1 - r) \ge 0\), то есть</p>
+      <div class="eq">\[ r \in [0, 1]. \tag{5.7} \]</div>
+      <div class="definition" data-num="4">Если в области устойчивости \(|q| = 1\) для всех волн, оператор <em>бездиссипативен</em>; иначе имеет место <em>численная диссипация</em>.</div>
+    </div>
+    <div class="example"><span class="lbl">Уголок: где диссипации нет и где она максимальна</span>
+      <ul style="margin-bottom:0">
+        <li>\(r = 1\): \(q = e^{ikh}\), \(|q| = 1\) — точный сдвиг \(u_j^{n+1} = u_{j-1}^n\).</li>
+        <li>\(r = \tfrac12\), \(kh = \pi\): \(|q|^2 = 1 - 4\cdot\tfrac14 = 0\) — «пила» \((-1)^j\) исчезает за один шаг: \(u_j^{n+1} = \tfrac12(u_j^n + u_{j-1}^n)\), а соседние значения пилы противоположны.</li>
+        <li>\(kh \to 0\): \(|q| \to 1\) при любом \(r\) — длинные волны почти не затухают.</li>
+      </ul>
     </div>
   </div>
-  <p class="bridge">После сокращения общего множителя остаётся алгебраическое уравнение на \(\lambda\) — характеристическое.</p>
+  <p class="bridge">Чтобы увидеть диссипацию для всех волн и всех \(r\) сразу — поверхность.</p>
 </section>
 
 <!-- 6 -->
 <section class="slide">
-  <div class="slide-num">§5.3 · Характеристическое уравнение</div>
-  <h2>Характеристическое уравнение и алгоритм</h2>
-  <div class="definition" data-num="3">
-    Соотношение \(\lambda = \lambda(\alpha)\), получаемое подстановкой гармоники (5.2) в схему и сокращением общего множителя, называется <em>характеристическим (дисперсионным) уравнением</em>. Для двухслойной схемы оно линейно по \(\lambda\), для трёхслойной — квадратное.
-  </div>
-  <div class="two-col wide-left">
-    <div class="flow">
-      <div class="step"><span class="n">1</span><div class="title">Безразмерные параметры</div><div class="body">\(r = a\tau/h\) для переноса, \(\varkappa = \tau/h^2\) для теплопроводности.</div></div>
-      <div class="step"><span class="n">2</span><div class="title">Подстановка по правилу (5.3)</div><div class="body">Каждое \(u_{m+p}^{n+s}\) заменить на \(\lambda^se^{i\alpha p}\).</div></div>
-      <div class="step"><span class="n">3</span><div class="title">Сократить и решить относительно \(\lambda\)</div><div class="body">Для неявных схем — разделить на коэффициент при \(\lambda\).</div></div>
-      <div class="step"><span class="n">4</span><div class="title">Вычислить \(|\lambda|^2\)</div><div class="body">\(e^{\pm i\alpha} = \cos\alpha \pm i\sin\alpha\), \(1 - \cos\alpha = 2\sin^2\frac{\alpha}{2}\), \(e^{i\alpha} - e^{-i\alpha} = 2i\sin\alpha\).</div></div>
-    </div>
+  <div class="slide-num">§5.3 · Диссипативная поверхность</div>
+  <h2>Диссипативная поверхность схемы «уголок»</h2>
+  <div class="two-col wide-right">
     <div>
-      <p class="small">Из (5.2) \(u_m^{n} = \lambda^n u_m^{0}\), где \(u_m^0 = e^{i\alpha m}\) — начальное условие. Значит,</p>
-      <div class="eq">\[ \max_m |u_m^n| = |\lambda|^n\,\max_m |u_m^0|. \tag{5.4} \]</div>
-      <div class="note"><span class="lbl">Готовая оценка</span>Равенство (5.4) — это оценка решения через начальные данные для одной гармоники. Осталось сопоставить её с требованием (5.1).</div>
+      <div class="definition" data-num="5" style="font-size:.9em">График \(|q| = f(r, kh)\) над прямоугольником \(r \in [r_{\min}, r_{\max}]\), \(kh \in [-\pi, \pi]\) — <em>диссипативная поверхность</em>. Отклонение от плоскости \(|q| = 1\) — степень затухания гармоники.</div>
+      <div class="note" style="font-size:.78em"><span class="lbl">Как читать</span>
+        <ul style="margin-bottom:0">
+          <li>\(kh = 0\): касание единичной плоскости — длинные волны не затухают;</li>
+          <li>\(r = 1\), \(r = 0\): поверхность в единичной плоскости;</li>
+          <li>долина \(|q| = 0\) при \(r = \tfrac12\), \(kh = \pm\pi\); симметрия \(r \leftrightarrow 1 - r\);</li>
+          <li>короткие волны гасятся сильнее при любом \(r\).</li>
+        </ul>
+      </div>
+    </div>
+    <div class="figure">
+      <img src="img/atlas/surf_upwind_diss.jpg" alt="Диссипативная поверхность схемы уголок" style="max-height:50vh">
+      <div class="caption">Рис. 1. \(|q(r, kh)|\) для «уголка»; полупрозрачная плоскость — уровень \(|q| = 1\).</div>
     </div>
   </div>
+  <p class="bridge">Модуль отвечает за амплитуду. Аргумент — за скорость волны.</p>
 </section>
 
 <!-- 7 -->
 <section class="slide">
-  <div class="slide-num">§5.4 · Вывод условия Неймана</div>
-  <h2>От оценки (5.1) к условию на \(\lambda\)</h2>
-  <p class="lead">Возьмём в (5.1) норму \(\|u^n\| = \max_m|u_m^n|\) и подставим гармонику. По (5.4) требование (5.1) для неё означает</p>
-  <div class="eq">\[ |\lambda(\alpha)|^n \le C \qquad\text{при всех } n = 0, 1, \dots, N = T/\tau \text{ и всех } \alpha. \tag{5.5} \]</div>
+  <div class="slide-num">§5.4 · Дисперсионное соотношение</div>
+  <h2>Частота, фазовая скорость, дисперсия</h2>
+  <div class="eq" style="font-size:.95em">\[ q = e^{i\omega\tau} \ \Longrightarrow\ \omega = -\frac{i}{\tau}\ln q = \underbrace{\frac{1}{\tau}\arg q}_{\text{частота}} - \underbrace{\frac{i}{\tau}\ln|q|}_{\text{затухание}}; \qquad\text{точное уравнение: } \omega = ck. \tag{5.8} \]</div>
   <div class="two-col">
-    <div>
-      <p class="small">Число шагов \(N = T/\tau \to \infty\) при \(\tau \to 0\). При \(n = N\):</p>
-      <div class="eq">\[ |\lambda| \le C^{1/N} = C^{\tau/T} = e^{(\tau/T)\ln C} \le 1 + C_1\tau. \]</div>
-      <p class="small">Обратно, \((1 + C_1\tau)^{T/\tau} \le e^{C_1T}\) — ограничено. Итак, (5.5) равносильно</p>
-      <div class="eq">\[ |\lambda(\alpha)| \le 1 + C_1\tau \quad\text{при всех } \alpha. \tag{5.6} \]</div>
+    <div class="definition" data-num="6">Фаза \(\omega t - kx = \mathrm{const}\) движется со скоростью \(\omega/k\) — <em>фазовой скоростью</em>. Приведённая фазовая скорость
+      \[ \gamma(r, kh) = \frac{\mathrm{Re}\,\omega}{kc} = \frac{\arg q}{\tau kc} = \frac{\arg q(r, kh)}{r\cdot kh}. \tag{5.9} \]
+      Для точного уравнения \(\gamma \equiv 1\).
     </div>
-    <div class="theorem" data-num="1">
-      Если схема с постоянными коэффициентами устойчива по начальным данным в норме \(\max|u_m^n|\) на бесконечной сетке, то множитель перехода каждой гармоники удовлетворяет (5.6) с постоянной, не зависящей от \(\tau, h, \alpha\). Неравенство (5.6) — <em>необходимое спектральное условие устойчивости (условие Неймана)</em>.
+    <div>
+      <div class="definition" data-num="7">Зависимость фазовой скорости от длины волны — <em>дисперсия</em>. При \(\gamma < 1\) она <em>нормальная</em> (гармоника отстаёт от эталонной, бегущей со скоростью \(c\)), при \(\gamma > 1\) — <em>аномальная</em> (опережает).</div>
+      <div class="note" style="font-size:.86em"><span class="lbl">Ветвь аргумента</span>Берём непрерывную по \(kh\) ветвь с \(\arg q \to 0\) при \(kh \to 0\) — иначе на поверхности появятся ложные разрывы.</div>
     </div>
   </div>
-  <p class="bridge">Условие получено проверкой (5.1) на <strong>одном</strong> классе данных — гармониках. Поэтому оно необходимое: нарушено для одной гармоники — схема неустойчива.</p>
+  <p class="bridge">Дисперсионная поверхность — график \(\gamma(r, kh)\) над той же областью.</p>
 </section>
 
 <!-- 8 -->
 <section class="slide">
-  <div class="slide-num">§5.4 · Геометрический смысл</div>
-  <h2>Кривая \(\lambda(\alpha)\) должна лежать в единичном круге</h2>
-  <div class="two-col">
+  <div class="slide-num">§5.5 · Дисперсионная поверхность</div>
+  <h2>Дисперсионная поверхность схемы «уголок»</h2>
+  <div class="two-col wide-right">
     <div>
-      <p class="lead">При \(\alpha\), пробегающем \([-\pi, \pi]\), точка \(\lambda(\alpha)\) описывает замкнутую кривую в комплексной плоскости; (5.6) означает, что она не выходит из круга радиуса \(1 + C_1\tau\). На практике требуют</p>
-      <div class="eq">\[ |\lambda(\alpha)| \le 1 \qquad\text{при всех } \alpha. \tag{5.7} \]</div>
-      <div class="note"><span class="lbl">Когда нужен запас \(C_1\tau\)</span>Только если само уравнение допускает растущие решения (\(u_t + au_x = u\)): тогда любая схема обязана давать \(|\lambda| = 1 + \tau + O(\tau^2)\). Для переноса без младших членов (5.7) — естественное требование.</div>
-      <p class="small">Множество значений параметра (например, \(r\)), при которых верно (5.7), — <strong>область устойчивости</strong> схемы.</p>
+      <div class="note" style="font-size:.78em"><span class="lbl">Как читать</span>
+        <ul style="margin-bottom:0">
+          <li>\(kh = 0\): касание единицы — длинные волны бегут верно;</li>
+          <li>\(r = 1\): \(\gamma \equiv 1\) — точный перенос;</li>
+          <li>\(r = \tfrac12\): тоже \(\gamma \equiv 1\), хотя диссипация максимальна: \(q = \tfrac12(1 + e^{ikh}) = e^{ikh/2}\cos\tfrac{kh}{2}\), \(\arg q = kh/2\) (5.10);</li>
+          <li>\(r < \tfrac12\): ниже плоскости — <em>нормальная</em>; \(\tfrac12 < r < 1\): выше — <em>аномальная</em>;</li>
+          <li>край \(kh = \pm\pi\): \(q = 1 - 2r\). При \(r < \tfrac12\) — \(\gamma = 0\): <strong>пила стоит на месте</strong>; при \(r > \tfrac12\) — \(\gamma = 1/r\): обрыв.</li>
+        </ul>
+      </div>
+      <div class="example" style="font-size:.78em"><span class="lbl">Числа для контроля, \(kh = \pi/2\)</span>\(r = 0.3\): \(\gamma \approx 0.86\); \(r = 0.5\): \(\gamma = 1\); \(r = 0.8\): \(\gamma \approx 1.05\).</div>
     </div>
     <div class="figure">
-      <svg viewBox="0 0 340 300" xmlns="http://www.w3.org/2000/svg" style="max-width:19rem">
-        <line x1="20" y1="150" x2="320" y2="150" stroke="#d9cfc0"/><line x1="170" y1="285" x2="170" y2="15" stroke="#d9cfc0"/>
-        <text x="300" y="142" font-family="Source Serif 4,serif" font-size="12" fill="#6b5d4f" font-style="italic">Re λ</text>
-        <text x="176" y="22" font-family="Source Serif 4,serif" font-size="12" fill="#6b5d4f" font-style="italic">Im λ</text>
-        <circle cx="170" cy="150" r="110" fill="rgba(26,107,90,0.06)" stroke="#1a6b5a" stroke-width="2" stroke-dasharray="6,3"/>
-        <text x="60" y="54" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a">|λ| = 1</text>
-        <circle cx="203" cy="150" r="77" fill="none" stroke="#b44a2d" stroke-width="2.2"/>
-        <circle cx="203" cy="150" r="3" fill="#b44a2d"/><text x="196" y="170" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">1−r</text>
-        <text x="200" y="245" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">λ(α), r = 0.7</text>
-        <circle cx="170" cy="150" r="2.5" fill="#2c2419"/>
-        <circle cx="280" cy="150" r="4" fill="#3a5ba0"/><text x="262" y="138" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">α = 0</text>
-        <circle cx="126" cy="150" r="4" fill="#3a5ba0"/><text x="96" y="138" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">α = π</text>
-      </svg>
-      <div class="caption">Схема «уголок», \(r = 0.7\): окружность радиуса \(r\) с центром \(1 - r\).</div>
+      <img src="img/atlas/surf_upwind_disp.jpg" alt="Дисперсионная поверхность схемы уголок" style="max-height:50vh">
+      <div class="caption">Рис. 2. \(\gamma(r, kh)\) для «уголка»; значения выше 1.5 обрезаны.</div>
     </div>
   </div>
-  <p class="bridge">Пять схем по алгоритму. Первая — «уголок».</p>
+  <p class="bridge">Ту же картину можно прочитать без характеристического уравнения — по дифференциальному приближению §4.</p>
 </section>
 
 <!-- 9 -->
 <section class="slide">
-  <div class="slide-num">§5.5 · Пример 1: схема «уголок»</div>
-  <h2>Пример 1. Схема «уголок»: подстановка</h2>
-  <p class="lead">Уравнение \(u_t + au_x = 0\), \(a > 0\). Явная схема с разностью назад, разрешённая относительно верхнего слоя:</p>
-  <div class="eq">\[ \frac{u_m^{n+1} - u_m^n}{\tau} + a\,\frac{u_m^n - u_{m-1}^n}{h} = 0 \quad\Longleftrightarrow\quad u_m^{n+1} = (1 - r)\,u_m^n + r\,u_{m-1}^n, \qquad r = \frac{a\tau}{h}. \tag{5.8} \]</div>
+  <div class="slide-num">§5.6 · Связь с дифференциальным приближением</div>
+  <h2>П.д.п. предсказывает диссипацию и дисперсию</h2>
+  <div class="eq" style="font-size:.86em">\[ u_t + c\,u_x = \nu\,u_{xx} + \beta\,u_{xxx} + \dots; \qquad\text{«уголок»:}\ \ \nu = \frac{ch}{2}(1 - r),\quad \beta = -\frac{ch^2}{6}(1 - r)(1 - 2r). \tag{5.11–12} \]</div>
   <div class="two-col">
     <div>
-      <span class="stage">шаги 2–3 · подстановка и сокращение</span>
-      <div class="eq" style="font-size:.95em">\[ \lambda^{n+1}e^{i\alpha m} = (1 - r)\lambda^n e^{i\alpha m} + r\lambda^n e^{i\alpha m}e^{-i\alpha} \]</div>
-      <div class="eq">\[ \Longrightarrow\qquad \lambda = 1 - r + r\,e^{-i\alpha}. \tag{5.9} \]</div>
+      <p class="small">Бегущая волна \(u = De^{i(\omega t - kx)}\): \(u_t = i\omega u\), \(u_x = -iku\), \(u_{xx} = -k^2u\), \(u_{xxx} = ik^3u\). Подстановка:</p>
+      <div class="eq" style="font-size:.92em">\[ i\omega - ick = -\nu k^2 + i\beta k^3 \ \Rightarrow\ \omega = ck + \beta k^3 + i\,\nu k^2, \tag{5.13} \]</div>
+      <div class="eq" style="font-size:.92em">\[ u = D\,e^{-\nu k^2 t}\exp\bigl\{ik[(c + \beta k^2)t - x]\bigr\}. \tag{5.14} \]</div>
     </div>
-    <div class="example"><span class="lbl">Что за кривая</span>К точке \(1 - r\) прибавляется вектор длины \(r\), поворачивающийся вместе с \(\alpha\): окружность радиуса \(r\) с центром \(1 - r\). При \(\alpha = 0\) она проходит через \(\lambda = 1\), при \(\alpha = \pi\) — через \(1 - 2r\).</div>
+    <div>
+      <div class="example"><span class="lbl">Роли членов</span><strong>Чётная</strong> производная \(u_{xx}\) — только в амплитуде: \(e^{-\nu k^2 t}\), затухание при \(\nu > 0\), рост при \(\nu < 0\). <strong>Нечётная</strong> \(u_{xxx}\) — только в фазе: скорость \(c + \beta k^2\),
+        \[ \gamma \approx 1 + \frac{\beta}{c}k^2 = 1 - \frac{(kh)^2}{6}(1 - r)(1 - 2r). \tag{5.15} \]
+      </div>
+      <div class="note" style="font-size:.86em"><span class="lbl">Согласование</span>Разложение точных (5.6), (5.9) при \(kh \to 0\) даёт ровно то же: \(|q|^2 \approx 1 - r(1-r)(kh)^2 \approx e^{-2\nu k^2\tau}\).</div>
+    </div>
   </div>
-  <p class="bridge">Шаг 4 — модуль. Здесь пригодится формула \(1 - \cos\alpha = 2\sin^2(\alpha/2)\).</p>
+  <p class="bridge">П.д.п. проще для длинных волн, спектральный анализ точен для всех. Знак \(\nu\) сразу говорит, устойчива ли схема.</p>
 </section>
 
 <!-- 10 -->
 <section class="slide">
-  <div class="slide-num">§5.5 · Пример 1: модуль и область устойчивости</div>
-  <h2>Уголок: \(|\lambda|^2\) и условие \(0 \le r \le 1\)</h2>
-  <span class="stage">шаг 4 · модуль</span>
-  <p class="small">\(\lambda = (1 - r + r\cos\alpha) - i\,r\sin\alpha\), поэтому</p>
-  <div class="eq" style="font-size:.95em">\[ |\lambda|^2 = (1 - r + r\cos\alpha)^2 + r^2\sin^2\alpha = 1 - 2r(1 - r)(1 - \cos\alpha) = 1 - 4r(1 - r)\sin^2\frac{\alpha}{2}. \tag{5.10} \]</div>
+  <div class="slide-num">§5.6–6.7 · Таблица п.д.п. Канал высокой точности</div>
+  <h2>Что п.д.п. говорит о схемах §4. Канал высокой точности</h2>
   <div class="two-col wide-left">
+    <table class="sum" style="font-size:.8em">
+      <tr><th>Схема</th><th>\(\nu\)</th><th>\(\beta\)</th><th>Амплитуда</th></tr>
+      <tr><td>A «уголок»</td><td>\(\tfrac{c}{2}(h - c\tau)\)</td><td>\(-\tfrac{ch^2}{6}(1-r)(1-2r)\)</td><td>убывает при \(\tau < h/c\)</td></tr>
+      <tr><td>B неявный уголок</td><td>\(\tfrac{ch}{2}\)</td><td>—</td><td>всегда убывает</td></tr>
+      <tr><td>C разность вперёд</td><td>\(-\tfrac{c}{2}(h + c\tau)\)</td><td>—</td><td>всегда растёт</td></tr>
+      <tr><td>F центральная явная</td><td>\(-\tfrac{c^2\tau}{2}\)</td><td>\(-\tfrac{ch^2}{6}\)</td><td>всегда растёт</td></tr>
+      <tr><td>Лакс–Вендрофф, «крест»</td><td>\(0\)</td><td>\(-\tfrac{ch^2}{6}(1 - r^2)\)</td><td>нужны 4-е производные</td></tr>
+    </table>
     <div>
-      <p class="small">Так как \(\sin^2(\alpha/2) \in [0, 1]\) и достигает единицы при \(\alpha = \pi\), условие \(|\lambda| \le 1\) при всех \(\alpha\) равносильно \(r(1 - r) \ge 0\):</p>
-      <div class="eq">\[ 0 \le r = \frac{a\tau}{h} \le 1 \qquad\text{— критерий Куранта.} \tag{5.11} \]</div>
-      <p class="small">При \(r > 1\) наибольший модуль у «пилы»: \(|\lambda(\pi)| = |1 - 2r| > 1\), она растёт как \(|1 - 2r|^n\).</p>
-    </div>
-    <div class="figure">
-      <svg viewBox="0 0 340 300" xmlns="http://www.w3.org/2000/svg" style="max-width:17rem">
-        <line x1="10" y1="150" x2="330" y2="150" stroke="#d9cfc0"/><line x1="170" y1="290" x2="170" y2="10" stroke="#d9cfc0"/>
-        <circle cx="170" cy="150" r="110" fill="rgba(26,107,90,0.06)" stroke="#1a6b5a" stroke-width="2" stroke-dasharray="6,3"/>
-        <circle cx="203" cy="150" r="77" fill="none" stroke="#1a6b5a" stroke-width="2.2"/><text x="215" y="90" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a">r = 0.7</text>
-        <circle cx="148" cy="150" r="132" fill="none" stroke="#b44a2d" stroke-width="2.2" stroke-dasharray="8,5"/><text x="22" y="50" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">r = 1.2</text>
-        <circle cx="16" cy="150" r="4" fill="#b44a2d"/><text x="20" y="170" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d">1−2r = −1.4</text>
-        <circle cx="280" cy="150" r="4" fill="#3a5ba0"/><text x="256" y="138" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0">λ = 1</text>
-        <circle cx="170" cy="150" r="2.5" fill="#2c2419"/>
-      </svg>
-      <div class="caption">При \(r = 1.2\) точка \(\alpha = \pi\) выходит из круга.</div>
+      <div class="example" style="font-size:.88em"><span class="lbl">Общее свойство</span>Касание единичной плоскости при \(kh \to 0\) — у всех аппроксимирующих схем; <em>характер касания</em> определяется порядком аппроксимации: \(1 - O((kh)^2)\) у первого, \(1 - O((kh)^4)\) у второго.</div>
+      <div class="note" style="font-size:.88em"><span class="lbl">Канал высокой точности</span>При \(r = 1\) все гармоники не диссипируют и не диспергируют; из непрерывности поверхностей — аномально высокая точность в окрестности \(r = 1\). Практическое правило: считать с \(r\), близким к единице.</div>
     </div>
   </div>
+  <p class="bridge">Итог для «уголка»: устойчивость \(r \in [0,1]\); диссипация максимальна при \(r = \tfrac12\); дисперсия нормальная при \(r < \tfrac12\), аномальная при \(r > \tfrac12\), отсутствует при \(r = \tfrac12, 1\). Проверим расчётом.</p>
 </section>
 
 <!-- 11 -->
 <section class="slide">
-  <div class="slide-num">§5.5 · Условие Куранта — геометрия</div>
-  <h2>Почему \(r \le 1\): область зависимости</h2>
-  <div class="two-col">
+  <div class="slide-num">§5.8 · Модельная задача и Фурье</div>
+  <h2>Модельная задача, разложение по гармоникам, суперпозиция</h2>
+  <div class="two-col wide-right">
     <div>
-      <p class="lead">Точное значение \(u(x_m, t_{n+1})\) определяется значением на слое \(t_n\) в основании характеристики \(x = x_m - a\tau\). Разностное \(u_m^{n+1}\) — значениями в узлах шаблона \(x_{m-1}\), \(x_m\).</p>
-      <div class="note"><span class="lbl">Условие Куранта–Фридрихса–Леви</span>Область зависимости схемы должна содержать область зависимости уравнения: \(x_m - a\tau \ge x_{m-1}\), то есть \(a\tau \le h\). Иначе схема не получает информацию, от которой зависит точное решение.</div>
-      <p class="small">Нейман — алгебра, КФЛ — геометрия; для «уголка» они совпали. В общем случае КФЛ грубее (пример 3).</p>
+      <p class="small">\(u_t + u_x = 0\), \(x \in [0, 2\pi]\), периодичность; \(N = 100\), \(h = 0.02\pi\). Профили: двойной гауссиан (5.17) и ступенька (5.18).</p>
+      <div class="eq" style="font-size:.8em">\[ f_j = \sum_{k=0}^{N-1} a_k e^{-i(kh)j}, \quad a_k = \frac1N\sum_{j=0}^{N-1} f_j e^{i(kh)j}, \tag{5.19} \]</div>
+      <div class="eq" style="font-size:.8em">\[ u_j^n = \sum_{k=0}^{N-1} a_k\,\bigl[q(r, kh)\bigr]^n e^{-i(kh)j}. \tag{5.20} \]</div>
+      <div class="note" style="font-size:.85em"><span class="lbl">Предсказание</span>Каждая гармоника затухает по своему месту на диссипативной поверхности и бежит по своему — на дисперсионной; «пакет» разъезжается. Гауссиан — длинные волны, \(|q| \approx 1\), \(\gamma \approx 1\). Ступенька — все волны, включая короткие.</div>
     </div>
     <div class="figure">
-      <svg viewBox="0 0 440 230" xmlns="http://www.w3.org/2000/svg">
-        <line x1="20" y1="180" x2="420" y2="180" stroke="#d9cfc0"/><line x1="20" y1="70" x2="420" y2="70" stroke="#d9cfc0"/>
-        <text x="6" y="184" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">tₙ</text><text x="2" y="74" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">tₙ₊₁</text>
-        <circle cx="80" cy="180" r="5" fill="#3a5ba0"/><circle cx="170" cy="180" r="5" fill="#3a5ba0"/><circle cx="170" cy="70" r="5" fill="#b44a2d"/>
-        <line x1="80" y1="180" x2="170" y2="180" stroke="#3a5ba0" stroke-width="3"/><line x1="170" y1="70" x2="170" y2="180" stroke="#b44a2d" stroke-width="1.5"/>
-        <line x1="170" y1="70" x2="110" y2="180" stroke="#1a6b5a" stroke-width="2" stroke-dasharray="5,4"/><circle cx="110" cy="180" r="4" fill="#1a6b5a"/>
-        <text x="70" y="205" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">x₍ₘ₋₁₎</text><text x="160" y="205" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">xₘ</text>
-        <text x="80" y="225" font-family="Source Serif 4,serif" font-size="12" fill="#1a6b5a">r &lt; 1: основание в шаблоне</text>
-        <circle cx="300" cy="180" r="5" fill="#3a5ba0"/><circle cx="390" cy="180" r="5" fill="#3a5ba0"/><circle cx="390" cy="70" r="5" fill="#b44a2d"/>
-        <line x1="300" y1="180" x2="390" y2="180" stroke="#3a5ba0" stroke-width="3"/><line x1="390" y1="70" x2="390" y2="180" stroke="#b44a2d" stroke-width="1.5"/>
-        <line x1="390" y1="70" x2="262" y2="180" stroke="#b44a2d" stroke-width="2" stroke-dasharray="5,4"/><circle cx="262" cy="180" r="4" fill="#b44a2d"/>
-        <text x="290" y="205" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">x₍ₘ₋₁₎</text><text x="380" y="205" font-family="JetBrains Mono,monospace" font-size="10" fill="#6b5d4f">xₘ</text>
-        <text x="290" y="225" font-family="Source Serif 4,serif" font-size="12" fill="#b44a2d">r &gt; 1: вне шаблона</text>
-        <text x="150" y="40" font-family="Source Serif 4,serif" font-size="12" fill="#1a6b5a" font-style="italic">характеристика x − at = const</text>
-      </svg>
+      <svg viewBox='0 0 640 300' xmlns='http://www.w3.org/2000/svg' style='max-width:640px'>
+<rect x='40.0' y='22' width='285' height='105' fill='#fff' stroke='#d9cfc0'/>
+<line x1='40.0' y1='119.2' x2='325' y2='119.2' stroke='#ede6da'/>
+<text x='36.0' y='122.7' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0</text>
+<line x1='40.0' y1='80.3' x2='325' y2='80.3' stroke='#ede6da'/>
+<text x='36.0' y='83.8' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0.5</text>
+<line x1='40.0' y1='41.4' x2='325' y2='41.4' stroke='#ede6da'/>
+<text x='36.0' y='44.9' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>1</text>
+<text x='40' y='138' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>0</text>
+<text x='182' y='138' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>π</text>
+<text x='325' y='138' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>2π</text>
+<polyline points='40.0,119.2 42.9,119.2 45.8,119.2 48.6,119.2 51.5,119.2 54.4,119.2 57.3,119.2 60.2,119.2 63.0,119.2 65.9,119.2 68.8,119.2 71.7,119.2 74.5,119.1 77.4,119.0 80.3,118.6 83.2,117.8 86.1,116.2 88.9,113.2 91.8,108.3 94.7,100.8 97.6,90.6 100.5,78.2 103.3,64.9 106.2,52.7 109.1,43.9 112.0,40.0 114.8,41.4 117.7,46.9 120.6,54.0 123.5,59.8 126.4,62.0 129.2,59.8 132.1,54.0 135.0,46.9 137.9,41.4 140.8,40.0 143.6,43.9 146.5,52.7 149.4,64.9 152.3,78.2 155.2,90.6 158.0,100.8 160.9,108.3 163.8,113.2 166.7,116.2 169.5,117.8 172.4,118.6 175.3,119.0 178.2,119.1 181.1,119.2 183.9,119.2 186.8,119.2 189.7,119.2 192.6,119.2 195.5,119.2 198.3,119.2 201.2,119.2 204.1,119.2 207.0,119.2 209.8,119.2 212.7,119.2 215.6,119.2 218.5,119.2 221.4,119.2 224.2,119.2 227.1,119.2 230.0,119.2 232.9,119.2 235.8,119.2 238.6,119.2 241.5,119.2 244.4,119.2 247.3,119.2 250.2,119.2 253.0,119.2 255.9,119.2 258.8,119.2 261.7,119.2 264.5,119.2 267.4,119.2 270.3,119.2 273.2,119.2 276.1,119.2 278.9,119.2 281.8,119.2 284.7,119.2 287.6,119.2 290.5,119.2 293.3,119.2 296.2,119.2 299.1,119.2 302.0,119.2 304.8,119.2 307.7,119.2 310.6,119.2 313.5,119.2 316.4,119.2 319.2,119.2 322.1,119.2 325.0,119.2' fill='none' stroke='#2c2419' stroke-width='1.4'/>
+<circle cx='40.0' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='42.9' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='45.8' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='48.6' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='51.5' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='54.4' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='57.3' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='60.2' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='63.0' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='65.9' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='68.8' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='71.7' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='74.5' cy='119.1' r='1.3' fill='#2c2419'/><circle cx='77.4' cy='119.0' r='1.3' fill='#2c2419'/><circle cx='80.3' cy='118.6' r='1.3' fill='#2c2419'/><circle cx='83.2' cy='117.8' r='1.3' fill='#2c2419'/><circle cx='86.1' cy='116.2' r='1.3' fill='#2c2419'/><circle cx='88.9' cy='113.2' r='1.3' fill='#2c2419'/><circle cx='91.8' cy='108.3' r='1.3' fill='#2c2419'/><circle cx='94.7' cy='100.8' r='1.3' fill='#2c2419'/><circle cx='97.6' cy='90.6' r='1.3' fill='#2c2419'/><circle cx='100.5' cy='78.2' r='1.3' fill='#2c2419'/><circle cx='103.3' cy='64.9' r='1.3' fill='#2c2419'/><circle cx='106.2' cy='52.7' r='1.3' fill='#2c2419'/><circle cx='109.1' cy='43.9' r='1.3' fill='#2c2419'/><circle cx='112.0' cy='40.0' r='1.3' fill='#2c2419'/><circle cx='114.8' cy='41.4' r='1.3' fill='#2c2419'/><circle cx='117.7' cy='46.9' r='1.3' fill='#2c2419'/><circle cx='120.6' cy='54.0' r='1.3' fill='#2c2419'/><circle cx='123.5' cy='59.8' r='1.3' fill='#2c2419'/><circle cx='126.4' cy='62.0' r='1.3' fill='#2c2419'/><circle cx='129.2' cy='59.8' r='1.3' fill='#2c2419'/><circle cx='132.1' cy='54.0' r='1.3' fill='#2c2419'/><circle cx='135.0' cy='46.9' r='1.3' fill='#2c2419'/><circle cx='137.9' cy='41.4' r='1.3' fill='#2c2419'/><circle cx='140.8' cy='40.0' r='1.3' fill='#2c2419'/><circle cx='143.6' cy='43.9' r='1.3' fill='#2c2419'/><circle cx='146.5' cy='52.7' r='1.3' fill='#2c2419'/><circle cx='149.4' cy='64.9' r='1.3' fill='#2c2419'/><circle cx='152.3' cy='78.2' r='1.3' fill='#2c2419'/><circle cx='155.2' cy='90.6' r='1.3' fill='#2c2419'/><circle cx='158.0' cy='100.8' r='1.3' fill='#2c2419'/><circle cx='160.9' cy='108.3' r='1.3' fill='#2c2419'/><circle cx='163.8' cy='113.2' r='1.3' fill='#2c2419'/><circle cx='166.7' cy='116.2' r='1.3' fill='#2c2419'/><circle cx='169.5' cy='117.8' r='1.3' fill='#2c2419'/><circle cx='172.4' cy='118.6' r='1.3' fill='#2c2419'/><circle cx='175.3' cy='119.0' r='1.3' fill='#2c2419'/><circle cx='178.2' cy='119.1' r='1.3' fill='#2c2419'/><circle cx='181.1' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='183.9' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='186.8' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='189.7' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='192.6' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='195.5' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='198.3' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='201.2' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='204.1' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='207.0' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='209.8' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='212.7' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='215.6' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='218.5' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='221.4' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='224.2' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='227.1' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='230.0' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='232.9' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='235.8' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='238.6' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='241.5' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='244.4' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='247.3' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='250.2' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='253.0' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='255.9' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='258.8' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='261.7' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='264.5' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='267.4' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='270.3' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='273.2' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='276.1' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='278.9' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='281.8' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='284.7' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='287.6' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='290.5' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='293.3' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='296.2' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='299.1' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='302.0' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='304.8' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='307.7' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='310.6' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='313.5' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='316.4' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='319.2' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='322.1' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='325.0' cy='119.2' r='1.3' fill='#2c2419'/>
+<text x='182' y='15' font-family='Source Serif 4,serif' font-size='11' fill='#2c2419' text-anchor='middle' font-weight='600'>двойной гауссиан (2.41)</text>
+<rect x='40.0' y='167' width='285' height='100' fill='#fff' stroke='#d9cfc0'/>
+<rect x='43.3' y='175.0' width='4.4' height='92.0' fill='#3a5ba0'/>
+<rect x='48.8' y='181.6' width='4.4' height='85.4' fill='#3a5ba0'/>
+<rect x='54.2' y='199.6' width='4.4' height='67.4' fill='#3a5ba0'/>
+<rect x='59.7' y='223.7' width='4.4' height='43.3' fill='#3a5ba0'/>
+<rect x='65.2' y='247.8' width='4.4' height='19.2' fill='#3a5ba0'/>
+<rect x='70.7' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='76.2' y='255.3' width='4.4' height='11.7' fill='#3a5ba0'/>
+<rect x='81.7' y='250.9' width='4.4' height='16.1' fill='#3a5ba0'/>
+<rect x='87.1' y='251.7' width='4.4' height='15.3' fill='#3a5ba0'/>
+<rect x='92.6' y='255.1' width='4.4' height='11.9' fill='#3a5ba0'/>
+<rect x='98.1' y='259.2' width='4.4' height='7.8' fill='#3a5ba0'/>
+<rect x='103.6' y='262.6' width='4.4' height='4.4' fill='#3a5ba0'/>
+<rect x='109.1' y='264.9' width='4.4' height='2.1' fill='#3a5ba0'/>
+<rect x='114.5' y='266.2' width='4.4' height='0.8' fill='#3a5ba0'/>
+<rect x='120.0' y='266.8' width='4.4' height='0.2' fill='#3a5ba0'/>
+<rect x='125.5' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='131.0' y='266.9' width='4.4' height='0.1' fill='#3a5ba0'/>
+<rect x='136.5' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='141.9' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='147.4' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='152.9' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='158.4' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='163.9' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='169.3' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='174.8' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='180.3' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='185.8' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='191.3' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='196.8' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='202.2' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='207.7' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='213.2' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='218.7' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='224.2' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='229.6' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='235.1' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='240.6' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='246.1' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='251.6' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='257.0' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='262.5' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='268.0' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='273.5' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='279.0' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='284.4' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='289.9' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='295.4' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='300.9' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='306.4' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='311.8' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<rect x='317.3' y='267.0' width='4.4' height='0.0' fill='#3a5ba0'/>
+<text x='45' y='278' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>0</text>
+<text x='100' y='278' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>10</text>
+<text x='155' y='278' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>20</text>
+<text x='210' y='278' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>30</text>
+<text x='265' y='278' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>40</text>
+<text x='320' y='278' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>50</text>
+<text x='182' y='160' font-family='Source Serif 4,serif' font-size='11' fill='#2c2419' text-anchor='middle' font-weight='600'>модули коэффициентов Фурье |a_k|, k = 0…50</text>
+<rect x='345.0' y='22' width='285' height='105' fill='#fff' stroke='#d9cfc0'/>
+<line x1='345.0' y1='119.2' x2='630' y2='119.2' stroke='#ede6da'/>
+<text x='341.0' y='122.7' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0</text>
+<line x1='345.0' y1='80.3' x2='630' y2='80.3' stroke='#ede6da'/>
+<text x='341.0' y='83.8' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0.5</text>
+<line x1='345.0' y1='41.4' x2='630' y2='41.4' stroke='#ede6da'/>
+<text x='341.0' y='44.9' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>1</text>
+<text x='345' y='138' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>0</text>
+<text x='488' y='138' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>π</text>
+<text x='630' y='138' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>2π</text>
+<polyline points='345.0,119.2 347.9,119.2 350.8,119.2 353.6,119.2 356.5,119.2 359.4,119.2 362.3,119.2 365.2,119.2 368.0,119.2 370.9,119.2 373.8,41.4 376.7,41.4 379.5,41.4 382.4,41.4 385.3,41.4 388.2,41.4 391.1,41.4 393.9,41.4 396.8,41.4 399.7,41.4 402.6,41.4 405.5,119.2 408.3,119.2 411.2,119.2 414.1,119.2 417.0,119.2 419.8,119.2 422.7,119.2 425.6,119.2 428.5,119.2 431.4,119.2 434.2,119.2 437.1,119.2 440.0,119.2 442.9,119.2 445.8,119.2 448.6,119.2 451.5,119.2 454.4,119.2 457.3,119.2 460.2,119.2 463.0,119.2 465.9,119.2 468.8,119.2 471.7,119.2 474.5,119.2 477.4,119.2 480.3,119.2 483.2,119.2 486.1,119.2 488.9,119.2 491.8,119.2 494.7,119.2 497.6,119.2 500.5,119.2 503.3,119.2 506.2,119.2 509.1,119.2 512.0,119.2 514.8,119.2 517.7,119.2 520.6,119.2 523.5,119.2 526.4,119.2 529.2,119.2 532.1,119.2 535.0,119.2 537.9,119.2 540.8,119.2 543.6,119.2 546.5,119.2 549.4,119.2 552.3,119.2 555.2,119.2 558.0,119.2 560.9,119.2 563.8,119.2 566.7,119.2 569.5,119.2 572.4,119.2 575.3,119.2 578.2,119.2 581.1,119.2 583.9,119.2 586.8,119.2 589.7,119.2 592.6,119.2 595.5,119.2 598.3,119.2 601.2,119.2 604.1,119.2 607.0,119.2 609.8,119.2 612.7,119.2 615.6,119.2 618.5,119.2 621.4,119.2 624.2,119.2 627.1,119.2 630.0,119.2' fill='none' stroke='#2c2419' stroke-width='1.4'/>
+<circle cx='345.0' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='347.9' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='350.8' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='353.6' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='356.5' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='359.4' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='362.3' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='365.2' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='368.0' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='370.9' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='373.8' cy='41.4' r='1.3' fill='#2c2419'/><circle cx='376.7' cy='41.4' r='1.3' fill='#2c2419'/><circle cx='379.5' cy='41.4' r='1.3' fill='#2c2419'/><circle cx='382.4' cy='41.4' r='1.3' fill='#2c2419'/><circle cx='385.3' cy='41.4' r='1.3' fill='#2c2419'/><circle cx='388.2' cy='41.4' r='1.3' fill='#2c2419'/><circle cx='391.1' cy='41.4' r='1.3' fill='#2c2419'/><circle cx='393.9' cy='41.4' r='1.3' fill='#2c2419'/><circle cx='396.8' cy='41.4' r='1.3' fill='#2c2419'/><circle cx='399.7' cy='41.4' r='1.3' fill='#2c2419'/><circle cx='402.6' cy='41.4' r='1.3' fill='#2c2419'/><circle cx='405.5' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='408.3' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='411.2' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='414.1' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='417.0' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='419.8' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='422.7' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='425.6' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='428.5' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='431.4' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='434.2' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='437.1' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='440.0' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='442.9' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='445.8' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='448.6' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='451.5' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='454.4' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='457.3' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='460.2' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='463.0' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='465.9' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='468.8' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='471.7' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='474.5' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='477.4' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='480.3' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='483.2' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='486.1' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='488.9' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='491.8' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='494.7' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='497.6' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='500.5' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='503.3' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='506.2' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='509.1' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='512.0' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='514.8' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='517.7' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='520.6' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='523.5' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='526.4' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='529.2' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='532.1' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='535.0' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='537.9' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='540.8' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='543.6' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='546.5' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='549.4' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='552.3' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='555.2' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='558.0' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='560.9' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='563.8' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='566.7' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='569.5' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='572.4' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='575.3' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='578.2' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='581.1' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='583.9' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='586.8' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='589.7' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='592.6' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='595.5' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='598.3' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='601.2' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='604.1' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='607.0' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='609.8' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='612.7' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='615.6' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='618.5' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='621.4' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='624.2' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='627.1' cy='119.2' r='1.3' fill='#2c2419'/><circle cx='630.0' cy='119.2' r='1.3' fill='#2c2419'/>
+<text x='488' y='15' font-family='Source Serif 4,serif' font-size='11' fill='#2c2419' text-anchor='middle' font-weight='600'>ступенька (2.42)</text>
+<rect x='345.0' y='167' width='285' height='100' fill='#fff' stroke='#d9cfc0'/>
+<rect x='348.3' y='175.0' width='4.4' height='92.0' fill='#3a5ba0'/>
+<rect x='353.8' y='176.8' width='4.4' height='90.2' fill='#3a5ba0'/>
+<rect x='359.2' y='182.1' width='4.4' height='84.9' fill='#3a5ba0'/>
+<rect x='364.7' y='190.5' width='4.4' height='76.5' fill='#3a5ba0'/>
+<rect x='370.2' y='201.5' width='4.4' height='65.5' fill='#3a5ba0'/>
+<rect x='375.7' y='214.2' width='4.4' height='52.8' fill='#3a5ba0'/>
+<rect x='381.2' y='227.9' width='4.4' height='39.1' fill='#3a5ba0'/>
+<rect x='386.7' y='241.6' width='4.4' height='25.4' fill='#3a5ba0'/>
+<rect x='392.1' y='254.6' width='4.4' height='12.4' fill='#3a5ba0'/>
+<rect x='397.6' y='266.1' width='4.4' height='0.9' fill='#3a5ba0'/>
+<rect x='403.1' y='258.6' width='4.4' height='8.4' fill='#3a5ba0'/>
+<rect x='408.6' y='251.9' width='4.4' height='15.1' fill='#3a5ba0'/>
+<rect x='414.1' y='247.8' width='4.4' height='19.2' fill='#3a5ba0'/>
+<rect x='419.5' y='246.4' width='4.4' height='20.6' fill='#3a5ba0'/>
+<rect x='425.0' y='247.5' width='4.4' height='19.5' fill='#3a5ba0'/>
+<rect x='430.5' y='250.6' width='4.4' height='16.4' fill='#3a5ba0'/>
+<rect x='436.0' y='255.1' width='4.4' height='11.9' fill='#3a5ba0'/>
+<rect x='441.5' y='260.5' width='4.4' height='6.5' fill='#3a5ba0'/>
+<rect x='446.9' y='266.0' width='4.4' height='1.0' fill='#3a5ba0'/>
+<rect x='452.4' y='262.8' width='4.4' height='4.2' fill='#3a5ba0'/>
+<rect x='457.9' y='258.6' width='4.4' height='8.4' fill='#3a5ba0'/>
+<rect x='463.4' y='255.7' width='4.4' height='11.3' fill='#3a5ba0'/>
+<rect x='468.9' y='254.3' width='4.4' height='12.7' fill='#3a5ba0'/>
+<rect x='474.3' y='254.4' width='4.4' height='12.6' fill='#3a5ba0'/>
+<rect x='479.8' y='255.9' width='4.4' height='11.1' fill='#3a5ba0'/>
+<rect x='485.3' y='258.6' width='4.4' height='8.4' fill='#3a5ba0'/>
+<rect x='490.8' y='262.1' width='4.4' height='4.9' fill='#3a5ba0'/>
+<rect x='496.3' y='266.0' width='4.4' height='1.0' fill='#3a5ba0'/>
+<rect x='501.8' y='264.3' width='4.4' height='2.7' fill='#3a5ba0'/>
+<rect x='507.2' y='261.1' width='4.4' height='5.9' fill='#3a5ba0'/>
+<rect x='512.7' y='258.6' width='4.4' height='8.4' fill='#3a5ba0'/>
+<rect x='518.2' y='257.3' width='4.4' height='9.7' fill='#3a5ba0'/>
+<rect x='523.7' y='257.1' width='4.4' height='9.9' fill='#3a5ba0'/>
+<rect x='529.2' y='258.1' width='4.4' height='8.9' fill='#3a5ba0'/>
+<rect x='534.6' y='260.0' width='4.4' height='7.0' fill='#3a5ba0'/>
+<rect x='540.1' y='262.7' width='4.4' height='4.3' fill='#3a5ba0'/>
+<rect x='545.6' y='265.8' width='4.4' height='1.2' fill='#3a5ba0'/>
+<rect x='551.1' y='265.0' width='4.4' height='2.0' fill='#3a5ba0'/>
+<rect x='556.6' y='262.2' width='4.4' height='4.8' fill='#3a5ba0'/>
+<rect x='562.0' y='260.0' width='4.4' height='7.0' fill='#3a5ba0'/>
+<rect x='567.5' y='258.6' width='4.4' height='8.4' fill='#3a5ba0'/>
+<rect x='573.0' y='258.3' width='4.4' height='8.7' fill='#3a5ba0'/>
+<rect x='578.5' y='259.0' width='4.4' height='8.0' fill='#3a5ba0'/>
+<rect x='584.0' y='260.6' width='4.4' height='6.4' fill='#3a5ba0'/>
+<rect x='589.4' y='262.9' width='4.4' height='4.1' fill='#3a5ba0'/>
+<rect x='594.9' y='265.7' width='4.4' height='1.3' fill='#3a5ba0'/>
+<rect x='600.4' y='265.4' width='4.4' height='1.6' fill='#3a5ba0'/>
+<rect x='605.9' y='262.7' width='4.4' height='4.3' fill='#3a5ba0'/>
+<rect x='611.4' y='260.5' width='4.4' height='6.5' fill='#3a5ba0'/>
+<rect x='616.8' y='259.1' width='4.4' height='7.9' fill='#3a5ba0'/>
+<rect x='622.3' y='258.6' width='4.4' height='8.4' fill='#3a5ba0'/>
+<text x='350' y='278' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>0</text>
+<text x='405' y='278' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>10</text>
+<text x='460' y='278' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>20</text>
+<text x='515' y='278' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>30</text>
+<text x='570' y='278' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>40</text>
+<text x='625' y='278' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>50</text>
+<text x='488' y='160' font-family='Source Serif 4,serif' font-size='11' fill='#2c2419' text-anchor='middle' font-weight='600'>модули коэффициентов Фурье |a_k|, k = 0…50</text>
+</svg>
+      <div class="caption">Рис. 3. Начальные профили и модули их коэффициентов Фурье \(|a_k|\).</div>
     </div>
   </div>
-  <p class="bridge">Проверим признак на схеме, у которой шаблон «смотрит» в другую сторону.</p>
 </section>
 
 <!-- 12 -->
 <section class="slide">
-  <div class="slide-num">§5.6 · Пример 2: разность вперёд</div>
-  <h2>Пример 2. Разность вперёд: абсолютная неустойчивость</h2>
-  <div class="eq">\[ \frac{u_m^{n+1} - u_m^n}{\tau} + a\,\frac{u_{m+1}^n - u_m^n}{h} = 0 \quad\Longleftrightarrow\quad u_m^{n+1} = (1 + r)\,u_m^n - r\,u_{m+1}^n. \tag{5.12} \]</div>
-  <div class="two-col">
-    <div>
-      <p class="small">Узлу \((m+1, n)\) отвечает \(e^{+i\alpha}\): \(\lambda = 1 + r - r\,e^{i\alpha}\) — окружность радиуса \(r\) с центром \(1 + r\).</p>
-      <div class="eq" style="font-size:.95em">\[ |\lambda|^2 = (1 + r - r\cos\alpha)^2 + r^2\sin^2\alpha = 1 + 4r(1 + r)\sin^2\frac{\alpha}{2} \ge 1, \tag{5.13} \]</div>
-      <p class="small">строго больше единицы при \(\alpha \ne 0\) и любом \(r > 0\). Условие Неймана нарушено при всех \(\tau, h\): схема <strong>абсолютно неустойчива</strong>.</p>
+  <div class="slide-num">§5.9 · Тесты: «уголок»</div>
+  <h2>Тестовые расчёты: «уголок», \(T = 1.884\), CFL = 0.25, 0.5, 0.75</h2>
+  <div class="two-col wide-left">
+    <div class="figure">
+      <svg viewBox='0 0 640 472' xmlns='http://www.w3.org/2000/svg' style='max-width:640px'>
+<rect x='40.0' y='26' width='285' height='120' fill='#fff' stroke='#d9cfc0'/>
+<line x1='40.0' y1='124.8' x2='325' y2='124.8' stroke='#ede6da'/>
+<text x='36.0' y='128.3' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0</text>
+<line x1='40.0' y1='89.5' x2='325' y2='89.5' stroke='#ede6da'/>
+<text x='36.0' y='93.0' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0.5</text>
+<line x1='40.0' y1='54.2' x2='325' y2='54.2' stroke='#ede6da'/>
+<text x='36.0' y='57.7' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>1</text>
+<text x='40' y='157' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>0</text>
+<text x='182' y='157' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>π</text>
+<text x='325' y='157' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>2π</text>
+<polyline points='40.0,124.8 42.9,124.8 45.8,124.8 48.6,124.8 51.5,124.8 54.4,124.8 57.3,124.8 60.2,124.8 63.0,124.8 65.9,124.8 68.8,124.8 71.7,124.8 74.5,124.8 77.4,124.8 80.3,124.8 83.2,124.8 86.1,124.8 88.9,124.8 91.8,124.8 94.7,124.8 97.6,124.8 100.5,124.8 103.3,124.8 106.2,124.8 109.1,124.8 112.0,124.8 114.8,124.8 117.7,124.8 120.6,124.8 123.5,124.8 126.4,124.8 129.2,124.8 132.1,124.8 135.0,124.8 137.9,124.8 140.8,124.8 143.6,124.8 146.5,124.8 149.4,124.8 152.3,123.7 155.2,54.2 158.0,54.2 160.9,54.2 163.8,54.2 166.7,54.2 169.5,54.2 172.4,54.2 175.3,54.2 178.2,54.2 181.1,54.2 183.9,55.3 186.8,124.8 189.7,124.8 192.6,124.8 195.5,124.8 198.3,124.8 201.2,124.8 204.1,124.8 207.0,124.8 209.8,124.8 212.7,124.8 215.6,124.8 218.5,124.8 221.4,124.8 224.2,124.8 227.1,124.8 230.0,124.8 232.9,124.8 235.8,124.8 238.6,124.8 241.5,124.8 244.4,124.8 247.3,124.8 250.2,124.8 253.0,124.8 255.9,124.8 258.8,124.8 261.7,124.8 264.5,124.8 267.4,124.8 270.3,124.8 273.2,124.8 276.1,124.8 278.9,124.8 281.8,124.8 284.7,124.8 287.6,124.8 290.5,124.8 293.3,124.8 296.2,124.8 299.1,124.8 302.0,124.8 304.8,124.8 307.7,124.8 310.6,124.8 313.5,124.8 316.4,124.8 319.2,124.8 322.1,124.8 325.0,124.8' fill='none' stroke='#2c2419' stroke-width='1.6'/>
+<polyline points='40.0,124.8 42.9,124.8 45.8,124.8 48.6,124.8 51.5,124.8 54.4,124.8 57.3,124.8 60.2,124.8 63.0,124.8 65.9,124.8 68.8,124.8 71.7,124.8 74.5,124.8 77.4,124.8 80.3,124.8 83.2,124.8 86.1,124.8 88.9,124.8 91.8,124.8 94.7,124.8 97.6,124.8 100.5,124.8 103.3,124.8 106.2,124.8 109.1,124.8 112.0,124.8 114.8,124.7 117.7,124.6 120.6,124.4 123.5,124.1 126.4,123.5 129.2,122.5 132.1,121.1 135.0,119.0 137.9,116.2 140.8,112.7 143.6,108.4 146.5,103.5 149.4,98.1 152.3,92.4 155.2,86.8 158.0,81.7 160.9,77.4 163.8,74.1 166.7,72.1 169.5,71.6 172.4,72.5 175.3,74.9 178.2,78.4 181.1,83.0 183.9,88.2 186.8,93.6 189.7,99.1 192.6,104.2 195.5,108.9 198.3,112.8 201.2,116.1 204.1,118.7 207.0,120.6 209.8,122.1 212.7,123.1 215.6,123.7 218.5,124.2 221.4,124.4 224.2,124.6 227.1,124.7 230.0,124.8 232.9,124.8 235.8,124.8 238.6,124.8 241.5,124.8 244.4,124.8 247.3,124.8 250.2,124.8 253.0,124.8 255.9,124.8 258.8,124.8 261.7,124.8 264.5,124.8 267.4,124.8 270.3,124.8 273.2,124.8 276.1,124.8 278.9,124.8 281.8,124.8 284.7,124.8 287.6,124.8 290.5,124.8 293.3,124.8 296.2,124.8 299.1,124.8 302.0,124.8 304.8,124.8 307.7,124.8 310.6,124.8 313.5,124.8 316.4,124.8 319.2,124.8 322.1,124.8 325.0,124.8' fill='none' stroke='#b44a2d' stroke-width='1.3'/>
+<circle cx='40.0' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='45.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='51.5' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='57.3' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='63.0' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='68.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='74.5' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='80.3' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='86.1' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='91.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='97.6' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='103.3' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='109.1' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='114.8' cy='124.7' r='1.2' fill='#b44a2d'/><circle cx='120.6' cy='124.4' r='1.2' fill='#b44a2d'/><circle cx='126.4' cy='123.5' r='1.2' fill='#b44a2d'/><circle cx='132.1' cy='121.1' r='1.2' fill='#b44a2d'/><circle cx='137.9' cy='116.2' r='1.2' fill='#b44a2d'/><circle cx='143.6' cy='108.4' r='1.2' fill='#b44a2d'/><circle cx='149.4' cy='98.1' r='1.2' fill='#b44a2d'/><circle cx='155.2' cy='86.8' r='1.2' fill='#b44a2d'/><circle cx='160.9' cy='77.4' r='1.2' fill='#b44a2d'/><circle cx='166.7' cy='72.1' r='1.2' fill='#b44a2d'/><circle cx='172.4' cy='72.5' r='1.2' fill='#b44a2d'/><circle cx='178.2' cy='78.4' r='1.2' fill='#b44a2d'/><circle cx='183.9' cy='88.2' r='1.2' fill='#b44a2d'/><circle cx='189.7' cy='99.1' r='1.2' fill='#b44a2d'/><circle cx='195.5' cy='108.9' r='1.2' fill='#b44a2d'/><circle cx='201.2' cy='116.1' r='1.2' fill='#b44a2d'/><circle cx='207.0' cy='120.6' r='1.2' fill='#b44a2d'/><circle cx='212.7' cy='123.1' r='1.2' fill='#b44a2d'/><circle cx='218.5' cy='124.2' r='1.2' fill='#b44a2d'/><circle cx='224.2' cy='124.6' r='1.2' fill='#b44a2d'/><circle cx='230.0' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='235.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='241.5' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='247.3' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='253.0' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='258.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='264.5' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='270.3' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='276.1' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='281.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='287.6' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='293.3' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='299.1' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='304.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='310.6' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='316.4' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='322.1' cy='124.8' r='1.2' fill='#b44a2d'/>
+<text x='182' y='20' font-family='JetBrains Mono,monospace' font-size='9' fill='#2c2419' text-anchor='middle'>CFL = 0.25, NT = 120, T = 1.884 — ступенька</text>
+<rect x='345.0' y='26' width='285' height='120' fill='#fff' stroke='#d9cfc0'/>
+<line x1='345.0' y1='124.8' x2='630' y2='124.8' stroke='#ede6da'/>
+<text x='341.0' y='128.3' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0</text>
+<line x1='345.0' y1='89.5' x2='630' y2='89.5' stroke='#ede6da'/>
+<text x='341.0' y='93.0' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0.5</text>
+<line x1='345.0' y1='54.2' x2='630' y2='54.2' stroke='#ede6da'/>
+<text x='341.0' y='57.7' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>1</text>
+<text x='345' y='157' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>0</text>
+<text x='488' y='157' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>π</text>
+<text x='630' y='157' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>2π</text>
+<polyline points='345.0,124.8 347.9,124.8 350.8,124.8 353.6,124.8 356.5,124.8 359.4,124.8 362.3,124.8 365.2,124.8 368.0,124.8 370.9,124.8 373.8,124.8 376.7,124.8 379.5,124.8 382.4,124.8 385.3,124.8 388.2,124.8 391.1,124.8 393.9,124.8 396.8,124.8 399.7,124.8 402.6,124.8 405.5,124.8 408.3,124.8 411.2,124.8 414.1,124.8 417.0,124.8 419.8,124.8 422.7,124.8 425.6,124.8 428.5,124.8 431.4,124.8 434.2,124.8 437.1,124.8 440.0,124.8 442.9,124.8 445.8,124.8 448.6,124.8 451.5,124.8 454.4,124.8 457.3,124.8 460.2,124.8 463.0,124.8 465.9,124.7 468.8,124.6 471.7,124.3 474.5,123.5 477.4,122.0 480.3,119.3 483.2,114.8 486.1,108.0 488.9,98.7 491.8,87.4 494.7,75.3 497.6,64.3 500.5,56.4 503.3,53.0 506.2,54.3 509.1,59.3 512.0,65.7 514.8,70.9 517.7,72.9 520.6,70.8 523.5,65.5 526.4,59.1 529.2,54.2 532.1,53.0 535.0,56.6 537.9,64.6 540.8,75.7 543.6,87.7 546.5,99.0 549.4,108.2 552.3,114.9 555.2,119.4 558.0,122.1 560.9,123.5 563.8,124.3 566.7,124.6 569.5,124.7 572.4,124.8 575.3,124.8 578.2,124.8 581.1,124.8 583.9,124.8 586.8,124.8 589.7,124.8 592.6,124.8 595.5,124.8 598.3,124.8 601.2,124.8 604.1,124.8 607.0,124.8 609.8,124.8 612.7,124.8 615.6,124.8 618.5,124.8 621.4,124.8 624.2,124.8 627.1,124.8 630.0,124.8' fill='none' stroke='#2c2419' stroke-width='1.6'/>
+<polyline points='345.0,124.8 347.9,124.8 350.8,124.8 353.6,124.8 356.5,124.8 359.4,124.8 362.3,124.8 365.2,124.8 368.0,124.8 370.9,124.8 373.8,124.8 376.7,124.8 379.5,124.8 382.4,124.8 385.3,124.8 388.2,124.8 391.1,124.8 393.9,124.8 396.8,124.8 399.7,124.8 402.6,124.8 405.5,124.8 408.3,124.8 411.2,124.8 414.1,124.8 417.0,124.8 419.8,124.8 422.7,124.8 425.6,124.8 428.5,124.8 431.4,124.8 434.2,124.8 437.1,124.8 440.0,124.8 442.9,124.8 445.8,124.7 448.6,124.6 451.5,124.5 454.4,124.2 457.3,123.9 460.2,123.3 463.0,122.4 465.9,121.2 468.8,119.5 471.7,117.3 474.5,114.6 477.4,111.2 480.3,107.3 483.2,102.9 486.1,98.2 488.9,93.2 491.8,88.3 494.7,83.6 497.6,79.4 500.5,75.6 503.3,72.5 506.2,70.1 509.1,68.2 512.0,66.9 514.8,66.1 517.7,65.8 520.6,65.9 523.5,66.7 526.4,68.0 529.2,69.9 532.1,72.6 535.0,75.9 537.9,79.9 540.8,84.3 543.6,89.1 546.5,94.0 549.4,98.8 552.3,103.4 555.2,107.7 558.0,111.4 560.9,114.6 563.8,117.2 566.7,119.3 569.5,120.9 572.4,122.1 575.3,123.0 578.2,123.6 581.1,124.1 583.9,124.3 586.8,124.5 589.7,124.6 592.6,124.7 595.5,124.8 598.3,124.8 601.2,124.8 604.1,124.8 607.0,124.8 609.8,124.8 612.7,124.8 615.6,124.8 618.5,124.8 621.4,124.8 624.2,124.8 627.1,124.8 630.0,124.8' fill='none' stroke='#b44a2d' stroke-width='1.3'/>
+<circle cx='345.0' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='350.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='356.5' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='362.3' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='368.0' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='373.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='379.5' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='385.3' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='391.1' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='396.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='402.6' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='408.3' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='414.1' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='419.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='425.6' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='431.4' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='437.1' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='442.9' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='448.6' cy='124.6' r='1.2' fill='#b44a2d'/><circle cx='454.4' cy='124.2' r='1.2' fill='#b44a2d'/><circle cx='460.2' cy='123.3' r='1.2' fill='#b44a2d'/><circle cx='465.9' cy='121.2' r='1.2' fill='#b44a2d'/><circle cx='471.7' cy='117.3' r='1.2' fill='#b44a2d'/><circle cx='477.4' cy='111.2' r='1.2' fill='#b44a2d'/><circle cx='483.2' cy='102.9' r='1.2' fill='#b44a2d'/><circle cx='488.9' cy='93.2' r='1.2' fill='#b44a2d'/><circle cx='494.7' cy='83.6' r='1.2' fill='#b44a2d'/><circle cx='500.5' cy='75.6' r='1.2' fill='#b44a2d'/><circle cx='506.2' cy='70.1' r='1.2' fill='#b44a2d'/><circle cx='512.0' cy='66.9' r='1.2' fill='#b44a2d'/><circle cx='517.7' cy='65.8' r='1.2' fill='#b44a2d'/><circle cx='523.5' cy='66.7' r='1.2' fill='#b44a2d'/><circle cx='529.2' cy='69.9' r='1.2' fill='#b44a2d'/><circle cx='535.0' cy='75.9' r='1.2' fill='#b44a2d'/><circle cx='540.8' cy='84.3' r='1.2' fill='#b44a2d'/><circle cx='546.5' cy='94.0' r='1.2' fill='#b44a2d'/><circle cx='552.3' cy='103.4' r='1.2' fill='#b44a2d'/><circle cx='558.0' cy='111.4' r='1.2' fill='#b44a2d'/><circle cx='563.8' cy='117.2' r='1.2' fill='#b44a2d'/><circle cx='569.5' cy='120.9' r='1.2' fill='#b44a2d'/><circle cx='575.3' cy='123.0' r='1.2' fill='#b44a2d'/><circle cx='581.1' cy='124.1' r='1.2' fill='#b44a2d'/><circle cx='586.8' cy='124.5' r='1.2' fill='#b44a2d'/><circle cx='592.6' cy='124.7' r='1.2' fill='#b44a2d'/><circle cx='598.3' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='604.1' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='609.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='615.6' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='621.4' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='627.1' cy='124.8' r='1.2' fill='#b44a2d'/>
+<text x='488' y='20' font-family='JetBrains Mono,monospace' font-size='9' fill='#2c2419' text-anchor='middle'>CFL = 0.25, NT = 120, T = 1.884 — гауссиан</text>
+<rect x='40.0' y='168' width='285' height='120' fill='#fff' stroke='#d9cfc0'/>
+<line x1='40.0' y1='266.8' x2='325' y2='266.8' stroke='#ede6da'/>
+<text x='36.0' y='270.3' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0</text>
+<line x1='40.0' y1='231.5' x2='325' y2='231.5' stroke='#ede6da'/>
+<text x='36.0' y='235.0' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0.5</text>
+<line x1='40.0' y1='196.2' x2='325' y2='196.2' stroke='#ede6da'/>
+<text x='36.0' y='199.7' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>1</text>
+<text x='40' y='299' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>0</text>
+<text x='182' y='299' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>π</text>
+<text x='325' y='299' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>2π</text>
+<polyline points='40.0,266.8 42.9,266.8 45.8,266.8 48.6,266.8 51.5,266.8 54.4,266.8 57.3,266.8 60.2,266.8 63.0,266.8 65.9,266.8 68.8,266.8 71.7,266.8 74.5,266.8 77.4,266.8 80.3,266.8 83.2,266.8 86.1,266.8 88.9,266.8 91.8,266.8 94.7,266.8 97.6,266.8 100.5,266.8 103.3,266.8 106.2,266.8 109.1,266.8 112.0,266.8 114.8,266.8 117.7,266.8 120.6,266.8 123.5,266.8 126.4,266.8 129.2,266.8 132.1,266.8 135.0,266.8 137.9,266.8 140.8,266.8 143.6,266.8 146.5,266.8 149.4,266.8 152.3,265.7 155.2,196.2 158.0,196.2 160.9,196.2 163.8,196.2 166.7,196.2 169.5,196.2 172.4,196.2 175.3,196.2 178.2,196.2 181.1,196.2 183.9,197.3 186.8,266.8 189.7,266.8 192.6,266.8 195.5,266.8 198.3,266.8 201.2,266.8 204.1,266.8 207.0,266.8 209.8,266.8 212.7,266.8 215.6,266.8 218.5,266.8 221.4,266.8 224.2,266.8 227.1,266.8 230.0,266.8 232.9,266.8 235.8,266.8 238.6,266.8 241.5,266.8 244.4,266.8 247.3,266.8 250.2,266.8 253.0,266.8 255.9,266.8 258.8,266.8 261.7,266.8 264.5,266.8 267.4,266.8 270.3,266.8 273.2,266.8 276.1,266.8 278.9,266.8 281.8,266.8 284.7,266.8 287.6,266.8 290.5,266.8 293.3,266.8 296.2,266.8 299.1,266.8 302.0,266.8 304.8,266.8 307.7,266.8 310.6,266.8 313.5,266.8 316.4,266.8 319.2,266.8 322.1,266.8 325.0,266.8' fill='none' stroke='#2c2419' stroke-width='1.6'/>
+<polyline points='40.0,266.8 42.9,266.8 45.8,266.8 48.6,266.8 51.5,266.8 54.4,266.8 57.3,266.8 60.2,266.8 63.0,266.8 65.9,266.8 68.8,266.8 71.7,266.8 74.5,266.8 77.4,266.8 80.3,266.8 83.2,266.8 86.1,266.8 88.9,266.8 91.8,266.8 94.7,266.8 97.6,266.8 100.5,266.8 103.3,266.8 106.2,266.8 109.1,266.8 112.0,266.8 114.8,266.8 117.7,266.8 120.6,266.7 123.5,266.6 126.4,266.3 129.2,265.9 132.1,265.0 135.0,263.6 137.9,261.4 140.8,258.2 143.6,253.9 146.5,248.5 149.4,242.2 152.3,235.2 155.2,228.1 158.0,221.4 160.9,215.5 163.8,211.0 166.7,208.1 169.5,207.2 172.4,208.1 175.3,211.0 178.2,215.5 181.1,221.4 183.9,228.1 186.8,235.2 189.7,242.2 192.6,248.5 195.5,253.9 198.3,258.2 201.2,261.4 204.1,263.6 207.0,265.0 209.8,265.9 212.7,266.3 215.6,266.6 218.5,266.7 221.4,266.8 224.2,266.8 227.1,266.8 230.0,266.8 232.9,266.8 235.8,266.8 238.6,266.8 241.5,266.8 244.4,266.8 247.3,266.8 250.2,266.8 253.0,266.8 255.9,266.8 258.8,266.8 261.7,266.8 264.5,266.8 267.4,266.8 270.3,266.8 273.2,266.8 276.1,266.8 278.9,266.8 281.8,266.8 284.7,266.8 287.6,266.8 290.5,266.8 293.3,266.8 296.2,266.8 299.1,266.8 302.0,266.8 304.8,266.8 307.7,266.8 310.6,266.8 313.5,266.8 316.4,266.8 319.2,266.8 322.1,266.8 325.0,266.8' fill='none' stroke='#b44a2d' stroke-width='1.3'/>
+<circle cx='40.0' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='45.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='51.5' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='57.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='63.0' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='68.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='74.5' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='80.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='86.1' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='91.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='97.6' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='103.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='109.1' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='114.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='120.6' cy='266.7' r='1.2' fill='#b44a2d'/><circle cx='126.4' cy='266.3' r='1.2' fill='#b44a2d'/><circle cx='132.1' cy='265.0' r='1.2' fill='#b44a2d'/><circle cx='137.9' cy='261.4' r='1.2' fill='#b44a2d'/><circle cx='143.6' cy='253.9' r='1.2' fill='#b44a2d'/><circle cx='149.4' cy='242.2' r='1.2' fill='#b44a2d'/><circle cx='155.2' cy='228.1' r='1.2' fill='#b44a2d'/><circle cx='160.9' cy='215.5' r='1.2' fill='#b44a2d'/><circle cx='166.7' cy='208.1' r='1.2' fill='#b44a2d'/><circle cx='172.4' cy='208.1' r='1.2' fill='#b44a2d'/><circle cx='178.2' cy='215.5' r='1.2' fill='#b44a2d'/><circle cx='183.9' cy='228.1' r='1.2' fill='#b44a2d'/><circle cx='189.7' cy='242.2' r='1.2' fill='#b44a2d'/><circle cx='195.5' cy='253.9' r='1.2' fill='#b44a2d'/><circle cx='201.2' cy='261.4' r='1.2' fill='#b44a2d'/><circle cx='207.0' cy='265.0' r='1.2' fill='#b44a2d'/><circle cx='212.7' cy='266.3' r='1.2' fill='#b44a2d'/><circle cx='218.5' cy='266.7' r='1.2' fill='#b44a2d'/><circle cx='224.2' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='230.0' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='235.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='241.5' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='247.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='253.0' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='258.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='264.5' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='270.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='276.1' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='281.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='287.6' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='293.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='299.1' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='304.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='310.6' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='316.4' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='322.1' cy='266.8' r='1.2' fill='#b44a2d'/>
+<text x='182' y='162' font-family='JetBrains Mono,monospace' font-size='9' fill='#2c2419' text-anchor='middle'>CFL = 0.5, NT = 60, T = 1.884 — ступенька</text>
+<rect x='345.0' y='168' width='285' height='120' fill='#fff' stroke='#d9cfc0'/>
+<line x1='345.0' y1='266.8' x2='630' y2='266.8' stroke='#ede6da'/>
+<text x='341.0' y='270.3' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0</text>
+<line x1='345.0' y1='231.5' x2='630' y2='231.5' stroke='#ede6da'/>
+<text x='341.0' y='235.0' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0.5</text>
+<line x1='345.0' y1='196.2' x2='630' y2='196.2' stroke='#ede6da'/>
+<text x='341.0' y='199.7' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>1</text>
+<text x='345' y='299' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>0</text>
+<text x='488' y='299' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>π</text>
+<text x='630' y='299' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>2π</text>
+<polyline points='345.0,266.8 347.9,266.8 350.8,266.8 353.6,266.8 356.5,266.8 359.4,266.8 362.3,266.8 365.2,266.8 368.0,266.8 370.9,266.8 373.8,266.8 376.7,266.8 379.5,266.8 382.4,266.8 385.3,266.8 388.2,266.8 391.1,266.8 393.9,266.8 396.8,266.8 399.7,266.8 402.6,266.8 405.5,266.8 408.3,266.8 411.2,266.8 414.1,266.8 417.0,266.8 419.8,266.8 422.7,266.8 425.6,266.8 428.5,266.8 431.4,266.8 434.2,266.8 437.1,266.8 440.0,266.8 442.9,266.8 445.8,266.8 448.6,266.8 451.5,266.8 454.4,266.8 457.3,266.8 460.2,266.8 463.0,266.8 465.9,266.7 468.8,266.6 471.7,266.3 474.5,265.5 477.4,264.0 480.3,261.3 483.2,256.8 486.1,250.0 488.9,240.7 491.8,229.4 494.7,217.3 497.6,206.3 500.5,198.4 503.3,195.0 506.2,196.3 509.1,201.3 512.0,207.7 514.8,212.9 517.7,214.9 520.6,212.8 523.5,207.5 526.4,201.1 529.2,196.2 532.1,195.0 535.0,198.6 537.9,206.6 540.8,217.7 543.6,229.7 546.5,241.0 549.4,250.2 552.3,256.9 555.2,261.4 558.0,264.1 560.9,265.5 563.8,266.3 566.7,266.6 569.5,266.7 572.4,266.8 575.3,266.8 578.2,266.8 581.1,266.8 583.9,266.8 586.8,266.8 589.7,266.8 592.6,266.8 595.5,266.8 598.3,266.8 601.2,266.8 604.1,266.8 607.0,266.8 609.8,266.8 612.7,266.8 615.6,266.8 618.5,266.8 621.4,266.8 624.2,266.8 627.1,266.8 630.0,266.8' fill='none' stroke='#2c2419' stroke-width='1.6'/>
+<polyline points='345.0,266.8 347.9,266.8 350.8,266.8 353.6,266.8 356.5,266.8 359.4,266.8 362.3,266.8 365.2,266.8 368.0,266.8 370.9,266.8 373.8,266.8 376.7,266.8 379.5,266.8 382.4,266.8 385.3,266.8 388.2,266.8 391.1,266.8 393.9,266.8 396.8,266.8 399.7,266.8 402.6,266.8 405.5,266.8 408.3,266.8 411.2,266.8 414.1,266.8 417.0,266.8 419.8,266.8 422.7,266.8 425.6,266.8 428.5,266.8 431.4,266.8 434.2,266.8 437.1,266.8 440.0,266.8 442.9,266.8 445.8,266.8 448.6,266.8 451.5,266.7 454.4,266.6 457.3,266.4 460.2,266.0 463.0,265.5 465.9,264.6 468.8,263.3 471.7,261.5 474.5,259.0 477.4,255.8 480.3,251.8 483.2,247.0 486.1,241.6 488.9,235.8 491.8,229.9 494.7,224.2 497.6,219.1 500.5,214.9 503.3,211.5 506.2,209.2 509.1,207.7 512.0,206.9 514.8,206.5 517.7,206.4 520.6,206.5 523.5,206.9 526.4,207.7 529.2,209.2 532.1,211.5 535.0,214.9 537.9,219.1 540.8,224.2 543.6,229.9 546.5,235.8 549.4,241.6 552.3,247.0 555.2,251.8 558.0,255.8 560.9,259.0 563.8,261.5 566.7,263.3 569.5,264.6 572.4,265.5 575.3,266.0 578.2,266.4 581.1,266.6 583.9,266.7 586.8,266.8 589.7,266.8 592.6,266.8 595.5,266.8 598.3,266.8 601.2,266.8 604.1,266.8 607.0,266.8 609.8,266.8 612.7,266.8 615.6,266.8 618.5,266.8 621.4,266.8 624.2,266.8 627.1,266.8 630.0,266.8' fill='none' stroke='#b44a2d' stroke-width='1.3'/>
+<circle cx='345.0' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='350.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='356.5' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='362.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='368.0' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='373.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='379.5' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='385.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='391.1' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='396.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='402.6' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='408.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='414.1' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='419.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='425.6' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='431.4' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='437.1' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='442.9' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='448.6' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='454.4' cy='266.6' r='1.2' fill='#b44a2d'/><circle cx='460.2' cy='266.0' r='1.2' fill='#b44a2d'/><circle cx='465.9' cy='264.6' r='1.2' fill='#b44a2d'/><circle cx='471.7' cy='261.5' r='1.2' fill='#b44a2d'/><circle cx='477.4' cy='255.8' r='1.2' fill='#b44a2d'/><circle cx='483.2' cy='247.0' r='1.2' fill='#b44a2d'/><circle cx='488.9' cy='235.8' r='1.2' fill='#b44a2d'/><circle cx='494.7' cy='224.2' r='1.2' fill='#b44a2d'/><circle cx='500.5' cy='214.9' r='1.2' fill='#b44a2d'/><circle cx='506.2' cy='209.2' r='1.2' fill='#b44a2d'/><circle cx='512.0' cy='206.9' r='1.2' fill='#b44a2d'/><circle cx='517.7' cy='206.4' r='1.2' fill='#b44a2d'/><circle cx='523.5' cy='206.9' r='1.2' fill='#b44a2d'/><circle cx='529.2' cy='209.2' r='1.2' fill='#b44a2d'/><circle cx='535.0' cy='214.9' r='1.2' fill='#b44a2d'/><circle cx='540.8' cy='224.2' r='1.2' fill='#b44a2d'/><circle cx='546.5' cy='235.8' r='1.2' fill='#b44a2d'/><circle cx='552.3' cy='247.0' r='1.2' fill='#b44a2d'/><circle cx='558.0' cy='255.8' r='1.2' fill='#b44a2d'/><circle cx='563.8' cy='261.5' r='1.2' fill='#b44a2d'/><circle cx='569.5' cy='264.6' r='1.2' fill='#b44a2d'/><circle cx='575.3' cy='266.0' r='1.2' fill='#b44a2d'/><circle cx='581.1' cy='266.6' r='1.2' fill='#b44a2d'/><circle cx='586.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='592.6' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='598.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='604.1' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='609.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='615.6' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='621.4' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='627.1' cy='266.8' r='1.2' fill='#b44a2d'/>
+<text x='488' y='162' font-family='JetBrains Mono,monospace' font-size='9' fill='#2c2419' text-anchor='middle'>CFL = 0.5, NT = 60, T = 1.884 — гауссиан</text>
+<rect x='40.0' y='310' width='285' height='120' fill='#fff' stroke='#d9cfc0'/>
+<line x1='40.0' y1='408.8' x2='325' y2='408.8' stroke='#ede6da'/>
+<text x='36.0' y='412.3' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0</text>
+<line x1='40.0' y1='373.5' x2='325' y2='373.5' stroke='#ede6da'/>
+<text x='36.0' y='377.0' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0.5</text>
+<line x1='40.0' y1='338.2' x2='325' y2='338.2' stroke='#ede6da'/>
+<text x='36.0' y='341.7' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>1</text>
+<text x='40' y='441' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>0</text>
+<text x='182' y='441' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>π</text>
+<text x='325' y='441' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>2π</text>
+<polyline points='40.0,408.8 42.9,408.8 45.8,408.8 48.6,408.8 51.5,408.8 54.4,408.8 57.3,408.8 60.2,408.8 63.0,408.8 65.9,408.8 68.8,408.8 71.7,408.8 74.5,408.8 77.4,408.8 80.3,408.8 83.2,408.8 86.1,408.8 88.9,408.8 91.8,408.8 94.7,408.8 97.6,408.8 100.5,408.8 103.3,408.8 106.2,408.8 109.1,408.8 112.0,408.8 114.8,408.8 117.7,408.8 120.6,408.8 123.5,408.8 126.4,408.8 129.2,408.8 132.1,408.8 135.0,408.8 137.9,408.8 140.8,408.8 143.6,408.8 146.5,408.8 149.4,408.8 152.3,407.7 155.2,338.2 158.0,338.2 160.9,338.2 163.8,338.2 166.7,338.2 169.5,338.2 172.4,338.2 175.3,338.2 178.2,338.2 181.1,338.2 183.9,339.3 186.8,408.8 189.7,408.8 192.6,408.8 195.5,408.8 198.3,408.8 201.2,408.8 204.1,408.8 207.0,408.8 209.8,408.8 212.7,408.8 215.6,408.8 218.5,408.8 221.4,408.8 224.2,408.8 227.1,408.8 230.0,408.8 232.9,408.8 235.8,408.8 238.6,408.8 241.5,408.8 244.4,408.8 247.3,408.8 250.2,408.8 253.0,408.8 255.9,408.8 258.8,408.8 261.7,408.8 264.5,408.8 267.4,408.8 270.3,408.8 273.2,408.8 276.1,408.8 278.9,408.8 281.8,408.8 284.7,408.8 287.6,408.8 290.5,408.8 293.3,408.8 296.2,408.8 299.1,408.8 302.0,408.8 304.8,408.8 307.7,408.8 310.6,408.8 313.5,408.8 316.4,408.8 319.2,408.8 322.1,408.8 325.0,408.8' fill='none' stroke='#2c2419' stroke-width='1.6'/>
+<polyline points='40.0,408.8 42.9,408.8 45.8,408.8 48.6,408.8 51.5,408.8 54.4,408.8 57.3,408.8 60.2,408.8 63.0,408.8 65.9,408.8 68.8,408.8 71.7,408.8 74.5,408.8 77.4,408.8 80.3,408.8 83.2,408.8 86.1,408.8 88.9,408.8 91.8,408.8 94.7,408.8 97.6,408.8 100.5,408.8 103.3,408.8 106.2,408.8 109.1,408.8 112.0,408.8 114.8,408.8 117.7,408.8 120.6,408.8 123.5,408.8 126.4,408.8 129.2,408.7 132.1,408.5 135.0,408.0 137.9,407.0 140.8,405.0 143.6,401.5 146.5,396.2 149.4,388.7 152.3,379.5 155.2,369.3 158.0,359.4 160.9,351.2 163.8,345.4 166.7,342.1 169.5,341.2 172.4,342.4 175.3,345.6 178.2,350.9 181.1,358.3 183.9,367.6 186.8,377.8 189.7,387.7 192.6,396.0 195.5,402.0 198.3,405.8 201.2,407.7 204.1,408.5 207.0,408.8 209.8,408.8 212.7,408.8 215.6,408.8 218.5,408.8 221.4,408.8 224.2,408.8 227.1,408.8 230.0,408.8 232.9,408.8 235.8,408.8 238.6,408.8 241.5,408.8 244.4,408.8 247.3,408.8 250.2,408.8 253.0,408.8 255.9,408.8 258.8,408.8 261.7,408.8 264.5,408.8 267.4,408.8 270.3,408.8 273.2,408.8 276.1,408.8 278.9,408.8 281.8,408.8 284.7,408.8 287.6,408.8 290.5,408.8 293.3,408.8 296.2,408.8 299.1,408.8 302.0,408.8 304.8,408.8 307.7,408.8 310.6,408.8 313.5,408.8 316.4,408.8 319.2,408.8 322.1,408.8 325.0,408.8' fill='none' stroke='#b44a2d' stroke-width='1.3'/>
+<circle cx='40.0' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='45.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='51.5' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='57.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='63.0' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='68.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='74.5' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='80.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='86.1' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='91.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='97.6' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='103.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='109.1' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='114.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='120.6' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='126.4' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='132.1' cy='408.5' r='1.2' fill='#b44a2d'/><circle cx='137.9' cy='407.0' r='1.2' fill='#b44a2d'/><circle cx='143.6' cy='401.5' r='1.2' fill='#b44a2d'/><circle cx='149.4' cy='388.7' r='1.2' fill='#b44a2d'/><circle cx='155.2' cy='369.3' r='1.2' fill='#b44a2d'/><circle cx='160.9' cy='351.2' r='1.2' fill='#b44a2d'/><circle cx='166.7' cy='342.1' r='1.2' fill='#b44a2d'/><circle cx='172.4' cy='342.4' r='1.2' fill='#b44a2d'/><circle cx='178.2' cy='350.9' r='1.2' fill='#b44a2d'/><circle cx='183.9' cy='367.6' r='1.2' fill='#b44a2d'/><circle cx='189.7' cy='387.7' r='1.2' fill='#b44a2d'/><circle cx='195.5' cy='402.0' r='1.2' fill='#b44a2d'/><circle cx='201.2' cy='407.7' r='1.2' fill='#b44a2d'/><circle cx='207.0' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='212.7' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='218.5' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='224.2' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='230.0' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='235.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='241.5' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='247.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='253.0' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='258.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='264.5' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='270.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='276.1' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='281.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='287.6' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='293.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='299.1' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='304.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='310.6' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='316.4' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='322.1' cy='408.8' r='1.2' fill='#b44a2d'/>
+<text x='182' y='304' font-family='JetBrains Mono,monospace' font-size='9' fill='#2c2419' text-anchor='middle'>CFL = 0.75, NT = 40, T = 1.884 — ступенька</text>
+<rect x='345.0' y='310' width='285' height='120' fill='#fff' stroke='#d9cfc0'/>
+<line x1='345.0' y1='408.8' x2='630' y2='408.8' stroke='#ede6da'/>
+<text x='341.0' y='412.3' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0</text>
+<line x1='345.0' y1='373.5' x2='630' y2='373.5' stroke='#ede6da'/>
+<text x='341.0' y='377.0' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0.5</text>
+<line x1='345.0' y1='338.2' x2='630' y2='338.2' stroke='#ede6da'/>
+<text x='341.0' y='341.7' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>1</text>
+<text x='345' y='441' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>0</text>
+<text x='488' y='441' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>π</text>
+<text x='630' y='441' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>2π</text>
+<polyline points='345.0,408.8 347.9,408.8 350.8,408.8 353.6,408.8 356.5,408.8 359.4,408.8 362.3,408.8 365.2,408.8 368.0,408.8 370.9,408.8 373.8,408.8 376.7,408.8 379.5,408.8 382.4,408.8 385.3,408.8 388.2,408.8 391.1,408.8 393.9,408.8 396.8,408.8 399.7,408.8 402.6,408.8 405.5,408.8 408.3,408.8 411.2,408.8 414.1,408.8 417.0,408.8 419.8,408.8 422.7,408.8 425.6,408.8 428.5,408.8 431.4,408.8 434.2,408.8 437.1,408.8 440.0,408.8 442.9,408.8 445.8,408.8 448.6,408.8 451.5,408.8 454.4,408.8 457.3,408.8 460.2,408.8 463.0,408.8 465.9,408.7 468.8,408.6 471.7,408.3 474.5,407.5 477.4,406.0 480.3,403.3 483.2,398.8 486.1,392.0 488.9,382.7 491.8,371.4 494.7,359.3 497.6,348.3 500.5,340.4 503.3,337.0 506.2,338.3 509.1,343.3 512.0,349.7 514.8,354.9 517.7,356.9 520.6,354.8 523.5,349.5 526.4,343.1 529.2,338.2 532.1,337.0 535.0,340.6 537.9,348.6 540.8,359.7 543.6,371.7 546.5,383.0 549.4,392.2 552.3,398.9 555.2,403.4 558.0,406.1 560.9,407.5 563.8,408.3 566.7,408.6 569.5,408.7 572.4,408.8 575.3,408.8 578.2,408.8 581.1,408.8 583.9,408.8 586.8,408.8 589.7,408.8 592.6,408.8 595.5,408.8 598.3,408.8 601.2,408.8 604.1,408.8 607.0,408.8 609.8,408.8 612.7,408.8 615.6,408.8 618.5,408.8 621.4,408.8 624.2,408.8 627.1,408.8 630.0,408.8' fill='none' stroke='#2c2419' stroke-width='1.6'/>
+<polyline points='345.0,408.8 347.9,408.8 350.8,408.8 353.6,408.8 356.5,408.8 359.4,408.8 362.3,408.8 365.2,408.8 368.0,408.8 370.9,408.8 373.8,408.8 376.7,408.8 379.5,408.8 382.4,408.8 385.3,408.8 388.2,408.8 391.1,408.8 393.9,408.8 396.8,408.8 399.7,408.8 402.6,408.8 405.5,408.8 408.3,408.8 411.2,408.8 414.1,408.8 417.0,408.8 419.8,408.8 422.7,408.8 425.6,408.8 428.5,408.8 431.4,408.8 434.2,408.8 437.1,408.8 440.0,408.8 442.9,408.8 445.8,408.8 448.6,408.8 451.5,408.8 454.4,408.8 457.3,408.7 460.2,408.6 463.0,408.3 465.9,407.9 468.8,407.2 471.7,406.0 474.5,404.1 477.4,401.3 480.3,397.5 483.2,392.5 486.1,386.3 488.9,379.1 491.8,371.4 494.7,363.9 497.6,357.2 500.5,351.8 503.3,348.3 506.2,346.7 509.1,346.6 512.0,347.4 514.8,348.4 517.7,349.0 520.6,349.0 523.5,348.3 526.4,347.5 529.2,347.4 532.1,348.6 535.0,351.6 537.9,356.5 540.8,363.0 543.6,370.5 546.5,378.4 549.4,385.8 552.3,392.3 555.2,397.6 558.0,401.6 560.9,404.4 563.8,406.3 566.7,407.4 569.5,408.1 572.4,408.5 575.3,408.7 578.2,408.8 581.1,408.8 583.9,408.8 586.8,408.8 589.7,408.8 592.6,408.8 595.5,408.8 598.3,408.8 601.2,408.8 604.1,408.8 607.0,408.8 609.8,408.8 612.7,408.8 615.6,408.8 618.5,408.8 621.4,408.8 624.2,408.8 627.1,408.8 630.0,408.8' fill='none' stroke='#b44a2d' stroke-width='1.3'/>
+<circle cx='345.0' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='350.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='356.5' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='362.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='368.0' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='373.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='379.5' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='385.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='391.1' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='396.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='402.6' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='408.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='414.1' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='419.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='425.6' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='431.4' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='437.1' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='442.9' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='448.6' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='454.4' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='460.2' cy='408.6' r='1.2' fill='#b44a2d'/><circle cx='465.9' cy='407.9' r='1.2' fill='#b44a2d'/><circle cx='471.7' cy='406.0' r='1.2' fill='#b44a2d'/><circle cx='477.4' cy='401.3' r='1.2' fill='#b44a2d'/><circle cx='483.2' cy='392.5' r='1.2' fill='#b44a2d'/><circle cx='488.9' cy='379.1' r='1.2' fill='#b44a2d'/><circle cx='494.7' cy='363.9' r='1.2' fill='#b44a2d'/><circle cx='500.5' cy='351.8' r='1.2' fill='#b44a2d'/><circle cx='506.2' cy='346.7' r='1.2' fill='#b44a2d'/><circle cx='512.0' cy='347.4' r='1.2' fill='#b44a2d'/><circle cx='517.7' cy='349.0' r='1.2' fill='#b44a2d'/><circle cx='523.5' cy='348.3' r='1.2' fill='#b44a2d'/><circle cx='529.2' cy='347.4' r='1.2' fill='#b44a2d'/><circle cx='535.0' cy='351.6' r='1.2' fill='#b44a2d'/><circle cx='540.8' cy='363.0' r='1.2' fill='#b44a2d'/><circle cx='546.5' cy='378.4' r='1.2' fill='#b44a2d'/><circle cx='552.3' cy='392.3' r='1.2' fill='#b44a2d'/><circle cx='558.0' cy='401.6' r='1.2' fill='#b44a2d'/><circle cx='563.8' cy='406.3' r='1.2' fill='#b44a2d'/><circle cx='569.5' cy='408.1' r='1.2' fill='#b44a2d'/><circle cx='575.3' cy='408.7' r='1.2' fill='#b44a2d'/><circle cx='581.1' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='586.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='592.6' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='598.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='604.1' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='609.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='615.6' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='621.4' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='627.1' cy='408.8' r='1.2' fill='#b44a2d'/>
+<text x='488' y='304' font-family='JetBrains Mono,monospace' font-size='9' fill='#2c2419' text-anchor='middle'>CFL = 0.75, NT = 40, T = 1.884 — гауссиан</text>
+<text x='632' y='466' font-family='Source Serif 4,serif' font-size='9' fill='#6b5d4f' text-anchor='end' font-style='italic'>чёрная линия — точное решение, красная с маркерами — разностная схема</text>
+</svg>
     </div>
-    <div>
-      <div class="note"><span class="lbl">Геометрия</span>При \(a > 0\) характеристика приходит в узел <em>слева</em>, а шаблон берёт информацию <em>справа</em>: условие КФЛ нарушено при любом \(r\).</div>
-      <div class="example"><span class="lbl">Правило</span>При \(a < 0\) картина зеркальна: устойчива именно разность вперёд при \(|a|\tau/h \le 1\). Разность берётся <strong>против потока</strong>.</div>
+    <div class="note" style="font-size:.86em"><span class="lbl">Поверхности предсказали — расчёт показал</span>
+      <ul style="margin-bottom:0">
+        <li><strong>Ступенька размазана</strong>: короткие волны гасятся; сильнее всего при \(r = 0.5\) (долина до нуля), круче всего при \(r = 0.75\) — ближе к каналу \(r = 1\).</li>
+        <li><strong>Гауссиан узнаваем</strong>, пики потеряли высоту; при \(r = 0.5\) провал между ними заплыл.</li>
+        <li><strong>Осцилляций нет</strong> ни при каком \(r\): дисперсия есть, но короткие волны гасятся раньше, чем разъезжаются — схема монотонна (§8–§9).</li>
+        <li>Положение фронта верное: длинные волны бегут с \(\gamma \approx 1\).</li>
+      </ul>
     </div>
   </div>
-  <p class="bridge">А если взять симметричную разность — не «за» и не «против»?</p>
+  <p class="bridge">Второй паспорт — схема второго порядка. Построим её тем же способом, каким объяснён «уголок».</p>
 </section>
 
 <!-- 13 -->
 <section class="slide">
-  <div class="slide-num">§5.7 · Пример 3: центральная разность</div>
-  <h2>Пример 3. Центральная разность: КФЛ выполнено, схема неустойчива</h2>
-  <div class="eq">\[ \frac{u_m^{n+1} - u_m^n}{\tau} + a\,\frac{u_{m+1}^n - u_{m-1}^n}{2h} = 0 \quad\Longleftrightarrow\quad u_m^{n+1} = u_m^n - \frac{r}{2}\bigl(u_{m+1}^n - u_{m-1}^n\bigr). \tag{5.14} \]</div>
+  <div class="slide-num">§5.10 · Схема Лакса–Вендроффа: происхождение</div>
+  <h2>Лакс–Вендрофф: квадратичная интерполяция вдоль характеристики</h2>
+  <div class="eq" style="font-size:.92em">\[ \frac{u_j^{n+1} - u_j^n}{\tau} + c\,\frac{u_{j+1}^n - u_{j-1}^n}{2h} = \frac{c^2\tau}{2}\,\frac{u_{j+1}^n - 2u_j^n + u_{j-1}^n}{h^2} \tag{5.22} \]</div>
   <div class="two-col">
     <div>
-      <p class="small">Множители узлов \(m \pm 1\) равны \(e^{\pm i\alpha}\), и \(e^{i\alpha} - e^{-i\alpha} = 2i\sin\alpha\):</p>
-      <div class="eq">\[ \lambda = 1 - i\,r\sin\alpha, \qquad |\lambda|^2 = 1 + r^2\sin^2\alpha \ge 1. \tag{5.15} \]</div>
-      <p class="small">Абсолютно неустойчива — хотя при \(r \le 1\) условие КФЛ выполнено: основание характеристики лежит в \([x_{m-1}, x_{m+1}]\).</p>
+      <p class="lead">Решение постоянно вдоль характеристик. Из узла \((x_j, t_{n+1})\) проведём характеристику назад: она приходит в \(x_A = x_j - rh\) на слое \(t_n\), и \(u_j^{n+1} = u(x_A, t_n)\). Интерполируем по узлам слоя \(t_n\):</p>
+      <ul class="small">
+        <li>линейно по \(x_{j-1}, x_j\) — получается «уголок»;</li>
+        <li>квадратично по \(x_{j-1}, x_j, x_{j+1}\) многочленом Лагранжа:</li>
+      </ul>
+      <div class="eq" style="font-size:.88em">\[ u_j^{n+1} = \sum_{s=-1}^{1} u_{j+s}^n P_{j+s}(x_A), \]</div><div class="eq" style="font-size:.88em">\[ P_{j-1} = \tfrac{r(1+r)}{2},\quad P_j = 1 - r^2,\quad P_{j+1} = -\tfrac{r(1-r)}{2}. \tag{5.21} \]</div>
     </div>
     <div>
-      <div class="note"><span class="lbl">Мораль</span>КФЛ — необходимое условие, но не достаточное; спектральный признак точнее.</div>
-      <div class="example"><span class="lbl">Причина (§4)</span>П-форма п.д.п.: \(u_t + au_x = -\dfrac{a^2\tau}{2}u_{xx} + \dots\) — <em>отрицательная</em> схемная вязкость, «антидиффузия», раскачивающая короткие волны. В §5а (разбор 3): \(\|u^{n+1}\|^2 = \|u^n\|^2 + \tau^2a^2\|u_{\mathring x}\|^2\).</div>
+      <div class="example"><span class="lbl">Паспорт, пункты 1–2</span>Схема 3 из задания §4: явная, трёхточечная, порядок \(O(\tau^2 + h^2)\) на решении. П.д.п. не содержит \(u_{xx}\): схемной вязкости первого порядка нет; \(\beta = -\frac{ch^2}{6}(1 - r^2)\) — нормальная дисперсия.</div>
     </div>
   </div>
-  <p class="bridge">Неявные схемы ведут себя иначе — пример 4.</p>
+  <p class="bridge">Пункт 3 паспорта — характеристическое уравнение.</p>
 </section>
 
 <!-- 14 -->
 <section class="slide">
-  <div class="slide-num">§5.8 · Пример 4: неявный «уголок»</div>
-  <h2>Пример 4. Неявный «уголок»: безусловная устойчивость</h2>
-  <div class="eq">\[ \frac{u_m^{n+1} - u_m^n}{\tau} + a\,\frac{u_m^{n+1} - u_{m-1}^{n+1}}{h} = 0 \quad\Longleftrightarrow\quad (1 + r)\,u_m^{n+1} - r\,u_{m-1}^{n+1} = u_m^n. \tag{5.16} \]</div>
+  <div class="slide-num">§5.10 · Характеристическое уравнение</div>
+  <h2>Лакс–Вендрофф: \(q\), модуль, область устойчивости</h2>
+  <p class="small">Разрешаем (5.22) относительно \(u_j^{n+1}\), узлам \(j \pm 1\) отвечают \(e^{\mp ikh}\); \(e^{-ikh} - e^{ikh} = -2i\sin kh\), \(e^{-ikh} + e^{ikh} = 2\cos kh\):</p>
+  <div class="eq" style="font-size:.95em">\[ q = 1 - \frac r2\bigl(e^{-ikh} - e^{ikh}\bigr) + \frac{r^2}{2}\bigl(e^{-ikh} - 2 + e^{ikh}\bigr) = 1 - r^2(1 - \cos kh) + i\,r\sin kh. \tag{5.23} \]</div>
   <div class="two-col">
     <div>
-      <p class="small">Узлу \((m-1, n+1)\) отвечает \(\lambda e^{-i\alpha}\): \((1 + r)\lambda - r\lambda e^{-i\alpha} = 1\), откуда</p>
-      <div class="eq" style="font-size:.95em">\[ \lambda = \frac{1}{1 + r - r\,e^{-i\alpha}}, \qquad |\lambda|^2 = \frac{1}{1 + 4r(1 + r)\sin^2\frac{\alpha}{2}} \le 1 \tag{5.17} \]</div>
-      <p class="small">при всех \(r > 0\) (знаменатель — выражение (5.13)). Условие Неймана выполнено при любых \(\tau, h\).</p>
+      <p class="small">Положим \(s = \sin^2(kh/2)\): \(1 - \cos kh = 2s\), \(\sin^2 kh = 4s(1 - s)\). Тогда</p>
+      <div class="eq" style="font-size:.95em">\[ |q|^2 = (1 - 2r^2s)^2 + 4r^2s(1 - s) = 1 - 4r^2(1 - r^2)\sin^4\frac{kh}{2}. \tag{5.24} \]</div>
+      <p class="small">\(|q| \le 1\ \forall kh \iff r^2(1 - r^2) \ge 0 \iff r \in [0, 1]\).</p>
     </div>
-    <div>
-      <div class="note"><span class="lbl">Почему</span>В неявной схеме \(u_m^{n+1}\) связано уравнением со всеми узлами верхнего слоя левее \(m\): область зависимости бесконечна, КФЛ выполнено при любом \(r\).</div>
-      <div class="example"><span class="lbl">Цена</span>Система уравнений на каждом шаге; для переноса при \(a > 0\) — «бегущий счёт» слева направо при заданном \(u_0^{n+1}\).</div>
-    </div>
+    <div class="example"><span class="lbl">Сравните с «уголком»</span>Область устойчивости та же, \(r \in [0,1]\). Но поправка к единице пропорциональна \(\sin^4(kh/2) \sim (kh)^4\), а не \(\sin^2 \sim (kh)^2\): диссипативная поверхность касается единичной плоскости с четвёртым порядком — «плотное прилегание» схемы второго порядка.</div>
   </div>
-  <p class="bridge">Метод не привязан к уравнению переноса. Пример 5 — уравнение теплопроводности и целое семейство схем сразу.</p>
+  <p class="bridge">Пункт 4 паспорта — поверхности.</p>
 </section>
 
 <!-- 15 -->
 <section class="slide">
-  <div class="slide-num">§5.9 · Пример 5: схема с весами</div>
-  <h2>Пример 5. Уравнение теплопроводности, семейство схем с весом \(\sigma\)</h2>
-  <div class="eq" style="font-size:.95em">\[ \frac{u_m^{n+1} - u_m^n}{\tau} = \sigma\,\frac{u_{m+1}^{n+1} - 2u_m^{n+1} + u_{m-1}^{n+1}}{h^2} + (1 - \sigma)\,\frac{u_{m+1}^{n} - 2u_m^{n} + u_{m-1}^{n}}{h^2}, \qquad \sigma \in [0, 1]. \tag{5.18} \]</div>
+  <div class="slide-num">§5.10 · Поверхности Лакса–Вендроффа</div>
+  <h2>Диссипативная и дисперсионная поверхности схемы Лакса–Вендроффа</h2>
   <div class="two-col">
-    <div>
-      <p class="small">\(\sigma = 0\) — явная, \(\sigma = 1\) — неявная, \(\sigma = \tfrac12\) — Кранк–Николсон. Параметр \(\varkappa = \tau/h^2\). Вторая разность на гармонике даёт множитель</p>
-      <div class="eq" style="font-size:.95em">\[ e^{i\alpha} - 2 + e^{-i\alpha} = -4\sin^2\frac{\alpha}{2}. \]</div>
-      <p class="small">Обозначим \(s = \varkappa\sin^2(\alpha/2) \in [0, \varkappa]\).</p>
-    </div>
-    <div>
-      <p class="small">Подстановка: \(\lambda - 1 = -4s\bigl(\sigma\lambda + 1 - \sigma\bigr)\), откуда</p>
-      <div class="eq">\[ \lambda = \frac{1 - 4(1 - \sigma)s}{1 + 4\sigma s}. \tag{5.19} \]</div>
-      <div class="example"><span class="lbl">Заметьте</span>Множитель вещественный — схема симметрична по \(x\); осталось найти, когда \(-1 \le \lambda \le 1\).</div>
-    </div>
+    <div class="figure"><img src="img/atlas/surf_lw_diss.jpg" alt="Диссипация Лакса-Вендроффа" style="max-height:50vh"><div class="caption">а) \(|q(r, kh)|\): плотное прилегание к единице при малых \(kh\)</div></div>
+    <div class="figure"><img src="img/atlas/surf_lw_disp.jpg" alt="Дисперсия Лакса-Вендроффа" style="max-height:50vh"><div class="caption">б) \(\gamma(r, kh)\): нормальная дисперсия при всех \(r \in (0,1)\)</div></div>
   </div>
+  <p class="bridge">Рис. 5. Качественно — как у «уголка»; отличие — в порядке касания единичной плоскости и в знаке дисперсии (всюду нормальная, \(\beta = -\frac{ch^2}{6}(1 - r^2) < 0\)). Канал высокой точности — \(r = 1\).</p>
 </section>
 
 <!-- 16 -->
 <section class="slide">
-  <div class="slide-num">§5.9 · Пример 5: условие устойчивости</div>
-  <h2>Схема с весами: \(\sigma \ge \tfrac12 - \tfrac{h^2}{4\tau}\)</h2>
-  <div class="two-col">
-    <div>
-      <p class="small"><strong>\(\lambda \le 1\)</strong> — всегда: числитель (5.19) не больше знаменателя при \(s \ge 0\).</p>
-      <p class="small"><strong>\(\lambda \ge -1\)</strong> ⟺ \(1 - 4(1 - \sigma)s \ge -1 - 4\sigma s\) ⟺ \(4s(1 - 2\sigma) \le 2\).</p>
-      <ul class="small">
-        <li>\(\sigma \ge \tfrac12\): левая часть неположительна — верно при всех \(s\): <strong>безусловная устойчивость</strong>.</li>
-        <li>\(\sigma < \tfrac12\): нужно \(s \le \dfrac{1}{2(1 - 2\sigma)}\) при всех \(s \le \varkappa\), то есть \(\varkappa(1 - 2\sigma) \le \tfrac12\).</li>
-      </ul>
-      <div class="eq">\[ \sigma \ge \frac12 - \frac{h^2}{4\tau}; \qquad \sigma = 0:\ \ \tau \le \frac{h^2}{2}. \tag{5.20} \]</div>
+  <div class="slide-num">§5.10 · Тесты: Лакс–Вендрофф</div>
+  <h2>Тестовые расчёты: Лакс–Вендрофф</h2>
+  <div class="two-col wide-left">
+    <div class="figure">
+      <svg viewBox='0 0 640 472' xmlns='http://www.w3.org/2000/svg' style='max-width:640px'>
+<rect x='40.0' y='26' width='285' height='120' fill='#fff' stroke='#d9cfc0'/>
+<line x1='40.0' y1='124.8' x2='325' y2='124.8' stroke='#ede6da'/>
+<text x='36.0' y='128.3' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0</text>
+<line x1='40.0' y1='89.5' x2='325' y2='89.5' stroke='#ede6da'/>
+<text x='36.0' y='93.0' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0.5</text>
+<line x1='40.0' y1='54.2' x2='325' y2='54.2' stroke='#ede6da'/>
+<text x='36.0' y='57.7' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>1</text>
+<text x='40' y='157' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>0</text>
+<text x='182' y='157' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>π</text>
+<text x='325' y='157' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>2π</text>
+<polyline points='40.0,124.8 42.9,124.8 45.8,124.8 48.6,124.8 51.5,124.8 54.4,124.8 57.3,124.8 60.2,124.8 63.0,124.8 65.9,124.8 68.8,124.8 71.7,124.8 74.5,124.8 77.4,124.8 80.3,124.8 83.2,124.8 86.1,124.8 88.9,124.8 91.8,124.8 94.7,124.8 97.6,124.8 100.5,124.8 103.3,124.8 106.2,124.8 109.1,124.8 112.0,124.8 114.8,124.8 117.7,124.8 120.6,124.8 123.5,124.8 126.4,124.8 129.2,124.8 132.1,124.8 135.0,124.8 137.9,124.8 140.8,124.8 143.6,124.8 146.5,124.8 149.4,124.8 152.3,123.7 155.2,54.2 158.0,54.2 160.9,54.2 163.8,54.2 166.7,54.2 169.5,54.2 172.4,54.2 175.3,54.2 178.2,54.2 181.1,54.2 183.9,55.3 186.8,124.8 189.7,124.8 192.6,124.8 195.5,124.8 198.3,124.8 201.2,124.8 204.1,124.8 207.0,124.8 209.8,124.8 212.7,124.8 215.6,124.8 218.5,124.8 221.4,124.8 224.2,124.8 227.1,124.8 230.0,124.8 232.9,124.8 235.8,124.8 238.6,124.8 241.5,124.8 244.4,124.8 247.3,124.8 250.2,124.8 253.0,124.8 255.9,124.8 258.8,124.8 261.7,124.8 264.5,124.8 267.4,124.8 270.3,124.8 273.2,124.8 276.1,124.8 278.9,124.8 281.8,124.8 284.7,124.8 287.6,124.8 290.5,124.8 293.3,124.8 296.2,124.8 299.1,124.8 302.0,124.8 304.8,124.8 307.7,124.8 310.6,124.8 313.5,124.8 316.4,124.8 319.2,124.8 322.1,124.8 325.0,124.8' fill='none' stroke='#2c2419' stroke-width='1.6'/>
+<polyline points='40.0,124.8 42.9,124.8 45.8,124.8 48.6,124.8 51.5,124.8 54.4,124.8 57.3,124.8 60.2,124.9 63.0,124.9 65.9,124.7 68.8,124.8 71.7,125.0 74.5,125.0 77.4,124.5 80.3,124.5 83.2,125.1 86.1,125.5 88.9,124.7 91.8,123.6 94.7,124.3 97.6,126.3 100.5,126.7 103.3,124.3 106.2,121.7 109.1,122.6 112.0,126.5 114.8,129.5 117.7,128.6 120.6,124.1 123.5,118.8 126.4,116.1 129.2,119.0 132.1,127.8 135.0,138.8 137.9,145.0 140.8,140.7 143.6,126.2 146.5,107.9 149.4,93.2 152.3,84.9 155.2,80.4 158.0,74.7 160.9,65.1 163.8,52.8 166.7,42.3 169.5,37.8 172.4,41.3 175.3,51.7 178.2,66.1 181.1,81.4 183.9,95.1 186.8,105.8 189.7,113.5 192.6,118.5 195.5,121.5 198.3,123.2 201.2,124.0 204.1,124.5 207.0,124.7 209.8,124.8 212.7,124.8 215.6,124.8 218.5,124.8 221.4,124.8 224.2,124.8 227.1,124.8 230.0,124.8 232.9,124.8 235.8,124.8 238.6,124.8 241.5,124.8 244.4,124.8 247.3,124.8 250.2,124.8 253.0,124.8 255.9,124.8 258.8,124.8 261.7,124.8 264.5,124.8 267.4,124.8 270.3,124.8 273.2,124.8 276.1,124.8 278.9,124.8 281.8,124.8 284.7,124.8 287.6,124.8 290.5,124.8 293.3,124.8 296.2,124.8 299.1,124.8 302.0,124.8 304.8,124.8 307.7,124.8 310.6,124.8 313.5,124.8 316.4,124.8 319.2,124.8 322.1,124.8 325.0,124.8' fill='none' stroke='#b44a2d' stroke-width='1.3'/>
+<circle cx='40.0' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='45.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='51.5' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='57.3' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='63.0' cy='124.9' r='1.2' fill='#b44a2d'/><circle cx='68.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='74.5' cy='125.0' r='1.2' fill='#b44a2d'/><circle cx='80.3' cy='124.5' r='1.2' fill='#b44a2d'/><circle cx='86.1' cy='125.5' r='1.2' fill='#b44a2d'/><circle cx='91.8' cy='123.6' r='1.2' fill='#b44a2d'/><circle cx='97.6' cy='126.3' r='1.2' fill='#b44a2d'/><circle cx='103.3' cy='124.3' r='1.2' fill='#b44a2d'/><circle cx='109.1' cy='122.6' r='1.2' fill='#b44a2d'/><circle cx='114.8' cy='129.5' r='1.2' fill='#b44a2d'/><circle cx='120.6' cy='124.1' r='1.2' fill='#b44a2d'/><circle cx='126.4' cy='116.1' r='1.2' fill='#b44a2d'/><circle cx='132.1' cy='127.8' r='1.2' fill='#b44a2d'/><circle cx='137.9' cy='145.0' r='1.2' fill='#b44a2d'/><circle cx='143.6' cy='126.2' r='1.2' fill='#b44a2d'/><circle cx='149.4' cy='93.2' r='1.2' fill='#b44a2d'/><circle cx='155.2' cy='80.4' r='1.2' fill='#b44a2d'/><circle cx='160.9' cy='65.1' r='1.2' fill='#b44a2d'/><circle cx='166.7' cy='42.3' r='1.2' fill='#b44a2d'/><circle cx='172.4' cy='41.3' r='1.2' fill='#b44a2d'/><circle cx='178.2' cy='66.1' r='1.2' fill='#b44a2d'/><circle cx='183.9' cy='95.1' r='1.2' fill='#b44a2d'/><circle cx='189.7' cy='113.5' r='1.2' fill='#b44a2d'/><circle cx='195.5' cy='121.5' r='1.2' fill='#b44a2d'/><circle cx='201.2' cy='124.0' r='1.2' fill='#b44a2d'/><circle cx='207.0' cy='124.7' r='1.2' fill='#b44a2d'/><circle cx='212.7' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='218.5' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='224.2' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='230.0' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='235.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='241.5' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='247.3' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='253.0' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='258.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='264.5' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='270.3' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='276.1' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='281.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='287.6' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='293.3' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='299.1' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='304.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='310.6' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='316.4' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='322.1' cy='124.8' r='1.2' fill='#b44a2d'/>
+<text x='182' y='20' font-family='JetBrains Mono,monospace' font-size='9' fill='#2c2419' text-anchor='middle'>CFL = 0.25, NT = 120, T = 1.884 — ступенька</text>
+<rect x='345.0' y='26' width='285' height='120' fill='#fff' stroke='#d9cfc0'/>
+<line x1='345.0' y1='124.8' x2='630' y2='124.8' stroke='#ede6da'/>
+<text x='341.0' y='128.3' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0</text>
+<line x1='345.0' y1='89.5' x2='630' y2='89.5' stroke='#ede6da'/>
+<text x='341.0' y='93.0' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0.5</text>
+<line x1='345.0' y1='54.2' x2='630' y2='54.2' stroke='#ede6da'/>
+<text x='341.0' y='57.7' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>1</text>
+<text x='345' y='157' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>0</text>
+<text x='488' y='157' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>π</text>
+<text x='630' y='157' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>2π</text>
+<polyline points='345.0,124.8 347.9,124.8 350.8,124.8 353.6,124.8 356.5,124.8 359.4,124.8 362.3,124.8 365.2,124.8 368.0,124.8 370.9,124.8 373.8,124.8 376.7,124.8 379.5,124.8 382.4,124.8 385.3,124.8 388.2,124.8 391.1,124.8 393.9,124.8 396.8,124.8 399.7,124.8 402.6,124.8 405.5,124.8 408.3,124.8 411.2,124.8 414.1,124.8 417.0,124.8 419.8,124.8 422.7,124.8 425.6,124.8 428.5,124.8 431.4,124.8 434.2,124.8 437.1,124.8 440.0,124.8 442.9,124.8 445.8,124.8 448.6,124.8 451.5,124.8 454.4,124.8 457.3,124.8 460.2,124.8 463.0,124.8 465.9,124.7 468.8,124.6 471.7,124.3 474.5,123.5 477.4,122.0 480.3,119.3 483.2,114.8 486.1,108.0 488.9,98.7 491.8,87.4 494.7,75.3 497.6,64.3 500.5,56.4 503.3,53.0 506.2,54.3 509.1,59.3 512.0,65.7 514.8,70.9 517.7,72.9 520.6,70.8 523.5,65.5 526.4,59.1 529.2,54.2 532.1,53.0 535.0,56.6 537.9,64.6 540.8,75.7 543.6,87.7 546.5,99.0 549.4,108.2 552.3,114.9 555.2,119.4 558.0,122.1 560.9,123.5 563.8,124.3 566.7,124.6 569.5,124.7 572.4,124.8 575.3,124.8 578.2,124.8 581.1,124.8 583.9,124.8 586.8,124.8 589.7,124.8 592.6,124.8 595.5,124.8 598.3,124.8 601.2,124.8 604.1,124.8 607.0,124.8 609.8,124.8 612.7,124.8 615.6,124.8 618.5,124.8 621.4,124.8 624.2,124.8 627.1,124.8 630.0,124.8' fill='none' stroke='#2c2419' stroke-width='1.6'/>
+<polyline points='345.0,124.8 347.9,124.8 350.8,124.8 353.6,124.8 356.5,124.8 359.4,124.8 362.3,124.8 365.2,124.8 368.0,124.8 370.9,124.8 373.8,124.8 376.7,124.8 379.5,124.8 382.4,124.8 385.3,124.8 388.2,124.8 391.1,124.8 393.9,124.8 396.8,124.8 399.7,124.8 402.6,124.8 405.5,124.8 408.3,124.8 411.2,124.8 414.1,124.8 417.0,124.8 419.8,124.8 422.7,124.8 425.6,124.8 428.5,124.8 431.4,124.8 434.2,124.8 437.1,124.8 440.0,124.8 442.9,124.8 445.8,124.8 448.6,124.9 451.5,124.9 454.4,124.8 457.3,124.7 460.2,124.6 463.0,124.6 465.9,125.0 468.8,125.9 471.7,126.9 474.5,127.3 477.4,126.0 480.3,121.9 483.2,114.3 486.1,103.4 488.9,90.5 491.8,77.5 494.7,66.9 497.6,60.4 500.5,58.7 503.3,61.0 506.2,65.6 509.1,69.9 512.0,72.0 514.8,70.8 517.7,66.6 520.6,60.8 523.5,55.3 526.4,52.0 529.2,52.0 532.1,55.8 535.0,62.8 537.9,72.0 540.8,82.0 543.6,91.8 546.5,100.6 549.4,107.8 552.3,113.4 555.2,117.4 558.0,120.3 560.9,122.1 563.8,123.3 566.7,124.0 569.5,124.4 572.4,124.6 575.3,124.7 578.2,124.8 581.1,124.8 583.9,124.8 586.8,124.8 589.7,124.8 592.6,124.8 595.5,124.8 598.3,124.8 601.2,124.8 604.1,124.8 607.0,124.8 609.8,124.8 612.7,124.8 615.6,124.8 618.5,124.8 621.4,124.8 624.2,124.8 627.1,124.8 630.0,124.8' fill='none' stroke='#b44a2d' stroke-width='1.3'/>
+<circle cx='345.0' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='350.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='356.5' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='362.3' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='368.0' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='373.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='379.5' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='385.3' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='391.1' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='396.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='402.6' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='408.3' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='414.1' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='419.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='425.6' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='431.4' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='437.1' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='442.9' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='448.6' cy='124.9' r='1.2' fill='#b44a2d'/><circle cx='454.4' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='460.2' cy='124.6' r='1.2' fill='#b44a2d'/><circle cx='465.9' cy='125.0' r='1.2' fill='#b44a2d'/><circle cx='471.7' cy='126.9' r='1.2' fill='#b44a2d'/><circle cx='477.4' cy='126.0' r='1.2' fill='#b44a2d'/><circle cx='483.2' cy='114.3' r='1.2' fill='#b44a2d'/><circle cx='488.9' cy='90.5' r='1.2' fill='#b44a2d'/><circle cx='494.7' cy='66.9' r='1.2' fill='#b44a2d'/><circle cx='500.5' cy='58.7' r='1.2' fill='#b44a2d'/><circle cx='506.2' cy='65.6' r='1.2' fill='#b44a2d'/><circle cx='512.0' cy='72.0' r='1.2' fill='#b44a2d'/><circle cx='517.7' cy='66.6' r='1.2' fill='#b44a2d'/><circle cx='523.5' cy='55.3' r='1.2' fill='#b44a2d'/><circle cx='529.2' cy='52.0' r='1.2' fill='#b44a2d'/><circle cx='535.0' cy='62.8' r='1.2' fill='#b44a2d'/><circle cx='540.8' cy='82.0' r='1.2' fill='#b44a2d'/><circle cx='546.5' cy='100.6' r='1.2' fill='#b44a2d'/><circle cx='552.3' cy='113.4' r='1.2' fill='#b44a2d'/><circle cx='558.0' cy='120.3' r='1.2' fill='#b44a2d'/><circle cx='563.8' cy='123.3' r='1.2' fill='#b44a2d'/><circle cx='569.5' cy='124.4' r='1.2' fill='#b44a2d'/><circle cx='575.3' cy='124.7' r='1.2' fill='#b44a2d'/><circle cx='581.1' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='586.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='592.6' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='598.3' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='604.1' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='609.8' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='615.6' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='621.4' cy='124.8' r='1.2' fill='#b44a2d'/><circle cx='627.1' cy='124.8' r='1.2' fill='#b44a2d'/>
+<text x='488' y='20' font-family='JetBrains Mono,monospace' font-size='9' fill='#2c2419' text-anchor='middle'>CFL = 0.25, NT = 120, T = 1.884 — гауссиан</text>
+<rect x='40.0' y='168' width='285' height='120' fill='#fff' stroke='#d9cfc0'/>
+<line x1='40.0' y1='266.8' x2='325' y2='266.8' stroke='#ede6da'/>
+<text x='36.0' y='270.3' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0</text>
+<line x1='40.0' y1='231.5' x2='325' y2='231.5' stroke='#ede6da'/>
+<text x='36.0' y='235.0' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0.5</text>
+<line x1='40.0' y1='196.2' x2='325' y2='196.2' stroke='#ede6da'/>
+<text x='36.0' y='199.7' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>1</text>
+<text x='40' y='299' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>0</text>
+<text x='182' y='299' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>π</text>
+<text x='325' y='299' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>2π</text>
+<polyline points='40.0,266.8 42.9,266.8 45.8,266.8 48.6,266.8 51.5,266.8 54.4,266.8 57.3,266.8 60.2,266.8 63.0,266.8 65.9,266.8 68.8,266.8 71.7,266.8 74.5,266.8 77.4,266.8 80.3,266.8 83.2,266.8 86.1,266.8 88.9,266.8 91.8,266.8 94.7,266.8 97.6,266.8 100.5,266.8 103.3,266.8 106.2,266.8 109.1,266.8 112.0,266.8 114.8,266.8 117.7,266.8 120.6,266.8 123.5,266.8 126.4,266.8 129.2,266.8 132.1,266.8 135.0,266.8 137.9,266.8 140.8,266.8 143.6,266.8 146.5,266.8 149.4,266.8 152.3,265.7 155.2,196.2 158.0,196.2 160.9,196.2 163.8,196.2 166.7,196.2 169.5,196.2 172.4,196.2 175.3,196.2 178.2,196.2 181.1,196.2 183.9,197.3 186.8,266.8 189.7,266.8 192.6,266.8 195.5,266.8 198.3,266.8 201.2,266.8 204.1,266.8 207.0,266.8 209.8,266.8 212.7,266.8 215.6,266.8 218.5,266.8 221.4,266.8 224.2,266.8 227.1,266.8 230.0,266.8 232.9,266.8 235.8,266.8 238.6,266.8 241.5,266.8 244.4,266.8 247.3,266.8 250.2,266.8 253.0,266.8 255.9,266.8 258.8,266.8 261.7,266.8 264.5,266.8 267.4,266.8 270.3,266.8 273.2,266.8 276.1,266.8 278.9,266.8 281.8,266.8 284.7,266.8 287.6,266.8 290.5,266.8 293.3,266.8 296.2,266.8 299.1,266.8 302.0,266.8 304.8,266.8 307.7,266.8 310.6,266.8 313.5,266.8 316.4,266.8 319.2,266.8 322.1,266.8 325.0,266.8' fill='none' stroke='#2c2419' stroke-width='1.6'/>
+<polyline points='40.0,266.8 42.9,266.8 45.8,266.8 48.6,266.8 51.5,266.8 54.4,266.8 57.3,266.8 60.2,266.8 63.0,266.8 65.9,266.8 68.8,266.8 71.7,266.8 74.5,266.8 77.4,266.8 80.3,266.8 83.2,266.8 86.1,266.9 88.9,266.9 91.8,266.8 94.7,266.7 97.6,266.8 100.5,267.1 103.3,267.1 106.2,266.5 109.1,266.0 112.0,266.4 114.8,267.9 117.7,269.1 120.6,268.1 123.5,264.8 126.4,261.7 129.2,261.9 132.1,266.8 135.0,274.5 137.9,280.8 140.8,281.1 143.6,272.8 146.5,257.6 149.4,240.3 152.3,226.2 155.2,217.4 158.0,212.2 160.9,206.7 163.8,198.6 166.7,189.4 169.5,183.0 172.4,183.0 175.3,190.8 178.2,204.4 181.1,220.5 183.9,235.6 186.8,247.6 189.7,256.1 192.6,261.3 195.5,264.2 198.3,265.7 201.2,266.4 204.1,266.7 207.0,266.8 209.8,266.8 212.7,266.8 215.6,266.8 218.5,266.8 221.4,266.8 224.2,266.8 227.1,266.8 230.0,266.8 232.9,266.8 235.8,266.8 238.6,266.8 241.5,266.8 244.4,266.8 247.3,266.8 250.2,266.8 253.0,266.8 255.9,266.8 258.8,266.8 261.7,266.8 264.5,266.8 267.4,266.8 270.3,266.8 273.2,266.8 276.1,266.8 278.9,266.8 281.8,266.8 284.7,266.8 287.6,266.8 290.5,266.8 293.3,266.8 296.2,266.8 299.1,266.8 302.0,266.8 304.8,266.8 307.7,266.8 310.6,266.8 313.5,266.8 316.4,266.8 319.2,266.8 322.1,266.8 325.0,266.8' fill='none' stroke='#b44a2d' stroke-width='1.3'/>
+<circle cx='40.0' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='45.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='51.5' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='57.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='63.0' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='68.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='74.5' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='80.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='86.1' cy='266.9' r='1.2' fill='#b44a2d'/><circle cx='91.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='97.6' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='103.3' cy='267.1' r='1.2' fill='#b44a2d'/><circle cx='109.1' cy='266.0' r='1.2' fill='#b44a2d'/><circle cx='114.8' cy='267.9' r='1.2' fill='#b44a2d'/><circle cx='120.6' cy='268.1' r='1.2' fill='#b44a2d'/><circle cx='126.4' cy='261.7' r='1.2' fill='#b44a2d'/><circle cx='132.1' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='137.9' cy='280.8' r='1.2' fill='#b44a2d'/><circle cx='143.6' cy='272.8' r='1.2' fill='#b44a2d'/><circle cx='149.4' cy='240.3' r='1.2' fill='#b44a2d'/><circle cx='155.2' cy='217.4' r='1.2' fill='#b44a2d'/><circle cx='160.9' cy='206.7' r='1.2' fill='#b44a2d'/><circle cx='166.7' cy='189.4' r='1.2' fill='#b44a2d'/><circle cx='172.4' cy='183.0' r='1.2' fill='#b44a2d'/><circle cx='178.2' cy='204.4' r='1.2' fill='#b44a2d'/><circle cx='183.9' cy='235.6' r='1.2' fill='#b44a2d'/><circle cx='189.7' cy='256.1' r='1.2' fill='#b44a2d'/><circle cx='195.5' cy='264.2' r='1.2' fill='#b44a2d'/><circle cx='201.2' cy='266.4' r='1.2' fill='#b44a2d'/><circle cx='207.0' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='212.7' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='218.5' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='224.2' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='230.0' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='235.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='241.5' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='247.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='253.0' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='258.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='264.5' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='270.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='276.1' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='281.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='287.6' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='293.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='299.1' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='304.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='310.6' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='316.4' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='322.1' cy='266.8' r='1.2' fill='#b44a2d'/>
+<text x='182' y='162' font-family='JetBrains Mono,monospace' font-size='9' fill='#2c2419' text-anchor='middle'>CFL = 0.5, NT = 60, T = 1.884 — ступенька</text>
+<rect x='345.0' y='168' width='285' height='120' fill='#fff' stroke='#d9cfc0'/>
+<line x1='345.0' y1='266.8' x2='630' y2='266.8' stroke='#ede6da'/>
+<text x='341.0' y='270.3' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0</text>
+<line x1='345.0' y1='231.5' x2='630' y2='231.5' stroke='#ede6da'/>
+<text x='341.0' y='235.0' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0.5</text>
+<line x1='345.0' y1='196.2' x2='630' y2='196.2' stroke='#ede6da'/>
+<text x='341.0' y='199.7' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>1</text>
+<text x='345' y='299' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>0</text>
+<text x='488' y='299' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>π</text>
+<text x='630' y='299' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>2π</text>
+<polyline points='345.0,266.8 347.9,266.8 350.8,266.8 353.6,266.8 356.5,266.8 359.4,266.8 362.3,266.8 365.2,266.8 368.0,266.8 370.9,266.8 373.8,266.8 376.7,266.8 379.5,266.8 382.4,266.8 385.3,266.8 388.2,266.8 391.1,266.8 393.9,266.8 396.8,266.8 399.7,266.8 402.6,266.8 405.5,266.8 408.3,266.8 411.2,266.8 414.1,266.8 417.0,266.8 419.8,266.8 422.7,266.8 425.6,266.8 428.5,266.8 431.4,266.8 434.2,266.8 437.1,266.8 440.0,266.8 442.9,266.8 445.8,266.8 448.6,266.8 451.5,266.8 454.4,266.8 457.3,266.8 460.2,266.8 463.0,266.8 465.9,266.7 468.8,266.6 471.7,266.3 474.5,265.5 477.4,264.0 480.3,261.3 483.2,256.8 486.1,250.0 488.9,240.7 491.8,229.4 494.7,217.3 497.6,206.3 500.5,198.4 503.3,195.0 506.2,196.3 509.1,201.3 512.0,207.7 514.8,212.9 517.7,214.9 520.6,212.8 523.5,207.5 526.4,201.1 529.2,196.2 532.1,195.0 535.0,198.6 537.9,206.6 540.8,217.7 543.6,229.7 546.5,241.0 549.4,250.2 552.3,256.9 555.2,261.4 558.0,264.1 560.9,265.5 563.8,266.3 566.7,266.6 569.5,266.7 572.4,266.8 575.3,266.8 578.2,266.8 581.1,266.8 583.9,266.8 586.8,266.8 589.7,266.8 592.6,266.8 595.5,266.8 598.3,266.8 601.2,266.8 604.1,266.8 607.0,266.8 609.8,266.8 612.7,266.8 615.6,266.8 618.5,266.8 621.4,266.8 624.2,266.8 627.1,266.8 630.0,266.8' fill='none' stroke='#2c2419' stroke-width='1.6'/>
+<polyline points='345.0,266.8 347.9,266.8 350.8,266.8 353.6,266.8 356.5,266.8 359.4,266.8 362.3,266.8 365.2,266.8 368.0,266.8 370.9,266.8 373.8,266.8 376.7,266.8 379.5,266.8 382.4,266.8 385.3,266.8 388.2,266.8 391.1,266.8 393.9,266.8 396.8,266.8 399.7,266.8 402.6,266.8 405.5,266.8 408.3,266.8 411.2,266.8 414.1,266.8 417.0,266.8 419.8,266.8 422.7,266.8 425.6,266.8 428.5,266.8 431.4,266.8 434.2,266.8 437.1,266.8 440.0,266.8 442.9,266.8 445.8,266.8 448.6,266.8 451.5,266.8 454.4,266.8 457.3,266.7 460.2,266.7 463.0,266.8 465.9,267.1 468.8,267.7 471.7,268.2 474.5,268.3 477.4,266.9 480.3,263.1 483.2,256.3 486.1,246.5 488.9,234.4 491.8,221.9 494.7,210.9 497.6,203.3 500.5,200.2 503.3,201.2 506.2,205.1 509.1,209.6 512.0,212.7 514.8,212.9 517.7,209.9 520.6,204.8 523.5,199.3 526.4,195.4 529.2,194.5 532.1,197.4 535.0,203.8 537.9,212.7 540.8,222.8 543.6,233.0 546.5,242.1 549.4,249.7 552.3,255.5 555.2,259.7 558.0,262.6 560.9,264.4 563.8,265.5 566.7,266.1 569.5,266.5 572.4,266.7 575.3,266.7 578.2,266.8 581.1,266.8 583.9,266.8 586.8,266.8 589.7,266.8 592.6,266.8 595.5,266.8 598.3,266.8 601.2,266.8 604.1,266.8 607.0,266.8 609.8,266.8 612.7,266.8 615.6,266.8 618.5,266.8 621.4,266.8 624.2,266.8 627.1,266.8 630.0,266.8' fill='none' stroke='#b44a2d' stroke-width='1.3'/>
+<circle cx='345.0' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='350.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='356.5' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='362.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='368.0' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='373.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='379.5' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='385.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='391.1' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='396.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='402.6' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='408.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='414.1' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='419.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='425.6' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='431.4' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='437.1' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='442.9' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='448.6' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='454.4' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='460.2' cy='266.7' r='1.2' fill='#b44a2d'/><circle cx='465.9' cy='267.1' r='1.2' fill='#b44a2d'/><circle cx='471.7' cy='268.2' r='1.2' fill='#b44a2d'/><circle cx='477.4' cy='266.9' r='1.2' fill='#b44a2d'/><circle cx='483.2' cy='256.3' r='1.2' fill='#b44a2d'/><circle cx='488.9' cy='234.4' r='1.2' fill='#b44a2d'/><circle cx='494.7' cy='210.9' r='1.2' fill='#b44a2d'/><circle cx='500.5' cy='200.2' r='1.2' fill='#b44a2d'/><circle cx='506.2' cy='205.1' r='1.2' fill='#b44a2d'/><circle cx='512.0' cy='212.7' r='1.2' fill='#b44a2d'/><circle cx='517.7' cy='209.9' r='1.2' fill='#b44a2d'/><circle cx='523.5' cy='199.3' r='1.2' fill='#b44a2d'/><circle cx='529.2' cy='194.5' r='1.2' fill='#b44a2d'/><circle cx='535.0' cy='203.8' r='1.2' fill='#b44a2d'/><circle cx='540.8' cy='222.8' r='1.2' fill='#b44a2d'/><circle cx='546.5' cy='242.1' r='1.2' fill='#b44a2d'/><circle cx='552.3' cy='255.5' r='1.2' fill='#b44a2d'/><circle cx='558.0' cy='262.6' r='1.2' fill='#b44a2d'/><circle cx='563.8' cy='265.5' r='1.2' fill='#b44a2d'/><circle cx='569.5' cy='266.5' r='1.2' fill='#b44a2d'/><circle cx='575.3' cy='266.7' r='1.2' fill='#b44a2d'/><circle cx='581.1' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='586.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='592.6' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='598.3' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='604.1' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='609.8' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='615.6' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='621.4' cy='266.8' r='1.2' fill='#b44a2d'/><circle cx='627.1' cy='266.8' r='1.2' fill='#b44a2d'/>
+<text x='488' y='162' font-family='JetBrains Mono,monospace' font-size='9' fill='#2c2419' text-anchor='middle'>CFL = 0.5, NT = 60, T = 1.884 — гауссиан</text>
+<rect x='40.0' y='310' width='285' height='120' fill='#fff' stroke='#d9cfc0'/>
+<line x1='40.0' y1='408.8' x2='325' y2='408.8' stroke='#ede6da'/>
+<text x='36.0' y='412.3' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0</text>
+<line x1='40.0' y1='373.5' x2='325' y2='373.5' stroke='#ede6da'/>
+<text x='36.0' y='377.0' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0.5</text>
+<line x1='40.0' y1='338.2' x2='325' y2='338.2' stroke='#ede6da'/>
+<text x='36.0' y='341.7' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>1</text>
+<text x='40' y='441' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>0</text>
+<text x='182' y='441' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>π</text>
+<text x='325' y='441' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>2π</text>
+<polyline points='40.0,408.8 42.9,408.8 45.8,408.8 48.6,408.8 51.5,408.8 54.4,408.8 57.3,408.8 60.2,408.8 63.0,408.8 65.9,408.8 68.8,408.8 71.7,408.8 74.5,408.8 77.4,408.8 80.3,408.8 83.2,408.8 86.1,408.8 88.9,408.8 91.8,408.8 94.7,408.8 97.6,408.8 100.5,408.8 103.3,408.8 106.2,408.8 109.1,408.8 112.0,408.8 114.8,408.8 117.7,408.8 120.6,408.8 123.5,408.8 126.4,408.8 129.2,408.8 132.1,408.8 135.0,408.8 137.9,408.8 140.8,408.8 143.6,408.8 146.5,408.8 149.4,408.8 152.3,407.7 155.2,338.2 158.0,338.2 160.9,338.2 163.8,338.2 166.7,338.2 169.5,338.2 172.4,338.2 175.3,338.2 178.2,338.2 181.1,338.2 183.9,339.3 186.8,408.8 189.7,408.8 192.6,408.8 195.5,408.8 198.3,408.8 201.2,408.8 204.1,408.8 207.0,408.8 209.8,408.8 212.7,408.8 215.6,408.8 218.5,408.8 221.4,408.8 224.2,408.8 227.1,408.8 230.0,408.8 232.9,408.8 235.8,408.8 238.6,408.8 241.5,408.8 244.4,408.8 247.3,408.8 250.2,408.8 253.0,408.8 255.9,408.8 258.8,408.8 261.7,408.8 264.5,408.8 267.4,408.8 270.3,408.8 273.2,408.8 276.1,408.8 278.9,408.8 281.8,408.8 284.7,408.8 287.6,408.8 290.5,408.8 293.3,408.8 296.2,408.8 299.1,408.8 302.0,408.8 304.8,408.8 307.7,408.8 310.6,408.8 313.5,408.8 316.4,408.8 319.2,408.8 322.1,408.8 325.0,408.8' fill='none' stroke='#2c2419' stroke-width='1.6'/>
+<polyline points='40.0,408.8 42.9,408.8 45.8,408.8 48.6,408.8 51.5,408.8 54.4,408.8 57.3,408.8 60.2,408.8 63.0,408.8 65.9,408.8 68.8,408.8 71.7,408.8 74.5,408.8 77.4,408.8 80.3,408.8 83.2,408.8 86.1,408.8 88.9,408.8 91.8,408.8 94.7,408.8 97.6,408.8 100.5,408.8 103.3,408.8 106.2,408.9 109.1,408.8 112.0,408.7 114.8,408.7 117.7,408.9 120.6,409.3 123.5,409.4 126.4,408.4 129.2,406.6 132.1,406.1 135.0,409.1 137.9,415.0 140.8,419.8 143.6,418.3 146.5,407.9 149.4,390.8 152.3,371.9 155.2,356.6 158.0,347.6 160.9,344.0 163.8,342.1 166.7,338.3 169.5,332.1 172.4,327.3 175.3,328.9 178.2,339.3 181.1,356.2 183.9,374.6 186.8,389.9 189.7,399.9 192.6,405.3 195.5,407.7 198.3,408.5 201.2,408.8 204.1,408.8 207.0,408.8 209.8,408.8 212.7,408.8 215.6,408.8 218.5,408.8 221.4,408.8 224.2,408.8 227.1,408.8 230.0,408.8 232.9,408.8 235.8,408.8 238.6,408.8 241.5,408.8 244.4,408.8 247.3,408.8 250.2,408.8 253.0,408.8 255.9,408.8 258.8,408.8 261.7,408.8 264.5,408.8 267.4,408.8 270.3,408.8 273.2,408.8 276.1,408.8 278.9,408.8 281.8,408.8 284.7,408.8 287.6,408.8 290.5,408.8 293.3,408.8 296.2,408.8 299.1,408.8 302.0,408.8 304.8,408.8 307.7,408.8 310.6,408.8 313.5,408.8 316.4,408.8 319.2,408.8 322.1,408.8 325.0,408.8' fill='none' stroke='#b44a2d' stroke-width='1.3'/>
+<circle cx='40.0' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='45.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='51.5' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='57.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='63.0' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='68.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='74.5' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='80.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='86.1' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='91.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='97.6' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='103.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='109.1' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='114.8' cy='408.7' r='1.2' fill='#b44a2d'/><circle cx='120.6' cy='409.3' r='1.2' fill='#b44a2d'/><circle cx='126.4' cy='408.4' r='1.2' fill='#b44a2d'/><circle cx='132.1' cy='406.1' r='1.2' fill='#b44a2d'/><circle cx='137.9' cy='415.0' r='1.2' fill='#b44a2d'/><circle cx='143.6' cy='418.3' r='1.2' fill='#b44a2d'/><circle cx='149.4' cy='390.8' r='1.2' fill='#b44a2d'/><circle cx='155.2' cy='356.6' r='1.2' fill='#b44a2d'/><circle cx='160.9' cy='344.0' r='1.2' fill='#b44a2d'/><circle cx='166.7' cy='338.3' r='1.2' fill='#b44a2d'/><circle cx='172.4' cy='327.3' r='1.2' fill='#b44a2d'/><circle cx='178.2' cy='339.3' r='1.2' fill='#b44a2d'/><circle cx='183.9' cy='374.6' r='1.2' fill='#b44a2d'/><circle cx='189.7' cy='399.9' r='1.2' fill='#b44a2d'/><circle cx='195.5' cy='407.7' r='1.2' fill='#b44a2d'/><circle cx='201.2' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='207.0' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='212.7' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='218.5' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='224.2' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='230.0' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='235.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='241.5' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='247.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='253.0' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='258.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='264.5' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='270.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='276.1' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='281.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='287.6' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='293.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='299.1' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='304.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='310.6' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='316.4' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='322.1' cy='408.8' r='1.2' fill='#b44a2d'/>
+<text x='182' y='304' font-family='JetBrains Mono,monospace' font-size='9' fill='#2c2419' text-anchor='middle'>CFL = 0.75, NT = 40, T = 1.884 — ступенька</text>
+<rect x='345.0' y='310' width='285' height='120' fill='#fff' stroke='#d9cfc0'/>
+<line x1='345.0' y1='408.8' x2='630' y2='408.8' stroke='#ede6da'/>
+<text x='341.0' y='412.3' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0</text>
+<line x1='345.0' y1='373.5' x2='630' y2='373.5' stroke='#ede6da'/>
+<text x='341.0' y='377.0' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>0.5</text>
+<line x1='345.0' y1='338.2' x2='630' y2='338.2' stroke='#ede6da'/>
+<text x='341.0' y='341.7' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='end'>1</text>
+<text x='345' y='441' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>0</text>
+<text x='488' y='441' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>π</text>
+<text x='630' y='441' font-family='JetBrains Mono,monospace' font-size='8.5' fill='#6b5d4f' text-anchor='middle'>2π</text>
+<polyline points='345.0,408.8 347.9,408.8 350.8,408.8 353.6,408.8 356.5,408.8 359.4,408.8 362.3,408.8 365.2,408.8 368.0,408.8 370.9,408.8 373.8,408.8 376.7,408.8 379.5,408.8 382.4,408.8 385.3,408.8 388.2,408.8 391.1,408.8 393.9,408.8 396.8,408.8 399.7,408.8 402.6,408.8 405.5,408.8 408.3,408.8 411.2,408.8 414.1,408.8 417.0,408.8 419.8,408.8 422.7,408.8 425.6,408.8 428.5,408.8 431.4,408.8 434.2,408.8 437.1,408.8 440.0,408.8 442.9,408.8 445.8,408.8 448.6,408.8 451.5,408.8 454.4,408.8 457.3,408.8 460.2,408.8 463.0,408.8 465.9,408.7 468.8,408.6 471.7,408.3 474.5,407.5 477.4,406.0 480.3,403.3 483.2,398.8 486.1,392.0 488.9,382.7 491.8,371.4 494.7,359.3 497.6,348.3 500.5,340.4 503.3,337.0 506.2,338.3 509.1,343.3 512.0,349.7 514.8,354.9 517.7,356.9 520.6,354.8 523.5,349.5 526.4,343.1 529.2,338.2 532.1,337.0 535.0,340.6 537.9,348.6 540.8,359.7 543.6,371.7 546.5,383.0 549.4,392.2 552.3,398.9 555.2,403.4 558.0,406.1 560.9,407.5 563.8,408.3 566.7,408.6 569.5,408.7 572.4,408.8 575.3,408.8 578.2,408.8 581.1,408.8 583.9,408.8 586.8,408.8 589.7,408.8 592.6,408.8 595.5,408.8 598.3,408.8 601.2,408.8 604.1,408.8 607.0,408.8 609.8,408.8 612.7,408.8 615.6,408.8 618.5,408.8 621.4,408.8 624.2,408.8 627.1,408.8 630.0,408.8' fill='none' stroke='#2c2419' stroke-width='1.6'/>
+<polyline points='345.0,408.8 347.9,408.8 350.8,408.8 353.6,408.8 356.5,408.8 359.4,408.8 362.3,408.8 365.2,408.8 368.0,408.8 370.9,408.8 373.8,408.8 376.7,408.8 379.5,408.8 382.4,408.8 385.3,408.8 388.2,408.8 391.1,408.8 393.9,408.8 396.8,408.8 399.7,408.8 402.6,408.8 405.5,408.8 408.3,408.8 411.2,408.8 414.1,408.8 417.0,408.8 419.8,408.8 422.7,408.8 425.6,408.8 428.5,408.8 431.4,408.8 434.2,408.8 437.1,408.8 440.0,408.8 442.9,408.8 445.8,408.8 448.6,408.8 451.5,408.8 454.4,408.8 457.3,408.8 460.2,408.8 463.0,408.9 465.9,409.0 468.8,409.2 471.7,409.3 474.5,408.9 477.4,407.5 480.3,404.4 483.2,398.7 486.1,390.2 488.9,379.4 491.8,367.2 494.7,355.5 497.6,346.4 500.5,341.2 503.3,340.4 506.2,343.5 509.1,348.4 512.0,352.9 514.8,355.2 517.7,354.1 520.6,350.0 523.5,344.5 526.4,339.5 529.2,337.0 532.1,338.4 535.0,343.8 537.9,352.4 540.8,362.8 543.6,373.6 546.5,383.5 549.4,391.7 552.3,397.9 555.2,402.3 558.0,405.1 560.9,406.9 563.8,407.8 566.7,408.4 569.5,408.6 572.4,408.7 575.3,408.8 578.2,408.8 581.1,408.8 583.9,408.8 586.8,408.8 589.7,408.8 592.6,408.8 595.5,408.8 598.3,408.8 601.2,408.8 604.1,408.8 607.0,408.8 609.8,408.8 612.7,408.8 615.6,408.8 618.5,408.8 621.4,408.8 624.2,408.8 627.1,408.8 630.0,408.8' fill='none' stroke='#b44a2d' stroke-width='1.3'/>
+<circle cx='345.0' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='350.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='356.5' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='362.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='368.0' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='373.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='379.5' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='385.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='391.1' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='396.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='402.6' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='408.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='414.1' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='419.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='425.6' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='431.4' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='437.1' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='442.9' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='448.6' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='454.4' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='460.2' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='465.9' cy='409.0' r='1.2' fill='#b44a2d'/><circle cx='471.7' cy='409.3' r='1.2' fill='#b44a2d'/><circle cx='477.4' cy='407.5' r='1.2' fill='#b44a2d'/><circle cx='483.2' cy='398.7' r='1.2' fill='#b44a2d'/><circle cx='488.9' cy='379.4' r='1.2' fill='#b44a2d'/><circle cx='494.7' cy='355.5' r='1.2' fill='#b44a2d'/><circle cx='500.5' cy='341.2' r='1.2' fill='#b44a2d'/><circle cx='506.2' cy='343.5' r='1.2' fill='#b44a2d'/><circle cx='512.0' cy='352.9' r='1.2' fill='#b44a2d'/><circle cx='517.7' cy='354.1' r='1.2' fill='#b44a2d'/><circle cx='523.5' cy='344.5' r='1.2' fill='#b44a2d'/><circle cx='529.2' cy='337.0' r='1.2' fill='#b44a2d'/><circle cx='535.0' cy='343.8' r='1.2' fill='#b44a2d'/><circle cx='540.8' cy='362.8' r='1.2' fill='#b44a2d'/><circle cx='546.5' cy='383.5' r='1.2' fill='#b44a2d'/><circle cx='552.3' cy='397.9' r='1.2' fill='#b44a2d'/><circle cx='558.0' cy='405.1' r='1.2' fill='#b44a2d'/><circle cx='563.8' cy='407.8' r='1.2' fill='#b44a2d'/><circle cx='569.5' cy='408.6' r='1.2' fill='#b44a2d'/><circle cx='575.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='581.1' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='586.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='592.6' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='598.3' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='604.1' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='609.8' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='615.6' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='621.4' cy='408.8' r='1.2' fill='#b44a2d'/><circle cx='627.1' cy='408.8' r='1.2' fill='#b44a2d'/>
+<text x='488' y='304' font-family='JetBrains Mono,monospace' font-size='9' fill='#2c2419' text-anchor='middle'>CFL = 0.75, NT = 40, T = 1.884 — гауссиан</text>
+<text x='632' y='466' font-family='Source Serif 4,serif' font-size='9' fill='#6b5d4f' text-anchor='end' font-style='italic'>чёрная линия — точное решение, красная с маркерами — разностная схема</text>
+</svg>
     </div>
-    <div>
-      <div class="example"><span class="lbl">Та же схема — вторым методом</span>Здесь (5.20) получено как <em>необходимое</em> условие для задачи без границ. В §5а (разбор 4) оно же будет получено энергетическим методом как <em>достаточное</em> — для краевой задачи \(u_0 = u_N = 0\). Совпадение означает: ответ найден точно.</div>
-      <div class="note"><span class="lbl">Итог</span>Неявная схема и схема Кранка–Николсон устойчивы при любых \(\tau, h\); явная — при \(\tau \le h^2/2\).</div>
+    <div class="note" style="font-size:.86em"><span class="lbl">Сравнение двух паспортов</span>
+      <ul style="margin-bottom:0">
+        <li><strong>Гауссиан</strong> — почти без потерь: диссипация второго порядка мала; лёгкое отставание — нормальная дисперсия.</li>
+        <li><strong>Ступенька</strong> — крутой фронт, но <strong>осцилляции позади</strong>: короткие волны затухают слабо и бегут медленнее длинных (\(\gamma < 1\)) — отстают и образуют хвост. У «уголка» это скрывала диссипация.</li>
+        <li>Чем меньше \(r\), тем сильнее осцилляции: при \(r = 0.25\) поверхность \(\gamma\) дальше от единицы.</li>
+        <li>Пила у разрывов — общее свойство линейных схем порядка \(\ge 2\): <em>теорема Годунова</em> (§9). Нормальная дисперсия — пила сзади, аномальная — спереди.</li>
+      </ul>
     </div>
   </div>
-  <p class="bridge">Все пять схем были двухслойными. У трёхслойной характеристическое уравнение квадратное — и корней два.</p>
 </section>
 
 <!-- 17 -->
 <section class="slide">
-  <div class="slide-num">§5.10 · Трёхслойная схема «крест»</div>
-  <h2>Трёхслойная схема: квадратное характеристическое уравнение</h2>
-  <div class="eq">\[ \frac{u_m^{n+1} - u_m^{n-1}}{2\tau} + a\,\frac{u_{m+1}^n - u_{m-1}^n}{2h} = 0 \tag{5.21} \]</div>
-  <div class="two-col">
-    <div>
-      <p class="small">Узлу \((m, n-1)\) отвечает \(\lambda^{-1}\). После умножения на \(\lambda\):</p>
-      <div class="eq" style="font-size:.95em">\[ \lambda^2 + 2i\,r\sin\alpha\,\lambda - 1 = 0, \qquad \lambda_{1,2} = -i\,r\sin\alpha \pm \sqrt{1 - r^2\sin^2\alpha}. \tag{5.22} \]</div>
-      <p class="small">При \(r \le 1\) корень вещественный и \(|\lambda_{1,2}|^2 = (1 - r^2\sin^2\alpha) + r^2\sin^2\alpha = 1\): оба корня на единичной окружности — устойчива и <em>бездиссипативна</em>. При \(r > 1\) и \(\alpha = \pi/2\): \(\lambda_{1,2} = -i(r \pm \sqrt{r^2 - 1})\), один корень по модулю больше 1.</p>
-    </div>
-    <div>
-      <div class="note"><span class="lbl">Два корня — два решения</span>Гармоника трёхслойной схемы: \(c_1\lambda_1^n + c_2\lambda_2^n\); условие Неймана — для <strong>каждого</strong> корня.</div>
-      <div class="example"><span class="lbl">Реальный и паразитный</span>\(\lambda_1 \to 1\) при \(\alpha \to 0\) — реальный корень, аппроксимирует точный множитель. \(\lambda_2 \to -1\) — паразитный: эволюция рассогласования двух стартовых слоёв. Подробнее — упражнения §6.</div>
-    </div>
-  </div>
-  <p class="bridge">Кратные корни на единичной окружности дают член \(n\lambda^n\): условие \(|\lambda| \le 1\) уже не гарантирует ограниченности. Пора сказать точно, когда условие Неймана достаточно.</p>
+  <div class="slide-num">§5.11 · Паспорт схемы</div>
+  <h2>Паспорт схемы: «уголок» и Лакс–Вендрофф</h2>
+  <table class="sum" style="font-size:.7em">
+    <tr><th style="width:20%">Пункт</th><th>«Уголок» (A)</th><th>Лакс–Вендрофф</th></tr>
+    <tr><td>Происхождение, порядок</td><td>линейная интерполяция; \(O(\tau + h)\)</td><td>квадратичная интерполяция; \(O(\tau^2 + h^2)\)</td></tr>
+    <tr><td>П-форма п.д.п.</td><td>\(u_t + cu_x = \frac{ch}{2}(1-r)u_{xx} - \frac{ch^2}{6}(1-r)(1-2r)u_{xxx}\)</td><td>\(u_t + cu_x = -\frac{ch^2}{6}(1-r^2)u_{xxx} + O(h^3)\)</td></tr>
+    <tr><td>Характеристическое уравнение</td><td>\(q = 1 - r + re^{ikh}\)</td><td>\(q = 1 - r^2(1 - \cos kh) + ir\sin kh\)</td></tr>
+    <tr><td>Модуль</td><td>\(|q|^2 = 1 - 4r(1-r)\sin^2\frac{kh}{2}\)</td><td>\(|q|^2 = 1 - 4r^2(1-r^2)\sin^4\frac{kh}{2}\)</td></tr>
+    <tr><td>Область устойчивости</td><td>\(r \in [0, 1]\)</td><td>\(r \in [0, 1]\)</td></tr>
+    <tr><td>Диссипация</td><td>первого порядка; максимум при \(r = \tfrac12\)</td><td>второго порядка; слабая</td></tr>
+    <tr><td>Дисперсия</td><td>нормальная при \(r < \tfrac12\), аномальная при \(r > \tfrac12\)</td><td>нормальная при всех \(r < 1\)</td></tr>
+    <tr><td>Канал высокой точности</td><td>\(r = 1\)</td><td>\(r = 1\)</td></tr>
+    <tr><td>Ступенька / гауссиан</td><td>размазана, без осцилляций / пики теряют высоту</td><td>крутой фронт, осцилляции позади / почти точно</td></tr>
+  </table>
+  <p class="bridge">Паспорта Бима–Уорминга, «креста» и неявного уголка — упражнения §5.13 и интерактивные поверхности на странице лекции.</p>
 </section>
 
 <!-- 18 -->
 <section class="slide">
-  <div class="slide-num">§5.11 · Границы и достаточность</div>
-  <h2>Когда условия Неймана достаточно, а когда — нет</h2>
+  <div class="slide-num">§5 · Итоги</div>
+  <h2>Итоги §5</h2>
   <div class="two-col">
     <div>
-      <div class="theorem" data-num="2">Пусть двухслойная схема с постоянными коэффициентами рассматривается на периодической сетке из \(N\) узлов и \(|\lambda(\alpha)| \le 1\) при всех \(\alpha\). Тогда \(\|u^n\| \le \|u^0\|\) в сеточной норме \(L_2\).</div>
-      <div class="proof small"><strong>Доказательство.</strong> Гармоники \(\alpha_k = 2\pi k/N\) — ортогональный базис; \(u^0 = \sum c_ke_{\alpha_k}\), по лемме 1 \(u^n = \sum c_k\lambda(\alpha_k)^ne_{\alpha_k}\), и по равенству Парсеваля
-        <span style="font-size:.85em">\[ \|u^n\|^2 = \sum_k|c_k|^2|\lambda(\alpha_k)|^{2n}\|e_{\alpha_k}\|^2 \le \max_k|\lambda(\alpha_k)|^{2n}\,\|u^0\|^2. \]</span>
-      </div>
+      <ol class="small">
+        <li><strong>Бегущая волна</strong> \(q^ne^{-ikhj}\); правило (5.3); характеристическое уравнение \(q(r, kh)\).</li>
+        <li><strong>Модуль</strong> — амплитуда за шаг: область устойчивости, численная диссипация, диссипативная поверхность.</li>
+        <li><strong>Аргумент</strong> — фаза: \(\omega = \arg q/\tau - (i/\tau)\ln|q|\), \(\gamma = \arg q/(r\,kh)\); нормальная и аномальная дисперсия, дисперсионная поверхность.</li>
+        <li><strong>П.д.п.</strong>: чётные производные → диссипация, нечётные → дисперсия; знак \(\nu\) — устойчивость.</li>
+        <li><strong>Суперпозиция</strong>: поверхности предсказывают перенос любого профиля; канал высокой точности у \(r = 1\).</li>
+        <li><strong>Паспорт</strong>: «уголок» — размазывает, монотонен; Лакс–Вендрофф — точен на гладком, осциллирует у разрывов.</li>
+      </ol>
     </div>
     <div>
-      <div class="note"><span class="lbl">Требования метода (лемма 1)</span>Линейность и однородность; постоянные коэффициенты; отсутствие границ. Иначе гармоники — не собственные функции.</div>
-      <div class="example"><span class="lbl">Недостаточно</span>
-        <ul style="margin-bottom:0">
-          <li><strong>Системы</strong>: \(\lambda\) — матрица; при недиагонализуемой матрице \(\|G^n\|\) растёт (условия Крайса).</li>
-          <li><strong>Многослойные схемы</strong> с кратными корнями на окружности: рост \(n\lambda^n\).</li>
-          <li><strong>Границы, переменные коэффициенты</strong>: метод не формулируется.</li>
-          <li>Теорема 2 говорит только о норме \(L_2\), не о \(C\).</li>
-        </ul>
-      </div>
+      <div class="example"><span class="lbl">Ключевой вывод</span>Гладкие профили переносятся хорошо даже при умеренной диссипации; разрывные требуют выбора числа Куранта и, в конечном счёте, схем, устроенных иначе (§8–§10).</div>
+      <div class="note"><span class="lbl">Дальше</span>§7 — метод неопределённых коэффициентов: как строить схемы с нужными свойствами. §9 — теорема Годунова.</div>
     </div>
-  </div>
-  <p class="bridge">Инструмент, дающий <strong>достаточные</strong> условия и работающий с границами и переменными коэффициентами, — энергетический метод (§5а).</p>
-</section>
-
-<!-- 19 -->
-<section class="slide">
-  <div class="slide-num">§5.12 · Итоги</div>
-  <h2>Итоги §5: шесть схем</h2>
-  <table class="sum">
-    <tr><th>Схема</th><th>\(\lambda(\alpha)\)</th><th>\(|\lambda|^2\)</th><th>Область устойчивости</th></tr>
-    <tr><td>«Уголок», явная</td><td>\(1 - r + re^{-i\alpha}\)</td><td>\(1 - 4r(1-r)\sin^2\frac{\alpha}{2}\)</td><td>\(0 \le r \le 1\)</td></tr>
-    <tr><td>Разность вперёд, явная</td><td>\(1 + r - re^{i\alpha}\)</td><td>\(1 + 4r(1+r)\sin^2\frac{\alpha}{2}\)</td><td>пуста</td></tr>
-    <tr><td>Центральная, явная</td><td>\(1 - ir\sin\alpha\)</td><td>\(1 + r^2\sin^2\alpha\)</td><td>пуста</td></tr>
-    <tr><td>Неявный «уголок»</td><td>\(\bigl(1 + r - re^{-i\alpha}\bigr)^{-1}\)</td><td>\(\bigl(1 + 4r(1+r)\sin^2\frac{\alpha}{2}\bigr)^{-1}\)</td><td>все \(r > 0\)</td></tr>
-    <tr><td>Теплопроводность, вес \(\sigma\)</td><td>\(\dfrac{1 - 4(1-\sigma)s}{1 + 4\sigma s}\)</td><td>\(\lambda^2\)</td><td>\(\sigma \ge \tfrac12 - \tfrac{h^2}{4\tau}\)</td></tr>
-    <tr><td>«Крест», трёхслойная</td><td>\(-ir\sin\alpha \pm \sqrt{1 - r^2\sin^2\alpha}\)</td><td>\(1\) при \(r \le 1\)</td><td>\(0 \le r \le 1\)</td></tr>
-  </table>
-  <div class="two-col">
-    <div class="example"><span class="lbl">Порядок действий</span>Проверить применимость → разрешить схему, ввести \(r\) или \(\varkappa\) → подставить гармонику по (5.3) → найти \(\lambda\) (все корни) и \(|\lambda|^2\) → потребовать \(|\lambda| \le 1\) при всех \(\alpha\) (худшая гармоника — «пила» или \(\alpha = \pi/2\)).</div>
-    <div class="note"><span class="lbl">Помнить</span>Условие необходимое; для скалярных двухслойных схем в \(L_2\) — и достаточное (теорема 2).</div>
-  </div>
-</section>
-
-<!-- 20 -->
-<section class="slide section">
-  <h1>Далее</h1>
-  <div class="two-col" style="text-align:left;max-width:52rem;margin:0 auto">
-    <div class="tile ok" style="grid-template-columns:1fr"><div><div class="t">§5а. Энергетический метод</div><div class="d">Те же схемы — вторым методом. Достаточные условия; краевые условия и переменные коэффициенты.</div></div></div>
-    <div class="tile" style="grid-template-columns:1fr"><div><div class="t">§6. Диссипация и дисперсия</div><div class="d">Модуль и аргумент \(\lambda(\alpha)\) как паспорт схемы: поверхности, тесты, атлас.</div></div></div>
   </div>
 </section>
 
@@ -434,10 +684,10 @@ window.MathJax = {
   <a href="s1-05.html" class="back" title="Полный текст лекции">← полная лекция</a>
   <div class="center">
     <button id="btnPrev" onclick="prev()" title="←">◀</button>
-    <span class="counter" id="counter">1 / 20</span>
+    <span class="counter" id="counter">1 / 18</span>
     <button id="btnNext" onclick="next()" title="→ / Space">▶</button>
   </div>
-  <a href="s1-05a-slides.html" class="back" title="Следующая лекция">§5а →</a>
+  <a href="s1-07.html" class="back" title="Следующая лекция">§7 →</a>
 </div>
 
 <script>
@@ -479,7 +729,7 @@ window.MathJax = {
   window.__slidesIndex = function () { return i; };
 })();
 (function initSlideTools() {
-  function ready() { if (!window.CFDSlideTools) return; window.CFDSlideTools.init({ slidesSelector: '.slide', activeClass: 'active', hudSelector: '.hud', projectName: 'sem1-05-slides', getCurrentIndex: function () { return window.__slidesIndex ? window.__slidesIndex() : 0; }, onGoToSlide: function (n) { if (window.__slidesShow) window.__slidesShow(n); } }); }
+  function ready() { if (!window.CFDSlideTools) return; window.CFDSlideTools.init({ slidesSelector: '.slide', activeClass: 'active', hudSelector: '.hud', projectName: 'sem1-06-slides', getCurrentIndex: function () { return window.__slidesIndex ? window.__slidesIndex() : 0; }, onGoToSlide: function (n) { if (window.__slidesShow) window.__slidesShow(n); } }); }
   if (window.CFDSlideTools) ready(); else window.addEventListener('load', ready);
 })();
 </script>

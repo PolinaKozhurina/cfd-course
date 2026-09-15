@@ -546,14 +546,14 @@
   function showError(msg) {
     const el = document.getElementById("auth-error");
     el.textContent = msg;
-    el.style.display = "";
+    el.style.display = "block";
     el.style.background = "#fde8e8";
     el.style.color = "#c44";
   }
   function showInfo(msg) {
     const el = document.getElementById("auth-error");
     el.textContent = msg;
-    el.style.display = "";
+    el.style.display = "block";
     el.style.background = "#e8f4f0";
     el.style.color = "#1a6b5a";
   }

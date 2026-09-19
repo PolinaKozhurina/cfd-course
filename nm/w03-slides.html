@@ -6,251 +6,1054 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ЧМ · §3 Слайды · Полиномиальная интерполяция</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script>window.MathJax = {tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },options: { skipHtmlTags: ['script','noscript','style','textarea'] }};</script>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
 <script src="../js/slide-tools.js"></script>
 <style>
 :root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
-body{font-family:'Source Serif 4',Georgia,serif;font-size:24px;line-height:1.55;color:var(--text);background:var(--bg);overflow:hidden}
+html{font-size:clamp(13px, min(2.78vh, 1.53vw), 38px)}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:1rem;line-height:1.55;color:var(--text);background:var(--bg);overflow:hidden}
+
 .slide{position:fixed;inset:0;padding:0;display:none;overflow:auto}
 .slide.active{display:flex;align-items:center;justify-content:center}
-.slide-content{width:100%;max-width:min(96vw, 1600px);margin:auto;padding:1.4rem 1.6rem 2.8rem;box-sizing:border-box}
-.slide.active .slide-content > *{animation: slideStep .38s cubic-bezier(.22,.61,.36,1) both;animation-delay: calc(var(--i, 0) * 85ms)}
+.slide-content{width:100%;max-width:96vw;margin:auto;padding:1rem 1.4rem 2.6rem;box-sizing:border-box}
+
+.slide.active .slide-content > *{
+  animation: slideStep .38s cubic-bezier(.22,.61,.36,1) both;
+  animation-delay: calc(var(--i, 0) * 85ms);
+}
 @keyframes slideStep{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-.slide.active .eq{animation: formulaIn .55s cubic-bezier(.22,.61,.36,1) both;animation-delay: calc(var(--i, 0) * 85ms);transform-origin: center}
-@keyframes formulaIn{0%{opacity:0;transform:scale(.92) translateY(4px);filter:blur(3.5px)}55%{opacity:1;transform:scale(1.02);filter:blur(0)}100%{opacity:1;transform:scale(1)}}
-.slide.active .eq::after{content:'';position:absolute;left:0;right:0;bottom:-6px;height:2px;background:linear-gradient(90deg,transparent,var(--accent) 50%,transparent);transform:scaleX(0);opacity:0;animation: formulaUnderline .55s ease-out both;animation-delay: calc(var(--i, 0) * 85ms + .35s)}
+.slide.active .eq{
+  animation: formulaIn .55s cubic-bezier(.22,.61,.36,1) both;
+  animation-delay: calc(var(--i, 0) * 85ms);
+  transform-origin: center;
+}
+@keyframes formulaIn{
+  0%{opacity:0;transform:scale(.92) translateY(4px);filter:blur(3.5px)}
+  55%{opacity:1;transform:scale(1.02);filter:blur(0)}
+  100%{opacity:1;transform:scale(1)}
+}
+.slide.active .eq::after{
+  content:'';position:absolute;left:0;right:0;bottom:-6px;height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent) 50%,transparent);
+  transform:scaleX(0);opacity:0;
+  animation: formulaUnderline .55s ease-out both;
+  animation-delay: calc(var(--i, 0) * 85ms + .35s);
+}
 .slide.active .eq{position:relative}
 @keyframes formulaUnderline{0%{transform:scaleX(0);opacity:0}40%{transform:scaleX(1);opacity:.7}100%{transform:scaleX(1);opacity:0}}
 .slide.title.active .slide-content > *{animation:slideStep .55s ease both;animation-delay:calc(var(--i,0) * 140ms)}
 @media (prefers-reduced-motion: reduce){.slide.active .slide-content > *, .slide.active .eq, .slide.active .eq::after{animation:none}}
-.slide-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:.6rem}
-h1{font-family:'Playfair Display',serif;font-weight:900;font-size:2.6rem;line-height:1.12;color:var(--text);margin-bottom:1rem;letter-spacing:-.01em}
-h2{font-family:'Playfair Display',serif;font-weight:700;font-size:1.8rem;color:var(--accent);margin-bottom:1.2rem;line-height:1.15}
+
+.slide-num{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--text3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:.6rem}
+h1{font-family:'Playfair Display',serif;font-weight:900;font-size:2.3rem;line-height:1.12;color:var(--text);margin-bottom:1rem;letter-spacing:-.01em}
+h2{font-family:'Playfair Display',serif;font-weight:700;font-size:1.45rem;color:var(--accent);margin-bottom:.8rem;line-height:1.15}
 h3{font-family:'Source Serif 4',serif;font-weight:700;font-size:1.15rem;color:var(--text);margin:1rem 0 .5rem}
-p{margin-bottom:.9rem}
+p{margin-bottom:.6rem}
 ul,ol{margin:0 0 .9rem 1.6rem;line-height:1.65}
 li{margin-bottom:.35rem}
 em{color:var(--accent2)}
 strong{color:var(--text)}
 code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2);padding:1px 6px;border-radius:3px}
-.eq{margin:1.2rem 0;text-align:center;font-size:1.05em}
-.definition,.condition,.theorem{position:relative;padding:1rem 1.3rem 1rem 3.2rem;border-radius:6px;margin:1rem 0;border:none;overflow:hidden;min-height:11rem}
-.definition{background:#e7efe8}.condition{background:#f2e5d6}.theorem{background:#e0e8f2}
+.eq{margin:.7rem 0;text-align:center;font-size:1.05em}
+
+.definition,.condition,.theorem{position:relative;padding:.8rem 1.1rem .8rem 2.8rem;border-radius:6px;margin:.7rem 0;border:none;overflow:hidden;min-height:4.5rem}
+.definition{background:#e7efe8}
+.condition{background:#f2e5d6}
+.theorem{background:#e0e8f2}
 .definition strong,.condition strong,.theorem strong{color:var(--text)}
-.definition::before,.condition::before,.theorem::before{position:absolute;left:0;top:0;bottom:0;width:2.1rem;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase}
+.definition::before,.condition::before,.theorem::before{
+  position:absolute;left:0;top:0;bottom:0;width:2.1rem;
+  display:flex;align-items:center;justify-content:center;
+  writing-mode:vertical-rl;transform:rotate(180deg);
+  font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:500;
+  letter-spacing:.22em;text-transform:uppercase;
+}
 .definition::before{background:#d0dfd4;color:#3d6b5a;content:'Определение'}
 .definition[data-num]::before{content:'Определение ' attr(data-num)}
 .condition::before{background:#e5d1b8;color:#8a5236;content:'Условие'}
 .condition[data-num]::before{content:'Условие ' attr(data-num)}
 .theorem::before{background:#c8d5e6;color:#4a5f88;content:'Теорема'}
 .theorem[data-num]::before{content:'Теорема ' attr(data-num)}
+
+.definition .mini-ex,.condition .mini-ex,.theorem .mini-ex{margin-top:.7rem;padding-top:.5rem;border-top:1px dashed rgba(44,36,25,.25);font-size:.9em}
+.mini-ex b{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--text2);margin-right:.4rem}
 .example{background:#e0e8f2;border-left:3px solid #7d95bd;padding:.8rem 1.1rem;border-radius:0 6px 6px 0;margin:.5rem 0 .8rem;font-size:.9em;color:var(--text)}
 .example .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#4a5f88;margin-bottom:.35rem}
 .example ul{margin:.15rem 0 0 1.1rem;font-size:.94em}
-@media(max-width:900px){.definition,.condition,.theorem{padding-left:2.6rem}.definition::before,.condition::before,.theorem::before{width:1.8rem;font-size:.56rem}}
+.example li{margin-bottom:.15rem}
+@media(max-width:900px){
+  .definition,.condition,.theorem{padding-left:2.6rem}
+  .definition::before,.condition::before,.theorem::before{width:1.8rem;font-size:.56rem;letter-spacing:.18em}
+}
 .figure{margin:1rem auto;text-align:center;max-width:100%}
 .figure svg{max-width:100%;height:auto}
 .figure .caption{font-size:.78rem;color:var(--text2);margin-top:.4rem;font-style:italic}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
-.callout{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;font-size:.95em;color:var(--text2)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;align-items:start}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;align-items:start}
+.lead{font-size:.86em;color:var(--text2);margin-bottom:.5rem}
+.figure{width:100%}
+.slide .disaster{grid-template-columns:8.5rem 6em 1fr;align-items:center;padding:.35rem .9rem;margin:.3rem 0}
+.slide .disaster .b{font-size:.84rem}
+.slide .disaster .h{font-size:1rem}
+.disaster img{width:8.5rem;height:4.7rem;object-fit:cover;border-radius:6px;display:block;box-shadow:0 2px 8px rgba(44,36,25,.18)}
+.credits{font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--text3);margin-top:.15rem;letter-spacing:.02em}
+.rod-fig{width:100%;max-width:21rem;height:auto;display:block;margin:0 auto}
+.errtiles{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin:.6rem 0}
+.errtiles .et{background:#fff;border:1px solid var(--border);border-radius:8px;padding:.6rem .9rem}
+.errtiles .et .t{font-family:'Playfair Display',serif;font-weight:700;font-size:1.05rem;margin-bottom:.25rem}
+.errtiles .et ul{margin:0;padding-left:1.1em;font-size:.86em;color:var(--text2)}
+.errtiles .et.a .t{color:var(--accent3)}
+.errtiles .et.r .t{color:var(--accent2)}
+.two-col .figure{margin:0 auto}
+html .cfd-st-btn{font-size:13px;padding:5px 12px}
+html .hud .cfd-hud-btn{font-size:13px;padding:6px 14px;margin-left:4px}
+html .cfd-st-tool-label{font-size:11px}
+html .cfd-st-panel{font-size:13px}
+.figure .caption{font-size:.72rem}
+.example{font-size:.95em}
+ol,ul{padding-left:1.2em}
+.slide-content > ol > li, .slide-content > ul > li{margin-bottom:.25em}
+.bridge{font-size:.82em;color:var(--text2);border-top:1px dashed var(--border);padding-top:.35rem;margin-top:.45rem}
+.bridge strong{color:var(--accent)}
+.callout{background:#fff;border:1px solid var(--border);border-radius:8px;padding:.7rem 1rem;font-size:.95em;color:var(--text2)}
+
+.flow{display:grid;grid-template-columns:1fr;gap:.45rem;margin:.6rem 0}
+.flow .step{position:relative;background:#fff;border:1.5px solid var(--border);border-left:5px solid var(--accent);border-radius:8px;padding:.45rem .9rem .45rem 1.1rem;box-shadow:0 2px 8px rgba(44,36,25,.04)}
+.flow .step .n{position:absolute;left:-14px;top:-12px;background:var(--accent);color:#fff;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;padding:.15rem .45rem;border-radius:3px;letter-spacing:.03em}
+.flow .step .title{font-family:'Playfair Display',serif;font-weight:700;font-size:1.05rem;color:var(--text);margin-bottom:.15rem}
+.flow .step .body{font-size:.92rem;color:var(--text2);line-height:1.45}
+.flow .step ul{margin:.25rem 0 0 1.1rem;font-size:.86rem;color:var(--text2)}
+.flow .arrow{text-align:center;color:var(--accent);font-size:1rem;line-height:.6;font-weight:700;user-select:none}
+@media(max-width:900px){.flow .step{padding:.55rem .8rem .55rem 1rem}.flow .step .title{font-size:.95rem}}
+
+.tiles{display:grid;grid-template-columns:1fr;gap:.4rem;margin:.6rem 0}
+.tile{background:#fff;border:1px solid var(--border);border-radius:6px;padding:.4rem .9rem;display:grid;grid-template-columns:7.5em minmax(8.5em,max-content) 1fr;align-items:center;gap:1rem}
+.tile>*{min-width:0}
+.tile .t{overflow-x:auto;overflow-y:hidden}
+.tile .h mjx-container{text-transform:none}
+.tile .h{font-family:'JetBrains Mono',monospace;font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
+.tile .t{font-family:'Playfair Display',serif;font-weight:700;font-size:1.02rem;color:var(--text);line-height:1.2}
+.tile .d{font-size:.9rem;color:var(--text2);line-height:1.35}
+.tile.hi{background:#f8efe1}
+.tile.hi .t{color:var(--accent)}
+.tile.hi .h{color:var(--accent)}
+@media(max-width:900px){.tile{grid-template-columns:1fr;gap:.15rem}}
+
+/* Специфика ЧМ */
+.disaster{background:#fbeee7;border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:.5rem .9rem;margin:.35rem 0;display:grid;grid-template-columns:6.5em 1fr;gap:.9rem;align-items:baseline}
+.disaster .yr{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent);letter-spacing:.1em}
+.disaster .h{font-family:'Playfair Display',serif;font-weight:700;font-size:1.05rem;color:var(--text)}
+.disaster .b{font-size:.9rem;color:var(--text2);margin-top:.2rem}
+.warning{background:#fbeee7;border-left:3px solid var(--accent);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:.6rem 0;font-size:.95em}
+.warning strong{color:var(--accent)}
+
 .slide.title{text-align:center;background:radial-gradient(ellipse at 30% 20%,#fff 0%,var(--bg) 55%,var(--bg2) 100%)}
-.slide.title .slide-content{max-width:1000px}
-.slide.title h1{font-size:3.4rem;margin-bottom:1.5rem;max-width:900px}
+.slide.title .slide-content{max-width:44rem}
+.slide.title h1{font-size:2.9rem;margin-bottom:1.2rem;max-width:40rem}
 .slide.title h1 .u{color:var(--accent);border-bottom:4px solid var(--accent);padding-bottom:.15rem}
 .slide.title .sub{font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--text2);margin-bottom:1rem;letter-spacing:.05em}
 .slide.title .course{font-size:.85rem;color:var(--text3);text-transform:uppercase;letter-spacing:.24em;margin-bottom:.6rem}
 .slide.title .badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:.35rem .85rem;border:1.5px solid var(--accent);color:var(--accent);border-radius:20px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:1.4rem}
-.hud{position:fixed;bottom:0;left:0;right:0;padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to top,rgba(250,248,244,.95),transparent);z-index:100;pointer-events:none}
+
+.hud{position:fixed;bottom:0;left:0;right:0;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to top,rgba(250,248,244,.95),transparent);z-index:100;pointer-events:none}
 .hud > *{pointer-events:auto}
-.hud button{font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:.4rem .9rem;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text2);cursor:pointer}
+.hud button{font-family:'JetBrains Mono',monospace;font-size:13px;padding:6px 14px;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text2);cursor:pointer;transition:all .12s}
 .hud button:hover{border-color:var(--accent);color:var(--accent);background:var(--bg2)}
 .hud button:disabled{opacity:.35;cursor:default}
-.hud .counter{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3)}
+.hud .counter{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text3);letter-spacing:.06em}
 .hud .center{display:flex;gap:.4rem;align-items:center}
-.hud .back{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);text-decoration:none;padding:.35rem .7rem;border:1px dashed var(--border);border-radius:4px}
+.hud .back{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text3);text-decoration:none;padding:5px 10px;border:1px dashed var(--border);border-radius:4px}
 .hud .back:hover{color:var(--accent);border-color:var(--accent)}
+
 .progress{position:fixed;top:0;left:0;right:0;height:3px;background:var(--bg3);z-index:99}
 .progress .fill{height:100%;background:var(--accent);transition:width .2s ease;width:0%}
-@media(min-width:1600px){body{font-size:26px}h1{font-size:3rem}h2{font-size:2rem}}
-@media(max-width:900px){.slide-content{padding:1.6rem 1.2rem 3rem}h1{font-size:1.9rem}h2{font-size:1.4rem}.two-col{grid-template-columns:1fr}body{font-size:19px}}
-@media print{body{overflow:visible;background:#fff}.slide{position:relative;display:flex!important;page-break-after:always;min-height:100vh;align-items:center;justify-content:center}.hud,.progress{display:none}}
+
+
+@media(max-width:900px){.slide-content{padding:1.6rem 1.2rem 3rem}h1{font-size:1.9rem}h2{font-size:1.4rem}.two-col,.three-col{grid-template-columns:1fr}}
+
+@media print{
+  body{overflow:visible;background:#fff}
+  .slide{position:relative;display:flex!important;page-break-after:always;min-height:100vh;align-items:center;justify-content:center}
+  .hud,.progress{display:none}
+}
+
+.slide.active .eq{position:relative}
+.slide.active .eq::after{content:'';position:absolute;left:0;right:0;bottom:-6px;height:2px;background:linear-gradient(90deg,transparent,var(--accent) 50%,transparent);transform:scaleX(0);opacity:0;animation:formulaUnderline .55s ease-out both;animation-delay:calc(var(--i, 0) * 85ms + .35s)}
+@keyframes formulaUnderline{0%{transform:scaleX(0);opacity:0}40%{transform:scaleX(1);opacity:.7}100%{transform:scaleX(1);opacity:0}}
+@media (prefers-reduced-motion: reduce){.slide.active .eq::after{animation:none}}
+
+table.dd{border-collapse:collapse;font-size:.78rem;font-family:'JetBrains Mono',monospace;margin:0 auto}
+table.dd th,table.dd td{padding:.2rem .6rem;border:1px solid var(--border);vertical-align:middle;text-align:center}
+table.dd th{background:var(--bg2);font-weight:500}
+table.dd td.e{border:none;padding:0;height:.95rem}
+table.dd td[rowspan]{height:1.9rem}
+table.dd .c0{background:#e7efe8}table.dd .c1{background:#e0e8f2}table.dd .c2{background:#f2e5d6}table.dd .c3{background:#fbeee7}
+table.cmp{border-collapse:collapse;font-size:.9rem}
+table.cmp th{text-align:left;padding:.3rem .6rem;border-bottom:2px solid var(--border);background:var(--bg2)}
+table.cmp td{padding:.25rem .6rem;border-bottom:1px solid var(--border)}
+.slide .condition{min-height:auto}
+.example .lbl mjx-container{text-transform:none;letter-spacing:0}
 </style>
 </head>
 <body>
+
 <div class="progress"><div class="fill" id="progressFill"></div></div>
 
+<!-- 1: Титульный -->
 <section class="slide title active">
   <div class="course">Численные методы</div>
-  <div class="badge">Занятие 3 · Блок II. Интерполяция</div>
+  <div class="badge">Занятие 3 · Блок II. Интерполяция и приближение</div>
   <h1>Полиномиальная <span class="u">интерполяция</span></h1>
-  <div class="sub">Лагранж · Ньютон · Погрешность · Феномен Рунге</div>
+  <div class="sub">Лагранж · Ньютон · Погрешность · Феномен Рунге · Разбор заданий</div>
 </section>
 
+<!-- 2: План -->
 <section class="slide">
-  <div class="slide-num">§3.1 · Задача</div>
-  <h2>Восстановить функцию по значениям в узлах</h2>
-  <div class="definition" data-num="1">
-    Даны \(n+1\) различных узлов \(x_0, \ldots, x_n\) и значения \(y_0, \ldots, y_n\) (обычно \(y_i = f(x_i)\)). Найти многочлен \(P_n(x)\) степени \(\le n\) такой, что
-    <div class="eq">\[ P_n(x_i) = y_i, \qquad i = 0, 1, \ldots, n. \tag{3.1} \]</div>
-  </div>
-  <p>Ограничение степени \(\le n\) даёт единственность.</p>
-</section>
-
-<section class="slide">
-  <div class="slide-num">§3.2 · Форма Лагранжа</div>
-  <h2>Базисные многочлены Лагранжа</h2>
-  <div class="definition" data-num="2">
-    <div class="eq">\[ \ell_i(x) = \prod_{j\ne i}\frac{x - x_j}{x_i - x_j},\qquad i = 0,\ldots,n. \tag{3.2} \]</div>
-    Свойство: \(\ell_i(x_k) = \delta_{ik}\) — единица в узле с номером \(i\), ноль в остальных.
-  </div>
-  <div class="theorem" data-num="1">
-    <em style="color:inherit;font-weight:600">форма Лагранжа.</em>
-    <div class="eq">\[ L_n(x) = \sum_{i=0}^{n} y_i\,\ell_i(x). \tag{3.3} \]</div>
-    В узле \(x_k\) все \(\ell_i(x_k)=0\) кроме \(\ell_k(x_k)=1\) — значит, \(L_n(x_k)=y_k\).
-  </div>
-</section>
-
-<section class="slide">
-  <div class="slide-num">§3.2 · Пример</div>
-  <h2>Пример: 3 узла</h2>
-  <div class="eq">\[
-    L_2(x) = y_0\,\frac{(x-x_1)(x-x_2)}{(x_0-x_1)(x_0-x_2)} + y_1\,\frac{(x-x_0)(x-x_2)}{(x_1-x_0)(x_1-x_2)} + y_2\,\frac{(x-x_0)(x-x_1)}{(x_2-x_0)(x_2-x_1)}.
-  \]</div>
-  <p>Три квадратных трёхчлена; вклад каждого «включается» в своём узле.</p>
-  <div class="callout" style="font-size:.9em">
-    <strong>Плюсы:</strong> явная формула, удобная для анализа погрешности.<br>
-    <strong>Минусы:</strong> при добавлении нового узла всю сумму нужно пересчитывать.
-  </div>
-</section>
-
-<section class="slide">
-  <div class="slide-num">§3.3 · Форма Ньютона</div>
-  <h2>Разделённые разности и форма Ньютона</h2>
-  <div class="definition" data-num="3">
-    <em style="color:inherit;font-weight:600">разделённые разности.</em>
-    <div class="eq">\[ f[x_i] = f(x_i),\qquad f[x_i,\ldots,x_{i+k}] = \frac{f[x_{i+1},\ldots,x_{i+k}] - f[x_i,\ldots,x_{i+k-1}]}{x_{i+k}-x_i}. \tag{3.4} \]</div>
-  </div>
-  <div class="theorem" data-num="2">
-    <div class="eq">\[ N_n(x) = f[x_0] + f[x_0,x_1](x-x_0) + \ldots + f[x_0,\ldots,x_n](x-x_0)\cdots(x-x_{n-1}). \tag{3.5} \]</div>
-  </div>
-  <p><strong>Плюс:</strong> добавили новый узел — добавили одну строку в таблицу и один член в многочлен.</p>
-</section>
-
-<section class="slide">
-  <div class="slide-num">§3.4 · Единственность</div>
-  <h2>Многочлен единственный</h2>
-  <div class="theorem" data-num="3">
-    <em style="color:inherit;font-weight:600">единственность.</em> При различных узлах \(x_0,\ldots,x_n\) существует единственный многочлен степени \(\le n\), удовлетворяющий условиям (3.1).
-  </div>
-  <p><em>Доказательство.</em> Если \(P, Q\) — два таких, то \(P-Q\) — многочлен степени \(\le n\) с \(n+1\) корнями. По основной теореме алгебры \(P-Q\equiv 0\). \(\square\)</p>
-  <div class="callout" style="font-size:.9em">
-    <strong>Следствие.</strong> Формы Лагранжа и Ньютона — два <em>представления</em> одного и того же многочлена. Форму выбирают по удобству: Лагранж — для анализа, Ньютон — для вычислений и обновлений.
-  </div>
-</section>
-
-<section class="slide">
-  <div class="slide-num">§3.5 · Погрешность</div>
-  <h2>Оценка погрешности интерполяции</h2>
-  <div class="theorem" data-num="4">
-    Пусть \(f\in C^{n+1}[a,b]\). Тогда для любого \(x\in[a,b]\) найдётся \(\xi\in[a,b]\):
-    <div class="eq">\[ f(x) - P_n(x) = \frac{f^{(n+1)}(\xi)}{(n+1)!}\,\omega_{n+1}(x),\qquad \omega_{n+1}(x) = \prod_{i=0}^{n}(x-x_i). \tag{3.6} \]</div>
-  </div>
-  <p>Формула распадается на два <em>независимых</em> множителя:</p>
-  <ul>
-    <li><strong>Функция:</strong> \(f^{(n+1)}(\xi)/(n+1)!\) — определяется только гладкостью \(f\).</li>
-    <li><strong>Узлы:</strong> \(\omega_{n+1}(x)\) — определяется только сеткой. Оптимизировать можно только это.</li>
-  </ul>
-</section>
-
-<section class="slide">
-  <div class="slide-num">§3.6 · Феномен Рунге</div>
-  <h2>Классический контрпример: \(1/(1+25x^2)\)</h2>
-  <p>Функция \(f(x)=1/(1+25x^2)\) на \([-1, 1]\) — бесконечно гладкая. Но её производные быстро растут, а комплексные полюсы \(x=\pm i/5\) находятся близко к вещественной оси.</p>
-  <div class="figure">
-    <svg viewBox="0 0 800 380" xmlns="http://www.w3.org/2000/svg" style="max-width:800px">
-      <line x1="30" y1="200" x2="770" y2="200" stroke="#2c2419" stroke-width="1.5"/>
-      <line x1="400" y1="360" x2="400" y2="20" stroke="#2c2419" stroke-width="1.5"/>
-      <path d="M 40 199 Q 270 195 340 130 Q 400 30 460 130 Q 530 195 760 199" fill="none" stroke="#2c2419" stroke-width="2.6"/>
-      <path d="M 40 50 C 70 340, 130 360, 180 200 C 230 110, 280 175, 320 130 C 360 90, 385 35, 400 35 C 415 35, 440 90, 480 130 C 520 175, 570 110, 620 200 C 670 360, 730 340, 760 50" fill="none" stroke="#b44a2d" stroke-width="2.4" stroke-dasharray="7,5"/>
-      <g fill="#3a5ba0">
-        <circle cx="40" cy="199" r="5"/><circle cx="112" cy="197" r="5"/><circle cx="184" cy="194" r="5"/>
-        <circle cx="256" cy="187" r="5"/><circle cx="328" cy="163" r="5"/><circle cx="400" cy="35" r="5"/>
-        <circle cx="472" cy="163" r="5"/><circle cx="544" cy="187" r="5"/><circle cx="616" cy="194" r="5"/>
-        <circle cx="688" cy="197" r="5"/><circle cx="760" cy="199" r="5"/>
-      </g>
-      <g font-family="JetBrains Mono,monospace" font-size="12" fill="#6b5d4f" text-anchor="middle">
-        <text x="40" y="220">-1</text><text x="400" y="220">0</text><text x="760" y="220">1</text>
-      </g>
-      <text x="80" y="70" font-family="JetBrains Mono,monospace" font-size="13" fill="#b44a2d">P_10 (Рунге)</text>
-      <text x="580" y="70" font-family="JetBrains Mono,monospace" font-size="13" fill="#2c2419">f = 1/(1+25x²)</text>
-    </svg>
-    <div class="caption">Полином степени 10 на равномерных узлах: в узлах точное совпадение, между ними — осцилляции амплитудой \(\sim 2\).</div>
-  </div>
-</section>
-
-<section class="slide">
-  <div class="slide-num">§3.6 · Причина</div>
-  <h2>Почему это происходит</h2>
-  <div class="condition" data-num="1">
-    <em style="color:inherit;font-weight:600">условие Рунге.</em> На равномерной сетке узловой множитель \(\omega_{n+1}(x)\) экспоненциально <em>растёт</em> у концов отрезка. Если производные \(f\) тоже растут быстро, оценка (3.6) даёт неограниченный рост \(|f-P_n|\) при \(n\to\infty\).
-  </div>
-  <p>Экспериментально: при \(n=10\) максимум ошибки \(\approx 1{,}9\); при \(n=20\) — уже \(\approx 60\). Рост экспоненциальный.</p>
-  <div class="callout" style="font-size:.9em">
-    <strong>Мораль:</strong> степень многочлена — не единственный параметр качества. <em>Расположение узлов</em> так же важно.
-  </div>
-</section>
-
-<section class="slide">
-  <div class="slide-num">§3.6 · Как лечить</div>
-  <h2>Два стандартных лечения Рунге</h2>
+  <div class="slide-num">§3.0 · План</div>
+  <h2>Содержание занятия</h2>
+  <p class="lead">Занятие делится на построение интерполяционного многочлена, анализ его погрешности и разбор типовых заданий.</p>
   <div class="two-col">
     <div class="callout">
-      <strong style="color:var(--accent)">1. Сменить сетку</strong>
-      <p style="font-size:.9em;margin-top:.3rem">Взять чебышёвские узлы \(x_i = \cos((2i+1)\pi/(2n+2))\) — они сгущаются у концов и минимизируют \(\max|\omega_{n+1}|\). При \(n=20\) ошибка Рунге падает с \(\sim 60\) до \(\sim 10^{-4}\).</p>
+      <h3 style="margin-top:0;color:var(--accent)">I. Построение</h3>
+      <ul style="font-size:.9em">
+        <li>§&nbsp;3.1 постановка задачи; существование и единственность;</li>
+        <li>§&nbsp;3.2 форма Лагранжа и барицентрическая форма;</li>
+        <li>§&nbsp;3.3–3.4 разделённые разности и форма Ньютона;</li>
+        <li>§&nbsp;3.5 разделённые разности и производные; связь с Тейлором.</li>
+      </ul>
     </div>
     <div class="callout">
-      <strong style="color:var(--accent)">2. Сменить базис</strong>
-      <p style="font-size:.9em;margin-top:.3rem">Использовать кусочные многочлены низкой степени — <em>сплайны</em>. Между соседними узлами — свой многочлен, стыковка гладкая. Ошибка ограничена шагом сетки, а не производными.</p>
+      <h3 style="margin-top:0;color:var(--accent3)">II. Анализ и практика</h3>
+      <ul style="font-size:.9em">
+        <li>§&nbsp;3.6–3.7 погрешность; узловой многочлен на равномерной сетке;</li>
+        <li>§&nbsp;3.8 линейная и квадратичная интерполяция, шаг таблицы;</li>
+        <li>§&nbsp;3.9 феномен Рунге; §&nbsp;3.10 константа Лебега;</li>
+        <li>§&nbsp;3.11 разбор шести типовых заданий.</li>
+      </ul>
     </div>
   </div>
-  <p style="margin-top:.6rem;color:var(--text2);font-size:.9em">Оба лечения — тема §&nbsp;4.</p>
+  <p class="bridge">Начнём с того, откуда берётся сама задача.</p>
 </section>
 
+<!-- 3: мотивация -->
 <section class="slide">
-  <div class="slide-num">§3.7 · Итоги</div>
-  <h2>Что унести с занятия 3</h2>
-  <ol style="font-size:.92em">
-    <li>Задача интерполяции даёт <em>единственный</em> многочлен степени \(\le n\) через \(n+1\) заданных точек.</li>
-    <li>Форма Лагранжа (3.3) — аналитическая, удобна для теории.</li>
-    <li>Форма Ньютона (3.5) с разделёнными разностями — обновляемая при добавлении узлов.</li>
-    <li>Погрешность (3.6): \((f^{(n+1)}/(n+1)!) \cdot \omega_{n+1}(x)\). Первый множитель — функция, второй — сетка.</li>
-    <li>Феномен Рунге: полиномиальная интерполяция на равномерной сетке может расходиться при \(n\to\infty\). Лечится сменой узлов (Чебышёв) или сменой базиса (сплайны).</li>
+  <div class="slide-num">§3.0 · Введение</div>
+  <h2>Значения вместо производных</h2>
+  <p class="lead">Многочлен Тейлора требует производных в одной точке; в вычислительной практике доступны лишь значения в нескольких точках.</p>
+  <div class="tiles">
+    <div class="tile"><div class="h">измерения</div><div class="t">датчик, интервал \(\Delta t\)</div><div class="d">значения в моменты \(t_i\); между ними — ничего</div></div>
+    <div class="tile"><div class="h">дорогой расчёт</div><div class="t">\(f(x_i)\) в двадцати точках</div><div class="d">каждая точка — час машинного времени; нужна вся кривая</div></div>
+    <div class="tile"><div class="h">численное решение</div><div class="t">\(u_i\approx u(x_i)\) в узлах сетки</div><div class="d">решение разностной схемы известно только в узлах</div></div>
+  </div>
+  <div class="two-col">
+    <div class="callout"><strong>Тейлор (§&nbsp;2):</strong> данные — \(f(x_0),f'(x_0),\ldots,f^{(n)}(x_0)\) в одной точке. Точность сосредоточена около \(x_0\).</div>
+    <div class="callout" style="border-left:3px solid var(--accent)"><strong style="color:var(--accent)">Интерполяция (§&nbsp;3):</strong> данные — \(f(x_0),\ldots,f(x_n)\) в \(n+1\) точках. Никаких производных; информация распределена по отрезку.</div>
+  </div>
+  <p class="bridge">Задача о таблице — лишь видимая часть: интерполяция лежит в основе большинства методов курса.</p>
+</section>
+
+<!-- 4: двигатель методов -->
+<section class="slide">
+  <div class="slide-num">§3.0 · Роль в курсе</div>
+  <h2>Интерполяция как основа численных методов</h2>
+  <p class="lead">Большинство методов курса построены по одной схеме: заменить \(f\) интерполяционным многочленом и выполнить операцию с ним.</p>
+  <div class="tiles">
+    <div class="tile"><div class="h">§&nbsp;7 квадратуры</div><div class="t">\(\int f\approx\int P_n\)</div><div class="d">трапеции, Симпсон, Гаусс — интегралы от интерполяционного многочлена; веса \(=\int\ell_i\)</div></div>
+    <div class="tile"><div class="h">§&nbsp;6 производные</div><div class="t">\(f'\approx P_n'\)</div><div class="d">разностные формулы — производные интерполяционного многочлена</div></div>
+    <div class="tile"><div class="h">ОДУ</div><div class="t">методы Адамса</div><div class="d">правая часть заменяется многочленом по предыдущим шагам</div></div>
+    <div class="tile"><div class="h">МКЭ</div><div class="t">функции формы \(=\ell_i\)</div><div class="d">базисные многочлены Лагранжа на каждом элементе</div></div>
+  </div>
+  <div class="warning"><strong>Оговорка.</strong> Точное совпадение в узлах уместно для <em>точных</em> данных. Зашумлённые измерения интерполировать нельзя — многочлен воспроизведёт шум; для них — метод наименьших квадратов (§&nbsp;5). Сегодня данные считаются точными.</div>
+  <p class="bridge">Перейдём к точной постановке задачи.</p>
+</section>
+
+<!-- 5: постановка -->
+<section class="slide">
+  <div class="slide-num">§3.1 · Постановка</div>
+  <h2>Задача интерполяции</h2>
+  <p class="lead">Условимся об обозначениях и сформулируем задачу точно.</p>
+  <div class="condition" data-num="1" style="min-height:auto">
+    Узлы \(x_0,x_1,\ldots,x_n\) попарно различны. Иначе два условия в одной точке либо противоречивы, либо совпадают, и условий меньше, чем неизвестных.
+  </div>
+  <div class="definition" data-num="1" style="min-height:auto">
+    <em>интерполяционный многочлен</em> — многочлен \(P_n\) степени <em>не выше</em> \(n\), удовлетворяющий условиям
+    <div class="eq">\[ P_n(x_i)=y_i,\qquad i=0,1,\ldots,n. \tag{3.1} \]</div>
+    <div class="mini-ex"><b>Пример</b>Через две точки — ровно одна прямая, \(P_1\). Через три точки, не лежащие на прямой, — ровно одна парабола. Если три точки лежат на прямой, \(P_2\) — эта прямая: степень «не выше \(2\)» допускает и степень \(1\).</div>
+  </div>
+  <p class="bridge">Неизвестных \(n+1\) и условий \(n+1\): естественно ожидать единственного решения.</p>
+</section>
+
+<!-- 6: Вандермонд и теорема 1 -->
+<section class="slide">
+  <div class="slide-num">§3.1 · Теорема 1</div>
+  <h2>Существование и единственность</h2>
+  <p class="lead">Подставив узлы в \(P_n(x)=a_0+a_1x+\dots+a_nx^n\), получаем линейную систему для коэффициентов.</p>
+  <div class="eq" style="font-size:.9em">\[ \begin{pmatrix}1&amp;x_0&amp;\cdots&amp;x_0^{n}\\ 1&amp;x_1&amp;\cdots&amp;x_1^{n}\\ \vdots&amp;&amp;&amp;\vdots\\ 1&amp;x_n&amp;\cdots&amp;x_n^{n}\end{pmatrix}\begin{pmatrix}a_0\\ a_1\\ \vdots\\ a_n\end{pmatrix}=\begin{pmatrix}y_0\\ y_1\\ \vdots\\ y_n\end{pmatrix},\qquad \det V=\prod_{i&lt;j}(x_j-x_i)\neq0. \tag{3.2–3.3} \]</div>
+  <div class="theorem" data-num="1" style="min-height:auto">
+    При условии&nbsp;1 для любых \(y_0,\ldots,y_n\) существует ровно один многочлен степени не выше \(n\), удовлетворяющий (3.1).
+  </div>
+  <p><em>Доказательство без определителя.</em> <strong>Единственность:</strong> разность двух решений — многочлен степени \(\le n\) с \(n+1\) корнем, то есть нуль. <strong>Существование:</strong> однородная система (3.2) имеет лишь тривиальное решение \(\Rightarrow\) матрица невырождена \(\Rightarrow\) система разрешима при любой правой части. \(\square\)</p>
+  <p class="bridge">Система (3.2) решает вопрос теоретически; вычислять по ней нельзя.</p>
+</section>
+
+<!-- 7: почему не решают -->
+<section class="slide">
+  <div class="slide-num">§3.1 · Практика</div>
+  <h2>Почему систему Вандермонда не решают</h2>
+  <p class="lead">Система (3.2) даёт коэффициенты при степенях \(x^k\), но её матрица катастрофически плохо обусловлена.</p>
+  <div class="tiles">
+    <div class="tile"><div class="h">\([0,1]\), 11 узлов</div><div class="t">\(\kappa(V)\approx10^{8}\)</div><div class="d">по (1.13) теряется восемь десятичных знаков из шестнадцати</div></div>
+    <div class="tile hi"><div class="h">\([0,1]\), 21 узел</div><div class="t">\(\kappa(V)\approx10^{17}\)</div><div class="d">в <code>double</code> ни одной верной цифры</div></div>
+    <div class="tile"><div class="h">\([-1,1]\), 11 и 21 узел</div><div class="t">\(10^{4}\) и \(10^{9}\)</div><div class="d">лучше, но рост по-прежнему экспоненциальный</div></div>
+  </div>
+  <div class="callout">Выход — <strong>явные формы</strong> интерполяционного многочлена: Лагранжа (§&nbsp;3.2) и Ньютона (§&nbsp;3.4). Это тот же единственный многочлен, записанный в другом базисе, не по степеням \(x\); никакой системы решать не приходится.</div>
+  <p class="bridge">Первая явная форма строится из простейших многочленов, «отвечающих» каждый за свой узел.</p>
+</section>
+
+<!-- 8: идея Лагранжа -->
+<section class="slide">
+  <div class="slide-num">§3.2 · Идея</div>
+  <h2>Базисные многочлены Лагранжа</h2>
+  <p class="lead">Разложим задачу на \(n+1\) простейших: для каждого узла построим многочлен, равный единице в нём и нулю в остальных.</p>
+  <div class="example">
+    <span class="lbl">Пример: узлы 0, 1, 2</span>
+    Многочлен для узла \(1\) должен иметь корни \(0\) и \(2\): \(\ell_1(x)=c\,x(x-2)\). Условие \(\ell_1(1)=1\) даёт \(c=-1\): \(\ell_1(x)=x(2-x)\). Аналогично \(\ell_0=\tfrac12(x-1)(x-2)\), \(\ell_2=\tfrac12x(x-1)\). В точке \(0{,}5\): \(\ell_0=0{,}375\), \(\ell_1=0{,}75\), \(\ell_2=-0{,}125\); сумма равна \(1\).
+  </div>
+  <div class="definition" data-num="2" style="min-height:auto">
+    <div class="eq">\[ \ell_i(x)=\prod_{\substack{j=0\\ j\neq i}}^{n}\frac{x-x_j}{x_i-x_j},\qquad \ell_i(x_k)=\delta_{ik}=\begin{cases}1,&amp;k=i,\\0,&amp;k\neq i.\end{cases} \tag{3.4} \]</div>
+    Каждый \(\ell_i\) — многочлен степени ровно \(n\); зависит только от узлов, не от значений \(y_i\).
+  </div>
+  <p class="bridge">Взвешенная сумма базисных многочленов и есть искомое решение.</p>
+</section>
+
+<!-- 9: теорема 2 + рисунок -->
+<section class="slide">
+  <div class="slide-num">§3.2 · Теорема 2</div>
+  <h2>Форма Лагранжа</h2>
+  <p class="lead">Искомый многочлен — взвешенная сумма базисных с весами, равными табличным значениям.</p>
+  <div class="two-col">
+    <div>
+      <div class="theorem" data-num="2" style="min-height:auto">
+        <div class="eq">\[ L_n(x)=\sum_{i=0}^{n}y_i\,\ell_i(x). \tag{3.5} \]</div>
+        <em>Доказательство.</em> Степень \(\le n\); в узле \(x_k\): \(\sum_i y_i\delta_{ik}=y_k\); по теореме&nbsp;1 других решений нет. \(\square\)
+      </div>
+      <p style="font-size:.9em">Базис зависит только от узлов: для фиксированной сетки \(\ell_i\) вычисляются один раз, и любые данные интерполируются взвешенным суммированием. Так устроены квадратурные формулы §&nbsp;7.</p>
+    </div>
+    <div class="figure">
+<svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:22rem" role="img" aria-label="Четыре базисных многочлена Лагранжа для узлов 0, 1, 2, 3: каждый равен единице в своём узле и нулю в остальных трёх, между узлами они уходят за пределы отрезка от нуля до единицы.">
+  <rect width="640" height="300" fill="#fdf9f3"/>
+  <line x1="52.0" y1="247.9" x2="624.0" y2="247.9" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="47.0" y="251.9" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">−0.5</text>
+  <line x1="52.0" y1="187.5" x2="624.0" y2="187.5" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="47.0" y="191.5" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">0</text>
+  <line x1="52.0" y1="127.1" x2="624.0" y2="127.1" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="47.0" y="131.1" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">0.5</text>
+  <line x1="52.0" y1="66.7" x2="624.0" y2="66.7" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="47.0" y="70.7" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">1</text>
+  <line x1="52.0" y1="187.5" x2="628.0" y2="187.5" stroke="#2c2419" stroke-width="1.2"/>
+  <line x1="52.0" y1="16.0" x2="52.0" y2="266.0" stroke="#2c2419" stroke-width="1.2"/>
+  <text x="630.0" y="191.5" font-family="JetBrains Mono,monospace" font-size="12" fill="#6b5d4f">x</text>
+  <line x1="92.9" y1="184.5" x2="92.9" y2="190.5" stroke="#2c2419" stroke-width="1"/>
+  <text x="92.9" y="282.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">x₀</text>
+  <line x1="256.3" y1="184.5" x2="256.3" y2="190.5" stroke="#2c2419" stroke-width="1"/>
+  <text x="256.3" y="282.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">x₁</text>
+  <line x1="419.7" y1="184.5" x2="419.7" y2="190.5" stroke="#2c2419" stroke-width="1"/>
+  <text x="419.7" y="282.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">x₂</text>
+  <line x1="583.1" y1="184.5" x2="583.1" y2="190.5" stroke="#2c2419" stroke-width="1"/>
+  <text x="583.1" y="282.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">x₃</text>
+  <path d="M 57.7 13.3 L 59.1 15.7 L 60.6 18.1 L 62.0 20.5 L 63.4 22.8 L 64.9 25.2 L 66.3 27.5 L 67.7 29.8 L 69.2 32.0 L 70.6 34.3 L 72.0 36.5 L 73.5 38.7 L 74.9 40.9 L 76.3 43.0 L 77.7 45.2 L 79.2 47.3 L 80.6 49.4 L 82.0 51.5 L 83.5 53.6 L 84.9 55.6 L 86.3 57.7 L 87.8 59.7 L 89.2 61.7 L 90.6 63.7 L 92.0 65.6 L 93.5 67.6 L 94.9 69.5 L 96.3 71.4 L 97.8 73.3 L 99.2 75.1 L 100.6 77.0 L 102.1 78.8 L 103.5 80.6 L 104.9 82.4 L 106.3 84.2 L 107.8 85.9 L 109.2 87.7 L 110.6 89.4 L 112.1 91.1 L 113.5 92.8 L 114.9 94.5 L 116.3 96.1 L 117.8 97.8 L 119.2 99.4 L 120.6 101.0 L 122.1 102.6 L 123.5 104.1 L 124.9 105.7 L 126.4 107.2 L 127.8 108.7 L 129.2 110.2 L 130.7 111.7 L 132.1 113.2 L 133.5 114.6 L 134.9 116.1 L 136.4 117.5 L 137.8 118.9 L 139.2 120.3 L 140.7 121.7 L 142.1 123.0 L 143.5 124.4 L 144.9 125.7 L 146.4 127.0 L 147.8 128.3 L 149.2 129.6 L 150.7 130.8 L 152.1 132.1 L 153.5 133.3 L 155.0 134.5 L 156.4 135.7 L 157.8 136.9 L 159.2 138.1 L 160.7 139.3 L 162.1 140.4 L 163.5 141.5 L 165.0 142.6 L 166.4 143.7 L 167.8 144.8 L 169.3 145.9 L 170.7 147.0 L 172.1 148.0 L 173.6 149.0 L 175.0 150.0 L 176.4 151.0 L 177.8 152.0 L 179.3 153.0 L 180.7 154.0 L 182.1 154.9 L 183.6 155.9 L 185.0 156.8 L 186.4 157.7 L 187.8 158.6 L 189.3 159.5 L 190.7 160.3 L 192.1 161.2 L 193.6 162.0 L 195.0 162.8 L 196.4 163.7 L 197.9 164.5 L 199.3 165.3 L 200.7 166.0 L 202.2 166.8 L 203.6 167.6 L 205.0 168.3 L 206.4 169.0 L 207.9 169.7 L 209.3 170.5 L 210.7 171.1 L 212.2 171.8 L 213.6 172.5 L 215.0 173.2 L 216.5 173.8 L 217.9 174.4 L 219.3 175.1 L 220.7 175.7 L 222.2 176.3 L 223.6 176.9 L 225.0 177.4 L 226.5 178.0 L 227.9 178.6 L 229.3 179.1 L 230.8 179.7 L 232.2 180.2 L 233.6 180.7 L 235.0 181.2 L 236.5 181.7 L 237.9 182.2 L 239.3 182.6 L 240.8 183.1 L 242.2 183.6 L 243.6 184.0 L 245.0 184.4 L 246.5 184.9 L 247.9 185.3 L 249.3 185.7 L 250.8 186.1 L 252.2 186.5 L 253.6 186.8 L 255.1 187.2 L 256.5 187.5 L 257.9 187.9 L 259.4 188.2 L 260.8 188.6 L 262.2 188.9 L 263.6 189.2 L 265.1 189.5 L 266.5 189.8 L 267.9 190.1 L 269.4 190.3 L 270.8 190.6 L 272.2 190.9 L 273.6 191.1 L 275.1 191.4 L 276.5 191.6 L 277.9 191.8 L 279.4 192.0 L 280.8 192.2 L 282.2 192.4 L 283.7 192.6 L 285.1 192.8 L 286.5 193.0 L 288.0 193.2 L 289.4 193.3 L 290.8 193.5 L 292.2 193.6 L 293.7 193.8 L 295.1 193.9 L 296.5 194.0 L 298.0 194.2 L 299.4 194.3 L 300.8 194.4 L 302.2 194.5 L 303.7 194.6 L 305.1 194.7 L 306.5 194.8 L 308.0 194.8 L 309.4 194.9 L 310.8 195.0 L 312.3 195.0 L 313.7 195.1 L 315.1 195.1 L 316.6 195.1 L 318.0 195.2 L 319.4 195.2 L 320.8 195.2 L 322.3 195.2 L 323.7 195.2 L 325.1 195.2 L 326.6 195.2 L 328.0 195.2 L 329.4 195.2 L 330.9 195.2 L 332.3 195.2 L 333.7 195.2 L 335.1 195.1 L 336.6 195.1 L 338.0 195.0 L 339.4 195.0 L 340.9 194.9 L 342.3 194.9 L 343.7 194.8 L 345.1 194.8 L 346.6 194.7 L 348.0 194.6 L 349.4 194.6 L 350.9 194.5 L 352.3 194.4 L 353.7 194.3 L 355.2 194.2 L 356.6 194.1 L 358.0 194.0 L 359.4 193.9 L 360.9 193.8 L 362.3 193.7 L 363.7 193.6 L 365.2 193.5 L 366.6 193.3 L 368.0 193.2 L 369.5 193.1 L 370.9 193.0 L 372.3 192.8 L 373.8 192.7 L 375.2 192.6 L 376.6 192.4 L 378.0 192.3 L 379.5 192.2 L 380.9 192.0 L 382.3 191.9 L 383.8 191.7 L 385.2 191.6 L 386.6 191.4 L 388.1 191.3 L 389.5 191.1 L 390.9 190.9 L 392.3 190.8 L 393.8 190.6 L 395.2 190.4 L 396.6 190.3 L 398.1 190.1 L 399.5 190.0 L 400.9 189.8 L 402.3 189.6 L 403.8 189.4 L 405.2 189.3 L 406.6 189.1 L 408.1 188.9 L 409.5 188.8 L 410.9 188.6 L 412.4 188.4 L 413.8 188.2 L 415.2 188.1 L 416.7 187.9 L 418.1 187.7 L 419.5 187.5 L 420.9 187.3 L 422.4 187.2 L 423.8 187.0 L 425.2 186.8 L 426.7 186.6 L 428.1 186.5 L 429.5 186.3 L 430.9 186.1 L 432.4 185.9 L 433.8 185.8 L 435.2 185.6 L 436.7 185.4 L 438.1 185.3 L 439.5 185.1 L 441.0 184.9 L 442.4 184.8 L 443.8 184.6 L 445.2 184.4 L 446.7 184.3 L 448.1 184.1 L 449.5 183.9 L 451.0 183.8 L 452.4 183.6 L 453.8 183.5 L 455.3 183.3 L 456.7 183.2 L 458.1 183.0 L 459.6 182.9 L 461.0 182.7 L 462.4 182.6 L 463.8 182.5 L 465.3 182.3 L 466.7 182.2 L 468.1 182.1 L 469.6 181.9 L 471.0 181.8 L 472.4 181.7 L 473.8 181.6 L 475.3 181.4 L 476.7 181.3 L 478.1 181.2 L 479.6 181.1 L 481.0 181.0 L 482.4 180.9 L 483.9 180.8 L 485.3 180.7 L 486.7 180.6 L 488.2 180.5 L 489.6 180.5 L 491.0 180.4 L 492.4 180.3 L 493.9 180.2 L 495.3 180.2 L 496.7 180.1 L 498.2 180.1 L 499.6 180.0 L 501.0 180.0 L 502.4 179.9 L 503.9 179.9 L 505.3 179.8 L 506.7 179.8 L 508.2 179.8 L 509.6 179.8 L 511.0 179.8 L 512.5 179.8 L 513.9 179.8 L 515.3 179.8 L 516.8 179.8 L 518.2 179.8 L 519.6 179.8 L 521.0 179.8 L 522.5 179.8 L 523.9 179.9 L 525.3 179.9 L 526.8 180.0 L 528.2 180.0 L 529.6 180.1 L 531.0 180.1 L 532.5 180.2 L 533.9 180.3 L 535.3 180.4 L 536.8 180.5 L 538.2 180.6 L 539.6 180.7 L 541.1 180.8 L 542.5 180.9 L 543.9 181.0 L 545.3 181.2 L 546.8 181.3 L 548.2 181.5 L 549.6 181.6 L 551.1 181.8 L 552.5 181.9 L 553.9 182.1 L 555.4 182.3 L 556.8 182.5 L 558.2 182.7 L 559.7 182.9 L 561.1 183.1 L 562.5 183.3 L 563.9 183.6 L 565.4 183.8 L 566.8 184.1 L 568.2 184.3 L 569.7 184.6 L 571.1 184.8 L 572.5 185.1 L 574.0 185.4 L 575.4 185.7 L 576.8 186.0 L 578.2 186.3 L 579.7 186.7 L 581.1 187.0 L 582.5 187.3 L 584.0 187.7 L 585.4 188.1 L 586.8 188.4 L 588.2 188.8 L 589.7 189.2 L 591.1 189.6 L 592.5 190.0 L 594.0 190.4 L 595.4 190.9 L 596.8 191.3 L 598.3 191.8 L 599.7 192.2 L 601.1 192.7 L 602.5 193.2 L 604.0 193.7 L 605.4 194.2 L 606.8 194.7 L 608.3 195.2 L 609.7 195.7 L 611.1 196.3 L 612.6 196.8 L 614.0 197.4 L 615.4 198.0 L 616.9 198.5 L 618.3 199.1 L 619.7 199.8 L 621.1 200.4 L 622.6 201.0 L 624.0 201.7" fill="none" stroke="#b44a2d" stroke-width="2.2" stroke-dasharray="7,4"/>
+  <circle cx="92.9" cy="66.7" r="4.5" fill="#b44a2d"/>
+  <circle cx="256.3" cy="187.5" r="2.6" fill="#b44a2d"/>
+  <circle cx="419.7" cy="187.5" r="2.6" fill="#b44a2d"/>
+  <circle cx="583.1" cy="187.5" r="2.6" fill="#b44a2d"/>
+  <path d="M 62.0 267.0 L 63.4 262.8 L 64.9 258.7 L 66.3 254.6 L 67.7 250.6 L 69.2 246.6 L 70.6 242.6 L 72.0 238.7 L 73.5 234.9 L 74.9 231.1 L 76.3 227.3 L 77.7 223.6 L 79.2 220.0 L 80.6 216.4 L 82.0 212.8 L 83.5 209.3 L 84.9 205.9 L 86.3 202.5 L 87.8 199.1 L 89.2 195.8 L 90.6 192.5 L 92.0 189.3 L 93.5 186.1 L 94.9 183.0 L 96.3 179.9 L 97.8 176.9 L 99.2 173.9 L 100.6 171.0 L 102.1 168.1 L 103.5 165.2 L 104.9 162.4 L 106.3 159.6 L 107.8 156.9 L 109.2 154.2 L 110.6 151.6 L 112.1 149.0 L 113.5 146.4 L 114.9 143.9 L 116.3 141.5 L 117.8 139.1 L 119.2 136.7 L 120.6 134.3 L 122.1 132.0 L 123.5 129.8 L 124.9 127.6 L 126.4 125.4 L 127.8 123.3 L 129.2 121.2 L 130.7 119.1 L 132.1 117.1 L 133.5 115.1 L 134.9 113.2 L 136.4 111.3 L 137.8 109.4 L 139.2 107.6 L 140.7 105.8 L 142.1 104.1 L 143.5 102.4 L 144.9 100.7 L 146.4 99.1 L 147.8 97.5 L 149.2 96.0 L 150.7 94.4 L 152.1 93.0 L 153.5 91.5 L 155.0 90.1 L 156.4 88.7 L 157.8 87.4 L 159.2 86.1 L 160.7 84.8 L 162.1 83.6 L 163.5 82.4 L 165.0 81.2 L 166.4 80.1 L 167.8 79.0 L 169.3 77.9 L 170.7 76.9 L 172.1 75.9 L 173.6 74.9 L 175.0 74.0 L 176.4 73.1 L 177.8 72.2 L 179.3 71.4 L 180.7 70.6 L 182.1 69.8 L 183.6 69.1 L 185.0 68.4 L 186.4 67.7 L 187.8 67.0 L 189.3 66.4 L 190.7 65.8 L 192.1 65.3 L 193.6 64.7 L 195.0 64.2 L 196.4 63.8 L 197.9 63.3 L 199.3 62.9 L 200.7 62.5 L 202.2 62.2 L 203.6 61.8 L 205.0 61.5 L 206.4 61.3 L 207.9 61.0 L 209.3 60.8 L 210.7 60.6 L 212.2 60.4 L 213.6 60.3 L 215.0 60.1 L 216.5 60.1 L 217.9 60.0 L 219.3 59.9 L 220.7 59.9 L 222.2 59.9 L 223.6 60.0 L 225.0 60.0 L 226.5 60.1 L 227.9 60.2 L 229.3 60.3 L 230.8 60.5 L 232.2 60.6 L 233.6 60.8 L 235.0 61.0 L 236.5 61.3 L 237.9 61.5 L 239.3 61.8 L 240.8 62.1 L 242.2 62.5 L 243.6 62.8 L 245.0 63.2 L 246.5 63.5 L 247.9 64.0 L 249.3 64.4 L 250.8 64.8 L 252.2 65.3 L 253.6 65.8 L 255.1 66.3 L 256.5 66.8 L 257.9 67.3 L 259.4 67.9 L 260.8 68.5 L 262.2 69.1 L 263.6 69.7 L 265.1 70.3 L 266.5 71.0 L 267.9 71.6 L 269.4 72.3 L 270.8 73.0 L 272.2 73.7 L 273.6 74.4 L 275.1 75.2 L 276.5 75.9 L 277.9 76.7 L 279.4 77.5 L 280.8 78.3 L 282.2 79.1 L 283.7 79.9 L 285.1 80.8 L 286.5 81.6 L 288.0 82.5 L 289.4 83.4 L 290.8 84.3 L 292.2 85.2 L 293.7 86.1 L 295.1 87.1 L 296.5 88.0 L 298.0 89.0 L 299.4 89.9 L 300.8 90.9 L 302.2 91.9 L 303.7 92.9 L 305.1 93.9 L 306.5 95.0 L 308.0 96.0 L 309.4 97.0 L 310.8 98.1 L 312.3 99.1 L 313.7 100.2 L 315.1 101.3 L 316.6 102.4 L 318.0 103.5 L 319.4 104.6 L 320.8 105.7 L 322.3 106.8 L 323.7 107.9 L 325.1 109.1 L 326.6 110.2 L 328.0 111.4 L 329.4 112.5 L 330.9 113.7 L 332.3 114.8 L 333.7 116.0 L 335.1 117.2 L 336.6 118.4 L 338.0 119.6 L 339.4 120.8 L 340.9 121.9 L 342.3 123.1 L 343.7 124.4 L 345.1 125.6 L 346.6 126.8 L 348.0 128.0 L 349.4 129.2 L 350.9 130.4 L 352.3 131.6 L 353.7 132.9 L 355.2 134.1 L 356.6 135.3 L 358.0 136.5 L 359.4 137.8 L 360.9 139.0 L 362.3 140.2 L 363.7 141.5 L 365.2 142.7 L 366.6 143.9 L 368.0 145.2 L 369.5 146.4 L 370.9 147.6 L 372.3 148.9 L 373.8 150.1 L 375.2 151.3 L 376.6 152.6 L 378.0 153.8 L 379.5 155.0 L 380.9 156.2 L 382.3 157.4 L 383.8 158.6 L 385.2 159.9 L 386.6 161.1 L 388.1 162.3 L 389.5 163.5 L 390.9 164.7 L 392.3 165.9 L 393.8 167.0 L 395.2 168.2 L 396.6 169.4 L 398.1 170.6 L 399.5 171.7 L 400.9 172.9 L 402.3 174.1 L 403.8 175.2 L 405.2 176.3 L 406.6 177.5 L 408.1 178.6 L 409.5 179.7 L 410.9 180.8 L 412.4 181.9 L 413.8 183.0 L 415.2 184.1 L 416.7 185.2 L 418.1 186.3 L 419.5 187.3 L 420.9 188.4 L 422.4 189.4 L 423.8 190.5 L 425.2 191.5 L 426.7 192.5 L 428.1 193.5 L 429.5 194.5 L 430.9 195.5 L 432.4 196.5 L 433.8 197.4 L 435.2 198.4 L 436.7 199.3 L 438.1 200.2 L 439.5 201.1 L 441.0 202.0 L 442.4 202.9 L 443.8 203.8 L 445.2 204.7 L 446.7 205.5 L 448.1 206.3 L 449.5 207.2 L 451.0 208.0 L 452.4 208.8 L 453.8 209.5 L 455.3 210.3 L 456.7 211.0 L 458.1 211.8 L 459.6 212.5 L 461.0 213.2 L 462.4 213.9 L 463.8 214.5 L 465.3 215.2 L 466.7 215.8 L 468.1 216.4 L 469.6 217.0 L 471.0 217.6 L 472.4 218.1 L 473.8 218.7 L 475.3 219.2 L 476.7 219.7 L 478.1 220.2 L 479.6 220.7 L 481.0 221.1 L 482.4 221.5 L 483.9 221.9 L 485.3 222.3 L 486.7 222.7 L 488.2 223.0 L 489.6 223.4 L 491.0 223.7 L 492.4 224.0 L 493.9 224.2 L 495.3 224.5 L 496.7 224.7 L 498.2 224.9 L 499.6 225.1 L 501.0 225.2 L 502.4 225.3 L 503.9 225.4 L 505.3 225.5 L 506.7 225.6 L 508.2 225.6 L 509.6 225.6 L 511.0 225.6 L 512.5 225.6 L 513.9 225.5 L 515.3 225.4 L 516.8 225.3 L 518.2 225.1 L 519.6 225.0 L 521.0 224.8 L 522.5 224.6 L 523.9 224.3 L 525.3 224.0 L 526.8 223.7 L 528.2 223.4 L 529.6 223.0 L 531.0 222.7 L 532.5 222.2 L 533.9 221.8 L 535.3 221.3 L 536.8 220.8 L 538.2 220.3 L 539.6 219.7 L 541.1 219.2 L 542.5 218.5 L 543.9 217.9 L 545.3 217.2 L 546.8 216.5 L 548.2 215.8 L 549.6 215.0 L 551.1 214.2 L 552.5 213.4 L 553.9 212.5 L 555.4 211.6 L 556.8 210.7 L 558.2 209.7 L 559.7 208.7 L 561.1 207.7 L 562.5 206.6 L 563.9 205.5 L 565.4 204.4 L 566.8 203.3 L 568.2 202.1 L 569.7 200.8 L 571.1 199.6 L 572.5 198.3 L 574.0 196.9 L 575.4 195.6 L 576.8 194.2 L 578.2 192.7 L 579.7 191.2 L 581.1 189.7 L 582.5 188.2 L 584.0 186.6 L 585.4 185.0 L 586.8 183.3 L 588.2 181.6 L 589.7 179.9 L 591.1 178.1 L 592.5 176.3 L 594.0 174.4 L 595.4 172.5 L 596.8 170.6 L 598.3 168.6 L 599.7 166.6 L 601.1 164.6 L 602.5 162.5 L 604.0 160.3 L 605.4 158.2 L 606.8 156.0 L 608.3 153.7 L 609.7 151.4 L 611.1 149.1 L 612.6 146.7 L 614.0 144.3 L 615.4 141.8 L 616.9 139.3 L 618.3 136.8 L 619.7 134.2 L 621.1 131.6 L 622.6 128.9 L 624.0 126.2" fill="none" stroke="#3a5ba0" stroke-width="2.2"/>
+  <circle cx="256.3" cy="66.7" r="4.5" fill="#3a5ba0"/>
+  <circle cx="92.9" cy="187.5" r="2.6" fill="#3a5ba0"/>
+  <circle cx="419.7" cy="187.5" r="2.6" fill="#3a5ba0"/>
+  <circle cx="583.1" cy="187.5" r="2.6" fill="#3a5ba0"/>
+  <path d="M 52.0 126.2 L 53.4 128.9 L 54.9 131.6 L 56.3 134.2 L 57.7 136.8 L 59.1 139.3 L 60.6 141.8 L 62.0 144.3 L 63.4 146.7 L 64.9 149.1 L 66.3 151.4 L 67.7 153.7 L 69.2 156.0 L 70.6 158.2 L 72.0 160.3 L 73.5 162.5 L 74.9 164.6 L 76.3 166.6 L 77.7 168.6 L 79.2 170.6 L 80.6 172.5 L 82.0 174.4 L 83.5 176.3 L 84.9 178.1 L 86.3 179.9 L 87.8 181.6 L 89.2 183.3 L 90.6 185.0 L 92.0 186.6 L 93.5 188.2 L 94.9 189.7 L 96.3 191.2 L 97.8 192.7 L 99.2 194.2 L 100.6 195.6 L 102.1 196.9 L 103.5 198.3 L 104.9 199.6 L 106.3 200.8 L 107.8 202.1 L 109.2 203.3 L 110.6 204.4 L 112.1 205.5 L 113.5 206.6 L 114.9 207.7 L 116.3 208.7 L 117.8 209.7 L 119.2 210.7 L 120.6 211.6 L 122.1 212.5 L 123.5 213.4 L 124.9 214.2 L 126.4 215.0 L 127.8 215.8 L 129.2 216.5 L 130.7 217.2 L 132.1 217.9 L 133.5 218.5 L 134.9 219.2 L 136.4 219.7 L 137.8 220.3 L 139.2 220.8 L 140.7 221.3 L 142.1 221.8 L 143.5 222.2 L 144.9 222.7 L 146.4 223.0 L 147.8 223.4 L 149.2 223.7 L 150.7 224.0 L 152.1 224.3 L 153.5 224.6 L 155.0 224.8 L 156.4 225.0 L 157.8 225.1 L 159.2 225.3 L 160.7 225.4 L 162.1 225.5 L 163.5 225.6 L 165.0 225.6 L 166.4 225.6 L 167.8 225.6 L 169.3 225.6 L 170.7 225.5 L 172.1 225.4 L 173.6 225.3 L 175.0 225.2 L 176.4 225.1 L 177.8 224.9 L 179.3 224.7 L 180.7 224.5 L 182.1 224.2 L 183.6 224.0 L 185.0 223.7 L 186.4 223.4 L 187.8 223.0 L 189.3 222.7 L 190.7 222.3 L 192.1 221.9 L 193.6 221.5 L 195.0 221.1 L 196.4 220.7 L 197.9 220.2 L 199.3 219.7 L 200.7 219.2 L 202.2 218.7 L 203.6 218.1 L 205.0 217.6 L 206.4 217.0 L 207.9 216.4 L 209.3 215.8 L 210.7 215.2 L 212.2 214.5 L 213.6 213.9 L 215.0 213.2 L 216.5 212.5 L 217.9 211.8 L 219.3 211.0 L 220.7 210.3 L 222.2 209.5 L 223.6 208.8 L 225.0 208.0 L 226.5 207.2 L 227.9 206.3 L 229.3 205.5 L 230.8 204.7 L 232.2 203.8 L 233.6 202.9 L 235.0 202.0 L 236.5 201.1 L 237.9 200.2 L 239.3 199.3 L 240.8 198.4 L 242.2 197.4 L 243.6 196.5 L 245.0 195.5 L 246.5 194.5 L 247.9 193.5 L 249.3 192.5 L 250.8 191.5 L 252.2 190.5 L 253.6 189.4 L 255.1 188.4 L 256.5 187.3 L 257.9 186.3 L 259.4 185.2 L 260.8 184.1 L 262.2 183.0 L 263.6 181.9 L 265.1 180.8 L 266.5 179.7 L 267.9 178.6 L 269.4 177.5 L 270.8 176.3 L 272.2 175.2 L 273.6 174.1 L 275.1 172.9 L 276.5 171.7 L 277.9 170.6 L 279.4 169.4 L 280.8 168.2 L 282.2 167.0 L 283.7 165.9 L 285.1 164.7 L 286.5 163.5 L 288.0 162.3 L 289.4 161.1 L 290.8 159.9 L 292.2 158.6 L 293.7 157.4 L 295.1 156.2 L 296.5 155.0 L 298.0 153.8 L 299.4 152.6 L 300.8 151.3 L 302.2 150.1 L 303.7 148.9 L 305.1 147.6 L 306.5 146.4 L 308.0 145.2 L 309.4 143.9 L 310.8 142.7 L 312.3 141.5 L 313.7 140.2 L 315.1 139.0 L 316.6 137.8 L 318.0 136.5 L 319.4 135.3 L 320.8 134.1 L 322.3 132.9 L 323.7 131.6 L 325.1 130.4 L 326.6 129.2 L 328.0 128.0 L 329.4 126.8 L 330.9 125.6 L 332.3 124.4 L 333.7 123.1 L 335.1 121.9 L 336.6 120.8 L 338.0 119.6 L 339.4 118.4 L 340.9 117.2 L 342.3 116.0 L 343.7 114.8 L 345.1 113.7 L 346.6 112.5 L 348.0 111.4 L 349.4 110.2 L 350.9 109.1 L 352.3 107.9 L 353.7 106.8 L 355.2 105.7 L 356.6 104.6 L 358.0 103.5 L 359.4 102.4 L 360.9 101.3 L 362.3 100.2 L 363.7 99.1 L 365.2 98.1 L 366.6 97.0 L 368.0 96.0 L 369.5 95.0 L 370.9 93.9 L 372.3 92.9 L 373.8 91.9 L 375.2 90.9 L 376.6 89.9 L 378.0 89.0 L 379.5 88.0 L 380.9 87.1 L 382.3 86.1 L 383.8 85.2 L 385.2 84.3 L 386.6 83.4 L 388.1 82.5 L 389.5 81.6 L 390.9 80.8 L 392.3 79.9 L 393.8 79.1 L 395.2 78.3 L 396.6 77.5 L 398.1 76.7 L 399.5 75.9 L 400.9 75.2 L 402.3 74.4 L 403.8 73.7 L 405.2 73.0 L 406.6 72.3 L 408.1 71.6 L 409.5 71.0 L 410.9 70.3 L 412.4 69.7 L 413.8 69.1 L 415.2 68.5 L 416.7 67.9 L 418.1 67.3 L 419.5 66.8 L 420.9 66.3 L 422.4 65.8 L 423.8 65.3 L 425.2 64.8 L 426.7 64.4 L 428.1 64.0 L 429.5 63.5 L 430.9 63.2 L 432.4 62.8 L 433.8 62.5 L 435.2 62.1 L 436.7 61.8 L 438.1 61.5 L 439.5 61.3 L 441.0 61.0 L 442.4 60.8 L 443.8 60.6 L 445.2 60.5 L 446.7 60.3 L 448.1 60.2 L 449.5 60.1 L 451.0 60.0 L 452.4 60.0 L 453.8 59.9 L 455.3 59.9 L 456.7 59.9 L 458.1 60.0 L 459.6 60.1 L 461.0 60.1 L 462.4 60.3 L 463.8 60.4 L 465.3 60.6 L 466.7 60.8 L 468.1 61.0 L 469.6 61.3 L 471.0 61.5 L 472.4 61.8 L 473.8 62.2 L 475.3 62.5 L 476.7 62.9 L 478.1 63.3 L 479.6 63.8 L 481.0 64.2 L 482.4 64.7 L 483.9 65.3 L 485.3 65.8 L 486.7 66.4 L 488.2 67.0 L 489.6 67.7 L 491.0 68.4 L 492.4 69.1 L 493.9 69.8 L 495.3 70.6 L 496.7 71.4 L 498.2 72.2 L 499.6 73.1 L 501.0 74.0 L 502.4 74.9 L 503.9 75.9 L 505.3 76.9 L 506.7 77.9 L 508.2 79.0 L 509.6 80.1 L 511.0 81.2 L 512.5 82.4 L 513.9 83.6 L 515.3 84.8 L 516.8 86.1 L 518.2 87.4 L 519.6 88.7 L 521.0 90.1 L 522.5 91.5 L 523.9 93.0 L 525.3 94.4 L 526.8 96.0 L 528.2 97.5 L 529.6 99.1 L 531.0 100.7 L 532.5 102.4 L 533.9 104.1 L 535.3 105.8 L 536.8 107.6 L 538.2 109.4 L 539.6 111.3 L 541.1 113.2 L 542.5 115.1 L 543.9 117.1 L 545.3 119.1 L 546.8 121.2 L 548.2 123.3 L 549.6 125.4 L 551.1 127.6 L 552.5 129.8 L 553.9 132.0 L 555.4 134.3 L 556.8 136.7 L 558.2 139.1 L 559.7 141.5 L 561.1 143.9 L 562.5 146.4 L 563.9 149.0 L 565.4 151.6 L 566.8 154.2 L 568.2 156.9 L 569.7 159.6 L 571.1 162.4 L 572.5 165.2 L 574.0 168.1 L 575.4 171.0 L 576.8 173.9 L 578.2 176.9 L 579.7 179.9 L 581.1 183.0 L 582.5 186.1 L 584.0 189.3 L 585.4 192.5 L 586.8 195.8 L 588.2 199.1 L 589.7 202.5 L 591.1 205.9 L 592.5 209.3 L 594.0 212.8 L 595.4 216.4 L 596.8 220.0 L 598.3 223.6 L 599.7 227.3 L 601.1 231.1 L 602.5 234.9 L 604.0 238.7 L 605.4 242.6 L 606.8 246.6 L 608.3 250.6 L 609.7 254.6 L 611.1 258.7 L 612.6 262.8 L 614.0 267.0" fill="none" stroke="#1a6b5a" stroke-width="2.2" stroke-dasharray="2.5,3.5"/>
+  <circle cx="419.7" cy="66.7" r="4.5" fill="#1a6b5a"/>
+  <circle cx="92.9" cy="187.5" r="2.6" fill="#1a6b5a"/>
+  <circle cx="256.3" cy="187.5" r="2.6" fill="#1a6b5a"/>
+  <circle cx="583.1" cy="187.5" r="2.6" fill="#1a6b5a"/>
+  <path d="M 52.0 201.7 L 53.4 201.0 L 54.9 200.4 L 56.3 199.8 L 57.7 199.1 L 59.1 198.5 L 60.6 198.0 L 62.0 197.4 L 63.4 196.8 L 64.9 196.3 L 66.3 195.7 L 67.7 195.2 L 69.2 194.7 L 70.6 194.2 L 72.0 193.7 L 73.5 193.2 L 74.9 192.7 L 76.3 192.2 L 77.7 191.8 L 79.2 191.3 L 80.6 190.9 L 82.0 190.4 L 83.5 190.0 L 84.9 189.6 L 86.3 189.2 L 87.8 188.8 L 89.2 188.4 L 90.6 188.1 L 92.0 187.7 L 93.5 187.3 L 94.9 187.0 L 96.3 186.7 L 97.8 186.3 L 99.2 186.0 L 100.6 185.7 L 102.1 185.4 L 103.5 185.1 L 104.9 184.8 L 106.3 184.6 L 107.8 184.3 L 109.2 184.1 L 110.6 183.8 L 112.1 183.6 L 113.5 183.3 L 114.9 183.1 L 116.3 182.9 L 117.8 182.7 L 119.2 182.5 L 120.6 182.3 L 122.1 182.1 L 123.5 181.9 L 124.9 181.8 L 126.4 181.6 L 127.8 181.5 L 129.2 181.3 L 130.7 181.2 L 132.1 181.0 L 133.5 180.9 L 134.9 180.8 L 136.4 180.7 L 137.8 180.6 L 139.2 180.5 L 140.7 180.4 L 142.1 180.3 L 143.5 180.2 L 144.9 180.1 L 146.4 180.1 L 147.8 180.0 L 149.2 180.0 L 150.7 179.9 L 152.1 179.9 L 153.5 179.8 L 155.0 179.8 L 156.4 179.8 L 157.8 179.8 L 159.2 179.8 L 160.7 179.8 L 162.1 179.8 L 163.5 179.8 L 165.0 179.8 L 166.4 179.8 L 167.8 179.8 L 169.3 179.8 L 170.7 179.8 L 172.1 179.9 L 173.6 179.9 L 175.0 180.0 L 176.4 180.0 L 177.8 180.1 L 179.3 180.1 L 180.7 180.2 L 182.1 180.2 L 183.6 180.3 L 185.0 180.4 L 186.4 180.5 L 187.8 180.5 L 189.3 180.6 L 190.7 180.7 L 192.1 180.8 L 193.6 180.9 L 195.0 181.0 L 196.4 181.1 L 197.9 181.2 L 199.3 181.3 L 200.7 181.4 L 202.2 181.6 L 203.6 181.7 L 205.0 181.8 L 206.4 181.9 L 207.9 182.1 L 209.3 182.2 L 210.7 182.3 L 212.2 182.5 L 213.6 182.6 L 215.0 182.7 L 216.5 182.9 L 217.9 183.0 L 219.3 183.2 L 220.7 183.3 L 222.2 183.5 L 223.6 183.6 L 225.0 183.8 L 226.5 183.9 L 227.9 184.1 L 229.3 184.3 L 230.8 184.4 L 232.2 184.6 L 233.6 184.8 L 235.0 184.9 L 236.5 185.1 L 237.9 185.3 L 239.3 185.4 L 240.8 185.6 L 242.2 185.8 L 243.6 185.9 L 245.0 186.1 L 246.5 186.3 L 247.9 186.5 L 249.3 186.6 L 250.8 186.8 L 252.2 187.0 L 253.6 187.2 L 255.1 187.3 L 256.5 187.5 L 257.9 187.7 L 259.4 187.9 L 260.8 188.1 L 262.2 188.2 L 263.6 188.4 L 265.1 188.6 L 266.5 188.8 L 267.9 188.9 L 269.4 189.1 L 270.8 189.3 L 272.2 189.4 L 273.6 189.6 L 275.1 189.8 L 276.5 190.0 L 277.9 190.1 L 279.4 190.3 L 280.8 190.4 L 282.2 190.6 L 283.7 190.8 L 285.1 190.9 L 286.5 191.1 L 288.0 191.3 L 289.4 191.4 L 290.8 191.6 L 292.2 191.7 L 293.7 191.9 L 295.1 192.0 L 296.5 192.2 L 298.0 192.3 L 299.4 192.4 L 300.8 192.6 L 302.2 192.7 L 303.7 192.8 L 305.1 193.0 L 306.5 193.1 L 308.0 193.2 L 309.4 193.3 L 310.8 193.5 L 312.3 193.6 L 313.7 193.7 L 315.1 193.8 L 316.6 193.9 L 318.0 194.0 L 319.4 194.1 L 320.8 194.2 L 322.3 194.3 L 323.7 194.4 L 325.1 194.5 L 326.6 194.6 L 328.0 194.6 L 329.4 194.7 L 330.9 194.8 L 332.3 194.8 L 333.7 194.9 L 335.1 194.9 L 336.6 195.0 L 338.0 195.0 L 339.4 195.1 L 340.9 195.1 L 342.3 195.2 L 343.7 195.2 L 345.1 195.2 L 346.6 195.2 L 348.0 195.2 L 349.4 195.2 L 350.9 195.2 L 352.3 195.2 L 353.7 195.2 L 355.2 195.2 L 356.6 195.2 L 358.0 195.2 L 359.4 195.1 L 360.9 195.1 L 362.3 195.1 L 363.7 195.0 L 365.2 195.0 L 366.6 194.9 L 368.0 194.8 L 369.5 194.8 L 370.9 194.7 L 372.3 194.6 L 373.8 194.5 L 375.2 194.4 L 376.6 194.3 L 378.0 194.2 L 379.5 194.0 L 380.9 193.9 L 382.3 193.8 L 383.8 193.6 L 385.2 193.5 L 386.6 193.3 L 388.1 193.2 L 389.5 193.0 L 390.9 192.8 L 392.3 192.6 L 393.8 192.4 L 395.2 192.2 L 396.6 192.0 L 398.1 191.8 L 399.5 191.6 L 400.9 191.4 L 402.3 191.1 L 403.8 190.9 L 405.2 190.6 L 406.6 190.3 L 408.1 190.1 L 409.5 189.8 L 410.9 189.5 L 412.4 189.2 L 413.8 188.9 L 415.2 188.6 L 416.7 188.2 L 418.1 187.9 L 419.5 187.5 L 420.9 187.2 L 422.4 186.8 L 423.8 186.5 L 425.2 186.1 L 426.7 185.7 L 428.1 185.3 L 429.5 184.9 L 430.9 184.4 L 432.4 184.0 L 433.8 183.6 L 435.2 183.1 L 436.7 182.6 L 438.1 182.2 L 439.5 181.7 L 441.0 181.2 L 442.4 180.7 L 443.8 180.2 L 445.2 179.7 L 446.7 179.1 L 448.1 178.6 L 449.5 178.0 L 451.0 177.4 L 452.4 176.9 L 453.8 176.3 L 455.3 175.7 L 456.7 175.1 L 458.1 174.4 L 459.6 173.8 L 461.0 173.2 L 462.4 172.5 L 463.8 171.8 L 465.3 171.1 L 466.7 170.5 L 468.1 169.7 L 469.6 169.0 L 471.0 168.3 L 472.4 167.6 L 473.8 166.8 L 475.3 166.0 L 476.7 165.3 L 478.1 164.5 L 479.6 163.7 L 481.0 162.8 L 482.4 162.0 L 483.9 161.2 L 485.3 160.3 L 486.7 159.5 L 488.2 158.6 L 489.6 157.7 L 491.0 156.8 L 492.4 155.9 L 493.9 154.9 L 495.3 154.0 L 496.7 153.0 L 498.2 152.0 L 499.6 151.0 L 501.0 150.0 L 502.4 149.0 L 503.9 148.0 L 505.3 147.0 L 506.7 145.9 L 508.2 144.8 L 509.6 143.7 L 511.0 142.6 L 512.5 141.5 L 513.9 140.4 L 515.3 139.3 L 516.8 138.1 L 518.2 136.9 L 519.6 135.7 L 521.0 134.5 L 522.5 133.3 L 523.9 132.1 L 525.3 130.8 L 526.8 129.6 L 528.2 128.3 L 529.6 127.0 L 531.0 125.7 L 532.5 124.4 L 533.9 123.0 L 535.3 121.7 L 536.8 120.3 L 538.2 118.9 L 539.6 117.5 L 541.1 116.1 L 542.5 114.6 L 543.9 113.2 L 545.3 111.7 L 546.8 110.2 L 548.2 108.7 L 549.6 107.2 L 551.1 105.7 L 552.5 104.1 L 553.9 102.6 L 555.4 101.0 L 556.8 99.4 L 558.2 97.8 L 559.7 96.1 L 561.1 94.5 L 562.5 92.8 L 563.9 91.1 L 565.4 89.4 L 566.8 87.7 L 568.2 85.9 L 569.7 84.2 L 571.1 82.4 L 572.5 80.6 L 574.0 78.8 L 575.4 77.0 L 576.8 75.1 L 578.2 73.3 L 579.7 71.4 L 581.1 69.5 L 582.5 67.6 L 584.0 65.6 L 585.4 63.7 L 586.8 61.7 L 588.2 59.7 L 589.7 57.7 L 591.1 55.6 L 592.5 53.6 L 594.0 51.5 L 595.4 49.4 L 596.8 47.3 L 598.3 45.2 L 599.7 43.0 L 601.1 40.9 L 602.5 38.7 L 604.0 36.5 L 605.4 34.3 L 606.8 32.0 L 608.3 29.8 L 609.7 27.5 L 611.1 25.2 L 612.6 22.8 L 614.0 20.5 L 615.4 18.1 L 616.9 15.7 L 618.3 13.3" fill="none" stroke="#5b54b8" stroke-width="2.2" stroke-dasharray="7,4"/>
+  <circle cx="583.1" cy="66.7" r="4.5" fill="#5b54b8"/>
+  <circle cx="92.9" cy="187.5" r="2.6" fill="#5b54b8"/>
+  <circle cx="256.3" cy="187.5" r="2.6" fill="#5b54b8"/>
+  <circle cx="419.7" cy="187.5" r="2.6" fill="#5b54b8"/>
+  <line x1="52.0" y1="66.7" x2="624.0" y2="66.7" stroke="#9a8d7e" stroke-width="0.8" stroke-dasharray="3,3"/>
+  <text x="84.7" y="40.2" font-family="JetBrains Mono,monospace" font-size="13" fill="#b44a2d" text-anchor="start">ℓ₀</text>
+  <text x="228.5" y="40.2" font-family="JetBrains Mono,monospace" font-size="13" fill="#3a5ba0" text-anchor="start">ℓ₁</text>
+  <text x="427.9" y="40.2" font-family="JetBrains Mono,monospace" font-size="13" fill="#1a6b5a" text-anchor="start">ℓ₂</text>
+  <text x="558.6" y="40.2" font-family="JetBrains Mono,monospace" font-size="13" fill="#5b54b8" text-anchor="start">ℓ₃</text>
+  <text x="338.0" y="23.2" font-family="Source Serif 4,serif" font-size="12" fill="#6b5d4f" text-anchor="middle" font-style="italic">ℓᵢ(xₖ) = 1 при k = i и 0 при k ≠ i</text>
+</svg>
+<div class="caption">Базисные многочлены для узлов \(0,1,2,3\): единица в своём узле, нули в остальных.</div>
+</div>
+  </div>
+  <p class="bridge">Из формулы (3.5) вытекают два свойства, которыми мы будем пользоваться постоянно.</p>
+</section>
+
+<!-- 10: свойства -->
+<section class="slide">
+  <div class="slide-num">§3.2 · Свойства</div>
+  <h2>Воспроизведение многочленов, разбиение единицы, стоимость</h2>
+  <p class="lead">Оба свойства следуют из единственности и явного вида базиса.</p>
+  <div class="two-col">
+    <div class="callout">
+      <strong>Воспроизведение многочленов.</strong> Если \(y_i=Q(x_i)\) для многочлена \(Q\) степени \(\le n\), то \(L_n\equiv Q\) (он сам удовлетворяет (3.1), а решение единственно). При \(Q\equiv1\):
+      <div class="eq">\[ \sum_{i=0}^{n}\ell_i(x)\equiv1. \tag{3.6} \]</div>
+      Удобная проверка программы: сумма вычисленных \(\ell_i(x)\) должна равняться единице с точностью до нескольких \(u\).
+    </div>
+    <div class="callout">
+      <strong>Стоимость.</strong> Формула (3.5) «в лоб»: \(O(n^2)\) на каждую точку; новый узел — всё заново. <em>Барицентрическая форма</em> с весами \(w_i=1/\prod_{j\ne i}(x_i-x_j)\):
+      <div class="eq" style="font-size:.9em">\[ L_n(x)=\frac{\sum_i w_iy_i/(x-x_i)}{\sum_i w_i/(x-x_i)} \tag{3.7} \]</div>
+      — \(O(n^2)\) один раз, затем \(O(n)\) на точку; численно устойчива (Higham, 2004).
+    </div>
+  </div>
+  <p class="bridge">Форма Лагранжа не приспособлена к добавлению узлов; форма Ньютона строится именно пошагово.</p>
+</section>
+
+<!-- 11: Ньютон пошагово, определение 3 -->
+<section class="slide">
+  <div class="slide-num">§3.3 · Разделённые разности</div>
+  <h2>Построение Ньютона: узел за узлом</h2>
+  <p class="lead">Будем добавлять узлы по одному так, чтобы каждая поправка не нарушала прежних условий.</p>
+  <p>\(P_0=y_0\); &nbsp; \(P_1=P_0+c_1(x-x_0)\), откуда \(c_1=\dfrac{y_1-y_0}{x_1-x_0}\); &nbsp; \(P_2=P_1+c_2(x-x_0)(x-x_1)\); … Поправка обращается в нуль в старых узлах, новое условие определяет \(c_k\). Эти коэффициенты — <em>разделённые разности</em>.</p>
+  <div class="definition" data-num="3" style="min-height:auto">
+    \(f[x_i]=f(x_i)\); для \(k\ge1\)
+    <div class="eq">\[ f[x_i,\ldots,x_{i+k}]=\frac{f[x_{i+1},\ldots,x_{i+k}]-f[x_i,\ldots,x_{i+k-1}]}{x_{i+k}-x_i}. \tag{3.8} \]</div>
+    В числителе — две разности порядка \(k-1\) без крайнего левого и без крайнего правого узла; в знаменателе — расстояние между <em>крайними</em> узлами.
+    <div class="mini-ex"><b>Пример</b>\(f=x^2\), узлы \(1,2,4\): \(f[1,2]=3\), \(f[2,4]=6\), \(f[1,2,4]=\tfrac{6-3}{4-1}=1=\tfrac{f''}{2!}\).</div>
+  </div>
+  <p class="bridge">Разности удобно считать таблицей — столбец за столбцом.</p>
+</section>
+
+<!-- 12: таблица -->
+<section class="slide">
+  <div class="slide-num">§3.3 · Таблица</div>
+  <h2>Таблица разделённых разностей</h2>
+  <p class="lead">Каждый столбец получается из предыдущего по (3.8); нужна лишь верхняя диагональ.</p>
+  <div class="two-col">
+    <div style="overflow-x:auto">
+    <table class="dd" style="min-width:20rem">
+<tr><th>\(x_i\)</th><th>\(f[x_i]\)</th><th>1-й порядок</th><th>2-й порядок</th><th>3-й порядок</th></tr>
+<tr><td rowspan="2">1</td><td rowspan="2" class="c0">1</td><td class="e"></td><td class="e"></td><td class="e"></td></tr>
+<tr><td rowspan="2" class="c1">\(\tfrac{5-1}{2-1}=4\)</td><td class="e"></td><td class="e"></td></tr>
+<tr><td rowspan="2">2</td><td rowspan="2" class="c0">5</td><td rowspan="2" class="c2">\(\tfrac{7-4}{4-1}=1\)</td><td class="e"></td></tr>
+<tr><td rowspan="2" class="c1">\(\tfrac{19-5}{4-2}=7\)</td><td rowspan="2" class="c3">\(\tfrac{5/3-1}{5-1}=\tfrac16\)</td></tr>
+<tr><td rowspan="2">4</td><td rowspan="2" class="c0">19</td><td rowspan="2" class="c2">\(\tfrac{12-7}{5-2}=\tfrac53\)</td></tr>
+<tr><td rowspan="2" class="c1">\(\tfrac{31-19}{5-4}=12\)</td><td class="e"></td></tr>
+<tr><td rowspan="2">5</td><td rowspan="2" class="c0">31</td><td class="e"></td><td class="e"></td></tr>
+<tr><td class="e"></td><td class="e"></td><td class="e"></td></tr>
+</table>
+    </div>
+    <div>
+      <div class="callout"><strong>Знаменатели второго порядка</strong> — \(4-1\) и \(5-2\): расстояния между <em>крайними</em> узлами тройки, а не между соседними.</div>
+      <div class="callout" style="margin-top:.6rem"><strong>Верхняя диагональ</strong> \(1,\ 4,\ 1,\ \tfrac16\) — коэффициенты формы Ньютона (3.11).</div>
+      <div class="callout" style="margin-top:.6rem">Если бы последнее значение было \(29\), третья разность обратилась бы в нуль: данные \(1,5,19,29\) сняты с параболы \(x^2+x-1\) (теорема&nbsp;4).</div>
+      <p style="font-size:.85em;margin-top:.6rem;color:var(--text2)">В программе: один массив, каждый столбец пересчитывается на месте <em>снизу вверх</em>; \(n(n+1)/2\) делений.</p>
+    </div>
+  </div>
+  <p class="bridge">Из верхней диагонали собирается вторая явная форма многочлена.</p>
+</section>
+
+<!-- 13: форма Ньютона -->
+<section class="slide">
+  <div class="slide-num">§3.4 · Теорема 3</div>
+  <h2>Форма Ньютона</h2>
+  <p class="lead">Дадим имя произведениям из поправок Ньютона и запишем результат построения.</p>
+  <div class="definition" data-num="4" style="min-height:auto">
+    <em>узловой многочлен:</em> \(\omega_0\equiv1\), &nbsp; \(\omega_k(x)=\prod_{i=0}^{k-1}(x-x_i)\) — степень \(k\), старший коэффициент \(1\), нули в первых \(k\) узлах. \(\tag{3.10}\)
+  </div>
+  <div class="theorem" data-num="3" style="min-height:auto">
+    <div class="eq">\[ N_n(x)=\sum_{k=0}^{n}f[x_0,\ldots,x_k]\,\omega_k(x)=f[x_0]+f[x_0,x_1](x-x_0)+\dots+f[x_0,\ldots,x_n](x-x_0)\cdots(x-x_{n-1}). \tag{3.11} \]</div>
+    <div class="mini-ex"><b>Пример</b>По таблице: \(N_3(x)=1+4(x-1)+(x-1)(x-2)+\tfrac16(x-1)(x-2)(x-4)\). Первые три слагаемых — \(N_2\) по узлам \(1,2,4\); четвёртое подключает узел \(5\).</div>
+  </div>
+  <p class="bridge">Доказательство опирается на тождество, связывающее три интерполяционных многочлена.</p>
+</section>
+
+<!-- 14: доказательство -->
+<section class="slide">
+  <div class="slide-num">§3.4 · Доказательство</div>
+  <h2>Тождество Эйткена и старший коэффициент</h2>
+  <p class="lead">Обозначим \(P_{i\ldots j}\) интерполяционный многочлен по узлам \(x_i,\ldots,x_j\).</p>
+  <div class="eq">\[ P_{0\ldots n}(x)=\frac{(x-x_0)\,P_{1\ldots n}(x)-(x-x_n)\,P_{0\ldots n-1}(x)}{x_n-x_0}. \tag{3.12} \]</div>
+  <div class="two-col">
+    <div class="callout"><strong>Шаг 1.</strong> Правая часть имеет степень \(\le n\); в \(x_0\) исчезает первое слагаемое, в \(x_n\) — второе, в промежуточном \(x_i\) оба многочлена равны \(y_i\) и дробь равна \(y_i\). По теореме&nbsp;1 это \(P_{0\ldots n}\).</div>
+    <div class="callout"><strong>Шаг 2.</strong> Старший коэффициент справа: \(\dfrac{a_{1\ldots n}-a_{0\ldots n-1}}{x_n-x_0}\) — рекуррентность (3.8). По индукции <em>старший коэффициент \(P_{0\ldots n}\) равен \(f[x_0,\ldots,x_n]\)</em>.</div>
+  </div>
+  <div class="callout"><strong>Шаг 3.</strong> \(P_{0\ldots n}-P_{0\ldots n-1}\) — степень \(\le n\), нули в \(x_0,\ldots,x_{n-1}\) \(\Rightarrow\) равна \(c\,\omega_n(x)\), где \(c\) — старший коэффициент, то есть \(f[x_0,\ldots,x_n]\). Индукция даёт (3.11). \(\square\) &nbsp; Побочно: старший коэффициент формы Лагранжа даёт явную формулу \(f[x_0,\ldots,x_k]=\sum_i f(x_i)/\prod_{j\ne i}(x_i-x_j)\) (3.9) — отсюда симметрия по узлам.</div>
+  <p class="bridge">Форма получена; посмотрим, как её вычислять и чем она удобнее формы Лагранжа.</p>
+</section>
+
+<!-- 15: Горнер и обновляемость -->
+<section class="slide">
+  <div class="slide-num">§3.4 · Вычисление</div>
+  <h2>Схема Горнера и обновляемость</h2>
+  <p class="lead">Форма Ньютона вычисляется вложенными скобками и легко принимает новые узлы.</p>
+  <div class="eq" style="font-size:.95em">\[ N_n(x)=c_0+(x-x_0)\Bigl(c_1+(x-x_1)\bigl(c_2+\dots+(x-x_{n-1})c_n\bigr)\Bigr),\qquad c_k=f[x_0,\ldots,x_k]. \tag{3.13} \]</div>
+  <div class="two-col">
+    <div class="example">
+      <span class="lbl">Пример: \(N_3(3)\) для \(c=(1,4,1,\tfrac16)\), узлы \(1,2,4\)</span>
+      \(b=\tfrac16\to\tfrac16(3-4)+1=\tfrac56\to\tfrac56(3-2)+4=\tfrac{29}{6}\to\tfrac{29}{6}(3-1)+1=\tfrac{32}{3}\).
+      <p style="margin:.4rem 0 0">Стоимость: \(n\) умножений и \(2n\) сложений на точку; таблица — один раз, \(O(n^2)\).</p>
+    </div>
+    <div class="callout">
+      <strong>Новый узел \(x_{n+1}\).</strong> Старые \(c_0,\ldots,c_n\) не меняются; к таблице дописывается одна диагональ (\(n+1\) деление), к многочлену — одно слагаемое \(c_{n+1}\omega_{n+1}(x)\). Оно же равно \(N_{n+1}-N_n\) — <em>апостериорная</em> мера вклада последнего узла.
+    </div>
+  </div>
+  <div class="tiles" style="font-size:.9em">
+    <div class="tile"><div class="h">Лагранж (3.5)</div><div class="t">\(O(n^2)\) на точку</div><div class="d">подготовки нет; новый узел — всё заново; удобна для теории</div></div>
+    <div class="tile"><div class="h">Ньютон (3.11)</div><div class="t">\(O(n)\) на точку</div><div class="d">таблица \(O(n^2)\) один раз; новый узел — одна диагональ</div></div>
+  </div>
+  <p class="bridge">Разделённые разности — не только коэффициенты: они тесно связаны с производными.</p>
+</section>
+
+<!-- 16: теорема 4 -->
+<section class="slide">
+  <div class="slide-num">§3.5 · Теорема 4</div>
+  <h2>Теорема о среднем для разделённых разностей</h2>
+  <p class="lead">Разность первого порядка равна \(f'(\xi)\) по теореме Лагранжа; это обобщается на любой порядок.</p>
+  <div class="theorem" data-num="4" style="min-height:auto">
+    Пусть \(f\in C^{k}[a,b]\), узлы \(x_0,\ldots,x_k\in[a,b]\) различны. Тогда найдётся \(\xi\) строго между наименьшим и наибольшим узлами:
+    <div class="eq">\[ f[x_0,x_1,\ldots,x_k]=\frac{f^{(k)}(\xi)}{k!}. \tag{3.14} \]</div>
+    <div class="mini-ex"><b>Пример</b>\(f=\sin x\), узлы \(0,\tfrac\pi4,\ldots,\pi\): разность четвёртого порядка \(0{,}0376=\sin\xi/24\), то есть \(\sin\xi=0{,}902\) — такие \(\xi\) есть внутри \([0,\pi]\).</div>
+  </div>
+  <p><em>Доказательство.</em> \(g=f-P_k\) имеет \(k+1\) нуль (узлы). По теореме Ролля \(g'\) имеет \(\ge k\) нулей, \(g''\) — \(\ge k-1\), …, \(g^{(k)}\) — хотя бы один нуль \(\xi\). Но \(P_k^{(k)}\equiv k!\,f[x_0,\ldots,x_k]\) (старший коэффициент, теорема&nbsp;3), поэтому \(0=g^{(k)}(\xi)=f^{(k)}(\xi)-k!\,f[x_0,\ldots,x_k]\). \(\square\)</p>
+  <p class="bridge">Теорема даёт три практических следствия.</p>
+</section>
+
+<!-- 17: следствия -->
+<section class="slide">
+  <div class="slide-num">§3.5 · Следствия</div>
+  <h2>Три следствия теоремы о среднем</h2>
+  <p class="lead">Каждое из них будет использовано — в лабораторной, в оценках и в доказательстве теоремы о погрешности.</p>
+  <div class="tiles">
+    <div class="tile"><div class="h">1. Многочлен степени \(m\)</div><div class="t">разности порядка \(m\) постоянны \(=a_m\); выше — нули</div><div class="d">способ распознать степень таблично заданного многочлена: строить столбцы до постоянного</div></div>
+    <div class="tile"><div class="h">2. Близкие узлы</div><div class="t">\(\bigl|f[x_0,\ldots,x_k]\bigr|\le M_k/k!\)</div><div class="d">никакого \(0/0\): числитель и знаменатель (3.8) стремятся к нулю согласованно; численно — лишь потеря значимости</div></div>
+    <div class="tile hi"><div class="h">3. Слияние узлов</div><div class="t">\(f[x_0,\ldots,x_0]=\dfrac{f^{(k)}(x_0)}{k!}\), \(\omega_k\to(x-x_0)^k\)</div><div class="d">форма Ньютона переходит в многочлен Тейлора (2.5): интерполяция <em>обобщает</em> Тейлора \(\tag{3.15}\)</div></div>
+  </div>
+  <p class="bridge">Многочлен построен; выясним, насколько он отличается от функции между узлами.</p>
+</section>
+
+<!-- 18: постановка вопроса об ошибке -->
+<section class="slide">
+  <div class="slide-num">§3.6 · Теорема 5</div>
+  <h2>Погрешность интерполяции</h2>
+  <p class="lead">Информация в узлах не определяет поведения \(f\) между ними; в ответ входит старшая производная на всём отрезке.</p>
+  <div class="condition" data-num="2" style="min-height:auto">
+    \([a,b]\) содержит все узлы и точку \(x\); \(f\in C^{n+1}[a,b]\). Для \(f=|x|\) условие нарушено уже при \(n=0\).
+  </div>
+  <div class="theorem" data-num="5" style="min-height:auto">
+    Для каждого \(x\in[a,b]\)
+    <div class="eq">\[ f(x)-P_n(x)=f[x_0,\ldots,x_n,x]\;\omega_{n+1}(x), \tag{3.16} \]</div>
+    и найдётся \(\xi=\xi(x)\in(a,b)\):
+    <div class="eq">\[ f(x)-P_n(x)=\frac{f^{(n+1)}(\xi)}{(n+1)!}\,\omega_{n+1}(x),\qquad \omega_{n+1}(x)=\prod_{i=0}^{n}(x-x_i). \tag{3.17} \]</div>
+    <div class="mini-ex"><b>Пример</b>\(n=0\): \(f(x)-f(x_0)=f'(\xi)(x-x_0)\) — теорема Лагранжа. \(n=1\): \(f-P_1=\tfrac12f''(\xi)(x-x_0)(x-x_1)\).</div>
+  </div>
+  <p class="bridge">Доказательство занимает четыре строки благодаря форме Ньютона.</p>
+</section>
+
+<!-- 19: доказательство и оценка -->
+<section class="slide">
+  <div class="slide-num">§3.6 · Оценка</div>
+  <h2>Доказательство и рабочая оценка</h2>
+  <p class="lead">Присоединим точку \(x\) к узлам и воспользуемся обновляемостью формы Ньютона.</p>
+  <p><em>Доказательство.</em> Пусть \(x\) не узел; положим \(x_{n+1}=x\). По (3.11) \(P_{n+1}(t)=P_n(t)+f[x_0,\ldots,x_n,x]\,\omega_{n+1}(t)\). При \(t=x\) слева \(P_{n+1}(x)=f(x)\) — это (3.16). Теорема&nbsp;4 для разности порядка \(n+1\) даёт (3.17). \(\square\)</p>
+  <div class="eq">\[ \max_{[a,b]}|f-P_n|\;\le\;\underbrace{\frac{M_{n+1}}{(n+1)!}}_{\text{функция}}\cdot\underbrace{\max_{[a,b]}|\omega_{n+1}|}_{\text{сетка}},\qquad M_{n+1}=\max_{[a,b]}|f^{(n+1)}|. \tag{3.18} \]</div>
+  <div class="two-col">
+    <div class="callout"><strong>Множитель функции</strong> от узлов не зависит: \(\le1/(n+1)!\) для \(\sin\), \(\cos\); \(e/(n+1)!\) для \(e^x\) на \([-1,1]\). Но бывает, что \(M_{n+1}\) растёт быстрее \((n+1)!\) — §&nbsp;3.9.</div>
+    <div class="callout"><strong>Множитель сетки</strong> от функции не зависит — единственное, чем управляет вычислитель. У Тейлора на его месте \((x-x_0)^{n+1}\): мал лишь около \(x_0\); \(\omega_{n+1}\) имеет \(n+1\) нуль по всему отрезку.</div>
+  </div>
+  <p class="bridge">Проверим оценку на конкретном примере.</p>
+</section>
+
+<!-- 20: пример sin -->
+<section class="slide">
+  <div class="slide-num">§3.6 · Пример</div>
+  <h2>\(\sin x\) на \([0,\pi]\) по пяти равномерным узлам</h2>
+  <p class="lead">Узлы \(0,\tfrac\pi4,\tfrac\pi2,\tfrac{3\pi}4,\pi\); \(n=4\), \(h=\pi/4\); все производные синуса не превосходят единицы.</p>
+  <div class="tiles">
+    <div class="tile"><div class="h">множитель функции</div><div class="t">\(M_5/5!\le1/120\)</div><div class="d">от узлов не зависит</div></div>
+    <div class="tile"><div class="h">множитель сетки</div><div class="t">\(\max|\omega_5|=1{,}085\)</div><div class="d">достигается при \(x\approx0{,}28\) и \(2{,}86\) — в <em>крайних</em> интервалах; в средних \(|\omega_5|\le0{,}42\)</div></div>
+    <div class="tile hi"><div class="h">оценка (3.18)</div><div class="t">\(\le9{,}0\cdot10^{-3}\)</div><div class="d">фактически \(\max|\sin x-P_4|=1{,}8\cdot10^{-3}\) — запас впятеро</div></div>
+    <div class="tile"><div class="h">в точке \(x=1\)</div><div class="t">\(|\omega_5(1)|=0{,}356\)</div><div class="d">оценка \(3{,}0\cdot10^{-3}\), фактическая ошибка \(2{,}7\cdot10^{-4}\)</div></div>
+  </div>
+  <div class="callout">Запас оценки — от замены \(\sin\xi\) единицей и от того, что максимумы двух множителей достигаются в разных точках. Множитель сетки при этом вычислен точно.</div>
+  <p class="bridge">Для самой распространённой — равномерной — сетки множитель сетки оценивается явно.</p>
+</section>
+
+<!-- 21: теорема 6 -->
+<section class="slide">
+  <div class="slide-num">§3.7 · Теорема 6</div>
+  <h2>Узловой многочлен равномерной сетки</h2>
+  <p class="lead">Для узлов \(x_i=x_0+ih\) множитель сетки оценивается явно.</p>
+  <div class="theorem" data-num="6" style="min-height:auto">
+    <div class="eq">\[ \max_{[x_0,x_n]}|\omega_{n+1}|\le\frac{h^{n+1}n!}{4},\qquad \max_{[x_0,x_n]}|f-P_n|\le\frac{M_{n+1}\,h^{n+1}}{4\,(n+1)}. \tag{3.19–3.20} \]</div>
+    <div class="mini-ex"><b>Пример</b>Пять узлов на \([0,\pi]\): оценка \(h^5\cdot4!/4=1{,}79\) против фактических \(1{,}085\). Одиннадцать узлов на \([-1,1]\): \(1{,}86\cdot10^{-2}\) против \(8{,}5\cdot10^{-3}\).</div>
+  </div>
+  <p><em>Доказательство.</em> Пусть \(x\in[x_j,x_{j+1}]\). Ближайшие множители: \(|x-x_j||x-x_{j+1}|\le h^2/4\). Слева (\(i\le j-1\)): \(|x-x_i|\le(j+1-i)h\), произведение \(\le h^{j}(j+1)!\). Справа (\(i\ge j+2\)): \(|x-x_i|\le(i-j)h\), произведение \(\le h^{n-j-1}(n-j)!\). Итого \(|\omega_{n+1}|\le\tfrac{h^{n+1}}{4}(j+1)!(n-j)!\le\tfrac{h^{n+1}}{4}n!\), причём равенство \((j+1)!(n-j)!=n!\) — только при \(j=0\) и \(j=n-1\). \(\square\)</p>
+  <p class="bridge">Равенство только в крайних интервалах — значит, внутри отрезка \(|\omega_{n+1}|\) существенно меньше.</p>
+</section>
+
+<!-- 22: рисунок omega + правила -->
+<section class="slide">
+  <div class="slide-num">§3.7 · Иллюстрация</div>
+  <h2>Где узловой многочлен велик</h2>
+  <p class="lead">Оценка (3.19) достигается лишь в крайних интервалах; в середине отрезка \(|\omega_{n+1}|\) на порядки меньше.</p>
+  <div class="two-col">
+    <div class="figure">
+<svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:24rem" role="img" aria-label="График узлового многочлена одиннадцатой степени для одиннадцати равномерных узлов на отрезке от минус единицы до единицы: в середине отрезка он почти нулевой, а в двух крайних интервалах достигает по модулю значения восемь с половиной тысячных.">
+  <rect width="640" height="300" fill="#fdf9f3"/>
+  <line x1="62.0" y1="246.3" x2="624.0" y2="246.3" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="57.0" y="250.3" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">−0.008</text>
+  <line x1="62.0" y1="193.6" x2="624.0" y2="193.6" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="57.0" y="197.6" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">−0.004</text>
+  <line x1="62.0" y1="141.0" x2="624.0" y2="141.0" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="57.0" y="145.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">0</text>
+  <line x1="62.0" y1="88.4" x2="624.0" y2="88.4" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="57.0" y="92.4" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">0.004</text>
+  <line x1="62.0" y1="35.7" x2="624.0" y2="35.7" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="57.0" y="39.7" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">0.008</text>
+  <line x1="62.0" y1="141.0" x2="628.0" y2="141.0" stroke="#2c2419" stroke-width="1.2"/>
+  <line x1="62.0" y1="16.0" x2="62.0" y2="266.0" stroke="#2c2419" stroke-width="1.2"/>
+  <text x="630.0" y="145.0" font-family="JetBrains Mono,monospace" font-size="12" fill="#6b5d4f">x</text>
+  <line x1="75.4" y1="138.0" x2="75.4" y2="144.0" stroke="#2c2419" stroke-width="1"/>
+  <text x="75.4" y="282.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">−1</text>
+  <line x1="209.2" y1="138.0" x2="209.2" y2="144.0" stroke="#2c2419" stroke-width="1"/>
+  <text x="209.2" y="282.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">−0.5</text>
+  <line x1="343.0" y1="138.0" x2="343.0" y2="144.0" stroke="#2c2419" stroke-width="1"/>
+  <text x="343.0" y="282.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">0</text>
+  <line x1="476.8" y1="138.0" x2="476.8" y2="144.0" stroke="#2c2419" stroke-width="1"/>
+  <text x="476.8" y="282.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">0.5</text>
+  <line x1="610.6" y1="138.0" x2="610.6" y2="144.0" stroke="#2c2419" stroke-width="1"/>
+  <text x="610.6" y="282.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">1</text>
+  <path d="M 70.4 258.9 L 71.1 238.5 L 71.8 219.4 L 72.5 201.6 L 73.2 184.9 L 73.9 169.4 L 74.6 155.0 L 75.3 141.6 L 76.0 129.2 L 76.8 117.8 L 77.5 107.2 L 78.2 97.5 L 78.9 88.6 L 79.6 80.5 L 80.3 73.2 L 81.0 66.5 L 81.7 60.5 L 82.4 55.1 L 83.1 50.3 L 83.8 46.1 L 84.5 42.4 L 85.2 39.2 L 85.9 36.5 L 86.6 34.3 L 87.3 32.4 L 88.0 31.0 L 88.7 29.9 L 89.4 29.2 L 90.1 28.8 L 90.8 28.7 L 91.5 28.9 L 92.2 29.4 L 92.9 30.1 L 93.6 31.0 L 94.3 32.2 L 95.0 33.5 L 95.7 35.1 L 96.4 36.7 L 97.1 38.6 L 97.8 40.5 L 98.5 42.6 L 99.2 44.8 L 99.9 47.1 L 100.6 49.5 L 101.3 52.0 L 102.0 54.5 L 102.7 57.1 L 103.4 59.7 L 104.1 62.4 L 104.9 65.1 L 105.6 67.8 L 106.3 70.5 L 107.0 73.3 L 107.7 76.0 L 108.4 78.8 L 109.1 81.5 L 109.8 84.2 L 110.5 86.9 L 111.2 89.6 L 111.9 92.2 L 112.6 94.8 L 113.3 97.4 L 114.0 100.0 L 114.7 102.5 L 115.4 104.9 L 116.1 107.3 L 116.8 109.7 L 117.5 112.0 L 118.2 114.2 L 118.9 116.4 L 119.6 118.5 L 120.3 120.6 L 121.0 122.6 L 121.7 124.6 L 122.4 126.5 L 123.1 128.3 L 123.8 130.1 L 124.5 131.8 L 125.2 133.4 L 125.9 135.0 L 126.6 136.5 L 127.3 138.0 L 128.0 139.4 L 128.7 140.7 L 129.4 142.0 L 130.1 143.2 L 130.8 144.3 L 131.5 145.4 L 132.2 146.4 L 133.0 147.4 L 133.7 148.3 L 134.4 149.2 L 135.1 150.0 L 135.8 150.7 L 136.5 151.4 L 137.2 152.0 L 137.9 152.6 L 138.6 153.2 L 139.3 153.7 L 140.0 154.1 L 140.7 154.5 L 141.4 154.9 L 142.1 155.2 L 142.8 155.4 L 143.5 155.7 L 144.2 155.9 L 144.9 156.0 L 145.6 156.1 L 146.3 156.2 L 147.0 156.3 L 147.7 156.3 L 148.4 156.3 L 149.1 156.2 L 149.8 156.1 L 150.5 156.0 L 151.2 155.9 L 151.9 155.8 L 152.6 155.6 L 153.3 155.4 L 154.0 155.2 L 154.7 154.9 L 155.4 154.7 L 156.1 154.4 L 156.8 154.1 L 157.5 153.8 L 158.2 153.5 L 158.9 153.2 L 159.6 152.9 L 160.3 152.5 L 161.1 152.2 L 161.8 151.8 L 162.5 151.4 L 163.2 151.0 L 163.9 150.7 L 164.6 150.3 L 165.3 149.9 L 166.0 149.5 L 166.7 149.1 L 167.4 148.7 L 168.1 148.3 L 168.8 147.9 L 169.5 147.5 L 170.2 147.1 L 170.9 146.7 L 171.6 146.3 L 172.3 145.9 L 173.0 145.5 L 173.7 145.2 L 174.4 144.8 L 175.1 144.4 L 175.8 144.1 L 176.5 143.7 L 177.2 143.4 L 177.9 143.0 L 178.6 142.7 L 179.3 142.3 L 180.0 142.0 L 180.7 141.7 L 181.4 141.4 L 182.1 141.1 L 182.8 140.8 L 183.5 140.6 L 184.2 140.3 L 184.9 140.0 L 185.6 139.8 L 186.3 139.6 L 187.0 139.3 L 187.7 139.1 L 188.4 138.9 L 189.2 138.7 L 189.9 138.5 L 190.6 138.3 L 191.3 138.2 L 192.0 138.0 L 192.7 137.9 L 193.4 137.7 L 194.1 137.6 L 194.8 137.5 L 195.5 137.4 L 196.2 137.3 L 196.9 137.2 L 197.6 137.1 L 198.3 137.0 L 199.0 137.0 L 199.7 136.9 L 200.4 136.9 L 201.1 136.9 L 201.8 136.8 L 202.5 136.8 L 203.2 136.8 L 203.9 136.8 L 204.6 136.8 L 205.3 136.8 L 206.0 136.8 L 206.7 136.9 L 207.4 136.9 L 208.1 136.9 L 208.8 137.0 L 209.5 137.0 L 210.2 137.1 L 210.9 137.1 L 211.6 137.2 L 212.3 137.3 L 213.0 137.4 L 213.7 137.4 L 214.4 137.5 L 215.1 137.6 L 215.8 137.7 L 216.5 137.8 L 217.3 137.9 L 218.0 138.0 L 218.7 138.1 L 219.4 138.2 L 220.1 138.3 L 220.8 138.5 L 221.5 138.6 L 222.2 138.7 L 222.9 138.8 L 223.6 138.9 L 224.3 139.0 L 225.0 139.2 L 225.7 139.3 L 226.4 139.4 L 227.1 139.5 L 227.8 139.7 L 228.5 139.8 L 229.2 139.9 L 229.9 140.0 L 230.6 140.1 L 231.3 140.3 L 232.0 140.4 L 232.7 140.5 L 233.4 140.6 L 234.1 140.7 L 234.8 140.8 L 235.5 140.9 L 236.2 141.0 L 236.9 141.1 L 237.6 141.2 L 238.3 141.3 L 239.0 141.4 L 239.7 141.5 L 240.4 141.6 L 241.1 141.7 L 241.8 141.8 L 242.5 141.9 L 243.2 142.0 L 243.9 142.1 L 244.6 142.1 L 245.4 142.2 L 246.1 142.3 L 246.8 142.3 L 247.5 142.4 L 248.2 142.4 L 248.9 142.5 L 249.6 142.6 L 250.3 142.6 L 251.0 142.6 L 251.7 142.7 L 252.4 142.7 L 253.1 142.8 L 253.8 142.8 L 254.5 142.8 L 255.2 142.8 L 255.9 142.9 L 256.6 142.9 L 257.3 142.9 L 258.0 142.9 L 258.7 142.9 L 259.4 142.9 L 260.1 142.9 L 260.8 142.9 L 261.5 142.9 L 262.2 142.9 L 262.9 142.9 L 263.6 142.8 L 264.3 142.8 L 265.0 142.8 L 265.7 142.8 L 266.4 142.8 L 267.1 142.7 L 267.8 142.7 L 268.5 142.7 L 269.2 142.6 L 269.9 142.6 L 270.6 142.5 L 271.3 142.5 L 272.0 142.5 L 272.8 142.4 L 273.5 142.4 L 274.2 142.3 L 274.9 142.3 L 275.6 142.2 L 276.3 142.1 L 277.0 142.1 L 277.7 142.0 L 278.4 142.0 L 279.1 141.9 L 279.8 141.9 L 280.5 141.8 L 281.2 141.7 L 281.9 141.7 L 282.6 141.6 L 283.3 141.6 L 284.0 141.5 L 284.7 141.4 L 285.4 141.4 L 286.1 141.3 L 286.8 141.2 L 287.5 141.2 L 288.2 141.1 L 288.9 141.0 L 289.6 141.0 L 290.3 140.9 L 291.0 140.9 L 291.7 140.8 L 292.4 140.8 L 293.1 140.7 L 293.8 140.6 L 294.5 140.6 L 295.2 140.5 L 295.9 140.5 L 296.6 140.4 L 297.3 140.4 L 298.0 140.3 L 298.7 140.3 L 299.4 140.2 L 300.1 140.2 L 300.9 140.1 L 301.6 140.1 L 302.3 140.1 L 303.0 140.0 L 303.7 140.0 L 304.4 140.0 L 305.1 139.9 L 305.8 139.9 L 306.5 139.9 L 307.2 139.8 L 307.9 139.8 L 308.6 139.8 L 309.3 139.8 L 310.0 139.8 L 310.7 139.7 L 311.4 139.7 L 312.1 139.7 L 312.8 139.7 L 313.5 139.7 L 314.2 139.7 L 314.9 139.7 L 315.6 139.7 L 316.3 139.7 L 317.0 139.7 L 317.7 139.7 L 318.4 139.7 L 319.1 139.7 L 319.8 139.8 L 320.5 139.8 L 321.2 139.8 L 321.9 139.8 L 322.6 139.8 L 323.3 139.8 L 324.0 139.9 L 324.7 139.9 L 325.4 139.9 L 326.1 139.9 L 326.8 140.0 L 327.5 140.0 L 328.2 140.0 L 328.9 140.1 L 329.7 140.1 L 330.4 140.2 L 331.1 140.2 L 331.8 140.2 L 332.5 140.3 L 333.2 140.3 L 333.9 140.4 L 334.6 140.4 L 335.3 140.5 L 336.0 140.5 L 336.7 140.6 L 337.4 140.6 L 338.1 140.6 L 338.8 140.7 L 339.5 140.7 L 340.2 140.8 L 340.9 140.8 L 341.6 140.9 L 342.3 140.9 L 343.0 141.0 L 343.7 141.1 L 344.4 141.1 L 345.1 141.2 L 345.8 141.2 L 346.5 141.3 L 347.2 141.3 L 347.9 141.4 L 348.6 141.4 L 349.3 141.4 L 350.0 141.5 L 350.7 141.5 L 351.4 141.6 L 352.1 141.6 L 352.8 141.7 L 353.5 141.7 L 354.2 141.8 L 354.9 141.8 L 355.6 141.8 L 356.3 141.9 L 357.1 141.9 L 357.8 142.0 L 358.5 142.0 L 359.2 142.0 L 359.9 142.1 L 360.6 142.1 L 361.3 142.1 L 362.0 142.1 L 362.7 142.2 L 363.4 142.2 L 364.1 142.2 L 364.8 142.2 L 365.5 142.2 L 366.2 142.2 L 366.9 142.3 L 367.6 142.3 L 368.3 142.3 L 369.0 142.3 L 369.7 142.3 L 370.4 142.3 L 371.1 142.3 L 371.8 142.3 L 372.5 142.3 L 373.2 142.3 L 373.9 142.3 L 374.6 142.3 L 375.3 142.3 L 376.0 142.2 L 376.7 142.2 L 377.4 142.2 L 378.1 142.2 L 378.8 142.2 L 379.5 142.1 L 380.2 142.1 L 380.9 142.1 L 381.6 142.0 L 382.3 142.0 L 383.0 142.0 L 383.7 141.9 L 384.4 141.9 L 385.1 141.9 L 385.9 141.8 L 386.6 141.8 L 387.3 141.7 L 388.0 141.7 L 388.7 141.6 L 389.4 141.6 L 390.1 141.5 L 390.8 141.5 L 391.5 141.4 L 392.2 141.4 L 392.9 141.3 L 393.6 141.2 L 394.3 141.2 L 395.0 141.1 L 395.7 141.1 L 396.4 141.0 L 397.1 141.0 L 397.8 140.9 L 398.5 140.8 L 399.2 140.8 L 399.9 140.7 L 400.6 140.6 L 401.3 140.6 L 402.0 140.5 L 402.7 140.4 L 403.4 140.4 L 404.1 140.3 L 404.8 140.3 L 405.5 140.2 L 406.2 140.1 L 406.9 140.1 L 407.6 140.0 L 408.3 140.0 L 409.0 139.9 L 409.7 139.9 L 410.4 139.8 L 411.1 139.7 L 411.8 139.7 L 412.5 139.6 L 413.2 139.6 L 414.0 139.5 L 414.7 139.5 L 415.4 139.5 L 416.1 139.4 L 416.8 139.4 L 417.5 139.3 L 418.2 139.3 L 418.9 139.3 L 419.6 139.2 L 420.3 139.2 L 421.0 139.2 L 421.7 139.2 L 422.4 139.2 L 423.1 139.1 L 423.8 139.1 L 424.5 139.1 L 425.2 139.1 L 425.9 139.1 L 426.6 139.1 L 427.3 139.1 L 428.0 139.1 L 428.7 139.1 L 429.4 139.1 L 430.1 139.1 L 430.8 139.2 L 431.5 139.2 L 432.2 139.2 L 432.9 139.2 L 433.6 139.3 L 434.3 139.3 L 435.0 139.4 L 435.7 139.4 L 436.4 139.4 L 437.1 139.5 L 437.8 139.6 L 438.5 139.6 L 439.2 139.7 L 439.9 139.7 L 440.6 139.8 L 441.3 139.9 L 442.1 139.9 L 442.8 140.0 L 443.5 140.1 L 444.2 140.2 L 444.9 140.3 L 445.6 140.4 L 446.3 140.5 L 447.0 140.6 L 447.7 140.7 L 448.4 140.8 L 449.1 140.9 L 449.8 141.0 L 450.5 141.1 L 451.2 141.2 L 451.9 141.3 L 452.6 141.4 L 453.3 141.5 L 454.0 141.6 L 454.7 141.7 L 455.4 141.9 L 456.1 142.0 L 456.8 142.1 L 457.5 142.2 L 458.2 142.3 L 458.9 142.5 L 459.6 142.6 L 460.3 142.7 L 461.0 142.8 L 461.7 143.0 L 462.4 143.1 L 463.1 143.2 L 463.8 143.3 L 464.5 143.4 L 465.2 143.5 L 465.9 143.7 L 466.6 143.8 L 467.3 143.9 L 468.0 144.0 L 468.7 144.1 L 469.4 144.2 L 470.2 144.3 L 470.9 144.4 L 471.6 144.5 L 472.3 144.6 L 473.0 144.6 L 473.7 144.7 L 474.4 144.8 L 475.1 144.9 L 475.8 144.9 L 476.5 145.0 L 477.2 145.0 L 477.9 145.1 L 478.6 145.1 L 479.3 145.1 L 480.0 145.2 L 480.7 145.2 L 481.4 145.2 L 482.1 145.2 L 482.8 145.2 L 483.5 145.2 L 484.2 145.2 L 484.9 145.1 L 485.6 145.1 L 486.3 145.1 L 487.0 145.0 L 487.7 145.0 L 488.4 144.9 L 489.1 144.8 L 489.8 144.7 L 490.5 144.6 L 491.2 144.5 L 491.9 144.4 L 492.6 144.3 L 493.3 144.1 L 494.0 144.0 L 494.7 143.8 L 495.4 143.7 L 496.1 143.5 L 496.8 143.3 L 497.5 143.1 L 498.3 142.9 L 499.0 142.7 L 499.7 142.4 L 500.4 142.2 L 501.1 142.0 L 501.8 141.7 L 502.5 141.4 L 503.2 141.2 L 503.9 140.9 L 504.6 140.6 L 505.3 140.3 L 506.0 140.0 L 506.7 139.7 L 507.4 139.3 L 508.1 139.0 L 508.8 138.6 L 509.5 138.3 L 510.2 137.9 L 510.9 137.6 L 511.6 137.2 L 512.3 136.8 L 513.0 136.5 L 513.7 136.1 L 514.4 135.7 L 515.1 135.3 L 515.8 134.9 L 516.5 134.5 L 517.2 134.1 L 517.9 133.7 L 518.6 133.3 L 519.3 132.9 L 520.0 132.5 L 520.7 132.1 L 521.4 131.7 L 522.1 131.3 L 522.8 131.0 L 523.5 130.6 L 524.2 130.2 L 524.9 129.8 L 525.6 129.5 L 526.4 129.1 L 527.1 128.8 L 527.8 128.5 L 528.5 128.2 L 529.2 127.9 L 529.9 127.6 L 530.6 127.3 L 531.3 127.1 L 532.0 126.8 L 532.7 126.6 L 533.4 126.4 L 534.1 126.2 L 534.8 126.1 L 535.5 126.0 L 536.2 125.9 L 536.9 125.8 L 537.6 125.7 L 538.3 125.7 L 539.0 125.7 L 539.7 125.8 L 540.4 125.9 L 541.1 126.0 L 541.8 126.1 L 542.5 126.3 L 543.2 126.6 L 543.9 126.8 L 544.6 127.1 L 545.3 127.5 L 546.0 127.9 L 546.7 128.3 L 547.4 128.8 L 548.1 129.4 L 548.8 130.0 L 549.5 130.6 L 550.2 131.3 L 550.9 132.0 L 551.6 132.8 L 552.3 133.7 L 553.0 134.6 L 553.8 135.6 L 554.5 136.6 L 555.2 137.7 L 555.9 138.8 L 556.6 140.0 L 557.3 141.3 L 558.0 142.6 L 558.7 144.0 L 559.4 145.5 L 560.1 147.0 L 560.8 148.6 L 561.5 150.2 L 562.2 151.9 L 562.9 153.7 L 563.6 155.5 L 564.3 157.4 L 565.0 159.4 L 565.7 161.4 L 566.4 163.5 L 567.1 165.6 L 567.8 167.8 L 568.5 170.0 L 569.2 172.3 L 569.9 174.7 L 570.6 177.1 L 571.3 179.5 L 572.0 182.0 L 572.7 184.6 L 573.4 187.2 L 574.1 189.8 L 574.8 192.4 L 575.5 195.1 L 576.2 197.8 L 576.9 200.5 L 577.6 203.2 L 578.3 206.0 L 579.0 208.7 L 579.7 211.5 L 580.4 214.2 L 581.1 216.9 L 581.8 219.6 L 582.6 222.3 L 583.3 224.9 L 584.0 227.5 L 584.7 230.0 L 585.4 232.5 L 586.1 234.9 L 586.8 237.2 L 587.5 239.4 L 588.2 241.5 L 588.9 243.4 L 589.6 245.3 L 590.3 246.9 L 591.0 248.5 L 591.7 249.8 L 592.4 251.0 L 593.1 251.9 L 593.8 252.6 L 594.5 253.1 L 595.2 253.3 L 595.9 253.2 L 596.6 252.8 L 597.3 252.1 L 598.0 251.0 L 598.7 249.6 L 599.4 247.7 L 600.1 245.5 L 600.8 242.8 L 601.5 239.6 L 602.2 235.9 L 602.9 231.7 L 603.6 226.9 L 604.3 221.5 L 605.0 215.5 L 605.7 208.8 L 606.4 201.5 L 607.1 193.4 L 607.8 184.5 L 608.5 174.8 L 609.2 164.2 L 609.9 152.8 L 610.7 140.4 L 611.4 127.0 L 612.1 112.6 L 612.8 97.1 L 613.5 80.4 L 614.2 62.6 L 614.9 43.5 L 615.6 23.1" fill="none" stroke="#5b54b8" stroke-width="2.2"/>
+  <circle cx="75.4" cy="141.0" r="3.2" fill="#2c2419"/>
+  <circle cx="128.9" cy="141.0" r="3.2" fill="#2c2419"/>
+  <circle cx="182.4" cy="141.0" r="3.2" fill="#2c2419"/>
+  <circle cx="236.0" cy="141.0" r="3.2" fill="#2c2419"/>
+  <circle cx="289.5" cy="141.0" r="3.2" fill="#2c2419"/>
+  <circle cx="343.0" cy="141.0" r="3.2" fill="#2c2419"/>
+  <circle cx="396.5" cy="141.0" r="3.2" fill="#2c2419"/>
+  <circle cx="450.0" cy="141.0" r="3.2" fill="#2c2419"/>
+  <circle cx="503.6" cy="141.0" r="3.2" fill="#2c2419"/>
+  <circle cx="557.1" cy="141.0" r="3.2" fill="#2c2419"/>
+  <circle cx="610.6" cy="141.0" r="3.2" fill="#2c2419"/>
+  <line x1="62.0" y1="28.7" x2="624.0" y2="28.7" stroke="#b44a2d" stroke-width="1" stroke-dasharray="5,4"/>
+  <line x1="62.0" y1="253.3" x2="624.0" y2="253.3" stroke="#b44a2d" stroke-width="1" stroke-dasharray="5,4"/>
+  <text x="343.0" y="42.7" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle">max|ω₁₁| = 8,5·10⁻³ — достигается в крайних интервалах</text>
+  <text x="343.0" y="125.2" font-family="JetBrains Mono,monospace" font-size="11" fill="#1a6b5a" text-anchor="middle">в середине |ω₁₁| ≤ 10⁻⁴</text>
+  <text x="343.0" y="235.7" font-family="Source Serif 4,serif" font-size="12" fill="#6b5d4f" text-anchor="middle" font-style="italic">ω₁₁(x) = (x − x₀)(x − x₁)···(x − x₁₀),  xᵢ = −1 + 0,2·i</text>
+</svg>
+<div class="caption">\(\omega_{11}\) для одиннадцати равномерных узлов на \([-1,1]\).</div>
+</div>
+    <div>
+      <div class="tiles" style="margin-top:0">
+        <div class="tile"><div class="h">\(n=10\)</div><div class="t">\(8{,}5\cdot10^{-3}\) против \(10^{-4}\)</div><div class="d">край против середины: в \(87\) раз</div></div>
+        <div class="tile"><div class="h">\(n=20\)</div><div class="t">отношение \(5\cdot10^{4}\)</div><div class="d">колебания нарастают к краям всё резче</div></div>
+      </div>
+      <div class="callout" style="margin-top:.6rem"><strong>Правило 1.</strong> Интерполировать — в середине таблицы: выбирать узлы так, чтобы \(x\) попала в центральные интервалы.</div>
+      <div class="callout" style="margin-top:.6rem;border-left:3px solid var(--accent)"><strong style="color:var(--accent)">Правило 2.</strong> Экстраполировать нельзя: вне \([x_0,x_n]\) все множители \(|x-x_i|\) растут сразу, и \(|\omega_{n+1}|\) выходит из-под контроля уже на расстоянии шага.</div>
+    </div>
+  </div>
+  <p class="bridge">Оценка (3.20) позволяет заранее выбрать число узлов под требуемую точность.</p>
+</section>
+
+<!-- 23: пример число узлов -->
+<section class="slide">
+  <div class="slide-num">§3.7 · Пример</div>
+  <h2>Выбор числа узлов по априорной оценке</h2>
+  <p class="lead">Сколько равномерных узлов нужно для \(\sin x\) на \([0,\pi]\) с гарантированной точностью \(10^{-6}\)?</p>
+  <p>По (3.20) с \(M_{n+1}\le1\), \(h=\pi/n\): требуется \(\dfrac{(\pi/n)^{n+1}}{4(n+1)}\le10^{-6}\).</p>
+  <div class="tiles">
+    <div class="tile"><div class="h">\(n=7\)</div><div class="t">\(5{,}1\cdot10^{-5}\)</div><div class="d">мало</div></div>
+    <div class="tile"><div class="h">\(n=8\)</div><div class="t">\(6{,}2\cdot10^{-6}\)</div><div class="d">ещё мало</div></div>
+    <div class="tile hi"><div class="h">\(n=9\)</div><div class="t">\(6{,}7\cdot10^{-7}\)</div><div class="d">достаточно: \(10\) узлов; фактическая погрешность \(3{,}0\cdot10^{-7}\)</div></div>
+  </div>
+  <div class="callout">Каждые два добавленных узла — выигрыш примерно на два порядка. Так для всякой \(f\), у которой \(M_{n+1}\) растёт не быстрее \((n+1)!\). Для функции с быстро растущими производными перебор не сошёлся бы вовсе (§&nbsp;3.9).</div>
+  <p class="bridge">Самые употребительные случаи — по двум и по трём соседним узлам таблицы.</p>
+</section>
+
+<!-- 24: линейная -->
+<section class="slide">
+  <div class="slide-num">§3.8 · Линейная интерполяция</div>
+  <h2>По двум соседним узлам: оценка и шаг таблицы</h2>
+  <p class="lead">Простейший и самый употребительный случай — \(n=1\); оценка (3.18) выписывается до числа.</p>
+  <div class="two-col">
+    <div>
+      <p>\(\omega_2(x)=(x-x_0)(x-x_1)\) — парабола, наибольшая по модулю посередине: \(\max|\omega_2|=h^2/4\). Из (3.18) с \(n=1\):</p>
+      <div class="eq">\[ \max_{[x_0,x_1]}|f-P_1|\le\frac{M_2\,h^2}{8}. \tag{3.21} \]</div>
+      <p>Задача составителя таблиц — обратная: при заданной точности \(\varepsilon\)</p>
+      <div class="eq">\[ h\le\sqrt{\frac{8\varepsilon}{M_2}}. \tag{3.23} \]</div>
+    </div>
+    <div class="figure">
+<svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:20rem" role="img" aria-label="Парабола, равная произведению расстояний до двух соседних узлов: она обращается в ноль в узлах и достигает наибольшего по модулю значения, равного четверти квадрата шага, посередине между ними.">
+  <rect width="640" height="230" fill="#fdf9f3"/>
+  <line x1="52.0" y1="170.9" x2="624.0" y2="170.9" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="47.0" y="174.9" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">−0.25</text>
+  <line x1="52.0" y1="108.0" x2="624.0" y2="108.0" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="47.0" y="112.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">−0.125</text>
+  <line x1="52.0" y1="45.1" x2="624.0" y2="45.1" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="47.0" y="49.1" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">0</text>
+  <line x1="52.0" y1="45.1" x2="628.0" y2="45.1" stroke="#2c2419" stroke-width="1.2"/>
+  <line x1="52.0" y1="20.0" x2="52.0" y2="196.0" stroke="#2c2419" stroke-width="1.2"/>
+  <text x="630.0" y="49.1" font-family="JetBrains Mono,monospace" font-size="12" fill="#6b5d4f">x</text>
+  <path d="M 118.0 45.1 L 120.2 47.6 L 122.4 50.1 L 124.6 52.6 L 126.8 55.0 L 129.0 57.4 L 131.2 59.8 L 133.4 62.1 L 135.6 64.5 L 137.8 66.8 L 140.0 69.0 L 142.2 71.3 L 144.4 73.5 L 146.6 75.7 L 148.8 77.9 L 151.0 80.0 L 153.2 82.2 L 155.4 84.3 L 157.6 86.3 L 159.8 88.4 L 162.0 90.4 L 164.2 92.4 L 166.4 94.4 L 168.6 96.3 L 170.8 98.2 L 173.0 100.1 L 175.2 102.0 L 177.4 103.9 L 179.6 105.7 L 181.8 107.5 L 184.0 109.3 L 186.2 111.0 L 188.4 112.7 L 190.6 114.4 L 192.8 116.1 L 195.0 117.7 L 197.2 119.4 L 199.4 121.0 L 201.6 122.5 L 203.8 124.1 L 206.0 125.6 L 208.2 127.1 L 210.4 128.6 L 212.6 130.0 L 214.8 131.4 L 217.0 132.8 L 219.2 134.2 L 221.4 135.5 L 223.6 136.9 L 225.8 138.2 L 228.0 139.4 L 230.2 140.7 L 232.4 141.9 L 234.6 143.1 L 236.8 144.3 L 239.0 145.4 L 241.2 146.5 L 243.4 147.6 L 245.6 148.7 L 247.8 149.7 L 250.0 150.7 L 252.2 151.7 L 254.4 152.7 L 256.6 153.6 L 258.8 154.6 L 261.0 155.5 L 263.2 156.3 L 265.4 157.2 L 267.6 158.0 L 269.8 158.8 L 272.0 159.5 L 274.2 160.3 L 276.4 161.0 L 278.6 161.7 L 280.8 162.4 L 283.0 163.0 L 285.2 163.6 L 287.4 164.2 L 289.6 164.8 L 291.8 165.3 L 294.0 165.8 L 296.2 166.3 L 298.4 166.8 L 300.6 167.2 L 302.8 167.6 L 305.0 168.0 L 307.2 168.4 L 309.4 168.7 L 311.6 169.0 L 313.8 169.3 L 316.0 169.6 L 318.2 169.8 L 320.4 170.1 L 322.6 170.2 L 324.8 170.4 L 327.0 170.5 L 329.2 170.7 L 331.4 170.7 L 333.6 170.8 L 335.8 170.8 L 338.0 170.9 L 340.2 170.8 L 342.4 170.8 L 344.6 170.7 L 346.8 170.7 L 349.0 170.5 L 351.2 170.4 L 353.4 170.2 L 355.6 170.1 L 357.8 169.8 L 360.0 169.6 L 362.2 169.3 L 364.4 169.0 L 366.6 168.7 L 368.8 168.4 L 371.0 168.0 L 373.2 167.6 L 375.4 167.2 L 377.6 166.8 L 379.8 166.3 L 382.0 165.8 L 384.2 165.3 L 386.4 164.8 L 388.6 164.2 L 390.8 163.6 L 393.0 163.0 L 395.2 162.4 L 397.4 161.7 L 399.6 161.0 L 401.8 160.3 L 404.0 159.5 L 406.2 158.8 L 408.4 158.0 L 410.6 157.2 L 412.8 156.3 L 415.0 155.5 L 417.2 154.6 L 419.4 153.6 L 421.6 152.7 L 423.8 151.7 L 426.0 150.7 L 428.2 149.7 L 430.4 148.7 L 432.6 147.6 L 434.8 146.5 L 437.0 145.4 L 439.2 144.3 L 441.4 143.1 L 443.6 141.9 L 445.8 140.7 L 448.0 139.4 L 450.2 138.2 L 452.4 136.9 L 454.6 135.5 L 456.8 134.2 L 459.0 132.8 L 461.2 131.4 L 463.4 130.0 L 465.6 128.6 L 467.8 127.1 L 470.0 125.6 L 472.2 124.1 L 474.4 122.5 L 476.6 121.0 L 478.8 119.4 L 481.0 117.7 L 483.2 116.1 L 485.4 114.4 L 487.6 112.7 L 489.8 111.0 L 492.0 109.3 L 494.2 107.5 L 496.4 105.7 L 498.6 103.9 L 500.8 102.0 L 503.0 100.1 L 505.2 98.2 L 507.4 96.3 L 509.6 94.4 L 511.8 92.4 L 514.0 90.4 L 516.2 88.4 L 518.4 86.3 L 520.6 84.3 L 522.8 82.2 L 525.0 80.0 L 527.2 77.9 L 529.4 75.7 L 531.6 73.5 L 533.8 71.3 L 536.0 69.0 L 538.2 66.8 L 540.4 64.5 L 542.6 62.1 L 544.8 59.8 L 547.0 57.4 L 549.2 55.0 L 551.4 52.6 L 553.6 50.1 L 555.8 47.6 L 558.0 45.1" fill="none" stroke="#5b54b8" stroke-width="2.2"/>
+  <circle cx="118.0" cy="45.1" r="3.5" fill="#2c2419"/>
+  <circle cx="558.0" cy="45.1" r="3.5" fill="#2c2419"/>
+  <text x="118.0" y="212.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">x₀</text>
+  <text x="558.0" y="212.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">x₁ = x₀ + h</text>
+  <text x="338.0" y="212.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">(x₀ + x₁)/2</text>
+  <line x1="338.0" y1="45.1" x2="338.0" y2="170.9" stroke="#b44a2d" stroke-width="1" stroke-dasharray="4,3"/>
+  <circle cx="338.0" cy="170.9" r="4" fill="#b44a2d"/>
+  <text x="351.2" y="163.3" font-family="JetBrains Mono,monospace" font-size="12" fill="#b44a2d" text-anchor="start">min ω₂ = −h²/4</text>
+  <text x="60.0" y="32.0" font-family="Source Serif 4,serif" font-size="12" fill="#6b5d4f" text-anchor="start" font-style="italic">ω₂(x) = (x − x₀)(x − x₁): парабола, наибольшая по модулю в середине интервала</text>
+</svg>
+<div class="caption">\(\omega_2(x)=(x-x_0)(x-x_1)\): минимум \(-h^2/4\) посередине.</div>
+</div>
+  </div>
+  <div class="callout">Таблица \(\sin x\) с шагом \(0{,}01\) при линейной интерполяции гарантирует \(0{,}01^2/8=1{,}25\cdot10^{-5}\) — четыре верных знака после запятой; так устроены четырёхзначные таблицы.</div>
+  <p class="bridge">Три узла вместо двух дают третий порядок по \(h\) и резко сокращают таблицу.</p>
+</section>
+
+<!-- 25: квадратичная -->
+<section class="slide">
+  <div class="slide-num">§3.8 · Квадратичная интерполяция</div>
+  <h2>По трём узлам: третий порядок по шагу</h2>
+  <p class="lead">Узлы \(x_0,\ x_0+h,\ x_0+2h\); в переменной \(t=x-x_0-h\) узловой многочлен равен \(t(t^2-h^2)\).</p>
+  <div class="eq">\[ \max|\omega_3|=\frac{2h^3}{3\sqrt3}\quad\Longrightarrow\quad \max_{[x_0,x_0+2h]}|f-P_2|\le\frac{M_3\,h^{3}}{9\sqrt3}\approx0{,}064\,M_3h^{3}. \tag{3.22} \]</div>
+  <div class="two-col">
+    <div class="example">
+      <span class="lbl">Пример: таблица \(\sin x\) с точностью \(10^{-6}\)</span>
+      <strong>Линейно:</strong> \(h\le\sqrt{8\cdot10^{-6}}=2{,}83\cdot10^{-3}\); берём \(h=0{,}002\) — \(786\) строк на \([0,\pi/2]\).<br>
+      <strong>Квадратично:</strong> \(h\le(9\sqrt3\cdot10^{-6})^{1/3}=0{,}025\) — \(63\) строки, в \(12\) раз короче. Цена — одно лишнее значение в каждой интерполяции.
+    </div>
+    <div class="callout" style="border-left:3px solid var(--accent3)">
+      <strong style="color:var(--accent3)">Границы темы.</strong> (3.21)–(3.22) относятся к <em>одному</em> интервалу. Сшивка кусков по всей таблице — кусочно-линейная интерполяция и сплайны, глобальный метод со сходимостью \(O(h^2)\) — предмет §&nbsp;4. Сегодняшний вопрос иной: что будет при росте степени одного многочлена на всём отрезке.
+    </div>
+  </div>
+  <p class="bridge">Интуиция говорит, что чем больше узлов, тем лучше; проверим.</p>
+</section>
+
+<!-- 26: Рунге рисунок -->
+<section class="slide">
+  <div class="slide-num">§3.9 · Феномен Рунге</div>
+  <h2>Функция Рунге: гладкая, ограниченная — и интерполяция расходится</h2>
+  <p class="lead">Зафиксируем \([-1,1]\) и будем увеличивать число равномерных узлов; ожидается улучшение приближения.</p>
+  <div class="two-col">
+    <div class="figure">
+<svg viewBox="0 0 640 330" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:24rem" role="img" aria-label="Функция Рунге и её интерполяционный многочлен десятой степени по одиннадцати равномерным узлам: в узлах совпадение точное, между крайними узлами многочлен уходит вверх почти до двух, тогда как сама функция там близка к нулю.">
+  <rect width="640" height="330" fill="#fdf9f3"/>
+  <line x1="48.0" y1="290.8" x2="624.0" y2="290.8" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="43.0" y="294.8" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">−0.5</text>
+  <line x1="48.0" y1="239.0" x2="624.0" y2="239.0" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="43.0" y="243.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">0</text>
+  <line x1="48.0" y1="187.1" x2="624.0" y2="187.1" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="43.0" y="191.1" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">0.5</text>
+  <line x1="48.0" y1="135.3" x2="624.0" y2="135.3" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="43.0" y="139.3" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">1</text>
+  <line x1="48.0" y1="83.4" x2="624.0" y2="83.4" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="43.0" y="87.4" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">1.5</text>
+  <line x1="48.0" y1="31.6" x2="624.0" y2="31.6" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="43.0" y="35.6" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">2</text>
+  <line x1="48.0" y1="239.0" x2="628.0" y2="239.0" stroke="#2c2419" stroke-width="1.2"/>
+  <line x1="48.0" y1="16.0" x2="48.0" y2="296.0" stroke="#2c2419" stroke-width="1.2"/>
+  <text x="630.0" y="243.0" font-family="JetBrains Mono,monospace" font-size="12" fill="#6b5d4f">x</text>
+  <line x1="64.3" y1="236.0" x2="64.3" y2="242.0" stroke="#2c2419" stroke-width="1"/>
+  <text x="64.3" y="312.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">−1</text>
+  <line x1="200.2" y1="236.0" x2="200.2" y2="242.0" stroke="#2c2419" stroke-width="1"/>
+  <text x="200.2" y="312.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">−0.5</text>
+  <line x1="336.0" y1="236.0" x2="336.0" y2="242.0" stroke="#2c2419" stroke-width="1"/>
+  <text x="336.0" y="312.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">0</text>
+  <line x1="471.8" y1="236.0" x2="471.8" y2="242.0" stroke="#2c2419" stroke-width="1"/>
+  <text x="471.8" y="312.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">0.5</text>
+  <line x1="607.7" y1="236.0" x2="607.7" y2="242.0" stroke="#2c2419" stroke-width="1"/>
+  <text x="607.7" y="312.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">1</text>
+  <path d="M 62.4 298.1 L 63.1 272.8 L 63.8 249.2 L 64.6 227.3 L 65.3 206.9 L 66.0 188.0 L 66.7 170.5 L 67.4 154.4 L 68.2 139.6 L 68.9 126.0 L 69.6 113.6 L 70.3 102.3 L 71.0 92.1 L 71.8 82.9 L 72.5 74.7 L 73.2 67.4 L 73.9 61.0 L 74.6 55.4 L 75.4 50.7 L 76.1 46.6 L 76.8 43.3 L 77.5 40.6 L 78.2 38.5 L 79.0 37.1 L 79.7 36.2 L 80.4 35.8 L 81.1 35.9 L 81.8 36.5 L 82.6 37.5 L 83.3 38.9 L 84.0 40.7 L 84.7 42.8 L 85.4 45.3 L 86.2 48.0 L 86.9 51.0 L 87.6 54.3 L 88.3 57.8 L 89.0 61.5 L 89.8 65.4 L 90.5 69.4 L 91.2 73.6 L 91.9 78.0 L 92.6 82.4 L 93.4 87.0 L 94.1 91.6 L 94.8 96.3 L 95.5 101.1 L 96.2 105.9 L 97.0 110.7 L 97.7 115.6 L 98.4 120.5 L 99.1 125.3 L 99.8 130.2 L 100.6 135.0 L 101.3 139.8 L 102.0 144.6 L 102.7 149.4 L 103.4 154.0 L 104.2 158.7 L 104.9 163.2 L 105.6 167.7 L 106.3 172.2 L 107.0 176.5 L 107.8 180.8 L 108.5 184.9 L 109.2 189.0 L 109.9 193.0 L 110.6 196.9 L 111.4 200.7 L 112.1 204.4 L 112.8 207.9 L 113.5 211.4 L 114.2 214.8 L 115.0 218.0 L 115.7 221.1 L 116.4 224.2 L 117.1 227.1 L 117.8 229.9 L 118.6 232.6 L 119.3 235.1 L 120.0 237.6 L 120.7 239.9 L 121.4 242.2 L 122.2 244.3 L 122.9 246.3 L 123.6 248.2 L 124.3 250.0 L 125.0 251.7 L 125.8 253.3 L 126.5 254.7 L 127.2 256.1 L 127.9 257.4 L 128.6 258.6 L 129.4 259.6 L 130.1 260.6 L 130.8 261.5 L 131.5 262.3 L 132.2 263.0 L 133.0 263.6 L 133.7 264.1 L 134.4 264.6 L 135.1 264.9 L 135.8 265.2 L 136.6 265.4 L 137.3 265.6 L 138.0 265.6 L 138.7 265.6 L 139.4 265.6 L 140.2 265.4 L 140.9 265.2 L 141.6 265.0 L 142.3 264.7 L 143.0 264.3 L 143.8 263.9 L 144.5 263.4 L 145.2 262.9 L 145.9 262.3 L 146.6 261.7 L 147.4 261.1 L 148.1 260.4 L 148.8 259.7 L 149.5 259.0 L 150.2 258.2 L 151.0 257.4 L 151.7 256.5 L 152.4 255.7 L 153.1 254.8 L 153.8 253.9 L 154.6 253.0 L 155.3 252.0 L 156.0 251.1 L 156.7 250.1 L 157.4 249.2 L 158.2 248.2 L 158.9 247.2 L 159.6 246.2 L 160.3 245.2 L 161.0 244.2 L 161.8 243.2 L 162.5 242.2 L 163.2 241.2 L 163.9 240.2 L 164.6 239.2 L 165.4 238.3 L 166.1 237.3 L 166.8 236.3 L 167.5 235.4 L 168.2 234.4 L 169.0 233.5 L 169.7 232.6 L 170.4 231.7 L 171.1 230.8 L 171.8 229.9 L 172.6 229.1 L 173.3 228.2 L 174.0 227.4 L 174.7 226.6 L 175.4 225.9 L 176.2 225.1 L 176.9 224.4 L 177.6 223.6 L 178.3 222.9 L 179.0 222.3 L 179.8 221.6 L 180.5 221.0 L 181.2 220.4 L 181.9 219.8 L 182.6 219.2 L 183.4 218.7 L 184.1 218.2 L 184.8 217.7 L 185.5 217.2 L 186.2 216.8 L 187.0 216.4 L 187.7 216.0 L 188.4 215.6 L 189.1 215.3 L 189.8 214.9 L 190.6 214.6 L 191.3 214.4 L 192.0 214.1 L 192.7 213.9 L 193.4 213.7 L 194.2 213.5 L 194.9 213.3 L 195.6 213.1 L 196.3 213.0 L 197.0 212.9 L 197.8 212.8 L 198.5 212.7 L 199.2 212.7 L 199.9 212.7 L 200.6 212.6 L 201.4 212.6 L 202.1 212.6 L 202.8 212.7 L 203.5 212.7 L 204.2 212.8 L 205.0 212.9 L 205.7 212.9 L 206.4 213.0 L 207.1 213.2 L 207.8 213.3 L 208.6 213.4 L 209.3 213.5 L 210.0 213.7 L 210.7 213.9 L 211.4 214.0 L 212.2 214.2 L 212.9 214.4 L 213.6 214.6 L 214.3 214.8 L 215.0 214.9 L 215.8 215.1 L 216.5 215.3 L 217.2 215.5 L 217.9 215.7 L 218.6 216.0 L 219.4 216.2 L 220.1 216.4 L 220.8 216.6 L 221.5 216.8 L 222.2 217.0 L 223.0 217.2 L 223.7 217.3 L 224.4 217.5 L 225.1 217.7 L 225.8 217.9 L 226.6 218.1 L 227.3 218.2 L 228.0 218.4 L 228.7 218.5 L 229.4 218.6 L 230.2 218.8 L 230.9 218.9 L 231.6 219.0 L 232.3 219.1 L 233.0 219.2 L 233.8 219.2 L 234.5 219.3 L 235.2 219.3 L 235.9 219.4 L 236.6 219.4 L 237.4 219.4 L 238.1 219.4 L 238.8 219.4 L 239.5 219.3 L 240.2 219.3 L 241.0 219.2 L 241.7 219.1 L 242.4 219.0 L 243.1 218.9 L 243.8 218.7 L 244.6 218.6 L 245.3 218.4 L 246.0 218.2 L 246.7 218.0 L 247.4 217.8 L 248.2 217.5 L 248.9 217.3 L 249.6 217.0 L 250.3 216.7 L 251.0 216.4 L 251.8 216.0 L 252.5 215.7 L 253.2 215.3 L 253.9 214.9 L 254.6 214.5 L 255.4 214.0 L 256.1 213.6 L 256.8 213.1 L 257.5 212.6 L 258.2 212.1 L 259.0 211.6 L 259.7 211.0 L 260.4 210.5 L 261.1 209.9 L 261.8 209.3 L 262.6 208.7 L 263.3 208.1 L 264.0 207.4 L 264.7 206.7 L 265.4 206.1 L 266.2 205.4 L 266.9 204.6 L 267.6 203.9 L 268.3 203.2 L 269.0 202.4 L 269.8 201.6 L 270.5 200.9 L 271.2 200.1 L 271.9 199.2 L 272.6 198.4 L 273.4 197.6 L 274.1 196.7 L 274.8 195.8 L 275.5 195.0 L 276.2 194.1 L 277.0 193.2 L 277.7 192.3 L 278.4 191.4 L 279.1 190.4 L 279.8 189.5 L 280.6 188.6 L 281.3 187.6 L 282.0 186.7 L 282.7 185.7 L 283.4 184.7 L 284.2 183.8 L 284.9 182.8 L 285.6 181.8 L 286.3 180.8 L 287.0 179.8 L 287.8 178.8 L 288.5 177.8 L 289.2 176.9 L 289.9 175.9 L 290.6 174.9 L 291.4 173.9 L 292.1 172.9 L 292.8 171.9 L 293.5 170.9 L 294.2 169.9 L 295.0 168.9 L 295.7 168.0 L 296.4 167.0 L 297.1 166.0 L 297.8 165.1 L 298.6 164.1 L 299.3 163.2 L 300.0 162.2 L 300.7 161.3 L 301.4 160.4 L 302.2 159.4 L 302.9 158.5 L 303.6 157.6 L 304.3 156.8 L 305.0 155.9 L 305.8 155.0 L 306.5 154.2 L 307.2 153.3 L 307.9 152.5 L 308.6 151.7 L 309.4 150.9 L 310.1 150.1 L 310.8 149.4 L 311.5 148.6 L 312.2 147.9 L 313.0 147.2 L 313.7 146.5 L 314.4 145.8 L 315.1 145.1 L 315.8 144.5 L 316.6 143.9 L 317.3 143.3 L 318.0 142.7 L 318.7 142.1 L 319.4 141.6 L 320.2 141.1 L 320.9 140.6 L 321.6 140.1 L 322.3 139.6 L 323.0 139.2 L 323.8 138.8 L 324.5 138.4 L 325.2 138.0 L 325.9 137.6 L 326.6 137.3 L 327.4 137.0 L 328.1 136.7 L 328.8 136.5 L 329.5 136.2 L 330.2 136.0 L 331.0 135.9 L 331.7 135.7 L 332.4 135.6 L 333.1 135.5 L 333.8 135.4 L 334.6 135.3 L 335.3 135.3 L 336.0 135.3 L 336.7 135.3 L 337.4 135.3 L 338.2 135.4 L 338.9 135.5 L 339.6 135.6 L 340.3 135.7 L 341.0 135.9 L 341.8 136.0 L 342.5 136.2 L 343.2 136.5 L 343.9 136.7 L 344.6 137.0 L 345.4 137.3 L 346.1 137.6 L 346.8 138.0 L 347.5 138.4 L 348.2 138.8 L 349.0 139.2 L 349.7 139.6 L 350.4 140.1 L 351.1 140.6 L 351.8 141.1 L 352.6 141.6 L 353.3 142.1 L 354.0 142.7 L 354.7 143.3 L 355.4 143.9 L 356.2 144.5 L 356.9 145.1 L 357.6 145.8 L 358.3 146.5 L 359.0 147.2 L 359.8 147.9 L 360.5 148.6 L 361.2 149.4 L 361.9 150.1 L 362.6 150.9 L 363.4 151.7 L 364.1 152.5 L 364.8 153.3 L 365.5 154.2 L 366.2 155.0 L 367.0 155.9 L 367.7 156.8 L 368.4 157.6 L 369.1 158.5 L 369.8 159.4 L 370.6 160.4 L 371.3 161.3 L 372.0 162.2 L 372.7 163.2 L 373.4 164.1 L 374.2 165.1 L 374.9 166.0 L 375.6 167.0 L 376.3 168.0 L 377.0 168.9 L 377.8 169.9 L 378.5 170.9 L 379.2 171.9 L 379.9 172.9 L 380.6 173.9 L 381.4 174.9 L 382.1 175.9 L 382.8 176.9 L 383.5 177.8 L 384.2 178.8 L 385.0 179.8 L 385.7 180.8 L 386.4 181.8 L 387.1 182.8 L 387.8 183.8 L 388.6 184.7 L 389.3 185.7 L 390.0 186.7 L 390.7 187.6 L 391.4 188.6 L 392.2 189.5 L 392.9 190.4 L 393.6 191.4 L 394.3 192.3 L 395.0 193.2 L 395.8 194.1 L 396.5 195.0 L 397.2 195.8 L 397.9 196.7 L 398.6 197.6 L 399.4 198.4 L 400.1 199.2 L 400.8 200.1 L 401.5 200.9 L 402.2 201.6 L 403.0 202.4 L 403.7 203.2 L 404.4 203.9 L 405.1 204.6 L 405.8 205.4 L 406.6 206.1 L 407.3 206.7 L 408.0 207.4 L 408.7 208.1 L 409.4 208.7 L 410.2 209.3 L 410.9 209.9 L 411.6 210.5 L 412.3 211.0 L 413.0 211.6 L 413.8 212.1 L 414.5 212.6 L 415.2 213.1 L 415.9 213.6 L 416.6 214.0 L 417.4 214.5 L 418.1 214.9 L 418.8 215.3 L 419.5 215.7 L 420.2 216.0 L 421.0 216.4 L 421.7 216.7 L 422.4 217.0 L 423.1 217.3 L 423.8 217.5 L 424.6 217.8 L 425.3 218.0 L 426.0 218.2 L 426.7 218.4 L 427.4 218.6 L 428.2 218.7 L 428.9 218.9 L 429.6 219.0 L 430.3 219.1 L 431.0 219.2 L 431.8 219.3 L 432.5 219.3 L 433.2 219.4 L 433.9 219.4 L 434.6 219.4 L 435.4 219.4 L 436.1 219.4 L 436.8 219.3 L 437.5 219.3 L 438.2 219.2 L 439.0 219.2 L 439.7 219.1 L 440.4 219.0 L 441.1 218.9 L 441.8 218.8 L 442.6 218.6 L 443.3 218.5 L 444.0 218.4 L 444.7 218.2 L 445.4 218.1 L 446.2 217.9 L 446.9 217.7 L 447.6 217.5 L 448.3 217.3 L 449.0 217.2 L 449.8 217.0 L 450.5 216.8 L 451.2 216.6 L 451.9 216.4 L 452.6 216.2 L 453.4 216.0 L 454.1 215.7 L 454.8 215.5 L 455.5 215.3 L 456.2 215.1 L 457.0 214.9 L 457.7 214.8 L 458.4 214.6 L 459.1 214.4 L 459.8 214.2 L 460.6 214.0 L 461.3 213.9 L 462.0 213.7 L 462.7 213.5 L 463.4 213.4 L 464.2 213.3 L 464.9 213.2 L 465.6 213.0 L 466.3 212.9 L 467.0 212.9 L 467.8 212.8 L 468.5 212.7 L 469.2 212.7 L 469.9 212.6 L 470.6 212.6 L 471.4 212.6 L 472.1 212.7 L 472.8 212.7 L 473.5 212.7 L 474.2 212.8 L 475.0 212.9 L 475.7 213.0 L 476.4 213.1 L 477.1 213.3 L 477.8 213.5 L 478.6 213.7 L 479.3 213.9 L 480.0 214.1 L 480.7 214.4 L 481.4 214.6 L 482.2 214.9 L 482.9 215.3 L 483.6 215.6 L 484.3 216.0 L 485.0 216.4 L 485.8 216.8 L 486.5 217.2 L 487.2 217.7 L 487.9 218.2 L 488.6 218.7 L 489.4 219.2 L 490.1 219.8 L 490.8 220.4 L 491.5 221.0 L 492.2 221.6 L 493.0 222.3 L 493.7 222.9 L 494.4 223.6 L 495.1 224.4 L 495.8 225.1 L 496.6 225.9 L 497.3 226.6 L 498.0 227.4 L 498.7 228.2 L 499.4 229.1 L 500.2 229.9 L 500.9 230.8 L 501.6 231.7 L 502.3 232.6 L 503.0 233.5 L 503.8 234.4 L 504.5 235.4 L 505.2 236.3 L 505.9 237.3 L 506.6 238.3 L 507.4 239.2 L 508.1 240.2 L 508.8 241.2 L 509.5 242.2 L 510.2 243.2 L 511.0 244.2 L 511.7 245.2 L 512.4 246.2 L 513.1 247.2 L 513.8 248.2 L 514.6 249.2 L 515.3 250.1 L 516.0 251.1 L 516.7 252.0 L 517.4 253.0 L 518.2 253.9 L 518.9 254.8 L 519.6 255.7 L 520.3 256.5 L 521.0 257.4 L 521.8 258.2 L 522.5 259.0 L 523.2 259.7 L 523.9 260.4 L 524.6 261.1 L 525.4 261.7 L 526.1 262.3 L 526.8 262.9 L 527.5 263.4 L 528.2 263.9 L 529.0 264.3 L 529.7 264.7 L 530.4 265.0 L 531.1 265.2 L 531.8 265.4 L 532.6 265.6 L 533.3 265.6 L 534.0 265.6 L 534.7 265.6 L 535.4 265.4 L 536.2 265.2 L 536.9 264.9 L 537.6 264.6 L 538.3 264.1 L 539.0 263.6 L 539.8 263.0 L 540.5 262.3 L 541.2 261.5 L 541.9 260.6 L 542.6 259.6 L 543.4 258.6 L 544.1 257.4 L 544.8 256.1 L 545.5 254.7 L 546.2 253.3 L 547.0 251.7 L 547.7 250.0 L 548.4 248.2 L 549.1 246.3 L 549.8 244.3 L 550.6 242.2 L 551.3 239.9 L 552.0 237.6 L 552.7 235.1 L 553.4 232.6 L 554.2 229.9 L 554.9 227.1 L 555.6 224.2 L 556.3 221.1 L 557.0 218.0 L 557.8 214.8 L 558.5 211.4 L 559.2 207.9 L 559.9 204.4 L 560.6 200.7 L 561.4 196.9 L 562.1 193.0 L 562.8 189.0 L 563.5 184.9 L 564.2 180.8 L 565.0 176.5 L 565.7 172.2 L 566.4 167.7 L 567.1 163.2 L 567.8 158.7 L 568.6 154.0 L 569.3 149.4 L 570.0 144.6 L 570.7 139.8 L 571.4 135.0 L 572.2 130.2 L 572.9 125.3 L 573.6 120.5 L 574.3 115.6 L 575.0 110.7 L 575.8 105.9 L 576.5 101.1 L 577.2 96.3 L 577.9 91.6 L 578.6 87.0 L 579.4 82.4 L 580.1 78.0 L 580.8 73.6 L 581.5 69.4 L 582.2 65.4 L 583.0 61.5 L 583.7 57.8 L 584.4 54.3 L 585.1 51.0 L 585.8 48.0 L 586.6 45.3 L 587.3 42.8 L 588.0 40.7 L 588.7 38.9 L 589.4 37.5 L 590.2 36.5 L 590.9 35.9 L 591.6 35.8 L 592.3 36.2 L 593.0 37.1 L 593.8 38.5 L 594.5 40.6 L 595.2 43.3 L 595.9 46.6 L 596.6 50.7 L 597.4 55.4 L 598.1 61.0 L 598.8 67.4 L 599.5 74.7 L 600.2 82.9 L 601.0 92.1 L 601.7 102.3 L 602.4 113.6 L 603.1 126.0 L 603.8 139.6 L 604.6 154.4 L 605.3 170.5 L 606.0 188.0 L 606.7 206.9 L 607.4 227.3 L 608.2 249.2 L 608.9 272.8 L 609.6 298.1" fill="none" stroke="#b44a2d" stroke-width="2.2" stroke-dasharray="7,4"/>
+  <path d="M 48.0 235.4 L 49.0 235.4 L 49.9 235.4 L 50.9 235.3 L 51.8 235.3 L 52.8 235.3 L 53.8 235.3 L 54.7 235.2 L 55.7 235.2 L 56.6 235.2 L 57.6 235.2 L 58.6 235.1 L 59.5 235.1 L 60.5 235.1 L 61.4 235.1 L 62.4 235.0 L 63.4 235.0 L 64.3 235.0 L 65.3 234.9 L 66.2 234.9 L 67.2 234.9 L 68.2 234.9 L 69.1 234.8 L 70.1 234.8 L 71.0 234.8 L 72.0 234.7 L 73.0 234.7 L 73.9 234.7 L 74.9 234.7 L 75.8 234.6 L 76.8 234.6 L 77.8 234.6 L 78.7 234.5 L 79.7 234.5 L 80.6 234.5 L 81.6 234.4 L 82.6 234.4 L 83.5 234.4 L 84.5 234.3 L 85.4 234.3 L 86.4 234.3 L 87.4 234.2 L 88.3 234.2 L 89.3 234.2 L 90.2 234.1 L 91.2 234.1 L 92.2 234.1 L 93.1 234.0 L 94.1 234.0 L 95.0 233.9 L 96.0 233.9 L 97.0 233.9 L 97.9 233.8 L 98.9 233.8 L 99.8 233.7 L 100.8 233.7 L 101.8 233.7 L 102.7 233.6 L 103.7 233.6 L 104.6 233.5 L 105.6 233.5 L 106.6 233.5 L 107.5 233.4 L 108.5 233.4 L 109.4 233.3 L 110.4 233.3 L 111.4 233.2 L 112.3 233.2 L 113.3 233.1 L 114.2 233.1 L 115.2 233.0 L 116.2 233.0 L 117.1 232.9 L 118.1 232.9 L 119.0 232.8 L 120.0 232.8 L 121.0 232.7 L 121.9 232.7 L 122.9 232.6 L 123.8 232.6 L 124.8 232.5 L 125.8 232.5 L 126.7 232.4 L 127.7 232.4 L 128.6 232.3 L 129.6 232.2 L 130.6 232.2 L 131.5 232.1 L 132.5 232.1 L 133.4 232.0 L 134.4 231.9 L 135.4 231.9 L 136.3 231.8 L 137.3 231.7 L 138.2 231.7 L 139.2 231.6 L 140.2 231.5 L 141.1 231.5 L 142.1 231.4 L 143.0 231.3 L 144.0 231.3 L 145.0 231.2 L 145.9 231.1 L 146.9 231.1 L 147.8 231.0 L 148.8 230.9 L 149.8 230.8 L 150.7 230.7 L 151.7 230.7 L 152.6 230.6 L 153.6 230.5 L 154.6 230.4 L 155.5 230.3 L 156.5 230.3 L 157.4 230.2 L 158.4 230.1 L 159.4 230.0 L 160.3 229.9 L 161.3 229.8 L 162.2 229.7 L 163.2 229.6 L 164.2 229.5 L 165.1 229.4 L 166.1 229.3 L 167.0 229.2 L 168.0 229.1 L 169.0 229.0 L 169.9 228.9 L 170.9 228.8 L 171.8 228.7 L 172.8 228.6 L 173.8 228.5 L 174.7 228.4 L 175.7 228.3 L 176.6 228.2 L 177.6 228.0 L 178.6 227.9 L 179.5 227.8 L 180.5 227.7 L 181.4 227.6 L 182.4 227.4 L 183.4 227.3 L 184.3 227.2 L 185.3 227.0 L 186.2 226.9 L 187.2 226.8 L 188.2 226.6 L 189.1 226.5 L 190.1 226.3 L 191.0 226.2 L 192.0 226.0 L 193.0 225.9 L 193.9 225.7 L 194.9 225.6 L 195.8 225.4 L 196.8 225.2 L 197.8 225.1 L 198.7 224.9 L 199.7 224.7 L 200.6 224.6 L 201.6 224.4 L 202.6 224.2 L 203.5 224.0 L 204.5 223.8 L 205.4 223.7 L 206.4 223.5 L 207.4 223.3 L 208.3 223.1 L 209.3 222.9 L 210.2 222.6 L 211.2 222.4 L 212.2 222.2 L 213.1 222.0 L 214.1 221.8 L 215.0 221.5 L 216.0 221.3 L 217.0 221.1 L 217.9 220.8 L 218.9 220.6 L 219.8 220.3 L 220.8 220.1 L 221.8 219.8 L 222.7 219.6 L 223.7 219.3 L 224.6 219.0 L 225.6 218.7 L 226.6 218.5 L 227.5 218.2 L 228.5 217.9 L 229.4 217.6 L 230.4 217.3 L 231.4 216.9 L 232.3 216.6 L 233.3 216.3 L 234.2 216.0 L 235.2 215.6 L 236.2 215.3 L 237.1 214.9 L 238.1 214.5 L 239.0 214.2 L 240.0 213.8 L 241.0 213.4 L 241.9 213.0 L 242.9 212.6 L 243.8 212.2 L 244.8 211.8 L 245.8 211.4 L 246.7 210.9 L 247.7 210.5 L 248.6 210.0 L 249.6 209.6 L 250.6 209.1 L 251.5 208.6 L 252.5 208.1 L 253.4 207.6 L 254.4 207.1 L 255.4 206.6 L 256.3 206.0 L 257.3 205.5 L 258.2 204.9 L 259.2 204.4 L 260.2 203.8 L 261.1 203.2 L 262.1 202.6 L 263.0 202.0 L 264.0 201.3 L 265.0 200.7 L 265.9 200.0 L 266.9 199.4 L 267.8 198.7 L 268.8 198.0 L 269.8 197.2 L 270.7 196.5 L 271.7 195.8 L 272.6 195.0 L 273.6 194.2 L 274.6 193.4 L 275.5 192.6 L 276.5 191.8 L 277.4 191.0 L 278.4 190.1 L 279.4 189.3 L 280.3 188.4 L 281.3 187.5 L 282.2 186.6 L 283.2 185.6 L 284.2 184.7 L 285.1 183.7 L 286.1 182.7 L 287.0 181.7 L 288.0 180.7 L 289.0 179.7 L 289.9 178.6 L 290.9 177.6 L 291.8 176.5 L 292.8 175.4 L 293.8 174.3 L 294.7 173.2 L 295.7 172.1 L 296.6 170.9 L 297.6 169.8 L 298.6 168.6 L 299.5 167.5 L 300.5 166.3 L 301.4 165.1 L 302.4 163.9 L 303.4 162.8 L 304.3 161.6 L 305.3 160.4 L 306.2 159.2 L 307.2 158.0 L 308.2 156.8 L 309.1 155.6 L 310.1 154.5 L 311.0 153.3 L 312.0 152.2 L 313.0 151.1 L 313.9 150.0 L 314.9 148.9 L 315.8 147.8 L 316.8 146.8 L 317.8 145.8 L 318.7 144.8 L 319.7 143.8 L 320.6 142.9 L 321.6 142.1 L 322.6 141.2 L 323.5 140.5 L 324.5 139.7 L 325.4 139.0 L 326.4 138.4 L 327.4 137.8 L 328.3 137.3 L 329.3 136.8 L 330.2 136.4 L 331.2 136.1 L 332.2 135.8 L 333.1 135.5 L 334.1 135.4 L 335.0 135.3 L 336.0 135.3 L 337.0 135.3 L 337.9 135.4 L 338.9 135.5 L 339.8 135.8 L 340.8 136.1 L 341.8 136.4 L 342.7 136.8 L 343.7 137.3 L 344.6 137.8 L 345.6 138.4 L 346.6 139.0 L 347.5 139.7 L 348.5 140.5 L 349.4 141.2 L 350.4 142.1 L 351.4 142.9 L 352.3 143.8 L 353.3 144.8 L 354.2 145.8 L 355.2 146.8 L 356.2 147.8 L 357.1 148.9 L 358.1 150.0 L 359.0 151.1 L 360.0 152.2 L 361.0 153.3 L 361.9 154.5 L 362.9 155.6 L 363.8 156.8 L 364.8 158.0 L 365.8 159.2 L 366.7 160.4 L 367.7 161.6 L 368.6 162.8 L 369.6 163.9 L 370.6 165.1 L 371.5 166.3 L 372.5 167.5 L 373.4 168.6 L 374.4 169.8 L 375.4 170.9 L 376.3 172.1 L 377.3 173.2 L 378.2 174.3 L 379.2 175.4 L 380.2 176.5 L 381.1 177.6 L 382.1 178.6 L 383.0 179.7 L 384.0 180.7 L 385.0 181.7 L 385.9 182.7 L 386.9 183.7 L 387.8 184.7 L 388.8 185.6 L 389.8 186.6 L 390.7 187.5 L 391.7 188.4 L 392.6 189.3 L 393.6 190.1 L 394.6 191.0 L 395.5 191.8 L 396.5 192.6 L 397.4 193.4 L 398.4 194.2 L 399.4 195.0 L 400.3 195.8 L 401.3 196.5 L 402.2 197.2 L 403.2 198.0 L 404.2 198.7 L 405.1 199.4 L 406.1 200.0 L 407.0 200.7 L 408.0 201.3 L 409.0 202.0 L 409.9 202.6 L 410.9 203.2 L 411.8 203.8 L 412.8 204.4 L 413.8 204.9 L 414.7 205.5 L 415.7 206.0 L 416.6 206.6 L 417.6 207.1 L 418.6 207.6 L 419.5 208.1 L 420.5 208.6 L 421.4 209.1 L 422.4 209.6 L 423.4 210.0 L 424.3 210.5 L 425.3 210.9 L 426.2 211.4 L 427.2 211.8 L 428.2 212.2 L 429.1 212.6 L 430.1 213.0 L 431.0 213.4 L 432.0 213.8 L 433.0 214.2 L 433.9 214.5 L 434.9 214.9 L 435.8 215.3 L 436.8 215.6 L 437.8 216.0 L 438.7 216.3 L 439.7 216.6 L 440.6 216.9 L 441.6 217.3 L 442.6 217.6 L 443.5 217.9 L 444.5 218.2 L 445.4 218.5 L 446.4 218.7 L 447.4 219.0 L 448.3 219.3 L 449.3 219.6 L 450.2 219.8 L 451.2 220.1 L 452.2 220.3 L 453.1 220.6 L 454.1 220.8 L 455.0 221.1 L 456.0 221.3 L 457.0 221.5 L 457.9 221.8 L 458.9 222.0 L 459.8 222.2 L 460.8 222.4 L 461.8 222.6 L 462.7 222.9 L 463.7 223.1 L 464.6 223.3 L 465.6 223.5 L 466.6 223.7 L 467.5 223.8 L 468.5 224.0 L 469.4 224.2 L 470.4 224.4 L 471.4 224.6 L 472.3 224.7 L 473.3 224.9 L 474.2 225.1 L 475.2 225.2 L 476.2 225.4 L 477.1 225.6 L 478.1 225.7 L 479.0 225.9 L 480.0 226.0 L 481.0 226.2 L 481.9 226.3 L 482.9 226.5 L 483.8 226.6 L 484.8 226.8 L 485.8 226.9 L 486.7 227.0 L 487.7 227.2 L 488.6 227.3 L 489.6 227.4 L 490.6 227.6 L 491.5 227.7 L 492.5 227.8 L 493.4 227.9 L 494.4 228.0 L 495.4 228.2 L 496.3 228.3 L 497.3 228.4 L 498.2 228.5 L 499.2 228.6 L 500.2 228.7 L 501.1 228.8 L 502.1 228.9 L 503.0 229.0 L 504.0 229.1 L 505.0 229.2 L 505.9 229.3 L 506.9 229.4 L 507.8 229.5 L 508.8 229.6 L 509.8 229.7 L 510.7 229.8 L 511.7 229.9 L 512.6 230.0 L 513.6 230.1 L 514.6 230.2 L 515.5 230.3 L 516.5 230.3 L 517.4 230.4 L 518.4 230.5 L 519.4 230.6 L 520.3 230.7 L 521.3 230.7 L 522.2 230.8 L 523.2 230.9 L 524.2 231.0 L 525.1 231.1 L 526.1 231.1 L 527.0 231.2 L 528.0 231.3 L 529.0 231.3 L 529.9 231.4 L 530.9 231.5 L 531.8 231.5 L 532.8 231.6 L 533.8 231.7 L 534.7 231.7 L 535.7 231.8 L 536.6 231.9 L 537.6 231.9 L 538.6 232.0 L 539.5 232.1 L 540.5 232.1 L 541.4 232.2 L 542.4 232.2 L 543.4 232.3 L 544.3 232.4 L 545.3 232.4 L 546.2 232.5 L 547.2 232.5 L 548.2 232.6 L 549.1 232.6 L 550.1 232.7 L 551.0 232.7 L 552.0 232.8 L 553.0 232.8 L 553.9 232.9 L 554.9 232.9 L 555.8 233.0 L 556.8 233.0 L 557.8 233.1 L 558.7 233.1 L 559.7 233.2 L 560.6 233.2 L 561.6 233.3 L 562.6 233.3 L 563.5 233.4 L 564.5 233.4 L 565.4 233.5 L 566.4 233.5 L 567.4 233.5 L 568.3 233.6 L 569.3 233.6 L 570.2 233.7 L 571.2 233.7 L 572.2 233.7 L 573.1 233.8 L 574.1 233.8 L 575.0 233.9 L 576.0 233.9 L 577.0 233.9 L 577.9 234.0 L 578.9 234.0 L 579.8 234.1 L 580.8 234.1 L 581.8 234.1 L 582.7 234.2 L 583.7 234.2 L 584.6 234.2 L 585.6 234.3 L 586.6 234.3 L 587.5 234.3 L 588.5 234.4 L 589.4 234.4 L 590.4 234.4 L 591.4 234.5 L 592.3 234.5 L 593.3 234.5 L 594.2 234.6 L 595.2 234.6 L 596.2 234.6 L 597.1 234.7 L 598.1 234.7 L 599.0 234.7 L 600.0 234.7 L 601.0 234.8 L 601.9 234.8 L 602.9 234.8 L 603.8 234.9 L 604.8 234.9 L 605.8 234.9 L 606.7 234.9 L 607.7 235.0 L 608.6 235.0 L 609.6 235.0 L 610.6 235.1 L 611.5 235.1 L 612.5 235.1 L 613.4 235.1 L 614.4 235.2 L 615.4 235.2 L 616.3 235.2 L 617.3 235.2 L 618.2 235.3 L 619.2 235.3 L 620.2 235.3 L 621.1 235.3 L 622.1 235.4 L 623.0 235.4 L 624.0 235.4" fill="none" stroke="#2c2419" stroke-width="2.6"/>
+  <circle cx="64.3" cy="235.0" r="4.2" fill="#3a5ba0"/>
+  <circle cx="118.6" cy="232.9" r="4.2" fill="#3a5ba0"/>
+  <circle cx="173.0" cy="228.6" r="4.2" fill="#3a5ba0"/>
+  <circle cx="227.3" cy="218.2" r="4.2" fill="#3a5ba0"/>
+  <circle cx="281.7" cy="187.1" r="4.2" fill="#3a5ba0"/>
+  <circle cx="336.0" cy="135.3" r="4.2" fill="#3a5ba0"/>
+  <circle cx="390.3" cy="187.1" r="4.2" fill="#3a5ba0"/>
+  <circle cx="444.7" cy="218.2" r="4.2" fill="#3a5ba0"/>
+  <circle cx="499.0" cy="228.6" r="4.2" fill="#3a5ba0"/>
+  <circle cx="553.4" cy="232.9" r="4.2" fill="#3a5ba0"/>
+  <circle cx="607.7" cy="235.0" r="4.2" fill="#3a5ba0"/>
+  <text x="162.1" y="78.2" font-family="JetBrains Mono,monospace" font-size="12" fill="#b44a2d" text-anchor="start">P₁₀ — интерполяция по 11 равномерным узлам</text>
+  <text x="371.3" y="149.8" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419" text-anchor="start">f(x) = 1/(1 + 25x²)</text>
+  <text x="371.3" y="270.1" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a5ba0" text-anchor="start">● — узлы xᵢ = −1 + 0,2·i</text>
+  <text x="80.6" y="29.5" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="start">max|f − P₁₀| ≈ 1,92 при x ≈ ±0,94</text>
+</svg>
+<div class="caption">Функция Рунге и \(P_{10}\) по одиннадцати равномерным узлам.</div>
+</div>
+    <div>
+      <div class="eq">\[ f(x)=\frac{1}{1+25x^2},\qquad x\in[-1,1]. \tag{3.24} \]</div>
+      <p style="font-size:.92em">Функция бесконечно дифференцируема на всей прямой и лишена особенностей на вещественной оси. Тем не менее её интерполяционные многочлены по равномерным узлам <em>не сходятся</em> к ней: вблизи концов отрезка возникают колебания, амплитуда которых растёт с \(n\) неограниченно.</p>
+      <div class="callout">При \(n=10\): \(\max|f-P_{10}|=1{,}92\) при \(x\approx\pm0{,}94\) — больше самой функции, которая не превосходит \(1\).</div>
+    </div>
+  </div>
+  <p class="bridge">Посмотрим, как погрешность зависит от \(n\), и найдём причину в формуле (3.18).</p>
+</section>
+
+<!-- 27: таблица ошибок и причина -->
+<section class="slide">
+  <div class="slide-num">§3.9 · Причина</div>
+  <h2>Рост погрешности и его механизм</h2>
+  <p class="lead">Погрешность на равномерной сетке растёт геометрически; это свойство точного многочлена, а не округления.</p>
+  <div style="overflow-x:auto">
+  <table class="cmp" style="width:100%;font-size:.9em">
+    <thead><tr><th>\(n\)</th><th>4</th><th>6</th><th>8</th><th>10</th><th>12</th><th>14</th><th>16</th><th>18</th><th>20</th><th>30</th><th>40</th></tr></thead>
+    <tbody><tr><td>\(\max|f-P_n|\)</td><td>0,44</td><td>0,62</td><td>1,05</td><td>1,92</td><td>3,66</td><td>7,19</td><td>14,4</td><td>29,2</td><td>59,8</td><td>\(2{,}4\cdot10^{3}\)</td><td>\(1{,}0\cdot10^{5}\)</td></tr></tbody>
+  </table>
+  </div>
+  <div class="two-col" style="margin-top:.6rem">
+    <div class="callout"><strong>Множитель функции.</strong> \(f=\tfrac12\bigl(\tfrac{1}{1+5ix}+\tfrac{1}{1-5ix}\bigr)\): полюсы \(\pm i/5\) на расстоянии \(0{,}2\) от отрезка. Производные растут как \(n!\,5^{n}\), и \(M_{n+1}/(n+1)!\sim5^{n+1}\) — не убывает, а растёт.</div>
+    <div class="callout"><strong>Множитель сетки.</strong> \(\max|\omega_{n+1}|\le h^{n+1}n!/4\) с \(h=2/n\) убывает лишь как \((2/e)^{n}\). Произведение \(\sim(10/e)^{n}\) растёт; у концов отрезка, где \(|\omega_{n+1}|\) велик, рост производных ничем не компенсируется.</div>
+  </div>
+  <p class="bridge">Тот же механизм, что у радиуса сходимости ряда Тейлора: ближайшая особенность в комплексной плоскости.</p>
+</section>
+
+<!-- 28: признак и что делать -->
+<section class="slide">
+  <div class="slide-num">§3.9 · Признак и выход</div>
+  <h2>Когда возникает феномен и что с ним делать</h2>
+  <p class="lead">Решает не функция сама по себе, а отношение расстояния до её особенности к длине отрезка.</p>
+  <div class="condition" data-num="3" style="min-height:auto">
+    <em>признак Рунге.</em> Для \(f=1/(x^2+a^2)\) на \([-1,1]\) равномерная интерполяция сходится \(\iff a&gt;a_*\approx0{,}5255\). У (3.24) \(a=0{,}2\) — расходится; у \(1/(1+x^2)\) на \([-1,1]\) \(a=1\) — сходится, но на \([-5,5]\) — снова \(a=0{,}2\).
+  </div>
+  <div class="tiles">
+    <div class="tile hi"><div class="h">1. сменить узлы</div><div class="t">сгустить к концам: \(\max|\omega_{n+1}|\to2^{-n}\)</div><div class="d">для (3.24) при \(n=20\) ошибка падает с \(60\) до \(10^{-2}\) — узлы Чебышёва, §&nbsp;4</div></div>
+    <div class="tile"><div class="h">2. снизить степень</div><div class="t">сшивать куски низкой степени</div><div class="d">кусочные многочлены и сплайны на равномерной сетке — §&nbsp;4</div></div>
+    <div class="tile"><div class="h">3. не интерполировать</div><div class="t">приближение «в среднем»</div><div class="d">для зашумлённых данных — метод наименьших квадратов, §&nbsp;5</div></div>
+  </div>
+  <p class="bridge">Феномен Рунге имеет и второе лицо — чувствительность к ошибкам в данных.</p>
+</section>
+
+<!-- 29: константа Лебега определение -->
+<section class="slide">
+  <div class="slide-num">§3.10 · Обусловленность</div>
+  <h2>Возмущение данных и функция Лебега</h2>
+  <p class="lead">Табличные значения округлены, измеренные — зашумлены; \(P_n\) зависит от \(y_i\) линейно с коэффициентами \(\ell_i(x)\).</p>
+  <div class="definition" data-num="5" style="min-height:auto">
+    <div class="eq">\[ \lambda_n(x)=\sum_{i=0}^{n}|\ell_i(x)|,\qquad \Lambda_n=\max_{[a,b]}\lambda_n(x) \tag{3.25} \]</div>
+    — <em>функция</em> и <em>константа Лебега</em> сетки. В узлах \(\lambda_n=1\); между узлами \(\lambda_n\ge1\) по (3.6). Характеристика только сетки.
+    <div class="mini-ex"><b>Пример</b>Два узла: \(\ell_0,\ell_1\ge0\) на \([x_0,x_1]\), \(\Lambda_1=1\) — линейная интерполяция ошибок не усиливает. Три равномерных узла: \(\Lambda_2=1{,}25\); одиннадцать: \(\Lambda_{10}=29{,}9\).</div>
+  </div>
+  <p class="bridge">Константа Лебега — в точности число обусловленности отображения «данные \(\to\) многочлен».</p>
+</section>
+
+<!-- 30: теорема 7 -->
+<section class="slide">
+  <div class="slide-num">§3.10 · Теорема 7</div>
+  <h2>Константа Лебега как число обусловленности</h2>
+  <p class="lead">Два неравенства: устойчивость к ошибкам данных и сравнение с наилучшим приближением.</p>
+  <div class="theorem" data-num="7" style="min-height:auto">
+    Для данных \(y_i\) и \(\tilde y_i=y_i+\delta_i\) на одной сетке
+    <div class="eq">\[ \max_{[a,b]}|\tilde P_n-P_n|\le\Lambda_n\max_i|\delta_i|;\qquad \max_{[a,b]}|f-P_n|\le(1+\Lambda_n)\,E_n(f). \tag{3.26–3.27} \]</div>
+    <div class="mini-ex"><b>Пример</b>Одиннадцать узлов, данные округлены до \(10^{-4}\): отклонение до \(29{,}9\cdot10^{-4}\approx3\cdot10^{-3}\). При \(n=20\) множитель \(1{,}1\cdot10^{4}\): округление в четвёртом знаке — погрешность порядка единицы.</div>
+  </div>
+  <p><em>Доказательство.</em> (3.26): \(\tilde P_n-P_n=\sum_i\delta_i\ell_i\), берём модуль. (3.27): пусть \(Q\) — наилучший многочлен, \(\max|f-Q|=E_n(f)\). Интерполяция воспроизводит \(Q\); \(f-P_n=(f-Q)-(P_n-Q)\), где \(P_n-Q\) интерполирует \(f-Q\), и по (3.26) \(\max|P_n-Q|\le\Lambda_nE_n(f)\). \(\square\)</p>
+  <p class="bridge">Остаётся узнать, как \(\Lambda_n\) зависит от \(n\) на равномерной сетке.</p>
+</section>
+
+<!-- 31: таблица Lambda + рисунок -->
+<section class="slide">
+  <div class="slide-num">§3.10 · Равномерная сетка</div>
+  <h2>Экспоненциальный рост \(\Lambda_n\) и выход из положения</h2>
+  <p class="lead">На равномерной сетке константа Лебега растёт как \(2^{n+1}/(e\,n\ln n)\) (3.28); функция Лебега повторяет форму \(\omega_{n+1}\).</p>
+  <div class="two-col">
+    <div class="figure">
+<svg viewBox="0 0 640 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:24rem" role="img" aria-label="Функция Лебега для одиннадцати равномерных узлов: в узлах она равна единице, в середине отрезка близка к единице, а в двух крайних интервалах поднимается почти до тридцати.">
+  <rect width="640" height="280" fill="#fdf9f3"/>
+  <line x1="48.0" y1="246.0" x2="624.0" y2="246.0" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="43.0" y="250.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">0</text>
+  <line x1="48.0" y1="176.3" x2="624.0" y2="176.3" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="43.0" y="180.3" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">10</text>
+  <line x1="48.0" y1="106.6" x2="624.0" y2="106.6" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="43.0" y="110.6" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">20</text>
+  <line x1="48.0" y1="36.9" x2="624.0" y2="36.9" stroke="#e8e0d4" stroke-width="0.6"/>
+  <text x="43.0" y="40.9" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="end">30</text>
+  <line x1="48.0" y1="246.0" x2="628.0" y2="246.0" stroke="#2c2419" stroke-width="1.2"/>
+  <line x1="48.0" y1="16.0" x2="48.0" y2="246.0" stroke="#2c2419" stroke-width="1.2"/>
+  <text x="630.0" y="250.0" font-family="JetBrains Mono,monospace" font-size="12" fill="#6b5d4f">x</text>
+  <line x1="61.7" y1="243.0" x2="61.7" y2="249.0" stroke="#2c2419" stroke-width="1"/>
+  <text x="61.7" y="262.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">−1</text>
+  <line x1="198.9" y1="243.0" x2="198.9" y2="249.0" stroke="#2c2419" stroke-width="1"/>
+  <text x="198.9" y="262.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">−0.5</text>
+  <line x1="336.0" y1="243.0" x2="336.0" y2="249.0" stroke="#2c2419" stroke-width="1"/>
+  <text x="336.0" y="262.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">0</text>
+  <line x1="473.1" y1="243.0" x2="473.1" y2="249.0" stroke="#2c2419" stroke-width="1"/>
+  <text x="473.1" y="262.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">0.5</text>
+  <line x1="610.3" y1="243.0" x2="610.3" y2="249.0" stroke="#2c2419" stroke-width="1"/>
+  <text x="610.3" y="262.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f" text-anchor="middle">1</text>
+  <path d="M 56.2 22.0 L 56.6 45.1 L 57.1 67.2 L 57.6 88.5 L 58.1 109.0 L 58.6 128.7 L 59.0 147.5 L 59.5 165.6 L 60.0 183.0 L 60.5 199.6 L 61.0 215.5 L 61.4 230.7 L 61.9 233.0 L 62.4 219.5 L 62.9 206.6 L 63.4 194.4 L 63.8 182.7 L 64.3 171.6 L 64.8 161.1 L 65.3 151.1 L 65.8 141.7 L 66.2 132.7 L 66.7 124.3 L 67.2 116.4 L 67.7 108.9 L 68.2 101.9 L 68.6 95.3 L 69.1 89.1 L 69.6 83.4 L 70.1 78.1 L 70.6 73.1 L 71.0 68.6 L 71.5 64.4 L 72.0 60.5 L 72.5 57.0 L 73.0 53.9 L 73.4 51.0 L 73.9 48.5 L 74.4 46.2 L 74.9 44.2 L 75.4 42.6 L 75.8 41.1 L 76.3 40.0 L 76.8 39.0 L 77.3 38.3 L 77.8 37.9 L 78.2 37.6 L 78.7 37.6 L 79.2 37.8 L 79.7 38.2 L 80.2 38.7 L 80.6 39.4 L 81.1 40.3 L 81.6 41.4 L 82.1 42.6 L 82.6 44.0 L 83.0 45.5 L 83.5 47.1 L 84.0 48.9 L 84.5 50.7 L 85.0 52.7 L 85.4 54.8 L 85.9 57.0 L 86.4 59.4 L 86.9 61.8 L 87.4 64.2 L 87.8 66.8 L 88.3 69.4 L 88.8 72.1 L 89.3 74.9 L 89.8 77.8 L 90.2 80.6 L 90.7 83.6 L 91.2 86.6 L 91.7 89.6 L 92.2 92.7 L 92.6 95.8 L 93.1 98.9 L 93.6 102.1 L 94.1 105.3 L 94.6 108.5 L 95.0 111.7 L 95.5 115.0 L 96.0 118.2 L 96.5 121.5 L 97.0 124.8 L 97.4 128.0 L 97.9 131.3 L 98.4 134.6 L 98.9 137.9 L 99.4 141.1 L 99.8 144.4 L 100.3 147.6 L 100.8 150.8 L 101.3 154.0 L 101.8 157.2 L 102.2 160.4 L 102.7 163.5 L 103.2 166.6 L 103.7 169.7 L 104.2 172.8 L 104.6 175.8 L 105.1 178.8 L 105.6 181.8 L 106.1 184.7 L 106.6 187.6 L 107.0 190.5 L 107.5 193.4 L 108.0 196.2 L 108.5 198.9 L 109.0 201.6 L 109.4 204.3 L 109.9 207.0 L 110.4 209.6 L 110.9 212.1 L 111.4 214.6 L 111.8 217.1 L 112.3 219.5 L 112.8 221.9 L 113.3 224.3 L 113.8 226.5 L 114.2 228.8 L 114.7 231.0 L 115.2 233.1 L 115.7 235.2 L 116.2 237.3 L 116.6 238.8 L 117.1 237.0 L 117.6 235.3 L 118.1 233.7 L 118.6 232.1 L 119.0 230.5 L 119.5 229.0 L 120.0 227.6 L 120.5 226.1 L 121.0 224.8 L 121.4 223.4 L 121.9 222.2 L 122.4 220.9 L 122.9 219.7 L 123.4 218.6 L 123.8 217.5 L 124.3 216.4 L 124.8 215.4 L 125.3 214.4 L 125.8 213.5 L 126.2 212.6 L 126.7 211.8 L 127.2 211.0 L 127.7 210.2 L 128.2 209.5 L 128.6 208.8 L 129.1 208.2 L 129.6 207.6 L 130.1 207.0 L 130.6 206.5 L 131.0 206.0 L 131.5 205.6 L 132.0 205.1 L 132.5 204.8 L 133.0 204.4 L 133.4 204.1 L 133.9 203.8 L 134.4 203.6 L 134.9 203.4 L 135.4 203.2 L 135.8 203.1 L 136.3 203.0 L 136.8 202.9 L 137.3 202.8 L 137.8 202.8 L 138.2 202.8 L 138.7 202.9 L 139.2 202.9 L 139.7 203.0 L 140.2 203.1 L 140.6 203.3 L 141.1 203.4 L 141.6 203.6 L 142.1 203.9 L 142.6 204.1 L 143.0 204.4 L 143.5 204.6 L 144.0 204.9 L 144.5 205.3 L 145.0 205.6 L 145.4 206.0 L 145.9 206.4 L 146.4 206.8 L 146.9 207.2 L 147.4 207.6 L 147.8 208.1 L 148.3 208.5 L 148.8 209.0 L 149.3 209.5 L 149.8 210.0 L 150.2 210.5 L 150.7 211.1 L 151.2 211.6 L 151.7 212.2 L 152.2 212.7 L 152.6 213.3 L 153.1 213.9 L 153.6 214.5 L 154.1 215.1 L 154.6 215.7 L 155.0 216.4 L 155.5 217.0 L 156.0 217.6 L 156.5 218.3 L 157.0 218.9 L 157.4 219.6 L 157.9 220.3 L 158.4 220.9 L 158.9 221.6 L 159.4 222.3 L 159.8 222.9 L 160.3 223.6 L 160.8 224.3 L 161.3 225.0 L 161.8 225.7 L 162.2 226.3 L 162.7 227.0 L 163.2 227.7 L 163.7 228.4 L 164.2 229.1 L 164.6 229.7 L 165.1 230.4 L 165.6 231.1 L 166.1 231.8 L 166.6 232.4 L 167.0 233.1 L 167.5 233.8 L 168.0 234.4 L 168.5 235.1 L 169.0 235.8 L 169.4 236.4 L 169.9 237.0 L 170.4 237.7 L 170.9 238.3 L 171.4 238.9 L 171.8 238.6 L 172.3 238.2 L 172.8 237.7 L 173.3 237.3 L 173.8 236.8 L 174.2 236.4 L 174.7 236.0 L 175.2 235.5 L 175.7 235.1 L 176.2 234.7 L 176.6 234.3 L 177.1 234.0 L 177.6 233.6 L 178.1 233.2 L 178.6 232.9 L 179.0 232.5 L 179.5 232.2 L 180.0 231.9 L 180.5 231.6 L 181.0 231.3 L 181.4 231.0 L 181.9 230.7 L 182.4 230.4 L 182.9 230.1 L 183.4 229.9 L 183.8 229.6 L 184.3 229.4 L 184.8 229.2 L 185.3 228.9 L 185.8 228.7 L 186.2 228.5 L 186.7 228.3 L 187.2 228.2 L 187.7 228.0 L 188.2 227.8 L 188.6 227.7 L 189.1 227.6 L 189.6 227.4 L 190.1 227.3 L 190.6 227.2 L 191.0 227.1 L 191.5 227.0 L 192.0 226.9 L 192.5 226.9 L 193.0 226.8 L 193.4 226.7 L 193.9 226.7 L 194.4 226.7 L 194.9 226.6 L 195.4 226.6 L 195.8 226.6 L 196.3 226.6 L 196.8 226.6 L 197.3 226.6 L 197.8 226.7 L 198.2 226.7 L 198.7 226.8 L 199.2 226.8 L 199.7 226.9 L 200.2 226.9 L 200.6 227.0 L 201.1 227.1 L 201.6 227.2 L 202.1 227.3 L 202.6 227.4 L 203.0 227.5 L 203.5 227.6 L 204.0 227.8 L 204.5 227.9 L 205.0 228.0 L 205.4 228.2 L 205.9 228.4 L 206.4 228.5 L 206.9 228.7 L 207.4 228.9 L 207.8 229.0 L 208.3 229.2 L 208.8 229.4 L 209.3 229.6 L 209.8 229.8 L 210.2 230.0 L 210.7 230.2 L 211.2 230.5 L 211.7 230.7 L 212.2 230.9 L 212.6 231.2 L 213.1 231.4 L 213.6 231.6 L 214.1 231.9 L 214.6 232.1 L 215.0 232.4 L 215.5 232.6 L 216.0 232.9 L 216.5 233.2 L 217.0 233.4 L 217.4 233.7 L 217.9 234.0 L 218.4 234.2 L 218.9 234.5 L 219.4 234.8 L 219.8 235.1 L 220.3 235.4 L 220.8 235.7 L 221.3 235.9 L 221.8 236.2 L 222.2 236.5 L 222.7 236.8 L 223.2 237.1 L 223.7 237.4 L 224.2 237.7 L 224.6 238.0 L 225.1 238.3 L 225.6 238.6 L 226.1 238.9 L 226.6 238.9 L 227.0 238.7 L 227.5 238.5 L 228.0 238.3 L 228.5 238.1 L 229.0 237.9 L 229.4 237.7 L 229.9 237.5 L 230.4 237.4 L 230.9 237.2 L 231.4 237.0 L 231.8 236.8 L 232.3 236.6 L 232.8 236.5 L 233.3 236.3 L 233.8 236.1 L 234.2 236.0 L 234.7 235.8 L 235.2 235.7 L 235.7 235.5 L 236.2 235.4 L 236.6 235.2 L 237.1 235.1 L 237.6 235.0 L 238.1 234.8 L 238.6 234.7 L 239.0 234.6 L 239.5 234.5 L 240.0 234.3 L 240.5 234.2 L 241.0 234.1 L 241.4 234.0 L 241.9 233.9 L 242.4 233.8 L 242.9 233.7 L 243.4 233.6 L 243.8 233.6 L 244.3 233.5 L 244.8 233.4 L 245.3 233.3 L 245.8 233.3 L 246.2 233.2 L 246.7 233.1 L 247.2 233.1 L 247.7 233.0 L 248.2 233.0 L 248.6 233.0 L 249.1 232.9 L 249.6 232.9 L 250.1 232.9 L 250.6 232.8 L 251.0 232.8 L 251.5 232.8 L 252.0 232.8 L 252.5 232.8 L 253.0 232.8 L 253.4 232.8 L 253.9 232.8 L 254.4 232.8 L 254.9 232.8 L 255.4 232.8 L 255.8 232.9 L 256.3 232.9 L 256.8 232.9 L 257.3 233.0 L 257.8 233.0 L 258.2 233.0 L 258.7 233.1 L 259.2 233.1 L 259.7 233.2 L 260.2 233.3 L 260.6 233.3 L 261.1 233.4 L 261.6 233.5 L 262.1 233.5 L 262.6 233.6 L 263.0 233.7 L 263.5 233.8 L 264.0 233.9 L 264.5 234.0 L 265.0 234.1 L 265.4 234.2 L 265.9 234.3 L 266.4 234.4 L 266.9 234.5 L 267.4 234.6 L 267.8 234.7 L 268.3 234.8 L 268.8 235.0 L 269.3 235.1 L 269.8 235.2 L 270.2 235.4 L 270.7 235.5 L 271.2 235.6 L 271.7 235.8 L 272.2 235.9 L 272.6 236.1 L 273.1 236.2 L 273.6 236.4 L 274.1 236.5 L 274.6 236.7 L 275.0 236.8 L 275.5 237.0 L 276.0 237.2 L 276.5 237.3 L 277.0 237.5 L 277.4 237.7 L 277.9 237.8 L 278.4 238.0 L 278.9 238.2 L 279.4 238.4 L 279.8 238.5 L 280.3 238.7 L 280.8 238.9 L 281.3 239.0 L 281.8 238.9 L 282.2 238.7 L 282.7 238.6 L 283.2 238.4 L 283.7 238.3 L 284.2 238.2 L 284.6 238.1 L 285.1 237.9 L 285.6 237.8 L 286.1 237.7 L 286.6 237.6 L 287.0 237.5 L 287.5 237.3 L 288.0 237.2 L 288.5 237.1 L 289.0 237.0 L 289.4 236.9 L 289.9 236.8 L 290.4 236.7 L 290.9 236.6 L 291.4 236.5 L 291.8 236.4 L 292.3 236.3 L 292.8 236.2 L 293.3 236.1 L 293.8 236.0 L 294.2 235.9 L 294.7 235.9 L 295.2 235.8 L 295.7 235.7 L 296.2 235.6 L 296.6 235.6 L 297.1 235.5 L 297.6 235.4 L 298.1 235.4 L 298.6 235.3 L 299.0 235.2 L 299.5 235.2 L 300.0 235.1 L 300.5 235.1 L 301.0 235.0 L 301.4 235.0 L 301.9 235.0 L 302.4 234.9 L 302.9 234.9 L 303.4 234.9 L 303.8 234.8 L 304.3 234.8 L 304.8 234.8 L 305.3 234.8 L 305.8 234.7 L 306.2 234.7 L 306.7 234.7 L 307.2 234.7 L 307.7 234.7 L 308.2 234.7 L 308.6 234.7 L 309.1 234.7 L 309.6 234.7 L 310.1 234.7 L 310.6 234.7 L 311.0 234.7 L 311.5 234.7 L 312.0 234.8 L 312.5 234.8 L 313.0 234.8 L 313.4 234.8 L 313.9 234.9 L 314.4 234.9 L 314.9 234.9 L 315.4 235.0 L 315.8 235.0 L 316.3 235.1 L 316.8 235.1 L 317.3 235.2 L 317.8 235.2 L 318.2 235.3 L 318.7 235.3 L 319.2 235.4 L 319.7 235.4 L 320.2 235.5 L 320.6 235.6 L 321.1 235.7 L 321.6 235.7 L 322.1 235.8 L 322.6 235.9 L 323.0 236.0 L 323.5 236.1 L 324.0 236.1 L 324.5 236.2 L 325.0 236.3 L 325.4 236.4 L 325.9 236.5 L 326.4 236.6 L 326.9 236.7 L 327.4 236.8 L 327.8 236.9 L 328.3 237.0 L 328.8 237.1 L 329.3 237.3 L 329.8 237.4 L 330.2 237.5 L 330.7 237.6 L 331.2 237.7 L 331.7 237.8 L 332.2 238.0 L 332.6 238.1 L 333.1 238.2 L 333.6 238.4 L 334.1 238.5 L 334.6 238.6 L 335.0 238.8 L 335.5 238.9 L 336.0 239.0 L 336.5 238.9 L 337.0 238.8 L 337.4 238.6 L 337.9 238.5 L 338.4 238.4 L 338.9 238.2 L 339.4 238.1 L 339.8 238.0 L 340.3 237.8 L 340.8 237.7 L 341.3 237.6 L 341.8 237.5 L 342.2 237.4 L 342.7 237.3 L 343.2 237.1 L 343.7 237.0 L 344.2 236.9 L 344.6 236.8 L 345.1 236.7 L 345.6 236.6 L 346.1 236.5 L 346.6 236.4 L 347.0 236.3 L 347.5 236.2 L 348.0 236.1 L 348.5 236.1 L 349.0 236.0 L 349.4 235.9 L 349.9 235.8 L 350.4 235.7 L 350.9 235.7 L 351.4 235.6 L 351.8 235.5 L 352.3 235.4 L 352.8 235.4 L 353.3 235.3 L 353.8 235.3 L 354.2 235.2 L 354.7 235.2 L 355.2 235.1 L 355.7 235.1 L 356.2 235.0 L 356.6 235.0 L 357.1 234.9 L 357.6 234.9 L 358.1 234.9 L 358.6 234.8 L 359.0 234.8 L 359.5 234.8 L 360.0 234.8 L 360.5 234.7 L 361.0 234.7 L 361.4 234.7 L 361.9 234.7 L 362.4 234.7 L 362.9 234.7 L 363.4 234.7 L 363.8 234.7 L 364.3 234.7 L 364.8 234.7 L 365.3 234.7 L 365.8 234.7 L 366.2 234.7 L 366.7 234.8 L 367.2 234.8 L 367.7 234.8 L 368.2 234.8 L 368.6 234.9 L 369.1 234.9 L 369.6 234.9 L 370.1 235.0 L 370.6 235.0 L 371.0 235.0 L 371.5 235.1 L 372.0 235.1 L 372.5 235.2 L 373.0 235.2 L 373.4 235.3 L 373.9 235.4 L 374.4 235.4 L 374.9 235.5 L 375.4 235.6 L 375.8 235.6 L 376.3 235.7 L 376.8 235.8 L 377.3 235.9 L 377.8 235.9 L 378.2 236.0 L 378.7 236.1 L 379.2 236.2 L 379.7 236.3 L 380.2 236.4 L 380.6 236.5 L 381.1 236.6 L 381.6 236.7 L 382.1 236.8 L 382.6 236.9 L 383.0 237.0 L 383.5 237.1 L 384.0 237.2 L 384.5 237.3 L 385.0 237.5 L 385.4 237.6 L 385.9 237.7 L 386.4 237.8 L 386.9 237.9 L 387.4 238.1 L 387.8 238.2 L 388.3 238.3 L 388.8 238.4 L 389.3 238.6 L 389.8 238.7 L 390.2 238.9 L 390.7 239.0 L 391.2 238.9 L 391.7 238.7 L 392.2 238.5 L 392.6 238.4 L 393.1 238.2 L 393.6 238.0 L 394.1 237.8 L 394.6 237.7 L 395.0 237.5 L 395.5 237.3 L 396.0 237.2 L 396.5 237.0 L 397.0 236.8 L 397.4 236.7 L 397.9 236.5 L 398.4 236.4 L 398.9 236.2 L 399.4 236.1 L 399.8 235.9 L 400.3 235.8 L 400.8 235.6 L 401.3 235.5 L 401.8 235.4 L 402.2 235.2 L 402.7 235.1 L 403.2 235.0 L 403.7 234.8 L 404.2 234.7 L 404.6 234.6 L 405.1 234.5 L 405.6 234.4 L 406.1 234.3 L 406.6 234.2 L 407.0 234.1 L 407.5 234.0 L 408.0 233.9 L 408.5 233.8 L 409.0 233.7 L 409.4 233.6 L 409.9 233.5 L 410.4 233.5 L 410.9 233.4 L 411.4 233.3 L 411.8 233.3 L 412.3 233.2 L 412.8 233.1 L 413.3 233.1 L 413.8 233.0 L 414.2 233.0 L 414.7 233.0 L 415.2 232.9 L 415.7 232.9 L 416.2 232.9 L 416.6 232.8 L 417.1 232.8 L 417.6 232.8 L 418.1 232.8 L 418.6 232.8 L 419.0 232.8 L 419.5 232.8 L 420.0 232.8 L 420.5 232.8 L 421.0 232.8 L 421.4 232.8 L 421.9 232.9 L 422.4 232.9 L 422.9 232.9 L 423.4 233.0 L 423.8 233.0 L 424.3 233.0 L 424.8 233.1 L 425.3 233.1 L 425.8 233.2 L 426.2 233.3 L 426.7 233.3 L 427.2 233.4 L 427.7 233.5 L 428.2 233.6 L 428.6 233.6 L 429.1 233.7 L 429.6 233.8 L 430.1 233.9 L 430.6 234.0 L 431.0 234.1 L 431.5 234.2 L 432.0 234.3 L 432.5 234.5 L 433.0 234.6 L 433.4 234.7 L 433.9 234.8 L 434.4 235.0 L 434.9 235.1 L 435.4 235.2 L 435.8 235.4 L 436.3 235.5 L 436.8 235.7 L 437.3 235.8 L 437.8 236.0 L 438.2 236.1 L 438.7 236.3 L 439.2 236.5 L 439.7 236.6 L 440.2 236.8 L 440.6 237.0 L 441.1 237.2 L 441.6 237.4 L 442.1 237.5 L 442.6 237.7 L 443.0 237.9 L 443.5 238.1 L 444.0 238.3 L 444.5 238.5 L 445.0 238.7 L 445.4 238.9 L 445.9 238.9 L 446.4 238.6 L 446.9 238.3 L 447.4 238.0 L 447.8 237.7 L 448.3 237.4 L 448.8 237.1 L 449.3 236.8 L 449.8 236.5 L 450.2 236.2 L 450.7 235.9 L 451.2 235.7 L 451.7 235.4 L 452.2 235.1 L 452.6 234.8 L 453.1 234.5 L 453.6 234.2 L 454.1 234.0 L 454.6 233.7 L 455.0 233.4 L 455.5 233.2 L 456.0 232.9 L 456.5 232.6 L 457.0 232.4 L 457.4 232.1 L 457.9 231.9 L 458.4 231.6 L 458.9 231.4 L 459.4 231.2 L 459.8 230.9 L 460.3 230.7 L 460.8 230.5 L 461.3 230.2 L 461.8 230.0 L 462.2 229.8 L 462.7 229.6 L 463.2 229.4 L 463.7 229.2 L 464.2 229.0 L 464.6 228.9 L 465.1 228.7 L 465.6 228.5 L 466.1 228.4 L 466.6 228.2 L 467.0 228.0 L 467.5 227.9 L 468.0 227.8 L 468.5 227.6 L 469.0 227.5 L 469.4 227.4 L 469.9 227.3 L 470.4 227.2 L 470.9 227.1 L 471.4 227.0 L 471.8 226.9 L 472.3 226.9 L 472.8 226.8 L 473.3 226.8 L 473.8 226.7 L 474.2 226.7 L 474.7 226.6 L 475.2 226.6 L 475.7 226.6 L 476.2 226.6 L 476.6 226.6 L 477.1 226.6 L 477.6 226.7 L 478.1 226.7 L 478.6 226.7 L 479.0 226.8 L 479.5 226.9 L 480.0 226.9 L 480.5 227.0 L 481.0 227.1 L 481.4 227.2 L 481.9 227.3 L 482.4 227.4 L 482.9 227.6 L 483.4 227.7 L 483.8 227.8 L 484.3 228.0 L 484.8 228.2 L 485.3 228.3 L 485.8 228.5 L 486.2 228.7 L 486.7 228.9 L 487.2 229.2 L 487.7 229.4 L 488.2 229.6 L 488.6 229.9 L 489.1 230.1 L 489.6 230.4 L 490.1 230.7 L 490.6 231.0 L 491.0 231.3 L 491.5 231.6 L 492.0 231.9 L 492.5 232.2 L 493.0 232.5 L 493.4 232.9 L 493.9 233.2 L 494.4 233.6 L 494.9 234.0 L 495.4 234.3 L 495.8 234.7 L 496.3 235.1 L 496.8 235.5 L 497.3 236.0 L 497.8 236.4 L 498.2 236.8 L 498.7 237.3 L 499.2 237.7 L 499.7 238.2 L 500.2 238.6 L 500.6 238.9 L 501.1 238.3 L 501.6 237.7 L 502.1 237.0 L 502.6 236.4 L 503.0 235.8 L 503.5 235.1 L 504.0 234.4 L 504.5 233.8 L 505.0 233.1 L 505.4 232.4 L 505.9 231.8 L 506.4 231.1 L 506.9 230.4 L 507.4 229.7 L 507.8 229.1 L 508.3 228.4 L 508.8 227.7 L 509.3 227.0 L 509.8 226.3 L 510.2 225.7 L 510.7 225.0 L 511.2 224.3 L 511.7 223.6 L 512.2 222.9 L 512.6 222.3 L 513.1 221.6 L 513.6 220.9 L 514.1 220.3 L 514.6 219.6 L 515.0 218.9 L 515.5 218.3 L 516.0 217.6 L 516.5 217.0 L 517.0 216.4 L 517.4 215.7 L 517.9 215.1 L 518.4 214.5 L 518.9 213.9 L 519.4 213.3 L 519.8 212.7 L 520.3 212.2 L 520.8 211.6 L 521.3 211.1 L 521.8 210.5 L 522.2 210.0 L 522.7 209.5 L 523.2 209.0 L 523.7 208.5 L 524.2 208.1 L 524.6 207.6 L 525.1 207.2 L 525.6 206.8 L 526.1 206.4 L 526.6 206.0 L 527.0 205.6 L 527.5 205.3 L 528.0 204.9 L 528.5 204.6 L 529.0 204.4 L 529.4 204.1 L 529.9 203.9 L 530.4 203.6 L 530.9 203.4 L 531.4 203.3 L 531.8 203.1 L 532.3 203.0 L 532.8 202.9 L 533.3 202.9 L 533.8 202.8 L 534.2 202.8 L 534.7 202.8 L 535.2 202.9 L 535.7 203.0 L 536.2 203.1 L 536.6 203.2 L 537.1 203.4 L 537.6 203.6 L 538.1 203.8 L 538.6 204.1 L 539.0 204.4 L 539.5 204.8 L 540.0 205.1 L 540.5 205.6 L 541.0 206.0 L 541.4 206.5 L 541.9 207.0 L 542.4 207.6 L 542.9 208.2 L 543.4 208.8 L 543.8 209.5 L 544.3 210.2 L 544.8 211.0 L 545.3 211.8 L 545.8 212.6 L 546.2 213.5 L 546.7 214.4 L 547.2 215.4 L 547.7 216.4 L 548.2 217.5 L 548.6 218.6 L 549.1 219.7 L 549.6 220.9 L 550.1 222.2 L 550.6 223.4 L 551.0 224.8 L 551.5 226.1 L 552.0 227.6 L 552.5 229.0 L 553.0 230.5 L 553.4 232.1 L 553.9 233.7 L 554.4 235.3 L 554.9 237.0 L 555.4 238.8 L 555.8 237.3 L 556.3 235.2 L 556.8 233.1 L 557.3 231.0 L 557.8 228.8 L 558.2 226.5 L 558.7 224.3 L 559.2 221.9 L 559.7 219.5 L 560.2 217.1 L 560.6 214.6 L 561.1 212.1 L 561.6 209.6 L 562.1 207.0 L 562.6 204.3 L 563.0 201.6 L 563.5 198.9 L 564.0 196.2 L 564.5 193.4 L 565.0 190.5 L 565.4 187.6 L 565.9 184.7 L 566.4 181.8 L 566.9 178.8 L 567.4 175.8 L 567.8 172.8 L 568.3 169.7 L 568.8 166.6 L 569.3 163.5 L 569.8 160.4 L 570.2 157.2 L 570.7 154.0 L 571.2 150.8 L 571.7 147.6 L 572.2 144.4 L 572.6 141.1 L 573.1 137.9 L 573.6 134.6 L 574.1 131.3 L 574.6 128.0 L 575.0 124.8 L 575.5 121.5 L 576.0 118.2 L 576.5 115.0 L 577.0 111.7 L 577.4 108.5 L 577.9 105.3 L 578.4 102.1 L 578.9 98.9 L 579.4 95.8 L 579.8 92.7 L 580.3 89.6 L 580.8 86.6 L 581.3 83.6 L 581.8 80.6 L 582.2 77.8 L 582.7 74.9 L 583.2 72.1 L 583.7 69.4 L 584.2 66.8 L 584.6 64.2 L 585.1 61.8 L 585.6 59.4 L 586.1 57.0 L 586.6 54.8 L 587.0 52.7 L 587.5 50.7 L 588.0 48.9 L 588.5 47.1 L 589.0 45.5 L 589.4 44.0 L 589.9 42.6 L 590.4 41.4 L 590.9 40.3 L 591.4 39.4 L 591.8 38.7 L 592.3 38.2 L 592.8 37.8 L 593.3 37.6 L 593.8 37.6 L 594.2 37.9 L 594.7 38.3 L 595.2 39.0 L 595.7 40.0 L 596.2 41.1 L 596.6 42.6 L 597.1 44.2 L 597.6 46.2 L 598.1 48.5 L 598.6 51.0 L 599.0 53.9 L 599.5 57.0 L 600.0 60.5 L 600.5 64.4 L 601.0 68.6 L 601.4 73.1 L 601.9 78.1 L 602.4 83.4 L 602.9 89.1 L 603.4 95.3 L 603.8 101.9 L 604.3 108.9 L 604.8 116.4 L 605.3 124.3 L 605.8 132.7 L 606.2 141.7 L 606.7 151.1 L 607.2 161.1 L 607.7 171.6 L 608.2 182.7 L 608.6 194.4 L 609.1 206.6 L 609.6 219.5 L 610.1 233.0 L 610.6 230.7 L 611.0 215.5 L 611.5 199.6 L 612.0 183.0 L 612.5 165.6 L 613.0 147.5 L 613.4 128.7 L 613.9 109.0 L 614.4 88.5 L 614.9 67.2 L 615.4 45.1 L 615.8 22.0" fill="none" stroke="#c98a2e" stroke-width="2.2"/>
+  <circle cx="61.7" cy="239.0" r="3.2" fill="#2c2419"/>
+  <circle cx="116.6" cy="239.0" r="3.2" fill="#2c2419"/>
+  <circle cx="171.4" cy="239.0" r="3.2" fill="#2c2419"/>
+  <circle cx="226.3" cy="239.0" r="3.2" fill="#2c2419"/>
+  <circle cx="281.1" cy="239.0" r="3.2" fill="#2c2419"/>
+  <circle cx="336.0" cy="239.0" r="3.2" fill="#2c2419"/>
+  <circle cx="390.9" cy="239.0" r="3.2" fill="#2c2419"/>
+  <circle cx="445.7" cy="239.0" r="3.2" fill="#2c2419"/>
+  <circle cx="500.6" cy="239.0" r="3.2" fill="#2c2419"/>
+  <circle cx="555.4" cy="239.0" r="3.2" fill="#2c2419"/>
+  <circle cx="610.3" cy="239.0" r="3.2" fill="#2c2419"/>
+  <line x1="48.0" y1="37.6" x2="624.0" y2="37.6" stroke="#b44a2d" stroke-width="1" stroke-dasharray="5,4"/>
+  <text x="336.0" y="56.4" font-family="JetBrains Mono,monospace" font-size="11" fill="#b44a2d" text-anchor="middle">Λ₁₀ = max λ₁₀(x) ≈ 29,9</text>
+  <text x="336.0" y="214.6" font-family="JetBrains Mono,monospace" font-size="11" fill="#1a6b5a" text-anchor="middle">в узлах λ₁₀ = 1; в середине отрезка λ₁₀ ≈ 1–2</text>
+  <text x="336.0" y="106.6" font-family="Source Serif 4,serif" font-size="12" fill="#6b5d4f" text-anchor="middle" font-style="italic">λ₁₀(x) = |ℓ₀(x)| + |ℓ₁(x)| + … + |ℓ₁₀(x)|,  равномерные узлы</text>
+</svg>
+<div class="caption">Функция Лебега \(\lambda_{10}\): единица в узлах, до \(30\) у концов.</div>
+</div>
+    <div>
+      <table class="cmp" style="width:100%;font-size:.85em">
+        <thead><tr><th>\(n\)</th><th>4</th><th>8</th><th>10</th><th>15</th><th>20</th><th>30</th></tr></thead>
+        <tbody><tr><td>\(\Lambda_n\)</td><td>2,2</td><td>10,9</td><td>29,9</td><td>512</td><td>\(1{,}1\cdot10^{4}\)</td><td>\(6{,}6\cdot10^{6}\)</td></tr></tbody>
+      </table>
+      <div class="callout" style="margin-top:.6rem">По (3.27) качество интерполяции сводится к \(\Lambda_n\): \(E_n(f)\to0\) для любой непрерывной \(f\) (Вейерштрасс), и всё решает сетка.</div>
+      <div class="callout" style="margin-top:.6rem;border-left:3px solid var(--accent2)"><strong style="color:var(--accent2)">Узлы Чебышёва (§&nbsp;4):</strong> \(\Lambda_n\le\tfrac2\pi\ln(n+1)+1\) — при \(n=20\) это \(2{,}9\) вместо \(1{,}1\cdot10^{4}\); интерполяция отличается от наилучшего приближения не более чем вчетверо. Медленнее \(\ln n\) расти нельзя (Эрдёш, 1961).</div>
+    </div>
+  </div>
+  <p class="bridge">Теория изложена; разберём шесть типовых заданий.</p>
+</section>
+
+<!-- 32: задания 1-2 -->
+<section class="slide">
+  <div class="slide-num">§3.11 · Задания 1–2</div>
+  <h2>Разбор: форма Лагранжа вручную; форма Ньютона и новый узел</h2>
+  <p class="lead">Первые два задания — на построение; обращайте внимание на контрольные проверки.</p>
+  <div class="two-col">
+    <div class="example">
+      <span class="lbl">Задание 1: узлы \(0,1,3\); значения \(1,2,10\)</span>
+      \(\ell_0=\tfrac{(x-1)(x-3)}{3}\), \(\ell_1=-\tfrac{x(x-3)}{2}\), \(\ell_2=\tfrac{x(x-1)}{6}\); проверка в своих узлах: \(1,1,1\).<br>
+      \(L_2=\tfrac{x^2-4x+3}{3}-(x^2-3x)+\tfrac{5(x^2-x)}{3}\): при \(x^2\): \(\tfrac13-1+\tfrac53=1\); при \(x\): \(0\); свободный \(1\). <strong>\(L_2=x^2+1\), \(L_2(2)=5\).</strong>
+      <p style="margin:.4rem 0 0;font-size:.9em">Для значения в одной точке скобки не раскрывают: \(\ell_i(2)=-\tfrac13,\,1,\,\tfrac13\); \(-\tfrac13+2+\tfrac{10}{3}=5\).</p>
+    </div>
+    <div class="example">
+      <span class="lbl">Задание 2: узлы \(1,2,4,5\); значения \(1,5,19,31\)</span>
+      Диагональ \(1,4,1,\tfrac16\): \(N_3=1+4(x-1)+(x-1)(x-2)+\tfrac16(x-1)(x-2)(x-4)\); по Горнеру \(N_3(3)=\tfrac{32}{3}\).<br>
+      Новый узел \(x=0\), \(y=-1\) — последней строкой: \(f[5,0]=\tfrac{32}{5}\), \(f[4,5,0]=\tfrac75\), \(f[2,4,5,0]=\tfrac{2}{15}\), \(f[1,2,4,5,0]=\tfrac{1}{30}\).<br>
+      <strong>\(N_4=N_3+\tfrac1{30}(x-1)(x-2)(x-4)(x-5)\)</strong>; контроль \(N_4(0)=-\tfrac73+\tfrac43=-1\). Поправка в \(x=3\): \(\tfrac{2}{15}\).
+    </div>
+  </div>
+  <p class="bridge">Следующие два задания — на оценку погрешности.</p>
+</section>
+
+<!-- 33: задания 3-4 -->
+<section class="slide">
+  <div class="slide-num">§3.11 · Задания 3–4</div>
+  <h2>Разбор: оценка погрешности и выбор числа узлов</h2>
+  <p class="lead">Здесь работает формула (3.18) и её равномерный вариант (3.20).</p>
+  <div class="two-col">
+    <div class="example">
+      <span class="lbl">Задание 3: \(e^x\) на \([0,1]\), узлы \(0,\ 0{,}5,\ 1\)</span>
+      \(M_3=e\); \(\omega_3=x(x-\tfrac12)(x-1)\), экстремумы при \(x_*=\tfrac12\pm\tfrac{1}{2\sqrt3}\), \(|\omega_3(x_*)|=0{,}0481\) (\(=2h^3/(3\sqrt3)\), \(h=\tfrac12\)).<br>
+      <strong>\(\max|e^x-P_2|\le\tfrac e6\cdot0{,}0481=0{,}0218\)</strong> (фактически \(0{,}0144\)).<br>
+      В \(x=0{,}25\): \(\omega_3=0{,}046875\), оценка \(0{,}0212\); \(\ell_i=0{,}375,\ 0{,}75,\ -0{,}125\) (сумма \(1\)), \(P_2=1{,}2718\), \(e^{0{,}25}=1{,}2840\): ошибка \(0{,}0123\).
+    </div>
+    <div class="example">
+      <span class="lbl">Задание 4: \(\cos x\) на \([0,2]\), точность \(10^{-4}\)</span>
+      \(M_{n+1}\le1\), \(h=2/n\); нужно \(\dfrac{(2/n)^{n+1}}{4(n+1)}\le10^{-4}\).<br>
+      \(n=4\): \(1{,}6\cdot10^{-3}\); \(n=5\): \(1{,}7\cdot10^{-4}\); \(n=6\): \(1{,}6\cdot10^{-5}\). <strong>Ответ: \(n=6\), семь узлов, \(h=1/3\).</strong>
+      <p style="margin:.4rem 0 0;font-size:.9em">При \(h&gt;1\) множитель \(h^{n+1}\) растёт с \(n\); перебор сходится лишь потому, что производные косинуса не растут.</p>
+    </div>
+  </div>
+  <p class="bridge">Последние два задания — прикладные: шаг таблицы и корень по таблице.</p>
+</section>
+
+<!-- 34: задания 5-6 -->
+<section class="slide">
+  <div class="slide-num">§3.11 · Задания 5–6</div>
+  <h2>Разбор: шаг таблицы и обратная интерполяция</h2>
+  <p class="lead">Прикладные задания: составление таблицы и корень уравнения по таблице.</p>
+  <div class="two-col">
+    <div class="example">
+      <span class="lbl">Задание 5: таблица \(\ln x\) на \([1,10]\), линейно, \(\varepsilon=10^{-5}\)</span>
+      \(f''=-1/x^2\), \(M_2=1\) (при \(x=1\)). По (3.23) \(h\le\sqrt{8\cdot10^{-5}}=8{,}9\cdot10^{-3}\); <strong>берём \(h=0{,}008\), \(1126\) строк.</strong>
+      <p style="margin:.4rem 0 0;font-size:.9em">При \(x=10\) вторая производная в \(100\) раз меньше — там допустим шаг вдесятеро крупнее: идея переменного шага и адаптивных сеток (§&nbsp;8).</p>
+    </div>
+    <div class="example">
+      <span class="lbl">Задание 6: корень \(f(x)=0\) по таблице \(x\colon1{,}0,\,1{,}1,\,1{,}2\); \(f\colon-0{,}20,\,0{,}05,\,0{,}32\)</span>
+      \(f\) монотонна — интерполируем \(x\) по \(y\): узлы \(-0{,}20,\,0{,}05,\,0{,}32\), значения \(1{,}0,\,1{,}1,\,1{,}2\), точка \(y=0\).<br>
+      \(\ell_0(0)=0{,}1231\), \(\ell_1(0)=0{,}9481\), \(\ell_2(0)=-0{,}0712\) (сумма \(1\)).<br>
+      <strong>\(x_*\approx0{,}1231+1{,}1\cdot0{,}9481-1{,}2\cdot0{,}0712=1{,}0806\)</strong>; корень прямого \(P_2(x)\) — тот же в четырёх знаках.
+    </div>
+  </div>
+  <p class="bridge">Подведём итоги занятия.</p>
+</section>
+
+<!-- 35: итоги 1 -->
+<section class="slide">
+  <div class="slide-num">§3.12 · Итоги (1/2)</div>
+  <h2>Итоги: построение интерполяционного многочлена</h2>
+  <p class="lead">Соберём результаты первой части занятия.</p>
+  <ol style="font-size:.86em">
+    <li><strong>Задача (3.1)</strong>: многочлен степени \(\le n\) через \(n+1\) различных узлов существует и единствен (теорема&nbsp;1); систему Вандермонда численно не решают.</li>
+    <li><strong>Форма Лагранжа (3.4)–(3.5)</strong>: базис \(\ell_i\) зависит только от узлов, \(\ell_i(x_k)=\delta_{ik}\), \(\sum\ell_i\equiv1\); интерполяция воспроизводит многочлены; для больших \(n\) — барицентрическая форма (3.7).</li>
+    <li><strong>Разделённые разности (3.8)</strong>: треугольная таблица, симметрия, \(f[x_0,\ldots,x_k]=f^{(k)}(\xi)/k!\) (теорема&nbsp;4); у многочлена степени \(m\) разности порядка \(m\) постоянны, выше — нули.</li>
+    <li><strong>Форма Ньютона (3.11)</strong>: верхняя диагональ таблицы; схема Горнера (3.13) за \(O(n)\); новый узел — одна диагональ и одно слагаемое.</li>
+    <li><strong>Слияние узлов</strong> (3.15) переводит форму Ньютона в многочлен Тейлора: интерполяция обобщает Тейлора.</li>
   </ol>
 </section>
 
+<!-- 36: итоги 2 -->
 <section class="slide">
-  <div class="slide-num">Практика</div>
-  <h2>Дальше — лаба и литература</h2>
+  <div class="slide-num">§3.12 · Итоги (2/2)</div>
+  <h2>Итоги: погрешность, сетка, обусловленность</h2>
+  <p class="lead">Вторая часть занятия — анализ построенного многочлена.</p>
+  <ol start="6" style="font-size:.86em">
+    <li><strong>Погрешность (3.16)–(3.18)</strong>: \(f-P_n=\dfrac{f^{(n+1)}(\xi)}{(n+1)!}\omega_{n+1}(x)\) — множитель <em>функции</em> \(\times\) множитель <em>сетки</em>; доказательство — присоединить \(x\) как узел и применить теорему&nbsp;4.</li>
+    <li><strong>Равномерная сетка (3.19)–(3.20)</strong>: \(\max|\omega_{n+1}|\le h^{n+1}n!/4\), максимум в крайних интервалах; интерполировать в середине таблицы, не экстраполировать.</li>
+    <li><strong>Линейная и квадратичная</strong> (3.21)–(3.23): \(M_2h^2/8\), \(M_3h^3/(9\sqrt3)\); шаг таблицы \(h\le\sqrt{8\varepsilon/M_2}\).</li>
+    <li><strong>Феномен Рунге</strong>: для \(1/(1+25x^2)\) погрешность растёт с \(n\) (\(1{,}9\) при \(n=10\), \(60\) при \(n=20\)); причина — полюсы \(\pm i/5\) вблизи отрезка; свойство точного многочлена.</li>
+    <li><strong>Константа Лебега (3.25)–(3.27)</strong>: число обусловленности интерполяции, \(\sim2^{n+1}/(en\ln n)\) на равномерной сетке; \(\max|f-P_n|\le(1+\Lambda_n)E_n(f)\) сводит качество интерполяции к выбору сетки — программа §&nbsp;4.</li>
+  </ol>
+</section>
+
+<!-- 37: практика и литература -->
+<section class="slide">
+  <div class="slide-num">Практика и источники</div>
+  <h2>Лабораторная работа и литература</h2>
+  <p class="lead">Материал занятия закрепляется в лабораторной работе на C++.</p>
   <div class="two-col">
     <div>
-      <h3 style="color:var(--accent)">▶ Лаба на C++</h3>
-      <p style="font-size:.9em">Реализуйте формы Лагранжа и Ньютона, воспроизведите феномен Рунге для \(1/(1+25x^2)\) на равномерной сетке при \(n = 10, 20\).</p>
+      <h3 style="color:var(--accent)">Лаба 3. Интерполяция и феномен Рунге</h3>
+      <ul style="font-size:.9em">
+        <li>\(\ell_i\), форма Лагранжа; таблица разделённых разностей и форма Ньютона; численная проверка единственности;</li>
+        <li>\(\max|\omega_{n+1}|\), погрешность для \(\sin\), сравнение с (3.18); степень табличного многочлена;</li>
+        <li>шаг таблицы для линейной интерполяции;</li>
+        <li>феномен Рунге при \(n=10,20\) и контраст с \(e^x\); константа Лебега и усиление возмущений данных.</li>
+      </ul>
       <div style="margin-top:.5rem;font-family:'JetBrains Mono',monospace;font-size:.8rem"><a href="w03-lab.html" style="color:var(--accent);text-decoration:none;border:1px solid var(--accent);padding:.35rem .8rem;border-radius:5px">открыть лабу →</a></div>
     </div>
     <div>
-      <h3 style="color:var(--accent)">Литература</h3>
-      <ol style="font-size:.82em;line-height:1.5">
-        <li>Süli, Mayers. Introduction to Numerical Analysis. — CUP, 2003. — гл. 6.</li>
-        <li>Trefethen. Approximation Theory and Practice. — SIAM, 2013. — гл. 3–5.</li>
-        <li>Бахвалов, Жидков, Кобельков. Численные методы. — БИНОМ, 2011. — гл. 2.</li>
+      <h3 style="color:var(--accent)">Литература к §&nbsp;3</h3>
+      <ol style="font-size:.8em;line-height:1.5">
+        <li>Бахвалов, Жидков, Кобельков. Численные методы. — гл. 2.</li>
+        <li>Самарский, Гулин. Численные методы. — гл. 3.</li>
+        <li>Süli E., Mayers D. An Introduction to Numerical Analysis. — гл. 6.</li>
+        <li>Trefethen L. N. Approximation Theory and Approximation Practice. — гл. 5, 13, 15.</li>
+        <li>Berrut, Trefethen. Barycentric Lagrange interpolation // SIAM Review, 2004.</li>
+        <li>Higham N. J. The numerical stability of barycentric Lagrange interpolation // IMA JNA, 2004.</li>
       </ol>
     </div>
   </div>
 </section>
 
+<!-- 38: финальный -->
 <section class="slide title">
   <div class="badge">Занятие 3 · итог</div>
   <h1>Вопросы?</h1>
@@ -258,17 +1061,18 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   <div style="margin-top:1.4rem;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3)">
     <span style="margin:0 .8rem">← / →&nbsp;&nbsp;навигация</span>
     <span style="margin:0 .8rem">F&nbsp;&nbsp;fullscreen</span>
+    <span style="margin:0 .8rem">Home / End</span>
   </div>
 </section>
 
 <div class="hud">
-  <a href="w03.html" class="back">← к тексту</a>
+  <a href="w03.html" class="back" title="К тексту лекции">← к тексту</a>
   <div class="center">
     <button id="btnPrev" onclick="prev()">◀ назад</button>
-    <span class="counter" id="counter">1 / 13</span>
+    <span class="counter" id="counter">1 / 38</span>
     <button id="btnNext" onclick="next()">вперёд ▶</button>
   </div>
-  <a href="w04.html" class="back">§4 →</a>
+  <a href="w04.html" class="back" title="Следующая лекция">§4 →</a>
 </div>
 
 <script>
@@ -277,13 +1081,23 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
   var counter = document.getElementById('counter');
   var fill = document.getElementById('progressFill');
   var i = 0;
-  slides.forEach(function(s){ var wrap = document.createElement('div'); wrap.className = 'slide-content'; while (s.firstChild) wrap.appendChild(s.firstChild); s.appendChild(wrap); });
+  slides.forEach(function(s){
+    var wrap = document.createElement('div');
+    wrap.className = 'slide-content';
+    while (s.firstChild) wrap.appendChild(s.firstChild);
+    s.appendChild(wrap);
+  });
   function show(n) {
     slides[i].classList.remove('active');
     i = Math.max(0, Math.min(slides.length - 1, n));
-    var s = slides[i]; var content = s.querySelector('.slide-content') || s;
+    var s = slides[i];
+    var content = s.querySelector('.slide-content') || s;
     var animated = [];
-    Array.from(content.children).forEach(function(child){ animated.push(child); var innerEq = child.querySelectorAll('.eq'); for (var j = 0; j < innerEq.length; j++) animated.push(innerEq[j]); });
+    Array.from(content.children).forEach(function(child){
+      animated.push(child);
+      var innerEq = child.querySelectorAll('.eq');
+      for (var j = 0; j < innerEq.length; j++) animated.push(innerEq[j]);
+    });
     animated.forEach(function(el, k){ el.style.setProperty('--i', k); el.style.animation = 'none'; });
     void s.offsetWidth;
     animated.forEach(function(el){ el.style.animation = ''; });
@@ -303,18 +1117,36 @@ code{font-family:'JetBrains Mono',monospace;font-size:.9em;background:var(--bg2)
     else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
     else if (e.key === 'Home') { e.preventDefault(); show(0); }
     else if (e.key === 'End')  { e.preventDefault(); show(slides.length - 1); }
-    else if (e.key === 'f' || e.key === 'F') { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); }
+    else if (e.key === 'f' || e.key === 'F') {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+    }
   });
   var h = parseInt((location.hash || '').replace('#', ''), 10);
-  if (!isNaN(h) && h >= 1 && h <= slides.length) show(h - 1); else show(0);
-  window.__slidesShow = show; window.__slidesIndex = function () { return i; };
+  if (!isNaN(h) && h >= 1 && h <= slides.length) show(h - 1);
+  else show(0);
+  window.__slidesShow = show;
+  window.__slidesIndex = function () { return i; };
 })();
 (function initSlideTools() {
-  function ready() { if (!window.CFDSlideTools) return;
-    window.CFDSlideTools.init({ slidesSelector: '.slide', activeClass: 'active', hudSelector: '.hud', projectName: 'nm-w03-slides', getCurrentIndex: function () { return window.__slidesIndex ? window.__slidesIndex() : 0; }, onGoToSlide: function (n) { if (window.__slidesShow) window.__slidesShow(n); } });
+  function ready() {
+    if (!window.CFDSlideTools) return;
+    window.CFDSlideTools.init({
+      slidesSelector: '.slide', activeClass: 'active', hudSelector: '.hud',
+      projectName: 'nm-w03-slides',
+      getCurrentIndex: function () { return window.__slidesIndex ? window.__slidesIndex() : 0; },
+      onGoToSlide: function (n) { if (window.__slidesShow) window.__slidesShow(n); },
+    });
   }
-  if (window.CFDSlideTools) ready(); else window.addEventListener('load', ready);
+  if (window.CFDSlideTools) ready();
+  else window.addEventListener('load', ready);
 })();
 </script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/slide-notes.js"></script>
 </body>
 </html>

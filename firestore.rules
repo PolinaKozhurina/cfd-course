@@ -564,7 +564,8 @@ service cloud.firestore {
       allow create, update, delete: if adminCanManageCourse(labCid());
     }
 
-    // lab_progress/{uid}_{cid}_{lab}: отметки и код студента. Пишет только
+    // lab_progress/{uid}_{cid}_{lab}: отметки и код студента (+ review — пометки
+    // преподавателя по задачам: { taskId: { status: rejected|remark, note, at, by } }). Пишет только
     // сам студент в свой документ; читает он же и admin курса (в т.ч.
     // списком where courseId == cid, labId == lab).
     match /lab_progress/{docId} {
@@ -574,8 +575,9 @@ service cloud.firestore {
                             || adminCanManageCourse(resource.data.get('courseId', ''))))
                     || docId.split('_')[0] == request.auth.uid
                   );
-      // Поля зачёта (accepted*) студент трогать не может — их ставит admin курса.
-      function acceptFields() { return ['accepted', 'acceptedAt', 'acceptedBy']; }
+      // Поля зачёта (accepted*) и пометки преподавателя по задачам (review)
+      // студент трогать не может — их ставит admin курса.
+      function acceptFields() { return ['accepted', 'acceptedAt', 'acceptedBy', 'review']; }
       function studentCreateOk() {
         return docId.split('_').size() == 3
             && docId.split('_')[0] == request.auth.uid

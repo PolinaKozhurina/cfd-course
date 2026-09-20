@@ -474,6 +474,13 @@ if (location.search.indexOf('embedded=1') !== -1) {
   <div id="labSession" style="border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;margin-bottom:.8rem;background:var(--card,#fff)"></div>
   <div id="labKeyBox" style="border:1px dashed var(--border);border-radius:8px;padding:.6rem 1rem;margin-bottom:.8rem;font-size:.82rem"></div>
   <div id="labProgress" style="border-top:1px solid var(--border);padding-top:.6rem"></div>
+  <div id="labReviewImport" style="border:1px dashed var(--border);border-radius:8px;padding:.6rem 1rem;margin-top:.8rem;font-size:.82rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3)">ПОМЕТКИ ПО ЗАДАНИЯМ</span>
+    <input type="file" id="labReviewFile" accept="application/json,.json" style="font-size:.78rem">
+    <button class="btn btn-sm" onclick="labsImportReviews()">Импорт JSON</button>
+    <span id="labReviewStatus" style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text3)"></span>
+    <span style="flex-basis:100%;color:var(--text3);font-size:.75rem">Формат: <code>{"lab":"w01","students":{"&lt;uid&gt;":{"tasks":{"q11":{"verdict":"reject|remark","note":"текст студенту"}}}}}</code>. Отклонённое задание не засчитывается и показывается студенту под условием; поставить или снять пометку по одной задаче — в окне «Код».</span>
+  </div>
   <div id="notesKeyBox" style="border:1px dashed var(--border);border-radius:8px;padding:.6rem 1rem;margin-top:1rem;font-size:.82rem"></div>
 </div>
 
@@ -4582,14 +4589,14 @@ async function labsRenderProgress(cid, lab, sess) {
     const pct = total ? Math.round(100 * done / total) : 0;
     const accepted = !!(p && p.accepted);
     const reached = info.pass ? done >= info.pass : false;
-    return { uid, fio: u.fio || u.email || uid, sg: u.studyGroup || '', done, total, pct, upd, allowed: allowed.has(uid), accepted, reached, hasCode: !!(p && p.code && Object.keys(p.code).length) };
+    return { uid, fio: u.fio || u.email || uid, sg: u.studyGroup || '', done, total, pct, upd, allowed: allowed.has(uid), accepted, reached, hasCode: !!(p && p.code && Object.keys(p.code).length), rej: p ? CFDLabs.reviewStats(p).rejected : 0 };
   }).sort((x, y) => x.fio.localeCompare(y.fio, 'ru'));
   box.innerHTML = '<div style="display:flex;align-items:center;gap:.8rem;margin-bottom:.4rem"><span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3)">ПРОГРЕСС · ' + rows.length + ' студ.' + (info.pass ? ' · ориентир зачёта ' + info.pass + '/' + (info.total || '?') + ' задач; зачёт ставите вы' : '') + '</span>' + '<button class="btn btn-sm" onclick="labsBackupToGit()" title="Сохранить код и отметки всех студентов этой лабы в приватный репозиторий cfd-submissions (labs/курс/лаба/uid/)">⇩ выгрузить в git</button><span id="labBackupStatus" style="font-size:.75rem;color:var(--text3)"></span></div>'
     + rows.map(r => '<div style="display:grid;grid-template-columns:1fr 90px 140px 70px 110px 120px 52px;gap:.6rem;align-items:center;padding:.35rem 0;border-bottom:1px dotted var(--border);font-size:.85rem">'
       + '<div>' + escapeHtml(r.fio) + (r.allowed ? '' : ' <span style="font-size:.7rem;color:var(--text3)">(не в списке)</span>') + '</div>'
       + '<div style="color:var(--text3);font-size:.75rem">' + escapeHtml(r.sg) + '</div>'
       + '<div style="height:8px;background:var(--track,#e6dfd0);border-radius:4px;overflow:hidden"><div style="height:100%;width:' + r.pct + '%;background:' + (r.reached ? '#3d6b5a' : '#3a5ba0') + '"></div></div>'
-      + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;text-align:right;color:' + (r.reached ? '#3d6b5a' : 'inherit') + '" title="' + (r.reached ? 'порог достигнут' : 'порог не достигнут') + '">' + r.done + '/' + r.total + '</div>'
+      + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;text-align:right;color:' + (r.reached ? '#3d6b5a' : 'inherit') + '" title="' + (r.reached ? 'порог достигнут' : 'порог не достигнут') + '">' + r.done + '/' + r.total + (r.rej ? ' <span style="color:#c44" title="отклонено преподавателем заданий: ' + r.rej + '">⚠' + r.rej + '</span>' : '') + '</div>'
       + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3);text-align:right">' + r.upd + '</div>'
       + '<div style="text-align:right">' + (r.accepted
           ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.7rem;color:var(--st-green,#1a6b5a)">✓ зачтено</span> <button class="btn btn-sm" title="Снять зачёт" onclick="labsSetAccepted(\'' + r.uid + '\', false)">×</button>'
@@ -4669,6 +4676,20 @@ async function labsShowCode(uid) {
 
   const body = await labsLoadBody(p.courseId, p.labId);
   const ids = body ? body.order.filter(id => id in code).concat(Object.keys(code).filter(id => !(id in body.tasks)).sort()) : Object.keys(code).sort();
+  const rv = p.review || {};
+  const rvHtml = id => {
+    const r = rv[id]; const cur = CFDLabs.codeHash(code[id] || '');
+    const changed = !!(r && r.codeHash && r.codeHash !== cur);
+    const status = r ? ((r.status === 'rejected' ? '<span style="color:#c44;font-weight:600">✗ отклонено' : '<span style="color:#8a5a00;font-weight:600">замечание') + (changed ? ' · код изменён после пометки' : '') + '</span>') : '';
+    return '<div style="padding:.45rem .8rem;background:var(--pale-cream,#f3efe7);border-top:1px solid var(--border);font-size:.8rem">'
+      + (r ? '<div style="margin-bottom:.3rem">' + status + ' <span style="color:var(--text3)">' + escapeHtml(r.by || '') + '</span><div style="white-space:pre-wrap;margin:.2rem 0 .3rem">' + escapeHtml(r.note || '') + '</div></div>' : '')
+      + '<textarea id="rvNote_' + escapeHtml(id) + '" rows="2" placeholder="пометка студенту: что не так и что исправить" style="width:100%;box-sizing:border-box;font-size:.8rem;padding:.3rem .5rem;border:1px solid var(--border);border-radius:4px;background:var(--card,#fff);color:inherit">' + (r ? escapeHtml(r.note || '') : '') + '</textarea>'
+      + '<div style="display:flex;gap:.4rem;margin-top:.3rem;flex-wrap:wrap">'
+      + '<button class="btn btn-sm" style="border-color:#c44;color:#c44" onclick="labsSetReview(\'' + uid + '\',\'' + escapeHtml(id) + '\',\'rejected\')">Отклонить</button>'
+      + '<button class="btn btn-sm" onclick="labsSetReview(\'' + uid + '\',\'' + escapeHtml(id) + '\',\'remark\')">Замечание</button>'
+      + (r ? '<button class="btn btn-sm" onclick="labsSetReview(\'' + uid + '\',\'' + escapeHtml(id) + '\',null)">Снять пометку</button>' : '')
+      + '</div></div>';
+  };
   const mark = id => { const t = tasks[id]; return t === 'ok' ? '<span style="color:var(--st-green,#1a6b5a);font-weight:600">✓ автопроверка пройдена</span>' : (t === 'err' ? '<span style="color:var(--st-red,#c44);font-weight:600">✗ последний запуск не прошёл</span>' : '<span style="color:var(--text3)">не запускалось</span>'); };
   const blocks = ids.map(id => {
     const t = body && body.tasks[id];
@@ -4676,7 +4697,7 @@ async function labsShowCode(uid) {
     const cond = t ? '<div style="font-size:.86rem;line-height:1.5;padding:.6rem .8rem;background:var(--pale-green,#e7efe8);border-radius:6px 6px 0 0">' + t.html + '</div>' : '<div style="font-size:.8rem;color:var(--text3);padding:.3rem .8rem">' + escapeHtml(id) + '</div>';
     return '<div style="margin:1rem 0;border:1px solid var(--border);border-radius:6px;overflow:hidden">' + cond
       + '<div style="display:flex;gap:1rem;align-items:center;font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text2);padding:.3rem .8rem;background:var(--pale-cream,#f3efe7)">' + escapeHtml(id) + ' · ' + mark(id) + (c.same ? ' · <span style="color:var(--st-amber,#854f0b)">не начато: код совпадает со скелетом</span>' : ' · <span style="color:var(--st-green,#3d6b5a)">подсвечены строки, которых нет в скелете</span>') + '</div>'
-      + '<pre style="margin:0;padding:.6rem .8rem;background:#1e1e1e;color:#e8e6e3;font-size:.78rem;line-height:1.4;overflow:auto;max-height:420px;white-space:pre">' + c.html + '</pre></div>';
+      + '<pre style="margin:0;padding:.6rem .8rem;background:#1e1e1e;color:#e8e6e3;font-size:.78rem;line-height:1.4;overflow:auto;max-height:420px;white-space:pre">' + c.html + '</pre>' + rvHtml(id) + '</div>';
   });
   const notStarted = body ? body.order.filter(id => !(id in code)) : [];
   wrap.firstChild.innerHTML = head
@@ -4686,13 +4707,53 @@ async function labsShowCode(uid) {
   if (body) { try { await labsEnsureMathJax(); if (window.MathJax && window.MathJax.typesetPromise) await window.MathJax.typesetPromise([wrap]); } catch (e) {} }
 }
 
+// Пометка по задаче из окна «Код»: отклонить / замечание / снять.
+async function labsSetReview(uid, id, status) {
+  const p = _labProg[uid]; if (!p) return;
+  const ta = document.getElementById('rvNote_' + id);
+  const note = ta ? ta.value.trim() : '';
+  if (status && !note) { alert('Напишите пометку студенту — что не так и что исправить.'); return; }
+  const rec = status ? { status: status, note: note, codeHash: CFDLabs.codeHash((p.code || {})[id] || '') } : null;
+  const r = await CFDLabs.setReview(uid, p.courseId, p.labId, id, rec);
+  if (!r.ok) { alert('Не сохранилось: ' + r.error); return; }
+  const fresh = await CFDLabs.loadProgress(uid, p.courseId, p.labId);
+  if (fresh) _labProg[uid] = fresh;
+  labsShowCode(uid);
+  const sess = await CFDLabs.getSession(p.courseId, p.labId);
+  labsRenderProgress(p.courseId, p.labId, sess);
+}
+
+// Массовый импорт пометок из JSON ({"lab","students":{uid:{"tasks":{id:{verdict,note}}}}}).
+async function labsImportReviews() {
+  const cid = document.getElementById('labCourse').value, lab = document.getElementById('labId').value;
+  const inp = document.getElementById('labReviewFile'), st = document.getElementById('labReviewStatus');
+  const f = inp && inp.files && inp.files[0];
+  if (!f) { st.textContent = 'выберите JSON-файл'; return; }
+  let j; try { j = JSON.parse(await f.text()); } catch (e) { st.style.color = '#c44'; st.textContent = '✗ не JSON: ' + e.message; return; }
+  if (j.lab && j.lab !== lab) { st.style.color = '#c44'; st.textContent = '✗ файл для лабы ' + j.lab + ', а выбрана ' + lab; return; }
+  const items = {}; let n = 0, unknown = 0;
+  Object.keys(j.students || {}).forEach(uid => {
+    const t = (j.students[uid] || {}).tasks || {};
+    if (!Object.keys(t).length) return;
+    if (!_labProg[uid]) unknown++;
+    items[uid] = t; n += Object.keys(t).length;
+  });
+  if (!n) { st.textContent = 'в файле нет пометок'; return; }
+  if (!confirm('Записать ' + n + ' пометок ' + Object.keys(items).length + ' студентам по лабе ' + lab + '?' + (unknown ? ' (' + unknown + ' uid нет в текущем списке прогресса)' : '') + ' Существующие пометки по тем же задачам будут заменены.')) return;
+  st.style.color = 'var(--text3)'; st.textContent = 'запись…';
+  const r = await CFDLabs.importReviews(cid, lab, items, _labProg);
+  st.style.color = r.ok ? '#1a6b5a' : '#c44';
+  st.textContent = (r.ok ? '✓ ' : '✗ ') + r.students + ' студ., ' + r.tasks + ' пометок' + (r.errors.length ? '; ошибки: ' + r.errors.join('; ') : '');
+  const sess = await CFDLabs.getSession(cid, lab); labsRenderProgress(cid, lab, sess);
+}
+
 // Выгрузка кода и отметок всех студентов текущей лабы в приватный репо (через Worker).
 async function labsBackupToGit() {
   const cid = document.getElementById('labCourse').value, lab = document.getElementById('labId').value;
   const st = document.getElementById('labBackupStatus');
   const items = Object.keys(_labProg).map(uid => {
     const p = _labProg[uid], u = (allUsers || []).find(x => x.uid === uid) || {};
-    return { uid: uid, email: u.email || null, fio: u.fio || null, tasks: p.tasks || {}, code: p.code || {}, done: p.done || 0, total: p.total || 0, accepted: !!p.accepted };
+    return { uid: uid, email: u.email || null, fio: u.fio || null, tasks: p.tasks || {}, code: p.code || {}, done: p.done || 0, total: p.total || 0, accepted: !!p.accepted, review: p.review || {} };
   });
   if (!items.length) { if (st) st.textContent = 'нечего выгружать'; return; }
   if (st) st.textContent = 'выгрузка ' + items.length + ' студ.…';

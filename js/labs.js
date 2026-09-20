@@ -91,6 +91,41 @@
     });
   }
 
+  // Пометки преподавателя по задачам (lab_progress.review) — под задачей на
+  // странице лабы: «отклонено» (не засчитывается) или «замечание».
+  function renderReviews(mount, progress) {
+    const rv = (progress && progress.review) || {};
+    const ids = Object.keys(rv); if (!ids.length) return;
+    if (!document.getElementById("lab-review-css")) {
+      const st = document.createElement("style"); st.id = "lab-review-css";
+      st.textContent =
+        ".teacher-note{margin:.5rem 0 .8rem;padding:.6rem .9rem;border-radius:0 6px 6px 0;font-size:.9rem;line-height:1.5;border-left:4px solid #c44;background:#fbeee7;color:#2c2419}" +
+        ".teacher-note.remark{border-left-color:#b8860b;background:#fbf3df}" +
+        ".teacher-note b{font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:.2rem}" +
+        ".teacher-note.rejected b{color:#c44}.teacher-note.remark b{color:#8a5a00}" +
+        ".teacher-note .when{font-size:.72rem;color:#6b5d4f;margin-top:.25rem}" +
+        "html.dark .teacher-note{background:#3a2420;color:#ede6da}html.dark .teacher-note.remark{background:#3a3120}html.dark .teacher-note .when{color:#bcb0a0}";
+      document.head.appendChild(st);
+    }
+    const esc = t => String(t || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    ids.forEach(id => {
+      const r = rv[id] || {}; if (!r.status) return;
+      const shell = mount.querySelector('.editor-shell[data-cpp="' + id + '"]') || mount.querySelector('[data-cpp="' + id + '"]');
+      if (!shell || !shell.parentNode) return;
+      const old = shell.parentNode.querySelector('.teacher-note[data-for="' + id + '"]'); if (old) old.remove();
+      const div = document.createElement("div");
+      div.className = "teacher-note " + (r.status === "rejected" ? "rejected" : "remark");
+      div.setAttribute("data-for", id);
+      const when = r.at && r.at.toDate ? r.at.toDate().toLocaleString("ru-RU", { timeZone: "Europe/Moscow", dateStyle: "short", timeStyle: "short" }) : "";
+      div.innerHTML = "<b>" + (r.status === "rejected" ? "✗ Отклонено преподавателем — задание не засчитано" : "Замечание преподавателя") + "</b>"
+        + esc(r.note)
+        + (r.status === "rejected"
+            ? '<div class="when">Исправьте решение и запустите проверку снова; засчитать задание заново может только преподаватель.' + (when ? " · " + when : "") + "</div>"
+            : (when ? '<div class="when">' + when + "</div>" : ""));
+      shell.parentNode.insertBefore(div, shell.nextSibling);
+    });
+  }
+
   const API = {
     labsOf: function (cid) { return ((window.CFD_LABS || {})[cid]) || []; },
     labInfo: function (cid, lab) { return API.labsOf(cid).find(l => l.id === lab) || { id: lab, title: lab, href: "" }; },
@@ -114,6 +149,70 @@
         }, { merge: true });
         return { ok: true };
       } catch (e) { return { ok: false, error: e.message }; }
+    },
+
+    // ---- пометки преподавателя по задачам ----
+    // lab_progress.review = { taskId: { status: 'rejected'|'remark', note, at, by, codeHash } }.
+    // Пишет только admin курса (по правилам поле review для студента закрыто);
+    // codeHash — отпечаток кода на момент пометки: видно, менял ли студент решение.
+    codeHash: function (t) {
+      let h = 5381; t = String(t || "");
+      for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
+      return (h >>> 0).toString(16);
+    },
+    setReview: async function (uid, cid, lab, taskId, review) {
+      const me = auth.currentUser; if (!me) return { ok: false, error: "Не авторизован" };
+      if (!/^[A-Za-z0-9_-]{1,32}$/.test(String(taskId))) return { ok: false, error: "плохой id задачи" };
+      try {
+        const ref = db.collection("lab_progress").doc(pid(uid, cid, lab));
+        if (!review) {
+          await ref.set({ uid: uid, courseId: cid, labId: lab, updatedAt: nowTs() }, { merge: true });
+          const upd = {}; upd["review." + taskId] = firebase.firestore.FieldValue.delete();
+          await ref.update(upd);
+        } else {
+          const rec = { status: review.status === "rejected" ? "rejected" : "remark", note: String(review.note || "").slice(0, 2000), at: nowTs(), by: me.email };
+          if (review.codeHash) rec.codeHash = review.codeHash;
+          const data = { uid: uid, courseId: cid, labId: lab, updatedAt: nowTs(), review: {} };
+          data.review[taskId] = rec;
+          await ref.set(data, { merge: true });
+        }
+        return { ok: true };
+      } catch (e) { return { ok: false, error: e.message }; }
+    },
+    // Массовый импорт: items = { uid: { taskId: { verdict|status: 'reject'|'remark', note } } };
+    // existing — текущий прогресс (для codeHash). Пометки по тем же задачам заменяются, остальные остаются.
+    importReviews: async function (cid, lab, items, existing) {
+      const me = auth.currentUser; if (!me) return { ok: false, error: "Не авторизован", students: 0, tasks: 0, errors: [] };
+      let n = 0, students = 0; const errors = [];
+      for (const uid of Object.keys(items || {})) {
+        const tasks = items[uid] || {}; const review = {}; let k = 0;
+        for (const id of Object.keys(tasks)) {
+          if (!/^[A-Za-z0-9_-]{1,32}$/.test(id)) continue;
+          const r = tasks[id] || {}; const v = String(r.status || r.verdict || "");
+          const rec = { status: (v === "reject" || v === "rejected") ? "rejected" : "remark", note: String(r.note || "").slice(0, 2000), at: nowTs(), by: me.email };
+          const code = existing && existing[uid] && existing[uid].code ? existing[uid].code[id] : null;
+          if (code != null) rec.codeHash = API.codeHash(code);
+          review[id] = rec; k++;
+        }
+        if (!k) continue;
+        try {
+          await db.collection("lab_progress").doc(pid(uid, cid, lab)).set({ uid: uid, courseId: cid, labId: lab, updatedAt: nowTs(), review: review }, { merge: true });
+          students++; n += k;
+        } catch (e) { errors.push(uid + ": " + e.message); }
+      }
+      return { ok: !errors.length, students: students, tasks: n, errors: errors };
+    },
+    // Сводка: сколько отклонено / замечаний; effectiveDone = done минус отклонённые из числа «ok».
+    reviewStats: function (progress) {
+      const rv = (progress && progress.review) || {}, tasks = (progress && progress.tasks) || {};
+      let rejected = 0, remark = 0, rejectedOk = 0;
+      Object.keys(rv).forEach(id => {
+        const r = rv[id] || {};
+        if (r.status === "rejected") { rejected++; if (tasks[id] === "ok") rejectedOk++; }
+        else if (r.status === "remark") remark++;
+      });
+      const done = (progress && progress.done) || 0;
+      return { rejected: rejected, remark: remark, effectiveDone: Math.max(0, done - rejectedOk) };
     },
 
     // ---- сеансы ----
@@ -354,6 +453,7 @@
         if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([mount]).catch(() => {});
         mounted = true;
         if (typeof opts.onReady === "function") opts.onReady(remote, user);
+        try { renderReviews(mount, remote); } catch (e) { console.warn("renderReviews", e); }
       };
 
       // Следим за сеансом: закрыли — прячем сразу.

@@ -217,6 +217,10 @@ h2{font-size:1.5rem}
 .tile .d{font-size:.88rem}
 mjx-assistive-mml{height:1px!important;max-height:1px!important}
 .tile{grid-template-columns:7.5em minmax(8.5em,15em) 1fr}
+.tiles.wide .tile{grid-template-columns:7.5em minmax(8.5em,max-content) 1fr}
+.tile .t{line-height:1.3;overflow:visible}
+.coef{color:#b44a2d;font-weight:700}
+table.hs{border-collapse:collapse;font-size:.82em;margin:.2rem 0}table.hs th,table.hs td{padding:.12rem .5rem;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}table.hs th{font-family:"JetBrains Mono",monospace;font-weight:500;font-size:.85em;color:var(--text2)}
 @media(max-width:900px){.tile{grid-template-columns:1fr}}
 </style>
 </head>
@@ -398,7 +402,7 @@ mjx-assistive-mml{height:1px!important;max-height:1px!important}
   <div class="slide-num">§3.3 · Способ 2 · Построение Ньютона</div>
   <h2>Способ 2. Построение по одному узлу: разделённые разности</h2>
   <p class="lead">Тот же многочлен иначе: добавляем узлы по одному, не нарушая уже выполненных условий.</p>
-  <div class="tiles" style="font-size:.81em;gap:.2rem">
+  <div class="tiles wide" style="font-size:.81em;gap:.2rem">
     <div class="tile"><div class="h">один узел</div><div class="t">\(P_0(x)=y_0\)</div><div class="d">условие в \(x_0\) выполнено</div></div>
     <div class="tile"><div class="h">второй узел</div><div class="t">\(P_1=P_0+c_1(x-x_0)\)</div><div class="d">поправка равна нулю в \(x_0\); условие \(P_1(x_1)=y_1\) даёт \(c_1=\tfrac{y_1-y_0}{x_1-x_0}=:f[x_0,x_1]\)</div></div>
     <div class="tile"><div class="h">третий узел</div><div class="t">\(P_2=P_1+c_2(x-x_0)(x-x_1)\)</div><div class="d">нули в \(x_0\), \(x_1\); из \(P_2(x_2)=y_2\): \(c_2=\tfrac{f[x_1,x_2]-f[x_0,x_1]}{x_2-x_0}=:f[x_0,x_1,x_2]\)</div></div>
@@ -452,14 +456,52 @@ mjx-assistive-mml{height:1px!important;max-height:1px!important}
 <section class="slide">
   <div class="slide-num">§3.4 · Способ 2 · Вычисление</div>
   <h2>Значение в точке: схема Горнера (§&nbsp;2.7)</h2>
-  <p class="lead">Чтобы получить число \(N_n(x)\), скобки не раскрывают, а вкладывают, как в схеме Горнера (2.18); отличие лишь в том, что вместо одного и того же \(x\) на каждом шаге стоит свой множитель \((x-x_k)\).</p>
-  <div class="eq" style="font-size:.9em;margin:.3rem 0">\[ N_n(x)=c_0+(x-x_0)\Bigl(c_1+(x-x_1)\bigl(c_2+\dots+(x-x_{n-1})c_n\bigr)\Bigr),\qquad c_k=f[x_0,\ldots,x_k]. \tag{3.13} \]</div>
-  <p style="font-size:.88em"><strong>Пример:</strong> \(c=(1,4,1,\tfrac16)\), узлы \(1,2,4\): \(N_3(3)=\bigl(\bigl(\tfrac16(3-4)+1\bigr)(3-2)+4\bigr)(3-1)+1=\tfrac{32}{3}\); \(n\) умножений и \(2n\) сложений.</p>
-  <div class="tiles" style="font-size:.9em">
-    <div class="tile"><div class="h">Способ 1 — Лагранж (3.5)</div><div class="t">\(O(n^2)\) на точку</div><div class="d">подготовки нет; узлы фиксированы — базис считается один раз; удобна для теории (§&nbsp;3.11) и для квадратур (§&nbsp;7)</div></div>
-    <div class="tile hi"><div class="h">Способ 2 — Ньютон (3.11)</div><div class="t">\(O(n)\) на точку</div><div class="d">таблица \(O(n^2)\) один раз; узлы добавляются по ходу счёта — одна диагональ; последнее слагаемое оценивает надёжность</div></div>
+  <p class="lead">Коэффициенты \(\class{coef}{c_k}=f[x_0,\ldots,x_k]\) — верхняя диагональ таблицы (слайд 10); скобки вкладываем, как у Горнера (2.18):</p>
+  <div class="eq" style="font-size:.9em;margin:.2rem 0">\[ N_n(x)=\class{coef}{c_0}+(x-x_0)\Bigl(\class{coef}{c_1}+(x-x_1)\bigl(\class{coef}{c_2}+\dots+(x-x_{n-1})\,\class{coef}{c_n}\bigr)\Bigr). \tag{3.13} \]</div>
+  <div class="two-col" style="grid-template-columns:1.5fr 1fr;gap:1.2rem;align-items:start;margin-top:.1rem">
+    <div>
+<svg viewBox="0 0 700 150" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;margin:.3rem 0 0" role="img" aria-label="Блок-схема: вход x, узлы, коэффициенты; b равно c_n, k равно n минус 1; пока k не меньше нуля: b равно b умножить на (x минус x_k) плюс c_k, k уменьшить на 1; выход N_n(x) равно b.">
+  <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3b3128"/></marker></defs>
+  <g font-family="JetBrains Mono,monospace" font-size="15" fill="#3b3128" text-anchor="middle">
+    <rect x="4" y="60" width="150" height="38" rx="19" fill="#e7efe8" stroke="#3b3128" stroke-width="1.2"/>
+    <text x="79" y="78">вход: x, узлы,</text><text x="79" y="93" font-size="13">c₀ … cₙ</text>
+    <rect x="170" y="60" width="162" height="38" fill="#fff" stroke="#3b3128" stroke-width="1.2"/>
+    <text x="251" y="84">b ← <tspan fill="#b44a2d" font-weight="700">cₙ</tspan>; k ← n − 1</text>
+    <polygon points="404,48 462,79 404,110 346,79" fill="#fbeee7" stroke="#3b3128" stroke-width="1.2"/>
+    <text x="404" y="84">k ≥ 0 ?</text>
+    <rect x="480" y="50" width="216" height="58" fill="#fff" stroke="#3b3128" stroke-width="1.2"/>
+    <text x="588" y="74">b ← b·(x − xₖ) + <tspan fill="#b44a2d" font-weight="700">cₖ</tspan></text>
+    <text x="588" y="97">k ← k − 1</text>
+    <rect x="316" y="4" width="176" height="30" rx="15" fill="#e7efe8" stroke="#3b3128" stroke-width="1.2"/>
+    <text x="404" y="24">выход: Nₙ(x) = b</text>
+    <g fill="none" stroke="#3b3128" stroke-width="1.4" marker-end="url(#ah)">
+      <path d="M154,79 L170,79"/>
+      <path d="M332,79 L346,79"/>
+      <path d="M462,79 L480,79"/>
+      <path d="M404,48 L404,34"/>
+      <path d="M588,108 L588,134 L404,134 L404,110"/>
+    </g>
+    <text x="466" y="72" font-size="12" text-anchor="start" fill="#6b5d4f">да</text>
+    <text x="410" y="45" font-size="12" text-anchor="start" fill="#6b5d4f">нет</text>
+    <text x="496" y="146" font-size="12" text-anchor="middle" fill="#6b5d4f">повтор n раз</text>
+  </g>
+</svg>
+    </div>
+    <div>
+      <p style="font-size:.8em;margin:0 0 .15rem"><strong>Пример.</strong> Узлы \(1,2,4,5\), \(\class{coef}{c}=(1,\ 4,\ 1,\ \tfrac16)\), \(x=3\); от последнего коэффициента к первому, узел \(x_3\) не участвует.</p>
+      <table class="hs" style="font-size:.74em">
+        <thead><tr><th>k</th><th>cₖ</th><th>x − xₖ</th><th>b ← b·(x − xₖ) + cₖ</th></tr></thead>
+        <tbody>
+          <tr><td>3</td><td class="coef">1/6</td><td>—</td><td>\(b=\tfrac16\)</td></tr>
+          <tr><td>2</td><td class="coef">1</td><td>3 − 4 = −1</td><td>\(\tfrac16\cdot(-1)+1=\tfrac56\)</td></tr>
+          <tr><td>1</td><td class="coef">4</td><td>3 − 2 = 1</td><td>\(\tfrac56\cdot1+4=\tfrac{29}{6}\)</td></tr>
+          <tr><td>0</td><td class="coef">1</td><td>3 − 1 = 2</td><td>\(\tfrac{29}{6}\cdot2+1=\tfrac{32}{3}\)</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
-  <p class="bridge">Многочлен построен двумя способами. Переходим к главному вопросу: насколько он точен между узлами.</p>
+  <p style="font-size:.84em;margin:.25rem 0 0">\(N_3(3)=\tfrac{32}{3}\approx10{,}67\) за \(n\) умножений и \(2n\) сложений; на шаге \(k\) множитель \((x-x_k)\) свой. Контроль: для данных \(1,5,19,29\) (парабола \(x^2+x-1\)) \(c_3=0\), и схема даёт \(1+2\,(4+1\cdot1)=11=3^2+3-1\).</p>
+  <p class="bridge">Итог: способ 1 — \(O(n^2)\) на каждую точку без подготовки; способ 2 — таблица \(O(n^2)\) один раз, потом \(O(n)\) на точку. Далее — насколько многочлен точен между узлами.</p>
 </section>
 
 <!-- 13: постановка задачи анализа -->
@@ -546,7 +588,7 @@ mjx-assistive-mml{height:1px!important;max-height:1px!important}
   <div class="slide-num">§3.6 · Теорема 4</div>
   <h2>Погрешность интерполяции</h2>
   <p class="lead">Информация в узлах не определяет поведения \(f\) между ними; как и у Тейлора (§&nbsp;2.3), в ответ входит старшая производная на всём отрезке.</p>
-  <div class="condition" data-num="2" style="min-height:auto">\([a,b]\) содержит все узлы и точку \(x\); \(f\in C^{n+1}[a,b]\). Для \(f=|x|\) условие нарушено уже при \(n=0\).</div>
+  <div class="condition" data-num="2" style="min-height:3.8rem">\([a,b]\) содержит все узлы и точку \(x\); \(f\in C^{n+1}[a,b]\). Для \(f=|x|\) условие нарушено уже при \(n=0\).</div>
   <div class="theorem" data-num="4" style="min-height:auto">
     Для каждого \(x\in[a,b]\) найдётся \(\xi=\xi(x)\in(a,b)\) такое, что
     <div class="eq" style="margin:.3rem 0">\[ f(x)-P_n(x)=f[x_0,\ldots,x_n,x]\;\omega_{n+1}(x)=\frac{f^{(n+1)}(\xi)}{(n+1)!}\,\omega_{n+1}(x),\qquad \omega_{n+1}(x)=\prod_{i=0}^{n}(x-x_i). \tag{3.16–3.17} \]</div>

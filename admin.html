@@ -4632,7 +4632,14 @@ async function labsLoadBody(cid, lab) {
       const clone = t.cloneNode(true);
       clone.querySelectorAll('.editor-shell, .verdict, .mcq, canvas, script').forEach(e => e.remove());
       let variants = null; try { variants = JSON.parse(sh.getAttribute('data-variants') || 'null'); } catch (e) {}
-      tasks[id] = { num: t.getAttribute('data-num') || '', html: clone.innerHTML, skeleton: ta ? ta.value : '', variants: Array.isArray(variants) && variants.length ? variants : null };
+      const rec = { num: t.getAttribute('data-num') || '', html: clone.innerHTML, skeleton: ta ? ta.value : '', variants: Array.isArray(variants) && variants.length ? variants : null };
+      if (t.hasAttribute('data-variant-of')) {
+        // индивидуальное задание: все формулировки складываем в alts, выбор — по uid в labsShowCode
+        if (!tasks[id]) { tasks[id] = Object.assign({}, rec, { alts: [] }); order.push(id); }
+        tasks[id].alts[+t.getAttribute('data-variant') || 0] = rec;
+        return;
+      }
+      tasks[id] = rec;
       order.push(id);
     });
     return (_labBodyCache[k] = { tasks, order });
@@ -4679,7 +4686,8 @@ async function labsShowCode(uid) {
   const ids = body ? body.order.filter(id => id in code).concat(Object.keys(code).filter(id => !(id in body.tasks)).sort()) : Object.keys(code).sort();
   const rv = p.review || {};
   const vinfo = id => {
-    const t = body && body.tasks[id]; if (!t || !t.variants || !CFDLabs.variantIndex) return '';
+    const t0 = body && body.tasks[id]; if (t0 && t0.alts && t0.alts.length) return ' · <span title="индивидуальное задание">ряд ' + (CFDLabs.variantIndex(uid, t0.alts.length) + 1) + ' из ' + t0.alts.length + '</span>';
+    const t = t0; if (!t || !t.variants || !CFDLabs.variantIndex) return '';
     const vi = CFDLabs.variantIndex(uid, t.variants.length), v = t.variants[vi] || {};
     return ' · <span title="параметры теста этого студента">вариант ' + (vi + 1) + ': ' + Object.keys(v).map(k => escapeHtml(k) + ' = ' + escapeHtml(String(v[k]))).join(', ') + '</span>';
   };
@@ -4698,7 +4706,8 @@ async function labsShowCode(uid) {
   };
   const mark = id => { const t = tasks[id]; return t === 'ok' ? '<span style="color:var(--st-green,#1a6b5a);font-weight:600">✓ автопроверка пройдена</span>' : (t === 'err' ? '<span style="color:var(--st-red,#c44);font-weight:600">✗ последний запуск не прошёл</span>' : '<span style="color:var(--text3)">не запускалось</span>'); };
   const blocks = ids.map(id => {
-    const t = body && body.tasks[id];
+    const t0 = body && body.tasks[id];
+    const t = (t0 && t0.alts && t0.alts.length) ? (t0.alts[CFDLabs.variantIndex(uid, t0.alts.length)] || t0) : t0;
     const c = labsCodeHtml(code[id], t ? t.skeleton : '');
     const cond = t ? '<div style="font-size:.86rem;line-height:1.5;padding:.6rem .8rem;background:var(--pale-green,#e7efe8);border-radius:6px 6px 0 0">' + t.html + '</div>' : '<div style="font-size:.8rem;color:var(--text3);padding:.3rem .8rem">' + escapeHtml(id) + '</div>';
     return '<div style="margin:1rem 0;border:1px solid var(--border);border-radius:6px;overflow:hidden">' + cond

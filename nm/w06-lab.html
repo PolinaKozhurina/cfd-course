@@ -275,6 +275,17 @@ document.getElementById('prog_reset').addEventListener('click', ()=>{
 updateProgUI();
 function closeTo(got, want, rtol, atol){ rtol = rtol||0; atol = atol||0; if (!isFinite(got) || !isFinite(want)) return got===want; const d = Math.abs(got-want); const tol = Math.max(atol, rtol*Math.abs(want)); return d <= tol; }
 function initTasks(){
+  // Индивидуальные задания: из группы .task[data-variant-of=ID] остаётся один блок — по uid студента.
+  (function () {
+    const groups = {};
+    document.querySelectorAll('.task[data-variant-of]').forEach(t => { const g = t.getAttribute('data-variant-of'); (groups[g] = groups[g] || []).push(t); });
+    Object.keys(groups).forEach(g => {
+      const list = groups[g].sort((a, b) => (+a.getAttribute('data-variant')) - (+b.getAttribute('data-variant')));
+      const uid = (window.__labUser && window.__labUser.uid) || '';
+      const vi = (window.CFDLabs && CFDLabs.variantIndex) ? CFDLabs.variantIndex(uid, list.length) : 0;
+      list.forEach((t, i) => { if (i !== vi) t.remove(); });
+    });
+  })();
 document.querySelectorAll('[data-cpp]').forEach(shell=>{
   const id = shell.getAttribute('data-cpp');
   const ta = shell.querySelector('[data-code]');
@@ -291,8 +302,6 @@ document.querySelectorAll('[data-cpp]').forEach(shell=>{
   if (V) {
     const taskEl = shell.closest('.task') || shell.parentNode;
     if (taskEl) taskEl.querySelectorAll('[data-var]').forEach(el => { const k = el.getAttribute('data-var'); if (k in V) el.textContent = String(V[k]).replace('.', ','); });
-    const fnEl = shell.querySelector('.editor-head .fname');
-    if (fnEl && !shell.querySelector('.variant-badge')) fnEl.insertAdjacentHTML('afterend', '<span class="variant-badge" title="параметры вашего варианта подставлены в тест">вариант ' + (VI + 1) + '</span>');
   }
   const evalArg = s => { s = s.trim(); const vm = s.match(/^V\.(\w+)$/); return (vm && V && (vm[1] in V)) ? Number(V[vm[1]]) : parseFloat(s); };
   const rtol = parseFloat(shell.getAttribute('data-check-rtol')||'0');

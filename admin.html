@@ -4631,7 +4631,8 @@ async function labsLoadBody(cid, lab) {
       const ta = sh.querySelector('textarea[data-code]');
       const clone = t.cloneNode(true);
       clone.querySelectorAll('.editor-shell, .verdict, .mcq, canvas, script').forEach(e => e.remove());
-      tasks[id] = { num: t.getAttribute('data-num') || '', html: clone.innerHTML, skeleton: ta ? ta.value : '' };
+      let variants = null; try { variants = JSON.parse(sh.getAttribute('data-variants') || 'null'); } catch (e) {}
+      tasks[id] = { num: t.getAttribute('data-num') || '', html: clone.innerHTML, skeleton: ta ? ta.value : '', variants: Array.isArray(variants) && variants.length ? variants : null };
       order.push(id);
     });
     return (_labBodyCache[k] = { tasks, order });
@@ -4677,6 +4678,11 @@ async function labsShowCode(uid) {
   const body = await labsLoadBody(p.courseId, p.labId);
   const ids = body ? body.order.filter(id => id in code).concat(Object.keys(code).filter(id => !(id in body.tasks)).sort()) : Object.keys(code).sort();
   const rv = p.review || {};
+  const vinfo = id => {
+    const t = body && body.tasks[id]; if (!t || !t.variants || !CFDLabs.variantIndex) return '';
+    const vi = CFDLabs.variantIndex(uid, t.variants.length), v = t.variants[vi] || {};
+    return ' · <span title="параметры теста этого студента">вариант ' + (vi + 1) + ': ' + Object.keys(v).map(k => escapeHtml(k) + ' = ' + escapeHtml(String(v[k]))).join(', ') + '</span>';
+  };
   const rvHtml = id => {
     const r = rv[id]; const cur = CFDLabs.codeHash(code[id] || '');
     const changed = !!(r && r.codeHash && r.codeHash !== cur);
@@ -4696,7 +4702,7 @@ async function labsShowCode(uid) {
     const c = labsCodeHtml(code[id], t ? t.skeleton : '');
     const cond = t ? '<div style="font-size:.86rem;line-height:1.5;padding:.6rem .8rem;background:var(--pale-green,#e7efe8);border-radius:6px 6px 0 0">' + t.html + '</div>' : '<div style="font-size:.8rem;color:var(--text3);padding:.3rem .8rem">' + escapeHtml(id) + '</div>';
     return '<div style="margin:1rem 0;border:1px solid var(--border);border-radius:6px;overflow:hidden">' + cond
-      + '<div style="display:flex;gap:1rem;align-items:center;font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text2);padding:.3rem .8rem;background:var(--pale-cream,#f3efe7)">' + escapeHtml(id) + ' · ' + mark(id) + (c.same ? ' · <span style="color:var(--st-amber,#854f0b)">не начато: код совпадает со скелетом</span>' : ' · <span style="color:var(--st-green,#3d6b5a)">подсвечены строки, которых нет в скелете</span>') + '</div>'
+      + '<div style="display:flex;gap:1rem;align-items:center;font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text2);padding:.3rem .8rem;background:var(--pale-cream,#f3efe7)">' + escapeHtml(id) + ' · ' + mark(id) + vinfo(id) + (c.same ? ' · <span style="color:var(--st-amber,#854f0b)">не начато: код совпадает со скелетом</span>' : ' · <span style="color:var(--st-green,#3d6b5a)">подсвечены строки, которых нет в скелете</span>') + '</div>'
       + '<pre style="margin:0;padding:.6rem .8rem;background:#1e1e1e;color:#e8e6e3;font-size:.78rem;line-height:1.4;overflow:auto;max-height:420px;white-space:pre">' + c.html + '</pre>' + rvHtml(id) + '</div>';
   });
   const notStarted = body ? body.order.filter(id => !(id in code)) : [];

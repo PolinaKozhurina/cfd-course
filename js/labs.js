@@ -183,6 +183,13 @@
       for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
       return (h >>> 0).toString(16);
     },
+    // Индивидуальный вариант задачи: детерминированный индекс 0..k-1 по uid (FNV-1a 32 бит).
+    // Используется оболочкой лабы (data-variants) и админкой (показ параметров варианта студента).
+    variantIndex: function (uid, k) {
+      const t = String(uid || ""); let h = 2166136261 >>> 0;
+      for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+      return k > 0 ? h % k : 0;
+    },
     setReview: async function (uid, cid, lab, taskId, review) {
       const me = auth.currentUser; if (!me) return { ok: false, error: "Не авторизован" };
       if (!/^[A-Za-z0-9_-]{1,32}$/.test(String(taskId))) return { ok: false, error: "плохой id задачи" };

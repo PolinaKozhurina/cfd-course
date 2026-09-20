@@ -505,6 +505,19 @@ document.querySelectorAll('[data-cpp]').forEach(shell=>{
   const btnRun = shell.querySelector('[data-run]');
   const btnReset = shell.querySelector('[data-reset]');
   const harness = shell.getAttribute('data-harness') || '';
+  // Индивидуальный вариант теста: data-variants='[{…},{…}]' — набор параметров выбирается по uid
+  // студента (CFDLabs.variantIndex); {{ключ}} в харнессе и V.ключ в data-check-eval заменяются его значениями.
+  const VARS = (() => { try { const v = JSON.parse(shell.getAttribute('data-variants') || 'null'); return Array.isArray(v) && v.length ? v : null; } catch (e) { return null; } })();
+  const VI = VARS ? ((window.CFDLabs && CFDLabs.variantIndex) ? CFDLabs.variantIndex((window.__labUser && window.__labUser.uid) || '', VARS.length) : 0) : 0;
+  const V = VARS ? VARS[VI] : null;
+  const harnessV = V ? harness.replace(/\{\{(\w+)\}\}/g, (mm, k) => (k in V ? String(V[k]) : mm)) : harness;
+  if (V) {
+    const taskEl = shell.closest('.task') || shell.parentNode;
+    if (taskEl) taskEl.querySelectorAll('[data-var]').forEach(el => { const k = el.getAttribute('data-var'); if (k in V) el.textContent = String(V[k]).replace('.', ','); });
+    const fnEl = shell.querySelector('.editor-head .fname');
+    if (fnEl && !shell.querySelector('.variant-badge')) fnEl.insertAdjacentHTML('afterend', '<span class="variant-badge" title="параметры вашего варианта подставлены в тест">вариант ' + (VI + 1) + '</span>');
+  }
+  const evalArg = s => { s = s.trim(); const vm = s.match(/^V\.(\w+)$/); return (vm && V && (vm[1] in V)) ? Number(V[vm[1]]) : parseFloat(s); };
   const rtol = parseFloat(shell.getAttribute('data-check-rtol')||'0');
   const atol = parseFloat(shell.getAttribute('data-check-atol')||'0');
   const targetAttr = shell.getAttribute('data-check-target');
@@ -545,7 +558,7 @@ document.querySelectorAll('[data-cpp]').forEach(shell=>{
     btnRun.disabled = true; btnRun.textContent = '…';
     try {
       const code = cm.getValue();
-      const res = await runCpp(code, harness, outputEl);
+      const res = await runCpp(code, harnessV, outputEl);
       const plotEl = shell.querySelector('[data-plot]');
       if (plotEl) drawLogLog(plotEl, res.points);
       // Compute targets
@@ -556,7 +569,7 @@ document.querySelectorAll('[data-cpp]').forEach(shell=>{
           if (!m) return NaN;
           const fn = window.__EVAL__[m[1]];
           if (!fn) return NaN;
-          try { return fn(parseFloat(m[2])); } catch(e){ return NaN; }
+          try { const args = m[2].trim() ? m[2].split(',').map(evalArg) : []; return fn.apply(null, args); } catch(e){ return NaN; }
         });
       } else if (targetAttr) {
         targets = targetAttr.split(',').map(s=>parseFloat(s));

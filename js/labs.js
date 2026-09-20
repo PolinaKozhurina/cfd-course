@@ -123,7 +123,30 @@
             ? '<div class="when">Исправьте решение и запустите проверку снова; засчитать задание заново может только преподаватель.' + (when ? " · " + when : "") + "</div>"
             : (when ? '<div class="when">' + when + "</div>" : ""));
       shell.parentNode.insertBefore(div, shell.nextSibling);
+      // Отклонённая задача: красный статус у самой задачи (перезапуск проверки его перепишет, пометка останется).
+      if (r.status === "rejected") {
+        const task = shell.closest(".task");
+        const v = task && task.querySelector("[data-verdict]");
+        if (v) { v.className = "verdict err"; v.innerHTML = '<span class="status-dot err"></span>✗ отклонено преподавателем — см. пометку под задачей'; }
+      }
     });
+    // Счётчик страницы: «решено N из T · отклонено K». updateProgUI объявлена в оболочке
+    // каждой лабы глобально; оборачиваем её, чтобы приписка переживала перезапуски проверки.
+    const rejected = ids.filter(id => rv[id] && rv[id].status === "rejected").length;
+    if (rejected && typeof window.updateProgUI === "function" && !window.updateProgUI.__withReview) {
+      const orig = window.updateProgUI;
+      const wrapped = function () {
+        const r = orig.apply(this, arguments);
+        ["prog_cnt", "side_progress"].forEach(id => {
+          const el = document.getElementById(id);
+          if (el && el.textContent.indexOf("отклонено") === -1) el.textContent += " · отклонено " + rejected;
+        });
+        return r;
+      };
+      wrapped.__withReview = true;
+      window.updateProgUI = wrapped;
+      try { wrapped(); } catch (e) {}
+    }
   }
 
   const API = {

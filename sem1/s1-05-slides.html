@@ -30,31 +30,45 @@ window.MathJax = {
 
 <!-- 2 -->
 <section class="slide">
-  <div class="slide-num">§5 · От устойчивости к качеству</div>
-  <h2>Два числа на каждую гармонику. План: паспорт схемы</h2>
+  <div class="slide-num">§5 · Откуда и куда</div>
+  <h2>От первого дифференциального приближения — к качеству схемы</h2>
+  <p class="lead">§4 закончился так: схема аппроксимирует <em>не</em> уравнение переноса, а своё первое дифференциальное приближение — то же уравнение плюс паразитные производные, коэффициенты которых мы умеем выписывать по шаблону:</p>
+  <div class="eq">\[ \frac{\partial u}{\partial t} + c\,\frac{\partial u}{\partial x} \;=\; \underbrace{\nu\,u_{xx} + \mu\,u_{xxxx} + \dots}_{\text{чётные}} \;+\; \underbrace{\beta\,u_{xxx} + \dots}_{\text{нечётные}} \tag{5.0} \]</div>
+  <p class="small" style="margin-bottom:.35rem">Вопрос §5: <strong>что эти лишние производные делают с решением?</strong> Ответ распадается надвое — и это два свойства схемы, которые мы будем измерять:</p>
   <div class="two-col">
-    <div>
-      <p class="lead">Устойчивость говорит лишь, что амплитуды не растут. Качество решения зависит от того, <em>насколько</em> они убывают и <em>как</em> сдвигается фаза. Обе характеристики — в множителе перехода:</p>
-      <div class="tile ok" style="grid-template-columns:1fr"><div><div class="h">модуль</div><div class="t">\(|\lambda|\) — изменение амплитуды за шаг</div><div class="d">\(|\lambda| < 1\): гармоника затухает — <strong>численная диссипация</strong></div></div></div>
-      <div class="tile" style="grid-template-columns:1fr;margin-top:.4rem"><div><div class="h">аргумент</div><div class="t">\(\arg \lambda\) — сдвиг фазы за шаг</div><div class="d">определяет скорость гармоники; зависимость скорости от \(k\) — <strong>численная дисперсия</strong></div></div></div>
+    <div class="tile ok" style="grid-template-columns:8em 1fr"><div class="h">чётные</div><div><div class="t">меняют амплитуду</div><div class="d">профиль расплывается — <strong>численная диссипация</strong></div></div></div>
+    <div class="tile" style="grid-template-columns:8em 1fr"><div class="h">нечётные</div><div><div class="t">меняют скорость</div><div class="d">волны разной длины расходятся — <strong>численная дисперсия</strong></div></div></div>
+  </div>
+  <p class="bridge">Есть и третий вопрос — <em>при каких шагах амплитуды вообще не растут</em>. Это <strong>устойчивость</strong>, ей посвящён §6; но число, которым её проверяют, мы получим уже здесь. Сначала — язык, на котором всё это измеряется.</p>
+</section>
+<section class="slide">
+  <div class="slide-num">§5.0 · Почему гармоники</div>
+  <h2>Гармоники выделены дважды: уравнением и схемой</h2>
+  <p class="lead">Дальше всё занятие — про волны \(e^{i(\omega t - kx)}\). Они не выбраны из удобства: сначала их выделяет само уравнение переноса, а потом — любая однородная разностная схема.</p>
+  <div class="pair">
+    <div class="h">
+      <span class="lbl">у уравнения переноса</span>
+      <p style="margin-bottom:.2rem">В уравнение \(u_t + c\,u_x = 0\) подставим \(u = De^{i(\omega t - kx)}\): \(i\omega u - ick\,u = 0\), откуда</p>
+      <div class="eq">\[ \omega = ck. \]</div>
+      <p style="margin-bottom:0">Амплитуда \(D\) не меняется, фаза бежит со скоростью \(c\) — одинаково при всех \(k\). А любой начальный профиль есть сумма таких волн (ряд Фурье), и уравнение линейно: <em>знать судьбу каждой волны — знать всё решение</em>.</p>
     </div>
-    <div class="flow" style="margin-top:0">
-      <div class="step"><span class="n">1</span><div class="title">Схема, шаблон, происхождение</div><div class="body">интерполяция вдоль характеристики</div></div>
-      <div class="step"><span class="n">2</span><div class="title">Дифференциальное приближение</div><div class="body">§4 → знаки \(\nu\), \(\beta\)</div></div>
-      <div class="step"><span class="n">3</span><div class="title">Характеристическое уравнение</div><div class="body">\(\lambda(r, kh)\), область устойчивости</div></div>
-      <div class="step"><span class="n">4</span><div class="title">Диссипативная и дисперсионная поверхности</div><div class="body">\(|\lambda|\), \(\gamma\) над \(r \times kh\)</div></div>
-      <div class="step"><span class="n">5</span><div class="title">Тестовые расчёты</div><div class="body">ступенька и гауссиан при CFL 0.25, 0.5, 0.75</div></div>
+    <div class="e">
+      <span class="lbl">у разностной схемы</span>
+      <p style="margin-bottom:.2rem">Схема \(u^{n+1} = S\,u^{n}\) однородна по пространству, поэтому перестановочна со сдвигом \(T\colon u_j \mapsto u_{j+1}\): \(ST = TS\). Сеточная экспонента \(e_k = \{e^{-ikh\,j}\}\) — собственная для сдвига, \(Te_k = e^{-ikh}e_k\), а значит и для \(S\):</p>
+      <div class="eq">\[ S\,e_k = \lambda\,e_k. \]</div>
+      <p class="small" style="margin-bottom:0">Проверка: \(v = Se_k\), тогда \(Tv = T(Se_k) = S(Te_k) = e^{-ikh}v\); рекурсия \(v_{j+1} = e^{-ikh}v_j\) даёт \(v = v_0e_k\). □ <em>Формально — лемма 1 §6.2.</em></p>
     </div>
   </div>
-  <p class="bridge">Паспорт — структура атласа Головизнина–Соловьёва [1]. Но сначала — идея: откуда у схемы вообще берутся диссипация и дисперсия.</p>
+  <p class="bridge">Точное решение и решение схемы разложены по <strong>одному и тому же базису</strong> — их можно сравнивать гармоника за гармоникой. У уравнения волна не меняет амплитуду; у схемы за один шаг она умножается на число \(\lambda\). Вся дальнейшая работа — с этим числом.</p>
 </section>
 
 <!-- 3 -->
+
+<!-- 3 -->
 <section class="slide">
-  <div class="slide-num">Идея · п.д.п. и чётность производных</div>
-  <h2>Диссипация и дисперсия — из первого дифф. приближения</h2>
-  <p class="small">Схема аппроксимирует не (5.1), а её <em>первое дифференциальное приближение</em> (§4) — уравнение переноса плюс поправочные производные. Возьмём пробной функцией бегущую волну \(u = D\,e^{i(\omega t - kx)}\); ключ — n-я производная экспоненты \(\partial^n u/\partial x^n = (-ik)^n u\).</p>
-  <div class="eq" style="font-size:.9em;margin:.5rem 0">\[ \frac{\partial u}{\partial t} + c\,\frac{\partial u}{\partial x} \;=\; \nu\,u_{xx} \;+\; \beta\,u_{xxx} \;+\; \mu\,u_{xxxx} \;+\; \dots \tag{5.0} \]</div>
+  <div class="slide-num">Идея · почему чётные — амплитуда, а нечётные — фаза</div>
+  <h2>Обещанное на слайде 2 — прямой подстановкой волны в п.д.п.</h2>
+  <p class="small">Подставим бегущую волну \(u = D\,e^{i(\omega t - kx)}\) в первое дифференциальное приближение (5.0). Ключ — n-я производная экспоненты: \(\partial^n u/\partial x^n = (-ik)^n u\); всё зависит только от чётности \(n\).</p>
   <div class="two-col">
     <div class="example" style="font-size:.88em"><span class="lbl">Чётные \(n = 2m\) — вещественные</span>
       \((-ik)^{2m} = (-1)^m\,k^{2m}\); \(u_{xx}, u_{xxxx}, \dots\) дают <em>вещественные</em> добавки в правую часть (5.0).
@@ -71,6 +85,26 @@ window.MathJax = {
 
 <!-- 4 -->
 <section class="slide">
+  <div class="slide-num">§5 · Что измеряем. План</div>
+  <h2>Два числа на каждую гармонику. План: паспорт схемы</h2>
+  <div class="two-col">
+    <div>
+      <p class="lead">Итог трёх слайдов: действие схемы на гармонику — умножение на одно комплексное число \(\lambda\). А у комплексного числа ровно два параметра, и каждый отвечает за своё:</p>
+      <div class="tile ok" style="grid-template-columns:1fr"><div><div class="h">модуль</div><div class="t">\(|\lambda|\) — изменение амплитуды за шаг</div><div class="d">\(|\lambda| < 1\): гармоника затухает — <strong>численная диссипация</strong></div></div></div>
+      <div class="tile" style="grid-template-columns:1fr;margin-top:.4rem"><div><div class="h">аргумент</div><div class="t">\(\arg \lambda\) — сдвиг фазы за шаг</div><div class="d">задаёт скорость гармоники; зависимость скорости от длины волны — <strong>численная дисперсия</strong></div></div></div>
+    </div>
+    <div class="flow" style="margin-top:0">
+      <div class="step"><span class="n">1</span><div class="title">Схема, шаблон, происхождение</div><div class="body">интерполяция вдоль характеристики</div></div>
+      <div class="step"><span class="n">2</span><div class="title">Дифференциальное приближение</div><div class="body">§4 → знаки \(\nu\), \(\beta\)</div></div>
+      <div class="step"><span class="n">3</span><div class="title">Характеристическое уравнение</div><div class="body">\(\lambda\) через число Куранта и длину волны</div></div>
+      <div class="step"><span class="n">4</span><div class="title">Две поверхности</div><div class="body">модуль и фазовая скорость над теми же параметрами</div></div>
+      <div class="step"><span class="n">5</span><div class="title">Тестовые расчёты</div><div class="body">ступенька и гауссиан при разных числах Куранта</div></div>
+    </div>
+  </div>
+  <p class="bridge">Одни и те же пять пунктов для каждой схемы — это <strong>паспорт схемы</strong>, структура атласа Головизнина–Соловьёва [1]. Пройдём его полностью для «уголка», затем для Лакса–Вендроффа.</p>
+</section>
+
+<section class="slide">
   <div class="slide-num">§5.1 · Бегущие волны</div>
   <h2>Бегущие волны и множитель перехода</h2>
   <p class="lead">У уравнения \(u_t + cu_x = 0\) есть решения-волны \(u = De^{i(\omega t - kx)}\): подстановка даёт \(\omega = ck\) — все волны бегут вправо со скоростью \(c\). На сетке \(x_j = jh\), \(t_n = n\tau\):</p>
@@ -83,7 +117,7 @@ window.MathJax = {
       <div class="definition compact" data-num="2" style="min-height:0">Уравнение на \(\lambda\), остающееся после сокращения общего множителя, — <em>характеристическое уравнение</em> схемы: \(\lambda = \lambda(r, kh)\).</div>
     </div>
   </div>
-  <p class="bridge">Знак в показателе — соглашение атласа (волна вправо); в §6 было \(e^{i\alpha m}\). На модуль это не влияет.</p>
+  <p class="bridge">Знак в показателе — соглашение атласа (волна вправо); в §6 гармоника будет записана как \(\lambda^ne^{i\alpha m}\), \(\alpha = kh\). На модуль выбор знака не влияет.</p>
 </section>
 
 <!-- 4 -->
@@ -94,7 +128,7 @@ window.MathJax = {
     <div>
       <p class="small">Схема \(u_j^{n+1} = (1 - r)\,u_j^n + r\,u_{j-1}^n\), \(r = c\tau/h\). По (5.3): узлу \((j, n+1)\) — \(\lambda\), узлу \((j, n)\) — \(1\), узлу \((j-1, n)\) — \(e^{+ikh}\):</p>
       <div class="eq">\[ \lambda = (1 - r) + r\,e^{ikh}. \tag{5.5} \]</div>
-      <p class="small">Окружность радиуса \(r\) с центром \(1 - r\) — та же, что в §6.</p>
+      <p class="small">Окружность радиуса \(r\) с центром \(1 - r\) — та же, что встретится в примере 1 §6.5.</p>
     </div>
     <div>
       <p class="small">\(\lambda = (1 - r + r\cos kh) + i\,r\sin kh\), откуда</p>
@@ -115,6 +149,7 @@ window.MathJax = {
       <p class="small">Из (5.6): \(|\lambda| \le 1\ \forall kh \iff r(1 - r) \ge 0\), то есть</p>
       <div class="eq">\[ r \in [0, 1]. \tag{5.7} \]</div>
       <div class="definition" data-num="4">Если в области устойчивости \(|\lambda| = 1\) для всех волн, оператор <em>бездиссипативен</em>; иначе имеет место <em>численная диссипация</em>.</div>
+      <p class="small" style="margin-bottom:0">Определение 3 самодостаточно: это условие на амплитуды, ничего заранее знать не нужно. В §6 то же неравенство \(|\lambda| \le 1\) будет <em>выведено</em> из определения устойчивости §2 и названо условием Неймана.</p>
     </div>
     <div class="example"><span class="lbl">Уголок: где диссипации нет и где она максимальна</span>
       <ul style="margin-bottom:0">
@@ -238,7 +273,7 @@ window.MathJax = {
       <div class="note" style="font-size:.86em"><span class="lbl">Согласование</span>Разложение точных (5.6), (5.9) при \(kh \to 0\) даёт ровно то же: \(|\lambda|^2 \approx 1 - r(1-r)(kh)^2 \approx e^{-2\nu k^2\tau}\).</div>
     </div>
   </div>
-  <p class="bridge">П.д.п. проще для длинных волн, спектральный анализ точен для всех. Знак \(\nu\) сразу говорит, устойчива ли схема.</p>
+  <p class="bridge">П.д.п. проще для длинных волн, спектральный анализ точен для всех. Знак \(\nu\) сразу говорит, гасятся амплитуды или растут: \(\nu > 0\) — затухание, \(\nu < 0\) — раскачка.</p>
 </section>
 
 
@@ -532,7 +567,7 @@ window.MathJax = {
         <li><strong>Бегущая волна</strong> \(\lambda^ne^{-ikhj}\); правило (5.3); характеристическое уравнение \(\lambda(r, kh)\).</li>
         <li><strong>Модуль</strong> — амплитуда за шаг: область устойчивости, численная диссипация, диссипативная поверхность.</li>
         <li><strong>Аргумент</strong> — фаза: \(\omega = \arg \lambda/\tau - (i/\tau)\ln|\lambda|\), \(\gamma = \arg \lambda/(r\,kh)\); нормальная и аномальная дисперсия, дисперсионная поверхность.</li>
-        <li><strong>П.д.п.</strong>: чётные производные → диссипация, нечётные → дисперсия; знак \(\nu\) — устойчивость.</li>
+        <li><strong>П.д.п.</strong>: чётные производные → диссипация, нечётные → дисперсия; знак \(\nu\) — затухание или раскачка амплитуд.</li>
         <li><strong>Суперпозиция</strong>: поверхности предсказывают перенос любого профиля; канал высокой точности у \(r = 1\).</li>
         <li><strong>Паспорт</strong>: «уголок» — размазывает, монотонен; Лакс–Вендрофф — точен на гладком, осциллирует у разрывов.</li>
       </ol>
@@ -548,7 +583,7 @@ window.MathJax = {
   <a href="s1-05.html" class="back" title="Полный текст лекции">← полная лекция</a>
   <div class="center">
     <button id="btnPrev" onclick="prev()" title="←">◀</button>
-    <span class="counter" id="counter">1 / 18</span>
+    <span class="counter" id="counter">1 / 20</span>
     <button id="btnNext" onclick="next()" title="→ / Space">▶</button>
   </div>
   <a href="s1-06-slides.html" class="back" title="Следующая лекция">§6 →</a>

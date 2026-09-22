@@ -996,7 +996,7 @@ P_{j-1}(x_A) = \tfrac{r(1 + r)}{2},\ \ P_j(x_A) = 1 - r^2,\ \ P_{j+1}(x_A) = -\t
     <select id="ic-type" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text)">
       <option value="gaussian">Двойной гауссиан</option>
       <option value="step">Ступенька</option>
-      <option value="triangle">Треугольник</option>
+      <option value="jump">Разрыв</option>
       <option value="sine">Синус</option>
     </select>
   </div>
@@ -1040,7 +1040,7 @@ P_{j-1}(x_A) = \tfrac{r(1 + r)}{2},\ \ P_j(x_A) = 1 - r^2,\ \ P_{j+1}(x_A) = -\t
       var x = i*h;
       if (type==='gaussian') u[i] = Math.exp(-Math.pow((x-0.5*Math.PI)/(0.1*Math.PI),2)) + Math.exp(-Math.pow((x-0.7*Math.PI)/(0.1*Math.PI),2));
       else if (type==='step') u[i] = (x >= 0.2*Math.PI && x <= 0.4*Math.PI) ? 1 : 0;
-      else if (type==='triangle') { var w = 0.3*Math.PI; u[i] = Math.max(0, 1 - Math.abs(x - 0.6*Math.PI)/w); }
+      else if (type==='jump') u[i] = (x < Math.PI) ? 1 : 0.25;
       else if (type==='sine') u[i] = 0.5*(1 + Math.sin(2*x));
     }
     return u;
@@ -1072,7 +1072,7 @@ P_{j-1}(x_A) = \tfrac{r(1 + r)}{2},\ \ P_j(x_A) = 1 - r^2,\ \ P_{j+1}(x_A) = -\t
   function analyze(type, r, steps) {
     var el = document.getElementById('analysis-text'), scheme = document.getElementById('scheme-type').value, txt = '<strong>Наблюдения:</strong><br>';
     if (scheme==='upwind'||scheme==='both') { txt += '<span style="color:#b44a2d">■ Уголок</span> — диссипация первого порядка: профиль размазывается, амплитуда падает' + (Math.abs(r-0.5)<0.1 ? ' (при r ≈ 0.5 — сильнее всего)' : '') + (r>0.9 ? ' (при r ≈ 1 — почти точный перенос, канал высокой точности)' : '') + '; осцилляций нет — схема монотонна.<br>'; }
-    if (scheme==='lw'||scheme==='both') { txt += '<span style="color:#3a5ba0">■ Лакс–Вендрофф</span> — диссипация мала, но видна нормальная дисперсия: ' + ((type==='step'||type==='triangle') ? 'короткие волны отстают и образуют осцилляции позади фронта (теорема Годунова, §9). ' : 'на гладком профиле она почти незаметна; переключите на ступеньку. ') + (r<0.4 ? 'При малых r дисперсия сильнее.' : ''); }
+    if (scheme==='lw'||scheme==='both') { txt += '<span style="color:#3a5ba0">■ Лакс–Вендрофф</span> — диссипация мала, но видна нормальная дисперсия: ' + ((type==='step'||type==='jump') ? 'короткие волны отстают и образуют осцилляции позади фронта (теорема Годунова, §9). ' : 'на гладком профиле она почти незаметна; переключите на ступеньку. ') + (r<0.4 ? 'При малых r дисперсия сильнее.' : ''); }
     el.innerHTML = txt; el.style.display = '';
   }
   function runAnim() {
@@ -1130,7 +1130,7 @@ P_{j-1}(x_A) = \tfrac{r(1 + r)}{2},\ \ P_j(x_A) = 1 - r^2,\ \ P_{j+1}(x_A) = -\t
 </div>
 
 <div class="exercise">
-<strong>Упражнение 7 (предсказание по поверхностям).</strong> Не проводя расчёта, предскажите по рис.&nbsp;1–2, как схема «уголок» при \(r = 0.9\) перенесёт треугольный профиль за 100 шагов: что произойдёт с вершиной, с наклоном сторон, появятся ли осцилляции. Проверьте прогноз в интерактиве §5.12.
+<strong>Упражнение 7 (предсказание по поверхностям).</strong> Не проводя расчёта, предскажите по рис.&nbsp;1–2, как схема «уголок» при \(r = 0.9\) перенесёт одиночный разрыв (слева уровень выше, справа ниже) за 100 шагов: насколько размажется фронт, сместится ли его положение, появятся ли осцилляции. Проверьте прогноз в интерактиве §5.12.
 </div>
 
 <!-- ============================================================== -->

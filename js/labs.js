@@ -209,8 +209,9 @@
         return { ok: true };
       } catch (e) { return { ok: false, error: e.message }; }
     },
-    // Массовый импорт: items = { uid: { taskId: { verdict|status: 'reject'|'remark', note } } };
-    // existing — текущий прогресс (для codeHash). Пометки по тем же задачам заменяются, остальные остаются.
+    // Массовый импорт: items = { uid: { taskId: { verdict|status: 'reject'|'remark'|'clear', note } } };
+    // existing — текущий прогресс (для codeHash). Пометки по тем же задачам заменяются, остальные остаются;
+    // verdict 'clear' (синонимы 'ok', 'accept') снимает пометку с задачи (работа над ошибками принята).
     importReviews: async function (cid, lab, items, existing) {
       const me = auth.currentUser; if (!me) return { ok: false, error: "Не авторизован", students: 0, tasks: 0, errors: [] };
       let n = 0, students = 0; const errors = [];
@@ -219,6 +220,7 @@
         for (const id of Object.keys(tasks)) {
           if (!/^[A-Za-z0-9_-]{1,32}$/.test(id)) continue;
           const r = tasks[id] || {}; const v = String(r.status || r.verdict || "");
+          if (v === "clear" || v === "ok" || v === "accept") { review[id] = firebase.firestore.FieldValue.delete(); k++; continue; }
           const rec = { status: (v === "reject" || v === "rejected") ? "rejected" : "remark", note: String(r.note || "").slice(0, 2000), at: nowTs(), by: me.email };
           const code = existing && existing[uid] && existing[uid].code ? existing[uid].code[id] : null;
           if (code != null) rec.codeHash = API.codeHash(code);

@@ -608,7 +608,9 @@ service cloud.firestore {
     // notes_keys/{cid}: ключ расшифровки заметок докладчика в слайдах курса.
     // Только admin курса (и superadmin).
     match /notes_keys/{cid} {
-      allow read, create, update, delete: if adminCanManageCourse(cid);
+      // Читать ключ (и видеть заметки) может любой admin/superadmin, менять — admin курса.
+      allow read: if isAdmin();
+      allow create, update, delete: if adminCanManageCourse(cid);
     }
 
     match /lectures/{docId} {

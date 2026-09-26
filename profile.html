@@ -429,8 +429,18 @@ td{padding:5px 10px;border:1px solid var(--border)}
     if (!ts) return 'без дедлайна';
     return new Date(ts.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) + ' МСК';
   }
-  function hwLocalLeft(ts) {
-    if (!ts) return '';
+  // Подпись рядом с дедлайном. subMs — время сдачи студента (если сдал): тогда
+  // сравниваем момент сдачи с дедлайном, а не текущее время — иначе вовремя
+  // сданная работа после дедлайна выглядела «просроченной».
+  function hwLocalLeft(ts, subMs) {
+    if (!ts) return subMs ? 'сдано' : '';
+    if (subMs) {
+      const late = subMs - ts.toMillis();
+      if (late <= 0) return 'сдано вовремя';
+      const dl = Math.floor(late / 86400000), hl = Math.floor((late % 86400000) / 3600000), ml = Math.floor((late % 3600000) / 60000);
+      const pl = []; if (dl) pl.push(dl + ' д'); if (hl || dl) pl.push(hl + ' ч'); pl.push(ml + ' мин');
+      return 'сдано с опозданием на ' + pl.join(' ');
+    }
     const diff = ts.toMillis() - Date.now();
     const abs = Math.abs(diff);
     const d = Math.floor(abs / 86400000);
@@ -494,7 +504,9 @@ td{padding:5px 10px;border:1px solid var(--border)}
     card.style.padding = '.7rem 1rem';
     card.style.marginBottom = '.5rem';
     const deadline = hwFmtDateMSK(a.deadlineAt);
-    const left = hwLocalLeft(a.deadlineAt);
+    const subTs = sub && (sub.submittedAt || sub.updatedAt);
+    const subMs = (sub && (((sub.files || []).length + (sub.links || []).length) > 0) && subTs && subTs.toMillis) ? subTs.toMillis() : 0;
+    const left = hwLocalLeft(a.deadlineAt, subMs);
     const isLate = a.deadlineAt && a.deadlineAt.toMillis() < Date.now();
     const strict = !!a.strictDeadline;
     const canSubmit = !isLate || !strict;

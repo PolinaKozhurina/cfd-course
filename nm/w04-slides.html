@@ -253,6 +253,7 @@ table.cmp td{padding:.25rem .7rem;border-bottom:1px solid var(--border)}
 .errtiles.six .et .n{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-top:.2rem}
 .slide table.cmp.tight th,.slide table.cmp.tight td{padding:.14rem .6rem}
 .rule code,.cmp2 .c code{white-space:nowrap}
+.errtiles .et{min-width:0}
 .slide .warning.small{font-size:.84em;padding:.5rem 1rem;margin:.4rem 0 0}
 @media(max-width:900px){.cmp2{grid-template-columns:1fr}.errtiles.six{grid-template-columns:1fr 1fr}}
 </style>
@@ -366,9 +367,27 @@ for (int j; j &lt;= n; ++j)</pre><p style="font-size:.8em;color:var(--text2);mar
     <div class="et r"><div class="t">За границей массива</div><pre class="code">for (j = n; j &gt;= 0; --j)
   t[j] = (t[j]-t[j-1]) /
          (xn[j]-xn[j-k]);</pre><p style="font-size:.8em;color:var(--text2);margin:.3rem 0 0">При \(j&lt;k\) читаются <code>t[-1]</code>, <code>xn[-k]</code> — память вне массива. По алгоритму §&nbsp;3.3 цикл заканчивается при \(j=k\).</p></div>
-    <div class="et r"><div class="t">Массив переменной длины</div><pre class="code">double y[n];           <span class="cm">// VLA</span></pre><p style="font-size:.8em;color:var(--text2);margin:.3rem 0 0">Расширение GCC/Clang, не предусмотренное стандартом C++; в MSVC не компилируется, \(5\cdot10^{4}\) чисел размещаются на стеке. Требуется <code>static double y[N_MAX]</code>.</p></div>
+    <div class="et r"><div class="t">Массив переменной длины</div><pre class="code">double y[n];           <span class="cm">// VLA</span></pre><p style="font-size:.8em;color:var(--text2);margin:.3rem 0 0">Расширение GCC/Clang, стандартом C++ не предусмотренное; массив размещается на стеке. Как выделить память правильно — следующий слайд.</p></div>
   </div>
   <div class="rule"><strong>Правило.</strong> Каждая переменная получает значение при объявлении; границы циклов определяются числом элементов; размеры массивов — константы. Предупреждения компилятора (<code>-Wall -Wextra</code>) сообщают о неинициализированных переменных и массивах переменной длины.</div>
+</section>
+
+<!-- Р5б: разбор — массив переменной длины и выделение памяти -->
+<section class="slide">
+  <div class="slide-num">Разбор · Лабораторная 1, задача 4.1</div>
+  <h2>Массив переменной длины: как выделить память</h2>
+  <p class="lead">Автоматические переменные функции размещаются на <em>стеке</em> — области памяти ограниченного объёма (обычно 1–8 МБ). Запись <code>double y[n]</code> с размером, известным только при выполнении, — расширение GCC/Clang, не предусмотренное стандартом C++ (в MSVC не компилируется); на стеке она занимает столько, сколько потребует n: \(5\cdot10^4\) чисел — 400 КБ, \(10^6\) — 8 МБ.</p>
+  <div class="errtiles" style="grid-template-columns:1fr 1fr 1fr;gap:.6rem">
+    <div class="et r"><div class="t">Известная константа</div><pre class="code">static double y[N_MAX]; <span class="cm">// константа</span>
+if (n &gt; N_MAX) return 0;</pre><p style="font-size:.8em;color:var(--text2);margin:.3rem 0 0">Статическая память: выделяется при запуске программы, не на стеке; так сделано в скелете задачи.</p></div>
+    <div class="et r"><div class="t">Динамическая память</div><pre class="code">double* y = new double[n]; <span class="cm">// куча</span>
+delete[] y;  <span class="cm">// освободить</span></pre><p style="font-size:.8em;color:var(--text2);margin:.3rem 0 0">Куча: объём задаётся при выполнении; выделенное <code>new[]</code> необходимо освободить <code>delete[]</code>, иначе память теряется.</p></div>
+    <div class="et r"><div class="t">Стандартный контейнер</div><pre class="code">#include &lt;vector&gt;
+std::vector&lt;double&gt; y(n);   <span class="cm">// куча</span>
+qsort(y.data(), n,
+      sizeof(double), cmp_abs);</pre><p style="font-size:.8em;color:var(--text2);margin:.3rem 0 0">Контейнер сам выделяет и освобождает память; <code>y.data()</code> — указатель на начало для функций в стиле C.</p></div>
+  </div>
+  <div class="rule"><strong>Правило.</strong> Автоматический массив <code>double y[N]</code> — только с константным N; иначе <code>new[]</code>/<code>delete[]</code> или <code>std::vector</code>. В лабораторных — статический массив с проверкой \(n\le N_{\max}\), как в скелете.</div>
 </section>
 
 <!-- Р6: разбор — целые типы, приведение, модуль -->

@@ -251,6 +251,7 @@ table.cmp td{padding:.25rem .7rem;border-bottom:1px solid var(--border)}
 .errtiles code{white-space:nowrap}
 .errtiles.six .et p{margin:0;font-size:.76em;color:var(--text2);line-height:1.4}
 .errtiles.six .et .n{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-top:.2rem}
+.slide table.cmp.tight th,.slide table.cmp.tight td{padding:.14rem .6rem}
 .slide .warning.small{font-size:.84em;padding:.5rem 1rem;margin:.4rem 0 0}
 @media(max-width:900px){.cmp2{grid-template-columns:1fr}.errtiles.six{grid-template-columns:1fr 1fr}}
 </style>
@@ -286,19 +287,24 @@ table.cmp td{padding:.25rem .7rem;border-bottom:1px solid var(--border)}
 <!-- Р2: разбор — указатель на массив -->
 <section class="slide">
   <div class="slide-num">Разбор · Лабораторная 1, задачи 1.1–2.1, 3.1, 5.1</div>
-  <h2>Передача массива указателем</h2>
-  <p class="lead">В <code>double sum_naive(const double* x, int n)</code> параметр <code>x</code> — адрес <em>начала</em> массива. Разыменование <code>*x</code> даёт элемент с индексом 0; сам указатель при этом не изменяется. Элемент с номером i записывается как <code>x[i]</code>, что по определению равно <code>*(x + i)</code>.</p>
+  <h2>Передача массива указателем: что такое <code>x</code>, <code>*x</code>, <code>x[i]</code></h2>
+  <p class="lead">При вызове <code>sum_naive(a, n)</code> имя массива <code>double a[N]</code> преобразуется к типу <code>const double*</code>: функция получает только адрес начала, поэтому длина передаётся отдельно параметром <code>n</code>; <code>const</code> запрещает изменять элементы через указатель.</p>
+  <table class="cmp tight" style="width:100%;font-size:.82em;margin:.1rem 0 .45rem">
+    <tr><th style="width:8em">Запись</th><th style="width:11em">Тип</th><th>Значение</th></tr>
+    <tr><td><code>x</code></td><td><code>const double*</code></td><td>указатель — адрес первого элемента, то же, что <code>&amp;x[0]</code></td></tr>
+    <tr><td><code>*x</code></td><td><code>double</code></td><td>разыменование: число по адресу <code>x</code>, то есть <code>x[0]</code>; сам <code>x</code> не изменяется</td></tr>
+    <tr><td><code>x + i</code></td><td><code>const double*</code></td><td>указатель — адрес i-го элемента: <code>x</code>, сдвинутый на \(i\cdot\)<code>sizeof(double)</code> байт</td></tr>
+    <tr><td><code>x[i]</code></td><td><code>double</code></td><td>по определению <code>*(x + i)</code> — значение i-го элемента</td></tr>
+  </table>
   <div class="cmp2">
-    <div class="bad"><div class="lbl">Неверная запись</div><pre class="code">double s = 0.0;
-for (int i = 0; i &lt; n; ++i)
+    <div class="bad"><div class="lbl">Неверная запись</div><pre class="code">for (int i = 0; i &lt; n; ++i)
     s += *x;                 <span class="cm">// на каждой итерации x[0]</span>
-return s;                    <span class="cm">// результат n·x[0]</span></pre><div class="c">В схеме Кэхэна та же ошибка: <code>y = *x - c</code>; сама схема при этом записана верно.</div></div>
-    <div class="good"><div class="lbl">Верная запись</div><pre class="code">double s = 0.0;
-for (int i = 0; i &lt; n; ++i)
+return s;                    <span class="cm">// результат n·x[0]</span></pre><div class="c">Та же ошибка в схеме Кэхэна: <code>y = *x - c</code>.</div></div>
+    <div class="good"><div class="lbl">Верная запись</div><pre class="code">for (int i = 0; i &lt; n; ++i)
     s += x[i];               <span class="cm">// ≡ *(x + i)</span>
-return s;</pre><div class="c">В попарном суммировании вторая половина массива начинается с адреса <code>x + m</code>: <code>sum_pairwise(x + m, n - m)</code>, а не <code>sum_pairwise(x, n - m)</code>.</div></div>
+return s;</pre><div class="c">Вторая половина массива — адрес <code>x + m</code>.</div></div>
   </div>
-  <div class="rule"><strong>Правило.</strong> Указатель не продвигается сам: обращение к элементу — через индекс <code>x[i]</code> либо через явный сдвиг <code>x + i</code>. Функцию суммирования следует проверять на массиве с различными элементами и известной суммой: для 1, 2, 3 верная запись даёт 6, неверная — 3.</div>
+  <div class="rule"><strong>Правило.</strong> <code>*x</code> — первый элемент, а не «текущий»: указатель не продвигается сам; i-й элемент — <code>x[i]</code> либо <code>*(x + i)</code>.</div>
 </section>
 
 <!-- Р3: разбор — члены ряда и критерий остановки -->

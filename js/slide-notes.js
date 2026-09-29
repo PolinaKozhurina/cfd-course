@@ -70,6 +70,19 @@
     return h ? h.textContent.replace(/\s+/g, ' ').trim() : '';
   });
 
+  // ---- Скрытые слайды для преподавателя (<section class="slide teacher">): содержимое — расшифрованная
+  // заметка с тем же индексом; кнопки .teacher-only показываются только admin'у.
+  function renderTeacherSlides() {
+    slides.forEach(function (s, i) {
+      if (!s.classList.contains('teacher')) return;
+      var body = s.querySelector('.teacher-body');
+      if (body && NOTES[i]) {
+        body.innerHTML = NOTES[i];
+        if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([body]).catch(function () {});
+      }
+    });
+  }
+
   var deck = (location.pathname.split('/').pop() || 'slides').replace(/\.html$/, '');
   var isPresenter = /[?&]presenter/.test(location.search);
   var chan = ('BroadcastChannel' in window) ? new BroadcastChannel('cfd-slides-' + deck) : null;
@@ -175,6 +188,8 @@
   }
 
   function activateMain() {
+    document.querySelectorAll('.teacher-only').forEach(function (el) { el.hidden = false; });
+    loadNotes().then(renderTeacherSlides);
     var center = document.querySelector('.hud .center');
     if (center) {
       btnNotes = document.createElement('button');

@@ -33,6 +33,7 @@
   var cid = document.documentElement.getAttribute('data-course') || '';
   var notesLoaded = NOTES.some(function (n) { return n; });
   var notesError = '';
+  var notesWarn = '';
 
   function b64ToBytes(b64) {
     var bin = atob(b64), out = new Uint8Array(bin.length);
@@ -56,6 +57,7 @@
         var key = await crypto.subtle.importKey('raw', b64ToBytes(d.data().key), { name: 'AES-GCM' }, false, ['decrypt']);
         var pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBytes(enc.iv) }, key, b64ToBytes(enc.ct));
         var arr = JSON.parse(new TextDecoder().decode(pt));
+        if (arr.length !== slides.length) notesWarn = 'число заметок (' + arr.length + ') не совпадает с числом слайдов (' + slides.length + '): страница устарела, обновите её (Ctrl+F5)';
         for (var i = 0; i < slides.length; i++) NOTES[i] = arr[i] || null;
         notesLoaded = true;
       } catch (e) {
@@ -64,6 +66,12 @@
     })();
     return notesPromise;
   }
+
+  // Скрытые (teacher) слайды не участвуют в нумерации, которую видит аудитория.
+  var IS_TEACHER = slides.map(function (s) { return s.classList.contains('teacher'); });
+  var VIS_COUNT = IS_TEACHER.filter(function (t) { return !t; }).length;
+  function visNum(i) { if (IS_TEACHER[i]) return 0; var k = 0; for (var j = 0; j <= i; j++) if (!IS_TEACHER[j]) k++; return k; }
+  function nextVisible(i) { for (var j = i + 1; j < slides.length; j++) if (!IS_TEACHER[j]) return j; return -1; }
 
   var TITLES = slides.map(function (s) {
     var h = s.querySelector('h1, h2');
@@ -156,7 +164,8 @@
       ? '<p class="cfd-notes-empty">Заметок к этому слайду нет.</p>'
       : (notesError ? '<p class="cfd-notes-empty">' + notesError + '</p>' : '<p class="cfd-notes-empty">…расшифровка заметок</p>');
     target.innerHTML =
-      '<div class="cfd-notes-h">Преподавателю <span>слайд ' + (i + 1) + ' / ' + slides.length + ' · N — скрыть</span></div>' +
+      '<div class="cfd-notes-h">Преподавателю <span>' + (visNum(i) ? 'слайд ' + visNum(i) + ' / ' + VIS_COUNT : 'скрытый слайд') + ' · N — скрыть</span></div>' +
+      (notesWarn ? '<p class="cfd-notes-empty">⚠ ' + notesWarn + '</p>' : '') +
       (h || empty);
     if (h && window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([target]).catch(function () {});
     if (!notesLoaded && !notesError) loadNotes().then(function () { if (target.isConnected) renderNotes(target, i); });
@@ -226,10 +235,11 @@
     document.body.appendChild(box);
     var cur = box.querySelector('.cur'), nxt = box.querySelector('.nxt'), notes = box.querySelector('.cfd-notes');
     function render(i) {
-      cur.textContent = (i + 1) + '. ' + (TITLES[i] || '');
-      nxt.textContent = (i + 1 < slides.length) ? ('дальше → ' + (i + 2) + '. ' + TITLES[i + 1]) : 'последний слайд';
+      var vi = visNum(i), nx = nextVisible(i);
+      cur.textContent = (vi ? vi + '. ' : 'скрытый слайд · ') + (TITLES[i] || '');
+      nxt.textContent = (nx >= 0) ? ('дальше → ' + visNum(nx) + '. ' + TITLES[nx]) : 'последний слайд';
       renderNotes(notes, i);
-      document.title = 'Докладчик · ' + (i + 1) + '/' + slides.length;
+      document.title = 'Докладчик · ' + (vi || '·') + '/' + VIS_COUNT;
     }
     render(0);
     if (chan) {

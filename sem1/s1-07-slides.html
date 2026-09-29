@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ru" data-course="sem1">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>§7. Слайды · Метод неопределённых коэффициентов</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/slides-sem1.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<script src="../js/slide-tools.js"></script>
+<style>
+  .aux-badge{display:inline-block;margin-left:.5rem;background:rgba(180,74,45,.18);color:#b44a2d;padding:1px 7px;border-radius:3px;font-size:.55rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;vertical-align:middle}
+.tiles.map .tile{grid-template-columns:4.2em 1fr;padding:.3rem .7rem;gap:.6rem}.tiles.map .tile .t{font-size:.95rem;line-height:1.15}.tiles.map .tile .d{font-size:.84rem;line-height:1.3}.tiles.map{gap:.3rem}
+</style>
+</head>
+<body>
+<div class="progress"><div class="fill" id="progressFill"></div></div>
+
+<!-- 1 -->
+<section class="slide">
+  <div class="slide-num">§7 · Семестр 1</div>
+  <h1>Метод неопределённых коэффициентов</h1>
+  <p class="lead" style="font-size:1.05em">Построение разностных схем заданного порядка на заданном шаблоне. Геометрия пространства коэффициентов.</p>
+  <div class="sub">Задача и невязка · Алгоритм 1 · Разбор: четырёхточечный шаблон · Условия \(\sum\alpha_\mu(-\mu)^k = r^k\) · Гиперплоскость, прямая, точка · Известные схемы как точки · Главный член невязки · Чего метод не даёт</div>
+  <p class="bridge">Уравнение переноса \(u_t + a\,u_x = 0\), \(a > 0\); сетка \(x_m = mh\), \(t_n = n\tau\); число Куранта \(r = a\tau/h\).</p>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+  <div class="slide-num">§7.1 · Предмет параграфа</div>
+  <h2>Обратная задача: по шаблону построить все схемы заданного порядка</h2>
+  <p class="lead">В §2–§6а схемы были заданы заранее и исследовались их свойства. Теперь порядок задан, а коэффициенты неизвестны.</p>
+  <div class="two-col wide-left" style="font-size:.92em">
+    <div class="tiles" style="margin-top:0">
+      <div class="tile"><div class="h">прямая задача, §2–§6а</div><div><div class="t">Дана схема — найти её свойства</div><div class="d">аппроксимация (§2), дифференциальное приближение (§4–§5), устойчивость (§6, §6а)</div></div></div>
+      <div class="tile hi"><div class="h">обратная задача, §7</div><div><div class="t">Даны узлы и порядок — найти схемы</div><div class="d">коэффициенты — неизвестные; условия аппроксимации — линейная система</div></div></div>
+      <div class="tile ok"><div class="h">результат</div><div><div class="t">Гиперплоскость → прямая → точка</div><div class="d">схемы порядка \(p\) — аффинное подпространство; каждое условие отнимает одну степень свободы</div></div></div>
+    </div>
+    <div class="note"><span class="lbl">Модельная задача</span>
+      <div class="eq">\[ \frac{\partial u}{\partial t} + a\,\frac{\partial u}{\partial x} = 0, \qquad a = \mathrm{const} > 0 \tag{7.1} \]</div>
+      Сетка \(x_m = mh\), \(t_n = n\tau\); число Куранта \(r = a\tau/h\); точное решение — \(u(x,t)\), сеточная функция — \(y_m^n\).
+    </div>
+  </div>
+  <p class="bridge">Известные схемы — «уголок», Лакса, Лакса–Вендроффа, Бима–Уорминга, Фромма — окажутся точками одной плоскости. Сначала — точные определения объектов.</p>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+  <div class="slide-num">§7.1 · Определение 1</div>
+  <h2>Шаблон и двухслойная явная схема</h2>
+  <p class="lead">Объект, с которым работает метод: набор узлов нижнего слоя и линейная формула с неизвестными весами.</p>
+  <div class="definition" data-num="1" style="font-size:.88em">
+    <strong>Шаблон</strong> — конечное множество целых смещений \(S = \{\mu_1, \dots, \mu_N\}\subset\mathbb Z\). <strong>Двухслойная явная схема на шаблоне \(S\)</strong>:
+    \[ y_m^{n+1} = \sum_{\mu\in S}\alpha_\mu\,y^n_{m+\mu}, \tag{7.2} \]
+    коэффициенты \(\alpha_\mu\) не зависят от \(m\), \(n\) и от сеточной функции, но могут зависеть от \(r\). Число узлов \(N\) равно числу коэффициентов.
+  </div>
+  <div class="two-col" style="font-size:.84em">
+    <div class="note"><span class="lbl">Аналог</span>Правило вычисления \(u(x_m, t_n + \tau)\) по значениям на слое \(t_n\). Для (7.1) оно есть точно — сдвиг вдоль характеристики \(u(x_m, t_{n+1}) = u(x_m - a\tau, t_n)\); схема (7.2) — его приближение по узлам.</div>
+    <div class="note"><span class="lbl">Роль</span>Все явные схемы §4–§6 имеют вид (7.2): «уголок» — \(S = \{-1, 0\}\), Лакс–Вендрофф — \(\{-1, 0, 1\}\), Бим–Уорминг — \(\{-2, -1, 0\}\). Зависимость только от \(r\): схема одинаково устроена на всех сетках с тем же \(\tau/h\).</div>
+  </div>
+  <p class="bridge">Что значит «схема аппроксимирует уравнение с порядком \(p\)» — через невязку на точном решении.</p>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§7.1 · Определение 2</div>
+  <h2>Невязка на точном решении и порядок аппроксимации</h2>
+  <p class="lead">Подставим в схему точное решение: то, что останется, и есть невязка; её порядок малости — порядок аппроксимации.</p>
+  <div class="definition" data-num="2" style="font-size:.88em">
+    <strong>Невязка</strong> схемы (7.2) на точном решении \(u\) уравнения (7.1):
+    \[ \psi_m^n = \frac{1}{\tau}\Bigl[u(x_m, t_{n+1}) - \sum_{\mu\in S}\alpha_\mu\,u(x_m + \mu h, t_n)\Bigr]. \tag{7.3} \]
+    <strong>Порядок аппроксимации \(p\)</strong>: при \(\tau = rh/a\), \(r\) фиксировано, \(\psi_m^n = O(h^{p})\) равномерно по \(m, n\) — оценка (2.9) определения 2 §2 для невязки (2.7).
+  </div>
+  <div class="two-col" style="font-size:.84em">
+    <div class="note"><span class="lbl">Роль деления на \(\tau\)</span>Невязка сравнивается с левой частью (7.1): первое слагаемое даёт \(u_t\), сумма — приближение \(-a\,u_x\). Без деления на \(\tau\) всякая схема с \(\sum\alpha_\mu = 1\) имела бы лишний множитель \(\tau\).</div>
+    <div class="callout">Обозначения презентации к занятию: скорость \(\lambda\), число Куранта \(\sigma = \lambda\tau/h\), коэффициенты \(\alpha^\nu_\mu(\sigma)\). Здесь, как в §6а: \(a\), \(r\), один нижний слой (\(\nu = 0\)); в §5 скорость обозначена \(c\).</div>
+  </div>
+  <p class="bridge">Коэффициенты входят в невязку линейно — отсюда линейность условий аппроксимации и название метода.</p>
+</section>
+
+<!-- 4 -->
+<section class="slide">
+  <div class="slide-num">§7.1 · Идея метода</div>
+  <h2>Почему условия на коэффициенты — линейная система</h2>
+  <p class="lead">Решение \(u\) при подстановке в (7.3) фиксировано; неизвестны только числа \(\alpha_\mu\).</p>
+  <div class="two-col">
+    <div class="example"><span class="lbl">Цепочка</span>
+      <ol style="margin:.2rem 0 0 1.2rem">
+        <li>Ряды Тейлора в точке \((x_m, t_n)\): невязка — линейная комбинация \(u\), \(u_x\), \(u_{xx}, \dots\)</li>
+        <li>Коэффициент \(c_k\) при \(\partial_x^k u\) — линейная функция от \(\alpha_\mu\) с множителем \(h^{k-1}\).</li>
+        <li>Порядок \(p\) \(\iff\) \(c_0 = c_1 = \dots = c_p = 0\): \(p + 1\) линейных уравнений, \(N\) неизвестных.</li>
+      </ol>
+    </div>
+    <div class="note"><span class="lbl">Почему ровно \(p + 1\) условий</span>
+      Если \(c_0 = \dots = c_p = 0\), первый ненулевой член — \(c_{p+1}\partial_x^{p+1}u = O(h^{p})\). Если какой-либо \(c_k\), \(k \le p\), отличен от нуля, невязка содержит член порядка \(h^{k-1}\), \(k - 1 \lt p\).<br>
+      Условие \(c_0 = 0\) — это \(\sum\alpha_\mu = 1\): точный перенос постоянного решения; иначе невязка содержит \(u/\tau\).
+    </div>
+  </div>
+  <div class="callout" style="font-size:.86em">Три исхода линейной системы: решений нет — порядок \(p\) на шаблоне недостижим; решение единственно — схема одна; семейство с \(N - p - 1\) параметрами — параметры отдаются другим свойствам (устойчивость, монотонность, вид дифференциального приближения).</div>
+  <p class="bridge">Порядок действий повторяет алгоритм §2.8 с обращённой постановкой: порядок задан, коэффициенты ищутся.</p>
+</section>
+
+<!-- 5 -->
+<section class="slide">
+  <div class="slide-num">§7.2 · Алгоритм 1</div>
+  <h2>Алгоритм 1: метод неопределённых коэффициентов</h2>
+  <p class="lead">Тот же путь, что в §2.8, с обращённой постановкой: порядок задан, коэффициенты ищутся.</p>
+  <div class="flow" style="margin-top:0;grid-template-columns:1fr 1fr;gap:.3rem .9rem;font-size:.82em">
+    <div class="step"><span class="n">1</span><div class="title">Шаблон и неизвестные</div><div class="body">Шаблон \(S\) из \(N\) узлов, схема (7.2) с неизвестными \(\alpha_\mu\); задан порядок \(p\).</div></div>
+    <div class="step"><span class="n">2</span><div class="title">Ряды Тейлора</div><div class="body">В точке \((x_m, t_n)\): нижний слой по степеням \(h\), верхний — по \(\tau\), до порядка \(p + 1\); от базовой точки порядок не зависит (§2.9).</div></div>
+    <div class="step"><span class="n">3</span><div class="title">Дифференциальные следствия</div><div class="body">Для решения (7.1): \(\partial_t^k u = (-a)^k\partial_x^k u\), как (4.3)–(4.4); допустимо, поскольку невязка берётся на решении.</div></div>
+    <div class="step"><span class="n">4</span><div class="title">Сбор по производным</div><div class="body">\(\psi_m^n = c_0u + c_1u_x + \dots + c_p\partial_x^pu + O(h^{p})\), \(c_k\) линейны по \(\alpha_\mu\).</div></div>
+    <div class="step" style="border-left-color:var(--accent2)"><span class="n" style="background:var(--accent2)">5</span><div class="title">Условия порядка \(p\)</div><div class="body">\(c_0 = c_1 = \dots = c_p = 0\) — \(p + 1\) линейных уравнений, \(N\) неизвестных.</div></div>
+    <div class="step"><span class="n">6</span><div class="title">Решение и распоряжение свободой</div><div class="body">Пусто / точка / семейство с \(N - p - 1\) параметрами; параметры — устойчивости (§6, §6а), монотонности (§8–§11), виду п.д.п. (§5).</div></div>
+  </div>
+  <p class="bridge"><strong>Аппроксимация — не устойчивость</strong>: по теореме Лакса (§3) нужны обе, и шаг 6 — не формальность (§7.8). Прогон алгоритма целиком — на четырёхточечном шаблоне, смещённом против потока.</p>
+</section>
+
+<!-- 6 -->
+<section class="slide">
+  <div class="slide-num">§7.3 · Разбор 1 · шаг 1</div>
+  <h2>Четырёхточечный шаблон \(S = \{-2, -1, 0, 1\}\)</h2>
+  <p class="lead">Для \(a > 0\) информация приходит слева, вдоль характеристики \(x - at = \mathrm{const}\): три узла слева от \(x_m\), один справа.</p>
+  <div class="eq">\[ y_m^{n+1} = \alpha_{-2}\,y^n_{m-2} + \alpha_{-1}\,y^n_{m-1} + \alpha_0\,y^n_m + \alpha_1\,y^n_{m+1} \tag{7.4} \]</div>
+  <div class="two-col wide-left">
+    <div class="figure" style="margin:0 auto;max-width:20rem">
+      <svg viewBox='0 0 420 250' xmlns='http://www.w3.org/2000/svg' style='max-width:360px'>
+<line x1='70' y1='40' x2='70' y2='220' stroke='#d9cfc0' stroke-width='1'/>
+<line x1='140' y1='40' x2='140' y2='220' stroke='#d9cfc0' stroke-width='1'/>
+<line x1='210' y1='40' x2='210' y2='220' stroke='#d9cfc0' stroke-width='1'/>
+<line x1='280' y1='40' x2='280' y2='220' stroke='#d9cfc0' stroke-width='1'/>
+<line x1='350' y1='40' x2='350' y2='220' stroke='#d9cfc0' stroke-width='1'/>
+<line x1='40' y1='60' x2='390' y2='60' stroke='#d9cfc0' stroke-width='1'/>
+<line x1='40' y1='130' x2='390' y2='130' stroke='#d9cfc0' stroke-width='1'/>
+<line x1='40' y1='200' x2='390' y2='200' stroke='#d9cfc0' stroke-width='1'/>
+<text x='8' y='64' font-family='Source Serif 4,serif' font-size='13' fill='#6b5d4f' font-style='italic'>n+1</text>
+<text x='8' y='134' font-family='Source Serif 4,serif' font-size='13' fill='#6b5d4f' font-style='italic'>n</text>
+<text x='8' y='204' font-family='Source Serif 4,serif' font-size='13' fill='#6b5d4f' font-style='italic'>n−1</text>
+<text x='70' y='240' font-family='Source Serif 4,serif' font-size='13' fill='#6b5d4f' text-anchor='middle' font-style='italic'>m−2</text>
+<text x='140' y='240' font-family='Source Serif 4,serif' font-size='13' fill='#6b5d4f' text-anchor='middle' font-style='italic'>m−1</text>
+<text x='210' y='240' font-family='Source Serif 4,serif' font-size='13' fill='#6b5d4f' text-anchor='middle' font-style='italic'>m</text>
+<text x='280' y='240' font-family='Source Serif 4,serif' font-size='13' fill='#6b5d4f' text-anchor='middle' font-style='italic'>m+1</text>
+<text x='350' y='240' font-family='Source Serif 4,serif' font-size='13' fill='#6b5d4f' text-anchor='middle' font-style='italic'>m+2</text>
+<circle cx='70' cy='130' r='6' fill='#3a5ba0'/>
+<circle cx='140' cy='130' r='6' fill='#3a5ba0'/>
+<circle cx='210' cy='130' r='6' fill='#3a5ba0'/>
+<circle cx='280' cy='130' r='6' fill='#3a5ba0'/>
+<circle cx='210' cy='60' r='7' fill='#b44a2d'/>
+<line x1='70' y1='130' x2='280' y2='130' stroke='#3a5ba0' stroke-width='2.5'/>
+<line x1='210' y1='130' x2='210' y2='60' stroke='#b44a2d' stroke-width='2.5'/>
+<text x='70' y='154' font-family='Source Serif 4,serif' font-size='13' fill='#3a5ba0' text-anchor='middle'>α₋₂</text>
+<text x='140' y='154' font-family='Source Serif 4,serif' font-size='13' fill='#3a5ba0' text-anchor='middle'>α₋₁</text>
+<text x='210' y='154' font-family='Source Serif 4,serif' font-size='13' fill='#3a5ba0' text-anchor='middle'>α₀</text>
+<text x='280' y='154' font-family='Source Serif 4,serif' font-size='13' fill='#3a5ba0' text-anchor='middle'>α₁</text>
+<text x='244' y='52' font-family='Source Serif 4,serif' font-size='13' fill='#b44a2d' text-anchor='middle'>(m, n+1)</text>
+<line x1='210' y1='60' x2='175' y2='130' stroke='#1a6b5a' stroke-width='1.6' stroke-dasharray='5,3'/>
+<circle cx='175' cy='130' r='4' fill='#1a6b5a'/>
+<text x='171' y='118' font-family='Source Serif 4,serif' font-size='12' fill='#1a6b5a' text-anchor='middle'>x<tspan baseline-shift='sub' font-size='9'>m</tspan> − rh</text>
+<text x='210' y='30' font-family='Source Serif 4,serif' font-size='11' fill='#6b5d4f' text-anchor='middle'>t</text>
+</svg>
+      <div class="caption">Узлы слоя \(n\) с весами \(\alpha_\mu\), узел \((m, n+1)\); пунктир — характеристика из точки \(x_m - rh\) (\(r = 1/2\)).</div>
+    </div>
+    <div class="note" style="font-size:.86em"><span class="lbl">Что искать</span>Четыре неизвестных \(\alpha_{-2}, \alpha_{-1}, \alpha_0, \alpha_1\) — функции \(r\). Вопросы разбора: достижим ли на четырёх узлах третий порядок и сколько схем первого и второго порядка помещается на шаблоне.</div>
+  </div>
+  <p class="bridge">Шаг 2 — разложения Тейлора всех пяти значений в базовой точке \((x_m, t_n)\) до третьих производных.</p>
+</section>
+
+<!-- 7 -->
+<section class="slide">
+  <div class="slide-num">§7.3 · Разбор 1 · шаг 2</div>
+  <h2>Ряды Тейлора в базовой точке \((x_m, t_n)\)</h2>
+  <p class="lead">Ниже \(u\), \(u_t\), \(u_x\), \(u_{xx}, \dots\) — значения решения и его производных в точке \((x_m, t_n)\). По времени — один ряд, по пространству — три: узел \(m\) совпадает с базовой точкой, его значение равно \(u\).</p>
+  <div class="eq">\[ u(x_m, t_{n+1}) = u + \tau u_t + \frac{\tau^2}{2}u_{tt} + \frac{\tau^3}{6}u_{ttt} + O(\tau^4) \tag{7.5} \]</div>
+  <div class="eq">\[ u(x_m - 2h, t_n) = u - 2h\,u_x + \frac{4h^2}{2}u_{xx} - \frac{8h^3}{6}u_{xxx} + O(h^4) \tag{7.6} \]</div>
+  <div class="eq">\[ u(x_m - h, t_n) = u - h\,u_x + \frac{h^2}{2}u_{xx} - \frac{h^3}{6}u_{xxx} + O(h^4) \tag{7.7} \]</div>
+  <div class="eq">\[ u(x_m + h, t_n) = u + h\,u_x + \frac{h^2}{2}u_{xx} + \frac{h^3}{6}u_{xxx} + O(h^4) \tag{7.8} \]</div>
+  <p class="bridge">Разложения доведены до третьих производных: для третьего порядка нужны коэффициенты при \(u\), \(u_x\), \(u_{xx}\), \(u_{xxx}\) — четыре условия на четыре неизвестных.</p>
+</section>
+
+<!-- 8 -->
+<section class="slide">
+  <div class="slide-num">§7.3 · Разбор 1 · шаг 3</div>
+  <h2>Подстановка в схему и дифференциальные следствия</h2>
+  <p class="lead">Схема (7.4) на точном решении выполняется с точностью до \(\tau\psi_m^n\); производные по \(t\) заменяем производными по \(x\).</p>
+  <div class="eq" style="font-size:.86em">\[
+  \begin{aligned}
+  u + \tau u_t + \frac{\tau^2}{2}u_{tt} + \frac{\tau^3}{6}u_{ttt} + O(\tau^4)
+  &= \alpha_{-2}\Bigl(u - 2h u_x + 2h^2u_{xx} - \frac{4h^3}{3}u_{xxx}\Bigr) + \alpha_{-1}\Bigl(u - h u_x + \frac{h^2}{2}u_{xx} - \frac{h^3}{6}u_{xxx}\Bigr)\\
+  &+ \alpha_0\,u + \alpha_1\Bigl(u + h u_x + \frac{h^2}{2}u_{xx} + \frac{h^3}{6}u_{xxx}\Bigr) + O(h^4) + \tau\psi_m^n
+  \end{aligned} \tag{7.9} \]</div>
+  <div class="two-col" style="font-size:.84em">
+    <div class="note"><span class="lbl">Дифференциальные следствия</span>
+      Дифференцируем (7.1) по \(t\) и по \(x\): \(u_{tt} + a u_{xt} = 0\), \(u_{tx} + a u_{xx} = 0\); исключаем смешанную производную, затем повторяем.
+      <div class="eq">\[ u_t = -a\,u_x,\quad u_{tt} = a^2u_{xx},\quad u_{ttt} = -a^3u_{xxx} \tag{7.10} \]</div>
+    </div>
+    <div class="callout">Замена допустима, поскольку \(u\) — решение (7.1): невязка вычисляется на решении, и можно пользоваться не только уравнением, но и его дифференциальными следствиями (§2.9). Это шаг 3 алгоритма.</div>
+  </div>
+  <p class="bridge">Шаг 4: перенести члены с \(u_x\) влево, остальное вправо, разделить на \(\tau\) и подставить (7.10).</p>
+</section>
+
+<!-- 9 -->
+<section class="slide">
+  <div class="slide-num">§7.3 · Разбор 1 · шаг 4</div>
+  <h2>Сбор по производным: уравнение \(L_1u = 0\)</h2>
+  <p class="lead">Слева — то, что должно стать левой частью (7.1); справа — члены с \(u\), \(u_{xx}\), \(u_{xxx}\), остаток и невязка.</p>
+  <div class="eq" style="font-size:.9em">\[
+  \begin{aligned}
+  u_t + \Bigl(\frac{2h}{\tau}\alpha_{-2} + \frac{h}{\tau}\alpha_{-1} - \frac{h}{\tau}\alpha_1\Bigr)u_x
+  &= -\frac{u}{\tau}\bigl(1 - \alpha_{-2} - \alpha_{-1} - \alpha_0 - \alpha_1\bigr)\\
+  &- \frac{u_{xx}}{\tau}\Bigl(\frac{a^2\tau^2}{2} - 2h^2\alpha_{-2} - \frac{h^2}{2}\alpha_{-1} - \frac{h^2}{2}\alpha_1\Bigr)\\
+  &- \frac{u_{xxx}}{\tau}\Bigl(-\frac{a^3\tau^3}{6} + \frac{4}{3}h^3\alpha_{-2} + \frac{h^3}{6}\alpha_{-1} - \frac{h^3}{6}\alpha_1\Bigr)
+  + O\Bigl(\tau^3, \frac{h^4}{\tau}\Bigr) + \psi_m^n
+  \end{aligned} \tag{7.11} \]</div>
+  <div class="two-col" style="font-size:.84em">
+    <div class="callout">Остаток \(O(\tau^3, h^4/\tau)\) при фиксированном \(r\) есть \(O(h^3)\): следующие члены — \(\tau^4u_{tttt}/24\) и \(\alpha_\mu\mu^4h^4u_{xxxx}/24\), делённые на \(\tau\).</div>
+    <div class="callout">Порядок 1: левая часть равна \(u_t + a u_x\), член с \(u/\tau\) исчез. Порядок 2: исчез и член с \(u_{xx}\). Порядок 3: исчез член с \(u_{xxx}\).</div>
+  </div>
+  <p class="bridge">Шаг 5 — выписать эти условия как систему для \(\alpha_{-2}, \alpha_{-1}, \alpha_0, \alpha_1\).</p>
+</section>
+
+<!-- 10 -->
+<section class="slide">
+  <div class="slide-num">§7.4 · Разбор 1 · шаг 5</div>
+  <h2>Условия на коэффициенты и их безразмерная форма</h2>
+  <p class="lead">Четыре условия по (7.11); деление на \(h/\tau\), \(h^2/2\), \(h^3/6\) и замена \(a\tau/h = r\) убирают все размерные множители.</p>
+  <div class="two-col" style="font-size:.9em">
+    <div class="eq">\[ \left\{\begin{aligned}
+    &\frac{2h}{\tau}\alpha_{-2} + \frac{h}{\tau}\alpha_{-1} - \frac{h}{\tau}\alpha_1 = a,\\
+    &1 - \alpha_{-2} - \alpha_{-1} - \alpha_0 - \alpha_1 = 0,\\
+    &\frac{a^2\tau^2}{2} - 2h^2\alpha_{-2} - \frac{h^2}{2}\alpha_{-1} - \frac{h^2}{2}\alpha_1 = 0,\\
+    &-\frac{a^3\tau^3}{6} + \frac{4}{3}h^3\alpha_{-2} + \frac{h^3}{6}\alpha_{-1} - \frac{h^3}{6}\alpha_1 = 0
+    \end{aligned}\right. \tag{7.12} \]</div>
+    <div class="eq">\[ \left\{\begin{aligned}
+    &\alpha_{-2} + \alpha_{-1} + \alpha_0 + \alpha_1 = 1,\\
+    &2\alpha_{-2} + \alpha_{-1} - \alpha_1 = r,\\
+    &4\alpha_{-2} + \alpha_{-1} + \alpha_1 = r^2,\\
+    &8\alpha_{-2} + \alpha_{-1} - \alpha_1 = r^3
+    \end{aligned}\right. \tag{7.13} \]</div>
+  </div>
+  <div class="note" style="font-size:.86em"><span class="lbl">Что видно в (7.13)</span>В \(k\)-й строке узел со смещением \(\mu\) входит с весом \((-\mu)^k\), справа стоит \(r^k\): строка \(k = 0\) — сохранение постоянного решения, \(k = 1\) — правильная скорость переноса, \(k = 2, 3\) — отсутствие членов с \(u_{xx}\), \(u_{xxx}\). Условия порядка \(p\) — первые \(p + 1\) строк.</div>
+  <p class="bridge">Закономерность общая: условия порядка на любом шаблоне — равенства моментов шаблона степеням числа Куранта.</p>
+</section>
+
+<!-- 11 -->
+<section class="slide">
+  <div class="slide-num">§7.4 · Теорема 1</div>
+  <h2>Критерий порядка аппроксимации</h2>
+  <p class="lead">Закономерность системы (7.13) — общая.</p>
+  <div class="theorem" data-num="1" style="font-size:.8em">
+    Схема (7.2) на шаблоне \(S\) имеет порядок \(p\) на решениях (7.1) тогда и только тогда, когда
+    \[ \sum_{\mu\in S}\alpha_\mu\,(-\mu)^k = r^k, \qquad k = 0, 1, \dots, p. \tag{7.14} \]
+    Главный член невязки: \(\displaystyle \psi_m^n = \frac{a}{r}\cdot\frac{h^{p}}{(p+1)!}\Bigl[(-r)^{p+1} - \sum_{\mu\in S}\alpha_\mu\,\mu^{p+1}\Bigr]\frac{\partial^{p+1}u}{\partial x^{p+1}} + O(h^{p+1}).\)
+  </div>
+  <div class="note" style="font-size:.78em"><span class="lbl">Рабочее тождество доказательства</span>
+    Решение постоянно вдоль характеристик (§5.10): \(u(x_m, t_{n+1}) = u(x_m - rh, t_n)\) — тождество (7.15). Подстановка в (7.3) и разложение по \(h\):
+    <div class="eq" style="font-size:.95em;margin:.2rem 0">\[ \tau\psi_m^n = \sum_{k=0}^{p+1}\frac{h^k}{k!}\Bigl[(-r)^k - \sum_{\mu}\alpha_\mu\mu^k\Bigr]\partial_x^k u + O(h^{p+2}) \tag{7.16} \]</div>
+  </div>
+  <p class="bridge">Коэффициент при \(\partial_x^k u\) в (7.16) равен нулю \(\iff\) \(\sum\alpha_\mu\mu^k = (-r)^k\) \(\iff\) (7.14); полное доказательство — §7.4, второй вывод — упражнение 6. У условий (7.14) два прочтения.</p>
+</section>
+
+<section class="slide">
+  <div class="slide-num">§7.4 · Два прочтения условий (7.14)</div>
+  <h2>Точность на многочленах и интерполяция вдоль характеристики</h2>
+  <p class="lead">Условия (7.14) можно не выводить из рядов Тейлора, а прочитать как свойство точности схемы на простых функциях.</p>
+  <div class="two-col" style="font-size:.88em">
+    <div class="example"><span class="lbl">Точность на многочленах</span>
+      (7.14) при \(k \le p\) \(\iff\) для всех многочленов \(q\) степени \(\le p\)
+      <div class="eq">\[ \sum_{\mu\in S}\alpha_\mu\,q(x_m + \mu h) = q(x_m - rh) \]</div>
+      достаточно проверить на \(q = (x - x_m)^k\). Схема порядка \(p\) — правило, точно переносящее вдоль характеристики любой многочлен степени \(p\).
+    </div>
+    <div class="example"><span class="lbl">Интерполяция (§5.10)</span>
+      Схема Лакса–Вендроффа получена интерполяцией \(u(x_m - rh, t_n)\) по трём узлам: коэффициенты — значения базисных многочленов Лагранжа, формула (5.21). По теореме 1 это общее правило: при числе узлов \(p + 1\) метод неопределённых коэффициентов и интерполяционно-характеристический метод дают одну и ту же схему.
+    </div>
+  </div>
+  <p class="bridge">Отсюда сразу следует, каков наибольший порядок на шаблоне из \(N\) узлов.</p>
+</section>
+
+<!-- 12 -->
+<section class="slide">
+  <div class="slide-num">§7.4 · Теорема 2</div>
+  <h2>Максимальный порядок на шаблоне равен \(N - 1\)</h2>
+  <p class="lead">Число условий (7.14) не может превысить число неизвестных.</p>
+  <div class="theorem" data-num="2" style="font-size:.84em">
+    На шаблоне из \(N\) узлов с попарно различными смещениями существует ровно одна схема порядка \(N - 1\): её коэффициенты — значения базисных многочленов Лагранжа, построенных по узлам \(x_m + \mu h\), в точке \(x_m - rh\). Порядок \(N\) недостижим, кроме конечного числа значений \(r\), при которых точка \(x_m - rh\) совпадает с узлом шаблона.
+  </div>
+  <div class="two-col" style="font-size:.8em">
+    <div class="note"><span class="lbl">Почему единственность</span>Условия (7.14) при \(k \le N - 1\) — система с матрицей Вандермонда \(\bigl((-\mu)^k\bigr)\) по различным узлам; она невырождена. Точность на всех многочленах степени \(\le N - 1\) — формула Лагранжа в точке \(x_m - rh\).</div>
+    <div class="note"><span class="lbl">Почему порядок \(N\) недостижим</span>Условие \(k = N\) — точность на \(q(x) = \prod_{\mu}(x - x_m - \mu h)\), равном нулю во всех узлах; в точке \(x_m - rh\) он равен \((-h)^N\prod_\mu(r + \mu)\) — нуль лишь при \(r = -\mu\), когда сдвиг попадает в узел.</div>
+  </div>
+  <p class="bridge">На четырёх узлах порядок не выше третьего, схема третьего порядка одна; при \(p = 1, 2\) остаётся свобода размерности \(N - p - 1\) (теорема 3). Решаем (7.13), добавляя по одному уравнению.</p>
+</section>
+<!-- 13 -->
+<section class="slide">
+  <div class="slide-num">§7.5 · Разбор 1 · шаг 6</div>
+  <h2>Порядок 1 — два параметра, порядок 2 — прямая</h2>
+  <p class="lead">Решаем (7.13), добавляя по одному уравнению; свободные параметры — \(\alpha_{-2}\) и \(\alpha_0\).</p>
+  <span class="stage">Порядок 1: строки \(k = 0, 1\)</span>
+  <div class="eq" style="font-size:.92em">\[ \alpha_{-1} = \frac{1 + r - \alpha_0 - 3\alpha_{-2}}{2}, \qquad \alpha_1 = \frac{1 - r - \alpha_0 + \alpha_{-2}}{2} \tag{7.17} \]</div>
+  <div class="callout" style="font-size:.84em">Двухпараметрическое семейство. \(\alpha_{-2} = 0\), \(\alpha_0 = 1 - r\) — «уголок» (\(\alpha_{-1} = r\), \(\alpha_1 = 0\)); \(\alpha_{-2} = 0\), \(\alpha_0 = 0\) — схема Лакса (\(\alpha_{\mp1} = (1 \pm r)/2\)).</div>
+  <span class="stage">Порядок 2: добавлена строка \(k = 2\)</span>
+  <div class="eq" style="font-size:.92em">\[ \alpha_0 = 3\alpha_{-2} + 1 - r^2, \qquad \alpha_{-1} = \frac{r + r^2}{2} - 3\alpha_{-2}, \qquad \alpha_1 = \frac{r^2 - r}{2} - \alpha_{-2} \tag{7.18} \]</div>
+  <div class="callout" style="font-size:.84em">Прямая с параметром \(\alpha_{-2}\) — весом дальнего узла. \(\alpha_{-2} = 0\) — Лакс–Вендрофф (5.21); \(\alpha_1 = 0\), то есть \(\alpha_{-2} = -\tfrac{r(1-r)}{2}\), — Бим–Уорминг; полусумма их коэффициентов, \(\alpha_{-2} = -\tfrac{r(1-r)}{4}\), — схема Фромма.</div>
+  <p class="bridge">Четвёртая строка (7.13) закрепляет последний параметр: схема третьего порядка на шаблоне одна.</p>
+</section>
+
+<!-- 14 -->
+<section class="slide">
+  <div class="slide-num">§7.5 · Разбор 1 · шаг 6</div>
+  <h2>Порядок 3 — точка \(C\); порядок 4 недостижим</h2>
+  <p class="lead">Вычитание второй строки (7.13) из четвёртой даёт \(6\alpha_{-2} = r^3 - r\); остальные коэффициенты — по (7.18).</p>
+  <div class="eq" style="font-size:.88em">\[ \begin{aligned} &\alpha_{-2} = -\frac{r(1 - r)(1 + r)}{6}, \qquad \alpha_{-1} = \frac{r(1 + r)(2 - r)}{2},\\ &\alpha_0 = \frac{(1 - r)(1 + r)(2 - r)}{2}, \qquad \alpha_1 = -\frac{r(1 - r)(2 - r)}{6} \end{aligned} \tag{7.19} \]</div>
+  <div class="eq" style="font-size:.82em">\[ \begin{aligned} y_m^{n+1} = y_m^n &- \frac{r}{6}\bigl(2y_{m+1}^n + 3y_m^n - 6y_{m-1}^n + y_{m-2}^n\bigr) + \frac{r^2}{2}\bigl(y_{m+1}^n - 2y_m^n + y_{m-1}^n\bigr)\\ &- \frac{r^3}{6}\bigl(y_{m+1}^n - 3y_m^n + 3y_{m-1}^n - y_{m-2}^n\bigr) \end{aligned} \tag{7.20} \]</div>
+  <div class="two-col" style="font-size:.78em">
+    <div class="note"><span class="lbl">Прочтение (7.20)</span>Разложение \(u(x_m - rh)\) по степеням \(rh\), в котором \(hu_x\), \(h^2u_{xx}\), \(h^3u_{xxx}\) заменены разностями на тех же узлах. \(\sum\alpha_\mu = 1\); при \(r = 1\) — сдвиг \(y_{m-1}^n\), при \(r = 2\) — сдвиг \(y_{m-2}^n\).</div>
+    <div class="note"><span class="lbl">Порядок 4 — нет (теорема 2)</span>\(r^4 - 16\alpha_{-2} - \alpha_{-1} - \alpha_1 = r(1 - r)(2 - r)(1 + r) \ne 0\); по теореме 1 главный член невязки
+      \(\psi_m^n = \tfrac{ah^3}{24}(1 - r)(1 + r)(2 - r)\,u_{xxxx} + O(h^4)\) — формула (7.21); нуль лишь при \(r = 1, 2\).</div>
+  </div>
+  <p class="bridge">Итог разбора: семейство (7.17), прямая (7.18), точка (7.19), пустота при \(p = 4\). Прежде чем придать этому геометрический смысл — упражнение на трёх узлах.</p>
+</section>
+
+<!-- 15 -->
+<section class="slide">
+  <div class="slide-num">§7.5 · Упражнение · 7 минут</div>
+  <h2>Упражнение: трёхточечный шаблон \(S = \{-1, 0, 1\}\)</h2>
+  <p class="lead">Схема \(y_m^{n+1} = \alpha\,y_{m-1}^n + \beta\,y_m^n + \gamma\,y_{m+1}^n\); уравнение (7.1), число Куранта \(r\).</p>
+  <div class="example" style="font-size:.95em"><span class="lbl">Задание</span>
+    <ol style="margin:.2rem 0 0 1.2rem">
+      <li>Выписать условия (7.14) при \(k = 0, 1, 2\) для коэффициентов \(\alpha, \beta, \gamma\).</li>
+      <li>Решить систему и показать, что схема второго порядка единственна; сравнить со схемой (5.21).</li>
+      <li>Записать условие с \(k = 3\) для найденных коэффициентов и выяснить, при каких \(r\) оно выполняется.</li>
+      <li>Указать, какие точки семейства первого порядка отвечают «уголку» и схеме Лакса.</li>
+    </ol>
+  </div>
+  <p class="bridge">Время — 7 минут; обсуждаются пункты 2 и 3. <button type="button" class="cfd-notes-btn teacher-only" hidden onclick="window.__showTeacher && window.__showTeacher('t-3pt')">Показать ответ</button></p>
+</section>
+
+<!--TEACHER_3PT-->
+<section class="slide teacher" id="t-3pt">
+  <div class="slide-num">§7.5 · Упражнение · ответ (только преподавателю)</div>
+  <h2>Ответ: схемы на трёхточечном шаблоне</h2>
+  <div class="teacher-body" style="font-size:.84em"><p class="cfd-notes-empty">Содержимое доступно преподавателю после входа.</p></div>
+  <p class="bridge"><button type="button" class="cfd-notes-btn" onclick="window.__hideTeacher && window.__hideTeacher()">← к упражнению</button></p>
+</section>
+
+<!-- 17 -->
+<section class="slide">
+  <div class="slide-num">§7.6 · Определение 3, теорема 3</div>
+  <h2>Пространство коэффициентов и гиперплоскости условий</h2>
+  <p class="lead">Последовательность «семейство — прямая — точка» из разбора 1 получает точный смысл.</p>
+  <div class="definition" data-num="3" style="font-size:.84em">
+    Для шаблона из \(N\) узлов <strong>пространство коэффициентов</strong> — \(\mathbb R^N\) с координатами \(\alpha_\mu\); точка \(\boldsymbol\alpha\) — одна схема (7.2). Условие (7.14) с фиксированным \(k\) — линейное уравнение; его решения — <strong>гиперплоскость условия порядка \(k\)</strong> \(\Pi_k\); схемы порядка \(p\) — пересечение \(A_p = \Pi_0\cap\Pi_1\cap\dots\cap\Pi_p\).
+  </div>
+  <div class="theorem" data-num="3" style="font-size:.84em">
+    При попарно различных смещениях и \(p \le N - 1\) множество \(A_p\) — аффинное подпространство размерности \(N - p - 1\): \(\ \mathbb R^N \supset A_0 \supset A_1 \supset \dots \supset A_{N-1} = \{\text{точка}\}\), а \(A_N = \varnothing\), кроме конечного числа \(r\). Каждое условие порядка отнимает одну степень свободы.
+  </div>
+  <div class="note" style="font-size:.82em"><span class="lbl">Почему</span>Строки \(\bigl((-\mu)^k\bigr)_{\mu}\), \(k \le p\), — первые строки матрицы Вандермонда по различным узлам, они линейно независимы: ранг системы равен \(p + 1\). Совместность при \(p \le N - 1\) и пустота \(A_N\) — из теоремы 2. Для \(N = 4\): \(A_0\) — гиперплоскость (\(\dim 3\)), \(A_1\) — плоскость, \(A_2\) — прямая, \(A_3\) — точка, \(A_4 = \varnothing\).</div>
+  <p class="bridge">Семейство \(A_1\) двумерно, и (7.17) задаёт его координатами \((\alpha_{-2}, \alpha_0)\): всё можно нарисовать на плоскости.</p>
+</section>
+
+<!-- 18 -->
+<section class="slide">
+  <div class="slide-num">§7.6 · Плоскость коэффициентов</div>
+  <h2>Прямая второго порядка и точка третьего</h2>
+  <p class="lead">Каждая точка плоскости — схема первого порядка; \(\alpha_{-1}\), \(\alpha_1\) вычисляются по (7.17). Показано \(r = 1/2\).</p>
+  <div class="two-col wide-left">
+    <div class="figure" style="margin:0 auto;max-width:24rem">
+      <svg viewBox='0 0 460 330' xmlns='http://www.w3.org/2000/svg' style='max-width:430px'>
+<defs><marker id='ar7' markerWidth='7' markerHeight='5' refX='7' refY='2.5' orient='auto'><path d='M0,0 L7,2.5 L0,5' fill='#6b5d4f'/></marker></defs>
+<line x1='36' y1='290' x2='432' y2='290' stroke='#6b5d4f' stroke-width='1.2' marker-end='url(#ar7)'/>
+<line x1='300' y1='312' x2='300' y2='15' stroke='#6b5d4f' stroke-width='1.2' marker-end='url(#ar7)'/>
+<text x='406' y='308' font-family='Source Serif 4,serif' font-size='14' fill='#6b5d4f' font-style='italic'>α₋₂</text>
+<text x='308' y='24' font-family='Source Serif 4,serif' font-size='14' fill='#6b5d4f' font-style='italic'>α₀</text>
+<line x1='60' y1='286' x2='60' y2='294' stroke='#6b5d4f'/>
+<text x='60' y='307' font-family='JetBrains Mono,monospace' font-size='11' fill='#6b5d4f' text-anchor='middle'>-0.2</text>
+<line x1='180' y1='286' x2='180' y2='294' stroke='#6b5d4f'/>
+<text x='180' y='307' font-family='JetBrains Mono,monospace' font-size='11' fill='#6b5d4f' text-anchor='middle'>-0.1</text>
+<line x1='296' y1='222' x2='304' y2='222' stroke='#6b5d4f'/>
+<text x='292' y='226' font-family='JetBrains Mono,monospace' font-size='11' fill='#6b5d4f' text-anchor='end'>0.25</text>
+<line x1='296' y1='155' x2='304' y2='155' stroke='#6b5d4f'/>
+<text x='292' y='159' font-family='JetBrains Mono,monospace' font-size='11' fill='#6b5d4f' text-anchor='end'>0.5</text>
+<line x1='296' y1='88' x2='304' y2='88' stroke='#6b5d4f'/>
+<text x='292' y='92' font-family='JetBrains Mono,monospace' font-size='11' fill='#6b5d4f' text-anchor='end'>0.75</text>
+<line x1='296' y1='20' x2='304' y2='20' stroke='#6b5d4f'/>
+<text x='292' y='24' font-family='JetBrains Mono,monospace' font-size='11' fill='#6b5d4f' text-anchor='end'>1.0</text>
+<line x1='60' y1='250' x2='396' y2='23' stroke='#b44a2d' stroke-width='2.2'/>
+<text x='46' y='264' font-family='Source Serif 4,serif' font-size='13' fill='#b44a2d'>A</text>
+<text x='402' y='19' font-family='Source Serif 4,serif' font-size='13' fill='#b44a2d'>B</text>
+<text x='42' y='39' font-family='Source Serif 4,serif' font-size='12' fill='#b44a2d'>второй порядок: α₀ = 3α₋₂ + 1 − r²</text>
+<circle cx='300.0' cy='290.0' r='5.5' fill='#854f0b'/>
+<text x='310.0' y='282.0' font-family='Source Serif 4,serif' font-size='12' fill='#854f0b'>Лакса</text>
+<circle cx='300.0' cy='155.0' r='5.5' fill='#854f0b'/>
+<text x='310.0' y='159.0' font-family='Source Serif 4,serif' font-size='12' fill='#854f0b'>«уголок»</text>
+<circle cx='300.0' cy='87.5' r='5.5' fill='#1a6b5a'/>
+<text x='310.0' y='81.5' font-family='Source Serif 4,serif' font-size='12' fill='#1a6b5a'>Лакса–Вендроффа</text>
+<circle cx='150.0' cy='188.8' r='5.5' fill='#1a6b5a'/>
+<text x='28.0' y='204.8' font-family='Source Serif 4,serif' font-size='12' fill='#1a6b5a'>Бима–Уорминга</text>
+<circle cx='225.0' cy='138.1' r='5.5' fill='#3a5ba0'/>
+<text x='75.0' y='128.1' font-family='Source Serif 4,serif' font-size='12' fill='#3a5ba0'>C = Фромма при r = ½</text>
+<text x='340' y='40' font-family='Source Serif 4,serif' font-size='11' fill='#6b5d4f'>r = 1/2</text>
+</svg>
+    </div>
+    <div style="font-size:.86em">
+      <div class="eq">\[ A_2:\ \alpha_0 = 3\alpha_{-2} + 1 - r^2 \ \text{— прямая } AB \tag{7.22} \]</div>
+      <div class="eq" style="font-size:.9em">\[ A_3 = C = \Bigl(-\tfrac{r(1-r)(1+r)}{6},\ \tfrac{(1-r)(1+r)(2-r)}{2}\Bigr) \]</div>
+      <div class="note"><span class="lbl">Ось \(\alpha_{-2} = 0\)</span>Схемы без узла \(m - 2\) — трёхточечный шаблон. На ней Лакс \((0, 0)\), «уголок» \((0, 1 - r)\), Лакс–Вендрофф \((0, 1 - r^2)\) — пересечение оси с прямой \(AB\): на трёх узлах схема второго порядка одна (§5.10).</div>
+    </div>
+  </div>
+  <p class="bridge">Остальные знаменитые схемы — тоже точки этой картинки.</p>
+</section>
+
+<!-- 19 -->
+<section class="slide">
+  <div class="slide-num">§7.6 · Известные схемы как точки</div>
+  <h2>Известные схемы в пространстве коэффициентов</h2>
+  <p class="lead">Бим–Уорминг — точка прямой \(AB\) с \(\alpha_1 = 0\); Фромм — середина отрезка Лакс–Вендрофф — Бим–Уорминг; \(C\) — единственная точка \(A_3\).</p>
+  <table style="font-size:.8em">
+    <tr><th>Схема</th><th>\((\alpha_{-2}, \alpha_{-1}, \alpha_0, \alpha_1)\)</th><th>Точка плоскости</th><th>Порядок</th></tr>
+    <tr><td>Лакса</td><td>\(\bigl(0,\ \tfrac{1+r}{2},\ 0,\ \tfrac{1-r}{2}\bigr)\)</td><td>\((0, 0)\)</td><td>1</td></tr>
+    <tr><td>«уголок»</td><td>\((0,\ r,\ 1 - r,\ 0)\)</td><td>\((0, 1 - r)\)</td><td>1</td></tr>
+    <tr><td>Лакса–Вендроффа</td><td>\(\bigl(0,\ \tfrac{r(1+r)}{2},\ 1 - r^2,\ -\tfrac{r(1-r)}{2}\bigr)\)</td><td>\((0, 1 - r^2)\) — ось \(\cap\) \(AB\)</td><td>2</td></tr>
+    <tr><td>Бима–Уорминга</td><td>\(\bigl(-\tfrac{r(1-r)}{2},\ r(2-r),\ \tfrac{(1-r)(2-r)}{2},\ 0\bigr)\)</td><td>на \(AB\), \(\alpha_1 = 0\)</td><td>2</td></tr>
+    <tr><td>Фромма</td><td>\(\bigl(-\tfrac{r(1-r)}{4},\ \tfrac{r(5-r)}{4},\ \tfrac{(1-r)(4+r)}{4},\ -\tfrac{r(1-r)}{4}\bigr)\)</td><td>середина ЛВ–БУ</td><td>2; 3 при \(r = \tfrac12, 1\)</td></tr>
+    <tr><td>\(C\)</td><td>(7.19)</td><td>точка \(A_3\)</td><td>3</td></tr>
+  </table>
+  <div class="note" style="font-size:.84em"><span class="lbl">Схема Фромма при \(r = 1/2\)</span>Четвёртое условие (7.13) для её коэффициентов даёт \(r^3 - 8\alpha_{-2} - \alpha_{-1} + \alpha_1 = \tfrac{r(1-r)(1-2r)}{2}\): при \(r = 1/2\) и \(r = 1\) схема Фромма имеет третий порядок и совпадает с \(C\) (упражнение 2).</div>
+  <p class="bridge">Теорема 1 даёт не только порядок, но и главный член невязки — а он определяет вид дифференциального приближения.</p>
+</section>
+
+<!-- 20 -->
+<section class="slide">
+  <div class="slide-num">§7.7 · Главный член невязки</div>
+  <h2>Главный член и первое дифференциальное приближение</h2>
+  <p class="lead">Для схемы порядка \(p\) на гладких функциях, удовлетворяющих схеме, выполняется \(u_t + a u_x + c_{p+1}\partial_x^{p+1}u + \dots = 0\).</p>
+  <div class="eq">\[ u_t + a\,u_x = -c_{p+1}\,\frac{\partial^{p+1}u}{\partial x^{p+1}} + \dots, \qquad c_{p+1} = \frac{a}{r}\cdot\frac{h^{p}}{(p+1)!}\Bigl[(-r)^{p+1} - \sum_{\mu\in S}\alpha_\mu\,\mu^{p+1}\Bigr] \tag{7.23} \]</div>
+  <div class="two-col" style="font-size:.86em">
+    <div class="callout"><strong style="color:var(--accent)">Порядок \(p\) нечётный</strong> (1, 3, …): главный член — производная чётного порядка \(p + 1\) — <strong>диссипация</strong> уже в главном члене; знак коэффициента решает, затухают гармоники или растут (\(\nu \ge 0\) при \(u_{xx}\), коэффициент \(\le 0\) при \(u_{xxxx}\)).</div>
+    <div class="callout"><strong style="color:var(--accent2)">Порядок \(p\) чётный</strong> (2, 4, …): главный член — нечётная производная — <strong>дисперсия</strong>; диссипация определяется следующим членом (табл. 1 §5 для схемы Лакса–Вендроффа: «по первому приближению не определяется»).</div>
+  </div>
+  <div class="note" style="font-size:.84em"><span class="lbl">Только главный член</span>Следующие коэффициенты п.д.п. §5 получаются исключением производных по времени с помощью самого дифференциального приближения, а не уравнения (7.1); с алгоритмом 1 они не совпадают (для «уголка» при \(u_{xxx}\): \(-\tfrac{ah^2}{6}(1 - r^2)\) против \(-\tfrac{ah^2}{6}(1 - r)(1 - 2r)\) в (5.12)). Для порядка и главного члена различия нет.</div>
+  <p class="bridge">Применим (7.23) к прямой второго порядка и к точке \(C\).</p>
+</section>
+
+<!-- 21 -->
+<section class="slide">
+  <div class="slide-num">§7.7 · Семейство второго порядка</div>
+  <h2>Коэффициент при \(u_{xxx}\) линеен по параметру и обращается в нуль в \(C\)</h2>
+  <p class="lead">Для прямой (7.18) главный член — \(\beta\,u_{xxx}\); при \(\beta = 0\) главным становится член четвёртого порядка (7.21).</p>
+  <div class="eq">\[ \beta(\alpha_{-2}) = -c_3 = \frac{ah^2}{6}(r^2 - 1) - \frac{ah^2}{r}\,\alpha_{-2}, \qquad u_t + a\,u_x = \beta\,u_{xxx} + \dots \tag{7.24} \]</div>
+  <div class="eq">\[ C:\qquad u_t + a\,u_x = -\frac{ah^3}{24}(1 - r)(1 + r)(2 - r)\,u_{xxxx} + \dots \tag{7.25} \]</div>
+  <table style="font-size:.78em">
+    <tr><th>Схема</th><th>Порядок</th><th>Главный член \(-c_{p+1}\partial_x^{p+1}u\)</th><th>Характер</th></tr>
+    <tr><td>«уголок»</td><td>1</td><td>\(\nu u_{xx}\), \(\nu = \tfrac{ah}{2}(1 - r)\)</td><td>диссипация, \(\nu \ge 0\) при \(r \le 1\)</td></tr>
+    <tr><td>Лакса</td><td>1</td><td>\(\nu u_{xx}\), \(\nu = \tfrac{ah}{2r}(1 - r^2)\)</td><td>диссипация; \(\nu\to\infty\) при \(r\to0\)</td></tr>
+    <tr><td>Лакса–Вендроффа</td><td>2</td><td>\(\beta u_{xxx}\), \(\beta = -\tfrac{ah^2}{6}(1 - r^2)\)</td><td>дисперсия — отставание коротких волн</td></tr>
+    <tr><td>Бима–Уорминга</td><td>2</td><td>\(\beta u_{xxx}\), \(\beta = \tfrac{ah^2}{6}(1 - r)(2 - r)\)</td><td>дисперсия — опережение при \(r \lt 1\)</td></tr>
+    <tr><td>Фромма</td><td>2</td><td>\(\beta u_{xxx}\), \(\beta = \tfrac{ah^2}{12}(1 - r)(1 - 2r)\)</td><td>дисперсия, знак меняется при \(r = \tfrac12\)</td></tr>
+    <tr><td>\(C\)</td><td>3</td><td>\(-\tfrac{ah^3}{24}(1 - r)(1 + r)(2 - r)\,u_{xxxx}\)</td><td>диссипация четвёртого порядка</td></tr>
+  </table>
+  <p class="bridge">Значения для Лакса–Вендроффа (табл. 1 §5) и Бима–Уорминга (§5.5) совпадают с §5. Об устойчивости всё это не говорит ничего.</p>
+</section>
+
+<!-- 22 -->
+<section class="slide">
+  <div class="slide-num">§7.8 · Чего метод не даёт</div>
+  <h2>Устойчивость проверяется отдельно для каждой точки</h2>
+  <p class="lead">Множитель перехода по правилу (6.3): \(\lambda(\alpha) = \sum_{\mu\in S}\alpha_\mu e^{i\alpha\mu}\); условие Неймана \(|\lambda| \le 1\) не следует из (7.14).</p>
+  <div class="two-col" style="font-size:.84em">
+    <table>
+      <tr><th>Схема</th><th>Порядок</th><th>Устойчивость</th><th>Где</th></tr>
+      <tr><td>«уголок»</td><td>1</td><td>\(0 \le r \le 1\)</td><td>§6.5</td></tr>
+      <tr><td>Лакса</td><td>1</td><td>\(r \le 1\)</td><td>§6.13, упр. 1</td></tr>
+      <tr><td>Лакса–Вендроффа</td><td>2</td><td>\(r \le 1\)</td><td>§5.10</td></tr>
+      <tr><td>Бима–Уорминга</td><td>2</td><td>\(r \le 2\)</td><td>§5, упр. 3</td></tr>
+      <tr><td>Фромма</td><td>2</td><td>\(r \le 1\)</td><td>упр. 2</td></tr>
+      <tr><td>\(C\)</td><td>3</td><td>\(0 \le r \le 1\)</td><td>упр. 3</td></tr>
+    </table>
+    <div class="example"><span class="lbl">Аппроксимация без устойчивости</span>
+      Шаблон по потоку \(S = \{0, 1, 2\}\) при \(a > 0\): единственная схема второго порядка
+      <div class="eq" style="font-size:.95em">\[ y_m^{n+1} = \tfrac{(1 + r)(2 + r)}{2}\,y_m^n - r(2 + r)\,y_{m+1}^n + \tfrac{r(1 + r)}{2}\,y_{m+2}^n \tag{7.26} \]</div>
+      При \(\alpha = \pi\): \(\lambda(\pi) = \tfrac{(1+r)(2+r)}{2} + r(2+r) + \tfrac{r(1+r)}{2} = 1 + 4r + 2r^2 > 1\) при любом \(r > 0\). Интерполяция в точке \(x_m - rh\) вне отрезка узлов.
+    </div>
+  </div>
+  <div class="verdict" style="font-size:.86em">Точки одной прямой \(AB\) имеют разные области устойчивости (\(r \le 1\) у Лакса–Вендроффа, \(r \le 2\) у Бима–Уорминга); область устойчивости — не линейная функция точки, из условий аппроксимации её не получить.</div>
+  <p class="bridge">Чем же тогда распорядиться, когда условий меньше, чем узлов?</p>
+</section>
+
+<!-- 23 -->
+<section class="slide">
+  <div class="slide-num">§7.8 · Свободные параметры</div>
+  <h2>На что расходуется свобода семейства</h2>
+  <p class="lead">Если \(p + 1 \lt N\), остаётся \(N - p - 1\) параметров; их задают требования, не сводящиеся к аппроксимации.</p>
+  <div class="tiles" style="margin-top:0;font-size:.86em">
+    <div class="tile"><div class="h">устойчивость</div><div><div class="t">Наибольшая область по \(r\)</div><div class="d">гармоники (§6) для постоянных коэффициентов, энергетический метод (§6а) — в общем случае; на прямой \(AB\) область меняется от \(r \le 1\) до \(r \le 2\)</div></div></div>
+    <div class="tile"><div class="h">дифференциальное приближение</div><div><div class="t">Минимальная диссипация или дисперсия</div><div class="d">коэффициент \(\beta\) линеен по параметру (7.24); его нуль — схема следующего порядка</div></div></div>
+    <div class="tile hi"><div class="h">знак коэффициентов</div><div><div class="t">\(\alpha_\mu \ge 0\) — монотонность, устойчивость в норме \(C\)</div><div class="d">на прямой (7.18) при \(0 \lt r \lt 1\) коэффициенты \(\alpha_1 = \tfrac{r^2 - r}{2} - \alpha_{-2}\) и \(\alpha_{-2}\) не могут быть неотрицательны одновременно: схем второго порядка с \(\alpha_\mu \ge 0\) нет — частный случай теоремы Годунова (§9)</div></div></div>
+  </div>
+  <div class="callout" style="font-size:.84em">Многослойные шаблоны (схема «крест», §6.10) и общая запись для симметричных шаблонов — предмет отдельного дополнения к параграфу.</div>
+  <p class="bridge">Итоги параграфа — одной таблицей.</p>
+</section>
+
+<!-- 24 -->
+<section class="slide">
+  <div class="slide-num">§7.9 · Итоги</div>
+  <h2>Итоги §7</h2>
+  <p class="lead">Метод неопределённых коэффициентов превращает построение схемы в линейную алгебру; всё остальное — свойства точки, которую эта алгебра выделила.</p>
+  <div class="tiles map" style="margin-top:0;font-size:.9em">
+    <div class="tile"><div class="h">§7.1–§7.2</div><div><div class="t">Схема (7.2), невязка (7.3), Алгоритм 1</div><div class="d">обратная задача; условия линейны по \(\alpha_\mu\); Тейлор → следствия → сбор → система → свобода</div></div></div>
+    <div class="tile"><div class="h">§7.3–§7.5</div><div><div class="t">Разбор на \(\{-2, -1, 0, 1\}\)</div><div class="d">система (7.13); порядок 1 — два параметра, 2 — прямая (7.18), 3 — точка \(C\) (7.19), 4 — нет</div></div></div>
+    <div class="tile"><div class="h">теоремы 1–3</div><div><div class="t">\(\sum\alpha_\mu(-\mu)^k = r^k\); порядок \(\le N - 1\); \(\dim A_p = N - p - 1\)</div><div class="d">точность на многочленах; предельная схема — интерполяционная (§5.10); вложенные гиперплоскости</div></div></div>
+    <div class="tile"><div class="h">§7.6–§7.7</div><div><div class="t">Плоскость \((\alpha_{-2}, \alpha_0)\); главный член</div><div class="d">Лакс, «уголок», ЛВ — на оси; БУ, Фромм, \(C\) — на прямой; нечётный порядок — диссипация, чётный — дисперсия</div></div></div>
+    <div class="tile hi"><div class="h">§7.8</div><div><div class="t">Аппроксимация ≠ устойчивость</div><div class="d">схема (7.26) второго порядка неустойчива при всех \(r\); свобода — на устойчивость, п.д.п., знак коэффициентов</div></div></div>
+  </div>
+  <p class="bridge">Дальше в курсе: §8 — консервативность и монотонность, §9 — теорема Годунова, §11 — схемы с положительными коэффициентами.</p>
+</section>
+
+<!-- 25 -->
+<section class="slide">
+  <div class="slide-num">§7.10 · Упражнения и задание</div>
+  <h2>Упражнения и задание к следующему занятию</h2>
+  <p class="lead">Восемь упражнений текста §7.10 и письменное задание; на занятии решено упражнение 1.</p>
+  <div class="two-col" style="font-size:.76em">
+    <div class="example"><span class="lbl">Упражнения (текст §7.10)</span>
+      <ol style="margin:.2rem 0 0 1.2rem">
+        <li>Трёхточечный шаблон: единственность схемы Лакса–Вендроффа; условие \(k = 3\).</li>
+        <li>Бим–Уорминг и Фромм на прямой (7.18); при каких \(r\) схема Фромма третьего порядка; её устойчивость.</li>
+        <li>Схема \(C\): \(\sum\alpha_\mu = 1\), запись (7.20), \(|\lambda|^2\), устойчивость при \(0 \le r \le 1\).</li>
+        <li>Шаблон по потоку: вывод (7.26), \(\max|\lambda| = 1 + 4r + 2r^2\), объяснение через характеристики.</li>
+        <li>Пятиточечный шаблон: единственная схема четвёртого порядка, главный член, область устойчивости.</li>
+        <li>Второй вывод теоремы 1 через замену производных по времени.</li>
+        <li>Вывод (7.24); нуль \(\beta\) — точка \(C\); смена знака \(\beta\) у схемы Фромма.</li>
+        <li>Сопоставление главных членов с §5 (табл. 1, §5.5); коэффициент при \(u_{xxx}\) «уголка» против (5.12).</li>
+      </ol>
+    </div>
+    <div class="note"><span class="lbl">Задание к следующему занятию</span>
+      Упражнения 2, 3 и 5 письменно. Для схемы \(C\) (7.20) — паспорт по образцу §5.11: главный член дифференциального приближения, характеристическое уравнение и \(|\lambda|^2\), область устойчивости, поверхности \(|\lambda|\) и \(\gamma\) над \(r\times kh\), тесты «ступенька» и «гауссиан» при \(r = 0{,}25;\ 0{,}5;\ 0{,}75\) с параметрами §5.9; сравнение с паспортами «уголка» и схемы Лакса–Вендроффа.
+    </div>
+  </div>
+  <p class="bridge">Литература: Самарский [1]; Магомедов, Холодов [2]; Холодов [3]; Головизнин, Соловьёв [4]; Рихтмайер, Мортон [5]; Warming, Hyett [6].</p>
+</section>
+<div class="hud">
+  <a href="s1-07.html" class="back" title="Полный текст лекции">← полная лекция</a>
+  <div class="center">
+    <button id="btnPrev" onclick="prev()" title="←">◀</button>
+    <span class="counter" id="counter">1 / 26</span>
+    <button id="btnNext" onclick="next()" title="→ / Space">▶</button>
+  </div>
+  <a href="s1-08.html" class="back" title="Следующая лекция">§8 →</a>
+</div>
+
+<script>
+(function(){
+  var slides = Array.from(document.querySelectorAll('.slide')).filter(function(s){ return !s.classList.contains('teacher'); });
+  var counter = document.getElementById('counter');
+  var fill = document.getElementById('progressFill');
+  var i = 0;
+  Array.from(document.querySelectorAll('.slide')).forEach(function(s){ var wrap = document.createElement('div'); wrap.className = 'slide-content'; while (s.firstChild) wrap.appendChild(s.firstChild); s.appendChild(wrap); });
+  function show(n) {
+    slides[i].classList.remove('active');
+    document.querySelectorAll('.slide.teacher.active').forEach(function(t){ t.classList.remove('active'); });
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    var s = slides[i], content = s.querySelector('.slide-content') || s, animated = [];
+    Array.from(content.children).forEach(function(child){ animated.push(child); var innerEq = child.querySelectorAll('.eq'); for (var j = 0; j < innerEq.length; j++) animated.push(innerEq[j]); });
+    animated.forEach(function(el, k){ el.style.setProperty('--i', k); el.style.animation = 'none'; });
+    void s.offsetWidth;
+    animated.forEach(function(el){ el.style.animation = ''; });
+    s.classList.add('active');
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+    fill.style.width = ((i + 1) / slides.length * 100) + '%';
+    history.replaceState(null, '', '#' + (i + 1));
+    document.getElementById('btnPrev').disabled = (i === 0);
+    document.getElementById('btnNext').disabled = (i === slides.length - 1);
+    s.scrollTop = 0;
+  }
+  window.__showTeacher = function(id){ var t = document.getElementById(id); if (!t) return; slides[i].classList.remove('active'); document.querySelectorAll('.slide.teacher.active').forEach(function(o){ o.classList.remove('active'); }); t.classList.add('active'); t.scrollTop = 0; if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([t]).catch(function(){}); };
+  window.__hideTeacher = function(){ document.querySelectorAll('.slide.teacher.active').forEach(function(t){ t.classList.remove('active'); }); slides[i].classList.add('active'); };
+  window.next = function(){ show(i + 1); };
+  window.prev = function(){ show(i - 1); };
+  document.addEventListener('keydown', function(e) {
+    if (/^(INPUT|TEXTAREA|SELECT)$/i.test((e.target || {}).tagName)) return;
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+    else if (e.key === 'Home') { e.preventDefault(); show(0); }
+    else if (e.key === 'End')  { e.preventDefault(); show(slides.length - 1); }
+    else if (e.key === 'f' || e.key === 'F') { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); }
+  });
+  var h = parseInt((location.hash || '').replace('#', ''), 10);
+  if (!isNaN(h) && h >= 1 && h <= slides.length) show(h - 1); else show(0);
+  window.__slidesShow = show;
+  window.__slidesIndex = function () { return i; };
+})();
+(function initSlideTools() {
+  function ready() { if (!window.CFDSlideTools) return; window.CFDSlideTools.init({ slidesSelector: '.slide:not(.teacher)', activeClass: 'active', hudSelector: '.hud', projectName: 'sem1-07-slides', getCurrentIndex: function () { return window.__slidesIndex ? window.__slidesIndex() : 0; }, onGoToSlide: function (n) { if (window.__slidesShow) window.__slidesShow(n); } }); }
+  if (window.CFDSlideTools) ready(); else window.addEventListener('load', ready);
+})();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/slide-notes.js"></script>
+</body>
+</html>

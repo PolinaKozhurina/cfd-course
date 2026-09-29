@@ -91,7 +91,7 @@ td{padding:5px 10px;border:1px solid var(--border)}
     <span id="fioStatus" style="font-size:.78rem;margin-left:.5rem;color:var(--accent2)"></span>
   </div>
 
-  <div class="card" style="margin-bottom:1rem">
+  <div class="card" id="legacyRepoCard" style="margin-bottom:1rem">
     <h3 style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--accent);margin-bottom:.5rem">Репозиторий группы</h3>
     <p style="font-size:.85rem;color:var(--text2);margin-bottom:.5rem">Укажите ссылку на GitHub-репозиторий вашей группы с кодом и результатами.</p>
     <div style="display:flex;gap:.5rem;align-items:center">
@@ -406,7 +406,31 @@ td{padding:5px 10px;border:1px solid var(--border)}
       + '<code style="font-family:\'JetBrains Mono\',monospace;font-size:1.05rem;letter-spacing:.15em;background:var(--code-bg,#2b2520);color:var(--code-text,#f0e6d8);padding:3px 10px;border-radius:5px">' + d.joinCode + '</code>'
       + '<button data-a="copy" style="font-family:\'JetBrains Mono\',monospace;font-size:.7rem;padding:3px 8px;border-radius:4px;background:var(--bg2);border:1px solid var(--border);cursor:pointer">копировать</button>'
       + '</div>'
-      + '<ul style="list-style:none;padding:0;margin:.4rem 0 0;font-size:.85rem">' + membersHtml + '</ul>';
+      + '<ul style="list-style:none;padding:0;margin:.4rem 0 0;font-size:.85rem">' + membersHtml + '</ul>'
+      + '<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-top:.6rem">'
+      + '<span style="font-size:.78rem;color:var(--text2);white-space:nowrap">Репозиторий группы:</span>'
+      + '<input type="text" data-a="repo" value="' + String(d.repoUrl || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '" placeholder="https://github.com/user/cfd-group" style="flex:1;min-width:220px;font-family:\'JetBrains Mono\',monospace;font-size:.8rem;padding:5px 10px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text)">'
+      + '<button data-a="repo-save" style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;padding:5px 12px;border-radius:5px;background:var(--accent);color:#fff;border:none;cursor:pointer">Сохранить</button>'
+      + '<span class="wg-repo-status" style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3)"></span>'
+      + '</div>'
+      + (d.repoUrl ? '<div style="font-size:.78rem;margin-top:.25rem"><a href="' + String(d.repoUrl).replace(/"/g, '&quot;') + '" target="_blank" rel="noopener" style="color:var(--accent3)">' + String(d.repoUrl).replace(/</g, '&lt;') + '</a></div>' : '');
+    root.querySelector('button[data-a="repo-save"]').onclick = async function(){
+      var inp = root.querySelector('input[data-a="repo"]');
+      var st = root.querySelector('.wg-repo-status');
+      var v = (inp.value || '').trim();
+      if (v && !/^https?:\/\/\S+$/.test(v)) { st.textContent = '✗ нужна ссылка вида https://…'; return; }
+      var me = firebase.auth().currentUser;
+      if (!me) { st.textContent = '✗ не авторизован'; return; }
+      this.disabled = true; st.textContent = 'сохраняю…';
+      try {
+        await db2.collection('groups').doc(d.gid).update({ repoUrl: v, repoUpdatedBy: me.email });
+        st.textContent = '✓ сохранено';
+        setTimeout(function(){ renderWgBlock(cid, root); }, 600);
+      } catch (e) {
+        st.textContent = '✗ ' + (e && e.message ? e.message : e);
+        this.disabled = false;
+      }
+    };
     root.querySelector('button[data-a="copy"]').onclick = function(){
       navigator.clipboard.writeText(d.joinCode).then(function(){
         var b = root.querySelector('button[data-a="copy"]');
@@ -676,7 +700,7 @@ td{padding:5px 10px;border:1px solid var(--border)}
         const txt = b.textContent;
         b.disabled = true; b.textContent = '⏳ скачиваю…';
         try { await CFDHomework.triggerDownload(rf.path, rf.name); }
-        catch (e) { alert(e.message); }
+        catch (e) { console.error('reviewed download failed', rf.path, e); alert('Не удалось скачать проверенный файл: ' + (e && e.message ? e.message : e) + '\nФайл: ' + rf.name + '\nЕсли ошибка повторяется — пришлите преподавателю этот текст и название браузера.'); }
         finally { b.textContent = txt; b.disabled = false; }
       };
     });
@@ -836,9 +860,16 @@ td{padding:5px 10px;border:1px solid var(--border)}
     if (!user) return;
     try {
       const userDoc = await db2.collection('users').doc(user.uid).get();
-      const group = userDoc.exists ? userDoc.data().group : null;
-      if (!group) { document.getElementById('repoStatus').textContent = 'Сначала вас должны назначить в группу'; return; }
-      await db2.collection('groups').doc(group).set({ repoUrl: url, repoUpdatedBy: user.email }, { merge: true });
+      let group = userDoc.exists ? userDoc.data().group : null;
+      if (!group) {
+        // Группы по курсам: users.courseGroups.{cid} = 'group_NN' -> groups/{cid}_group_NN
+        const cg = (userDoc.exists && userDoc.data().courseGroups) || {};
+        const cids = Object.keys(cg).filter(k => cg[k]);
+        if (cids.length === 1) group = cids[0] + '_' + String(cg[cids[0]]).replace(/^group_/, 'group_');
+        else if (cids.length > 1) { document.getElementById('repoStatus').textContent = 'У вас несколько курсовых групп — укажите ссылку в блоке нужной группы ниже'; return; }
+      }
+      if (!group) { document.getElementById('repoStatus').textContent = 'Вы ещё не состоите в рабочей группе: создайте её или присоединитесь по коду в блоке «Мои рабочие группы»'; return; }
+      await db2.collection('groups').doc(group).update({ repoUrl: url, repoUpdatedBy: user.email });
       document.getElementById('repoStatus').textContent = 'Ссылка сохранена';
     } catch(e) { document.getElementById('repoStatus').textContent = 'Ошибка: ' + e.message; }
   };
@@ -975,8 +1006,13 @@ firebase.auth().onAuthStateChanged(async user => {
         }
       }
     } else {
-      document.getElementById('profileGroup').textContent =
-        'Группа ещё не назначена администратором';
+      const cg0 = (userDoc.exists && userDoc.data().courseGroups) || {};
+      const cgList = Object.keys(cg0).filter(k => cg0[k]).map(k => k + ' — ' + String(cg0[k]).replace('group_', '№'));
+      document.getElementById('profileGroup').textContent = cgList.length
+        ? 'Рабочие группы по курсам: ' + cgList.join(', ') + ' (подробности — в блоке «Мои рабочие группы»)'
+        : 'Рабочая группа: создайте её или присоединитесь по коду в блоке «Мои рабочие группы»';
+      const legacyCard = document.getElementById('legacyRepoCard');
+      if (legacyCard) legacyCard.style.display = 'none';
       // Show approval status
       const approvalEl = document.getElementById('approvalStatus');
       if (approvalEl) {
@@ -993,7 +1029,7 @@ firebase.auth().onAuthStateChanged(async user => {
 
   if (!userGroup) {
     document.getElementById('resultsBody').innerHTML =
-      '<tr><td colspan="4" style="text-align:center;color:var(--text3)">Сначала администратор должен назначить вас в группу</td></tr>';
+      '<tr><td colspan="4" style="text-align:center;color:var(--text3)">Результаты по общей группе не ведутся; работы по курсам — в разделах «Домашние задания» и «Мои лабы»</td></tr>';
     return;
   }
 

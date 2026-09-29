@@ -339,6 +339,10 @@
         const a = document.createElement("a");
         a.href = url;
         a.download = name || d.name || "file";
+        // Встроенные браузеры (Telegram/VK на Android, iOS без всплывающих окон) игнорируют
+        // атрибут download у blob-ссылок; с target=_blank файл хотя бы откроется в просмотрщике.
+        a.target = "_blank";
+        a.rel = "noopener";
         document.body.appendChild(a);
         a.click();
         setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);

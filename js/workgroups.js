@@ -204,6 +204,7 @@
         groupIndex: data.groupIndex || nn.replace(/^group_/, ""),
         joinCode: data.joinCode,
         approved: !!data.approved,
+        repoUrl: data.repoUrl || "",
         maxSize: data.maxSize || 3,
         name: data.name || "",
         createdBy: data.createdBy,

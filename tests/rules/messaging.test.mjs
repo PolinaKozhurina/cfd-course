@@ -1,6 +1,6 @@
 // Сценарий: сообщения — групповой чат и личные (DM).
 import { describe, it, beforeAll, beforeEach, afterAll } from 'vitest';
-import { doc, setDoc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import {
   getEnv, clear, cleanup, seed, asSuper, asAdminNm, asStudent,
   assertSucceeds, assertFails,
@@ -137,6 +137,17 @@ describe('dm/{dmId}/messages — личные сообщения', () => {
     await assertFails(setDoc(doc(alpha, 'dm', DM, 'messages', 'm4'), {
       authorUid: 'alpha', text: 'x',
     }));
+  });
+
+  it('список «мои чаты»: запрос по participants проходит, чужие чаты не видны', async () => {
+    await seed(async db => {
+      await db.collection('dm').doc(DM).set({ participants: ['alpha', 'beta'] });
+      await db.collection('dm').doc('beta_gamma').set({ participants: ['beta', 'gamma'] });
+    });
+    const alpha = await asStudent('alpha');
+    const snap = await assertSucceeds(getDocs(query(collection(alpha, 'dm'), where('participants', 'array-contains', 'alpha'))));
+    if (snap.size !== 1) throw new Error('ожидался 1 чат, получено ' + snap.size);
+    await assertFails(getDocs(query(collection(alpha, 'dm'), where('participants', 'array-contains', 'gamma'))));
   });
 
   it('удалить может только сам автор (участие не даёт права удалять чужое)', async () => {

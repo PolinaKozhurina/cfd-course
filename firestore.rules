@@ -312,7 +312,11 @@ service cloud.firestore {
     // ---------- dm (личные сообщения) ----------
     // dmId = sort([uid1, uid2]).join('_') — участники в id.
     match /dm/{dmId} {
-      allow read, write: if isAuth() && dmIsParticipant(dmId);
+      // get/write — по dmId (uidA_uidB). Список «мои чаты» (where participants
+      // array-contains uid) правило по docId не пропускает: для list-запроса
+      // условие должно выражаться через поля документа.
+      allow get, write: if isAuth() && dmIsParticipant(dmId);
+      allow list: if isAuth() && request.auth.uid in resource.data.participants;
 
       match /messages/{msgId} {
         allow read: if isAuth() && dmIsParticipant(dmId);

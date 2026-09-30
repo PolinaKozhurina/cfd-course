@@ -1986,7 +1986,16 @@ async function renderHwSubmissionsTable(aid) {
     let variantCell = '<span style="color:var(--text3);font-size:.72rem">—</span>';
     if (a.mode === 'personal') {
       const cur = (a.assignedVariants || {})[u.uid];
-      variantCell = '<select onchange="hwSetVariant(\''+aid+'\',\''+u.uid+'\',this.value)" style="font-size:.78rem;padding:1px 4px">'
+      const hasCur = cur !== undefined && cur !== null;
+      const vFile = hasCur ? (((a.variants || [])[cur] || {}).files || [])[0] : null;
+      // Номер варианта крупно и ссылка на его PDF; список ниже — для переназначения.
+      variantCell = '<div style="white-space:nowrap">'
+        + (hasCur
+            ? '<strong style="font-family:\'JetBrains Mono\',monospace;font-size:.9rem;color:var(--accent)">В' + (cur + 1) + '</strong>'
+              + (vFile && vFile.url ? ' <a href="' + vFile.url + '" target="_blank" title="' + hwEscape(vFile.name) + '" style="color:var(--accent3);font-size:.78rem">📎 PDF</a>' : '')
+            : '<span style="color:var(--st-red,#a33);font-size:.78rem">не назначен</span>')
+        + '</div>'
+        + '<select onchange="hwSetVariant(\''+aid+'\',\''+u.uid+'\',this.value)" title="Переназначить вариант" style="font-size:.72rem;padding:0 2px;margin-top:.15rem">'
         + '<option value="">—</option>'
         + variantsOpts.replace('value="'+cur+'"', 'value="'+cur+'" selected')
         + '</select>';
@@ -2036,6 +2045,7 @@ async function hwSetVariant(aid, uid, idx) {
   if (a) {
     a.assignedVariants = a.assignedVariants || {};
     if (val === null) delete a.assignedVariants[uid]; else a.assignedVariants[uid] = val;
+    renderHwSubmissionsTable(aid);
   }
 }
 

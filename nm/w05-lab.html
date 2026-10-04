@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <link rel="icon" href="../favicon.ico" type="image/x-icon">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Лабораторная работа №5 курса «Численные методы»: МНК-аппроксимация e^x через нормальные уравнения и через ортогональный базис Лежандра, эффект κ² на матрице Гильберта.">
-<title>ЧМ · Лаба 5. МНК и ортогональные базисы</title>
+<meta name="description" content="Лабораторная работа №5 курса «Численные методы»: константа Лебега, прямая и многочлен МНК по нормальным уравнениям, выбор степени, потеря точности в нормальных уравнениях, многочлены Лежандра и наилучшее L2-приближение, ортогональные многочлены на сетке данных, гармоники периодических данных.">
+<title>ЧМ · Лаба 5. Метод наименьших квадратов</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/material-darker.css">
@@ -47,7 +47,8 @@ code{font-family:'JetBrains Mono',monospace;background:var(--bg2);padding:1px 5p
 .warning strong{color:var(--accent)}
 .editor-shell{margin:1rem 0;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
 .editor-head{background:#2b2520;color:#c9b89a;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.4rem .9rem;display:flex;justify-content:space-between;align-items:center;gap:.6rem;flex-wrap:wrap}
-.editor-head .fname{color:#9ec97f}.editor-head .actions{display:flex;gap:.4rem}
+.editor-head .fname{color:#9ec97f}
+.editor-head .actions{display:flex;gap:.4rem}
 .editor-head .btn{background:var(--accent);color:#fff;border:none;padding:.35rem .85rem;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;cursor:pointer}
 .editor-head .btn:hover{background:#8f3a24}.editor-head .btn:disabled{background:#6b5d4f;cursor:wait;opacity:.7}
 .editor-head .btn.secondary{background:transparent;border:1px solid #6b5d4f;color:#c9b89a}
@@ -109,27 +110,29 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
 
 <nav class="sidebar">
   <h2>Лаба 5. МНК</h2>
-  <div class="progress" id="side_progress">решено 0 из 9</div>
+  <div class="progress" id="side_progress">решено 0 из 12</div>
   <div class="runtime-state" id="side_runtime">clang: не загружен</div>
   <div class="g">Содержание</div>
   <a href="#intro">Введение</a>
-  <a href="#part0">§0. Скалярное произведение</a>
-  <a href="#part1">§1. Полиномы Лежандра</a>
-  <a href="#part2">§2. МНК через Лежандра</a>
-  <a href="#part3">§3. Нормальные уравнения</a>
+  <a href="#part0">§0. Константа Лебега</a>
+  <a href="#part1">§1. Прямая и многочлен МНК</a>
+  <a href="#part2">§2. Потеря цифр</a>
+  <a href="#part3">§3. Многочлены Лежандра</a>
+  <a href="#part4">§4. Ортогональные на сетке</a>
+  <a href="#part5">§5. Гармоники</a>
   <div class="sep"></div>
   <div class="g">Материалы</div>
   <a href="w05.html">§5. Лекция</a>
   <a href="w05-slides.html">▶ Слайды §5</a>
   <a href="index.html">← Обзор курса</a>
-  <a href="w06.html">→ §6. Численное дифф.</a>
+  <a href="w06.html">→ §6. Численное дифференцирование</a>
 </nav>
 
 <div class="main"><div class="main-inner">
 <span class="lecture-tag">Лабораторная работа</span>
-<div class="lecture-num">Лаба 5 · к §5 «МНК и ортогональные базисы»</div>
+<div class="lecture-num">Лаба 5 · к §5 «Метод наименьших квадратов»</div>
 <div style="display:flex;align-items:baseline;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
-  <h1 style="margin:0">Аппроксимация \(e^x\) методом наименьших квадратов</h1>
+  <h1 style="margin:0">Метод наименьших квадратов и ортогональные базисы</h1>
   <a href="w05.html" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.4rem .8rem;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none">▶ Лекция</a>
 </div>
 
@@ -137,13 +140,13 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
   <div class="cell"><b>Формат</b>Парная работа за компьютером</div>
   <div class="cell"><b>Язык</b>C++11, только stdlib</div>
   <div class="cell"><b>Сборка</b>clang++ в браузере (wasm)</div>
-  <div class="cell"><b>Оценка</b>7/9 задач → зачёт</div>
+  <div class="cell"><b>Оценка</b>10/12 задач → зачёт</div>
 </div>
 
 <div class="progresspanel">
   <span>Прогресс</span>
   <div class="bar"><div id="prog_bar" style="width:0%"></div></div>
-  <span class="cnt" id="prog_cnt">0/9</span>
+  <span class="cnt" id="prog_cnt">0/12</span>
   <span class="runtime" id="prog_runtime">clang: init…</span>
   <button class="reset" id="prog_reset" type="button">сбросить</button>
 </div>
@@ -159,7 +162,7 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
 
 <div class="lecture-nav">
   <a class="nav-prev" href="w05.html">← §5. Лекция</a>
-  <a class="nav-next" href="w06.html">§6. Численное дифф. →</a>
+  <a class="nav-next" href="w06.html">§6. Численное дифференцирование →</a>
 </div>
 
 </div></div>
@@ -258,7 +261,7 @@ function scheduleRemoteSave(){
 window.__labFlush = function(){ clearTimeout(_rsTimer); return remoteSaveNow(); };
 window.addEventListener('beforeunload', function(){ if (_rsTimer) { clearTimeout(_rsTimer); remoteSaveNow(); } });
 document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden' && _rsTimer) { clearTimeout(_rsTimer); _rsTimer = null; remoteSaveNow(); } });
-const TOTAL = 9;
+const TOTAL = 12;
 delete PROG.q41; // задача-обсуждение удалена
 function updateProgUI(){
   const done = Object.values(PROG).filter(v=>v==='ok').length;
@@ -336,7 +339,7 @@ document.querySelectorAll('[data-cpp]').forEach(shell=>{
         });
       } else if (targetAttr) { targets = targetAttr.split(',').map(s=>parseFloat(s)); }
       if (verdictEl) {
-        if (!res.ended) { verdictEl.className = 'verdict err'; verdictEl.innerHTML = '<span class="status-dot err"></span>✗ программа не вывела __END__ за 2 мин'; PROG[id] = 'err'; }
+        if (!res.ended) { verdictEl.className = 'verdict err'; verdictEl.innerHTML = '<span class="status-dot err"></span>✗ программа не вывела __END__ за 2 мин (в Firefox первая загрузка бывает долгой — подождите и запустите ещё раз)'; PROG[id] = 'err'; }
         else if (res.answers.length === 0) { verdictEl.className = 'verdict part'; verdictEl.innerHTML = '<span class="status-dot"></span>программа запустилась, но не напечатала __ANS__'; }
         else {
           const n = Math.min(res.answers.length, targets.length || res.answers.length);

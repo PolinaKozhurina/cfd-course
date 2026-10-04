@@ -281,73 +281,6 @@ table.cmp td{padding:.25rem .7rem;border-bottom:1px solid var(--border)}
   <div class="sub">Константа Лебега · Нормальные уравнения · Выбор степени · Обусловленность κ² · Многочлены Лежандра · Ортогональные многочлены на сетке · Гармоники</div>
 </section>
 
-<!-- Р1: разбор лабораторной 4 — обзор -->
-<section class="slide">
-  <div class="roadmap"><span class="b on" title="Разбор лабы 4">Разбор лабы 4</span><span class="b" title="Зашумлённые данные">I</span><span class="b" title="Метод наименьших квадратов">II</span><span class="b" title="Обусловленность">III</span><span class="b" title="Ортогональные базисы">IV</span><span class="b" title="Практика и итоги">V</span><span class="here">Разбор лабораторной 4</span></div>
-  <h2>Что показала проверка лабораторной 4</h2>
-  <p class="lead">Результаты в большинстве работ совпали с эталоном, но совпадение не гарантирует правильности кода. Повторяются три типа дефектов.</p>
-  <div class="errtiles six">
-    <div class="et r"><div class="t">Начальные значения</div><p><code>cheb_T</code> при \(n=0\), \(n=1\) возвращает \(0\), \(1\) или неинициализированную переменную вместо \(T_0=1\), \(T_1=x\).</p><span class="n">задача 0.1</span></div>
-    <div class="et r"><div class="t">Двойная рекурсия</div><p><code>cheb_T(n-1)</code> и <code>cheb_T(n-2)</code> в одной строке: число вызовов растёт как \(1{,}618^{n}\).</p><span class="n">задача 0.1</span></div>
-    <div class="et r"><div class="t">Границы циклов прогонки</div><p>Прямой ход с <code>i = 0</code> читает <code>g[-1]</code>; обратный с <code>i = m-1</code> читает <code>x[m]</code>.</p><span class="n">задачи 3.1–3.2</span></div>
-    <div class="et a"><div class="t">Модуль числа</div><p><code>abs(x)</code> без <code>std::</code> в ряде компиляторов — целочисленная функция: модуль \(0{,}3\) равен \(0\).</p><span class="n">задачи 1.2, 2.1, 3.4</span></div>
-    <div class="et a"><div class="t">Правка без проверки</div><p>Исправленный код сохранён с опечаткой и не компилируется.</p><span class="n">работа над ошибками</span></div>
-    <div class="et a"><div class="t">Исправлено</div><p>Большинство пометок к лабораторным 1–3 сняты: индексы, критерии остановки, приведение типов.</p><span class="n">лабораторные 1–3</span></div>
-  </div>
-  <p class="bridge">Разберём первые три дефекта на коде.</p>
-</section>
-
-<!-- Р2: разбор — рекуррентность -->
-<section class="slide">
-  <div class="roadmap"><span class="b on" title="Разбор лабы 4">Разбор лабы 4</span><span class="b" title="Зашумлённые данные">I</span><span class="b" title="Метод наименьших квадратов">II</span><span class="b" title="Обусловленность">III</span><span class="b" title="Ортогональные базисы">IV</span><span class="b" title="Практика и итоги">V</span><span class="here">Разбор лабораторной 4 <i>· Рекуррентность</i></span></div>
-  <h2>Рекуррентность: начальные значения и число шагов</h2>
-  <p class="lead">Рекуррентность (4.6) — это два начальных значения и правило перехода. Функция обязана быть верной при любом \(n\ge0\) и вычислять \(T_n\) за \(n\) шагов.</p>
-  <div class="cmp2">
-    <div class="bad"><div class="lbl">Неверная запись</div><pre class="code">double T0 = 1, T1 = x, T2 = 0;
-for (int k = 2; k &lt;= n; ++k) {
-    T2 = 2*x*T1 - T0; T0 = T1; T1 = T2;
-}
-return T2;          <span class="cm">// n = 0, 1: вернёт 0</span>
-
-return 2*x*cheb_T(n-1, x) - cheb_T(n-2, x);
-                    <span class="cm">// 2F(n+1) - 1 вызовов</span></pre></div>
-    <div class="good"><div class="lbl">Верная запись</div><pre class="code">if (n == 0) return 1.0;
-double T0 = 1.0, T1 = x;   <span class="cm">// T_{k-1}, T_k</span>
-for (int k = 1; k &lt; n; ++k) {
-    double T2 = 2*x*T1 - T0;
-    T0 = T1; T1 = T2;
-}
-return T1;                  <span class="cm">// T_n, n &gt;= 1</span></pre></div>
-  </div>
-  <div class="rule"><strong>Правило.</strong> Функцию проверяют на краевых значениях параметра (\(n=0\), \(n=1\)). Рекуррентность вычисляют циклом с двумя последними значениями; рекурсия с двумя вызовами даёт \(2\cdot10^{4}\) вызовов при \(n=20\) и \(4\cdot10^{10}\) при \(n=50\).</div>
-  <p class="bridge">Вторая группа ошибок — границы циклов в прогонке.</p>
-</section>
-
-<!-- Р3: разбор — прогонка и модуль -->
-<section class="slide">
-  <div class="roadmap"><span class="b on" title="Разбор лабы 4">Разбор лабы 4</span><span class="b" title="Зашумлённые данные">I</span><span class="b" title="Метод наименьших квадратов">II</span><span class="b" title="Обусловленность">III</span><span class="b" title="Ортогональные базисы">IV</span><span class="b" title="Практика и итоги">V</span><span class="here">Разбор лабораторной 4 <i>· Прогонка</i></span></div>
-  <h2>Прогонка: границы циклов; модуль вещественного числа</h2>
-  <p class="lead">Прогоночные коэффициенты с номером \(0\) вычисляются до цикла, неизвестное с номером \(m-1\) — до обратного хода. Циклы начинаются со следующих номеров.</p>
-  <div class="cmp2">
-    <div class="bad"><div class="lbl">Неверная запись</div><pre class="code">for (int i = 0; i &lt; m; ++i)       <span class="cm">// g[-1]</span>
-    g[i] = c[i] / (b[i] - a[i]*g[i-1]);
-x[m-1] = q[m-1];
-for (int i = m-1; i &gt;= 0; --i)    <span class="cm">// x[m]</span>
-    x[i] = q[i] - g[i]*x[i+1];
-
-double e = abs(f(x) - P(x));      <span class="cm">// abs(int)</span></pre></div>
-    <div class="good"><div class="lbl">Верная запись</div><pre class="code">g[0] = c[0]/b[0];  q[0] = d[0]/b[0];
-for (int i = 1; i &lt; m; ++i) { … }
-x[m-1] = q[m-1];
-for (int i = m-2; i &gt;= 0; --i)
-    x[i] = q[i] - g[i]*x[i+1];
-
-double e = std::fabs(f(x) - P(x));</pre></div>
-  </div>
-  <div class="rule"><strong>Правило.</strong> Для каждого цикла проверяют первое и последнее значение индекса: все обращения <code>a[i-1]</code>, <code>x[i+1]</code> должны оставаться внутри массива. Модуль <code>double</code> — только <code>std::fabs</code>. После правки код запускают ещё раз: сохранённая редакция должна компилироваться.</div>
-  <p class="bridge">Переходим к теме занятия.</p>
-</section>
-
 <!-- 2: введение -->
 <section class="slide">
   <div class="roadmap"><span class="b on" title="Зашумлённые данные">I. Зашумлённые данные</span><span class="b" title="Метод наименьших квадратов">II</span><span class="b" title="Обусловленность">III</span><span class="b" title="Ортогональные базисы">IV</span><span class="b" title="Практика и итоги">V</span><span class="here">§5.0. Зашумлённые данные <i>· План занятия</i></span></div>
@@ -974,7 +907,7 @@ double e = std::fabs(f(x) - P(x));</pre></div>
   <p style="font-size:.88em">Проверим на простейшем случае: у матрицы \(A=\operatorname{diag}(10,1)\) число обусловленности равно \(10\), а у \(A^{\mathsf T}A=\operatorname{diag}(100,1)\) — уже \(100\); в общем случае равенство следует из сингулярного разложения (§&nbsp;13). Для \(21\) точки на \([0,1]\) при \(n=10\) это означает \(\kappa(A)\approx2\cdot10^{7}\), но \(\kappa(A^{\mathsf T}A)\approx5\cdot10^{14}\).</p>
   <div class="example" style="font-size:.88em"><span class="lbl">Опыт с известным ответом</span>
   Многочлен \(p(x)=1+x+\dots+x^n\), у которого все коэффициенты равны единице, вычислен точно в \(50\) точках отрезка \([0,1]\), и коэффициенты восстановлены по нормальным уравнениям. При \(n=4\) они верны до \(10^{-11}\), при \(n=8\) — лишь до \(2\cdot10^{-5}\), а при \(n=11\) ошибочны уже в первой цифре (\(0{,}5\)). Данные точны и модель верна — все цифры теряются из-за округления.</div>
-  <p class="bridge">Тот же опыт вы поставите в лабораторной. Как избежать этой потери?</p>
+  <p class="bridge">Как избежать этой потери?</p>
 </section>
 
 <!-- 19: выходы и паспорт -->
@@ -1342,14 +1275,14 @@ double e = std::fabs(f(x) - P(x));</pre></div>
   <p class="lead">Главное из занятия 5 — по разделам.</p>
   <p style="font-size:.84em">Интерполяция усиливает ошибки данных в \(\Lambda_n\) раз (5.2), а на равномерной сетке \(\Lambda_{20}=1{,}1\cdot10^{4}\), поэтому зашумлённые данные не интерполируют. Метод наименьших квадратов минимизирует сумму квадратов невязок (5.4) для модели, линейной по коэффициентам (5.3); решение — нормальные уравнения (5.7), невязка ортогональна столбцам (5.8), и при линейно независимых столбцах решение единственно (теорема&nbsp;1). Степень выбирают по оценке шума \(\hat\sigma^2(n)\) (5.12), а не по сумме невязок.</p>
   <p style="font-size:.84em">Нормальные уравнения возводят число обусловленности в квадрат (5.16), и в степенном базисе коэффициенты теряют все цифры уже около \(n=11\). В ортогональном базисе коэффициенты — проекции (5.18), не зависящие от степени; ортогональные многочлены строятся трёхчленной рекуррентностью (5.22): многочлены Лежандра для функций на отрезке (\(E_4(e^x)=4{,}70\cdot10^{-4}\)) и многочлены Форсайта для данных. Периодические данные приближают гармониками по формулам (5.27), помня о наложении частот.</p>
-  <div class="callout" style="font-size:.82em"><strong>Лабораторная 5</strong> — константа Лебега, прямая и многочлен МНК, потеря цифр, Лежандр для \(e^x\), ортогональные многочлены на сетке, гармоники температуры: \(12\) задач, зачёт \(10\). <strong>Литература:</strong> Бахвалов — Жидков — Кобельков, гл.&nbsp;4; Калиткин, гл.&nbsp;2; Trefethen, ATAP, гл.&nbsp;15–17.</div>
+  <div class="callout" style="font-size:.82em"><strong>Литература:</strong> Бахвалов — Жидков — Кобельков, гл.&nbsp;4; Калиткин, гл.&nbsp;2; Trefethen, ATAP, гл.&nbsp;15–17.</div>
 </section>
 
 <div class="hud">
   <a href="w05.html" class="back" title="К тексту лекции">← к тексту</a>
   <div class="center">
     <button id="btnPrev" onclick="prev()">◀ назад</button>
-    <span class="counter" id="counter">1 / 40</span>
+    <span class="counter" id="counter">1 / 37</span>
     <button id="btnNext" onclick="next()">вперёд ▶</button>
   </div>
   <a href="w06.html" class="back" title="Следующая лекция">§6 →</a>

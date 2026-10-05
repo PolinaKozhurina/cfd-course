@@ -69,6 +69,8 @@ h1{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:900;line-he
   const typeset = () => { if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([app]).catch(() => {}); else setTimeout(typeset, 300); };
 
   let user = null, sess = null, attempt = null, offset = 0, timerId = null, pollId = null, finished = false;
+  // Пробный режим: сеанс читает преподаватель курса, когда тест закрыт или его нет в списке допущенных.
+  let preview = false;
   const answers = {};          // локальная копия: номер вопроса → индекс варианта
   const pending = {};          // ещё не сохранённые на сервере
 
@@ -99,7 +101,11 @@ h1{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:900;line-he
     document.getElementById("title").textContent = sess.title || info().title;
     document.title = "ЧМ · " + (sess.title || "Тест");
     attempt = await loadAttempt();
-    if (sess.showAnswers && !sess.open) { await showReview(); return; }
+    preview = !(sess.open && (sess.allowedUids || []).indexOf(user.uid) !== -1) && !(sess.showAnswers && (sess.allowedUids || []).indexOf(user.uid) !== -1);
+    if (preview) {
+      if (!attempt) { showIntro(); return; }
+      if (attempt.submitted) { await showReview(); return; }
+    } else if (sess.showAnswers && !sess.open) { await showReview(); return; }
     if (!attempt) { showIntro(); return; }
     if (attempt.submitted) { showFinished(); return; }
     // Продолжение после перезагрузки: пробная запись даёт серверное время.
@@ -113,7 +119,7 @@ h1{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:900;line-he
 
   function showIntro() {
     const n = (sess.questions || []).length, min = Math.round((sess.durationSec || 900) / 60);
-    msg("Перед началом", "",
+    msg("Перед началом", preview ? '<b>Пробный режим преподавателя.</b> Попытка не попадает в результаты студентов; после завершения сразу показывается разбор.' : "",
       '<ul><li>' + n + ' вопросов, в каждом один верный вариант.</li>'
       + '<li>На весь тест — <b>' + min + ' мин</b>. Отсчёт начинается с нажатия кнопки и не останавливается при закрытии страницы.</li>'
       + '<li>Каждый выбранный ответ сразу сохраняется; до конца времени ответ можно изменить.</li>'
@@ -152,7 +158,7 @@ h1{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:900;line-he
     clearInterval(timerId); timerId = setInterval(tick, 250); tick();
     // Если преподаватель закроет тест, перестаём принимать ответы.
     clearInterval(pollId);
-    pollId = setInterval(async () => { const s = await loadSession(); if (!s || !s.open) { await finish(true, "Преподаватель закрыл тест."); } }, 10000);
+    if (!preview) pollId = setInterval(async () => { const s = await loadSession(); if (!s || !s.open) { await finish(true, "Преподаватель закрыл тест."); } }, 10000);
   }
 
   function updCnt() { const el = document.getElementById("cnt"); if (el) el.textContent = "отвечено " + Object.keys(answers).length + " из " + sess.questions.length; }
@@ -190,6 +196,7 @@ h1{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:900;line-he
     app.querySelectorAll('input').forEach(i => i.disabled = true);
     try { if (Object.keys(pending).length) { flushing = false; finished = false; await flush(); finished = true; } } catch (e) {}
     try { await CFDQuiz.submit(user, CID, QID); } catch (e) {}
+    if (preview) { attempt = await loadAttempt(); showReview(); return; }
     showFinished(auto, why);
   }
 
@@ -207,13 +214,21 @@ h1{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:900;line-he
     if (!attempt) { msg("Разбор теста", "Вы не проходили этот тест."); return; }
     if (!key) { msg("Разбор теста", "Ключ ответов пока недоступен."); return; }
     const sc = CFDQuiz.score(attempt, key), qs = sess.questions;
-    app.innerHTML = '<div class="finish"><div class="score">' + sc.score + ' / ' + sc.total + '</div><p style="color:var(--text2)">верных ответов</p></div>'
+    app.innerHTML = '<div class="finish"><div class="score">' + sc.score + ' / ' + sc.total + '</div><p style="color:var(--text2)">верных ответов</p>'
+      + (preview ? '<p style="margin-top:.8rem"><button class="btn" id="retryBtn">Пройти заново</button></p>' : '') + '</div>'
       + order().map((qi, k) => {
           const mine = attempt.answers && attempt.answers[qi] != null ? Number(attempt.answers[qi]) : null, right = key.answers[qi];
           return '<div class="q ' + (mine === right ? 'done-ok' : 'done-bad') + '"><div class="num">Вопрос ' + (k + 1) + (mine == null ? ' · без ответа' : '') + '</div><div class="text">' + qs[qi].text + '</div>'
             + optOrder(qi).map(oi => '<label class="' + (oi === right ? 'right' : (oi === mine ? 'wrong' : '')) + '"><input type="radio" disabled' + (oi === mine ? ' checked' : '') + '><span>' + qs[qi].options[oi] + '</span></label>').join('')
             + (key.explanations && key.explanations[qi] ? '<div class="expl">' + key.explanations[qi] + '</div>' : '') + '</div>';
         }).join('');
+    const rb = document.getElementById("retryBtn");
+    if (rb) rb.onclick = async () => {
+      rb.disabled = true;
+      try { await CFDQuiz.resetAttempt(user.uid, CID, QID); } catch (e) {}
+      for (const k in answers) delete answers[k];
+      finished = false; attempt = null; route();
+    };
     typeset();
   }
 

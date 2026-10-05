@@ -4760,6 +4760,9 @@ async function quizToggleAnswers() {
 function quizRows() {
   const allowed = new Set((_quizSess && _quizSess.allowedUids) || []);
   const uids = new Set([...allowed, ...Object.keys(_quizAtt)]);
+  // Пробная попытка преподавателя (сам в списке допущенных не бывает) — не показываем.
+  const me = firebase.auth().currentUser;
+  if (me && !allowed.has(me.uid)) uids.delete(me.uid);
   const dur = ((_quizSess && _quizSess.durationSec) || 900) * 1000;
   return Array.from(uids).map(uid => {
     const u = (allUsers || []).find(x => x.uid === uid) || {};

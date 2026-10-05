@@ -218,6 +218,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
   <button class="tab" onclick="showTab('homework');renderHomeworkTab()">ДЗ</button>
   <button class="tab" onclick="showTab('attendance');renderAttendanceTab()">Посещаемость</button>
   <button class="tab" onclick="showTab('labs');renderLabsTab()">Лабы</button>
+  <button class="tab" onclick="showTab('quiz');renderQuizTab()">Тесты</button>
   <button class="tab" onclick="showTab('gating');renderGatingTab()">Гейтинг лекций</button>
   <!-- Скрыто: относилось к одному конкретному курсу, пока не нужно.
        При необходимости вернуть — раскомментировать. -->
@@ -484,6 +485,29 @@ if (location.search.indexOf('embedded=1') !== -1) {
   <div id="notesKeyBox" style="border:1px dashed var(--border);border-radius:8px;padding:.6rem 1rem;margin-top:1rem;font-size:.82rem"></div>
 </div>
 
+<div id="tab-quiz" class="panel">
+  <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:.7rem">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3)">Курс:</label>
+    <select id="quizCourse" onchange="quizFillList();renderQuizTab()" style="font-family:'JetBrains Mono',monospace;font-size:.85rem"></select>
+    <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3);margin-left:.4rem">Тест:</label>
+    <select id="quizId" onchange="renderQuizTab()" style="font-family:'JetBrains Mono',monospace;font-size:.85rem"></select>
+    <a id="quizLink" href="#" target="_blank" style="font-size:.8rem">страница теста ↗</a>
+  </div>
+  <p style="font-size:.8rem;color:var(--text2);margin:0 0 .8rem">Вопросы видны студенту только при открытом тесте и только если он отмечен присутствующим в выбранном занятии. Отсчёт времени идёт от нажатия студентом «Начать»; после срока сервер не принимает ответы. После теста нажмите «Закрыть», затем «Показать ответы» — студенты увидят свой балл и разбор на странице теста.</p>
+  <div id="quizSession" style="border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;margin-bottom:.8rem;background:var(--card,#fff)"></div>
+  <div id="quizResults" style="border-top:1px solid var(--border);padding-top:.6rem;overflow-x:auto"></div>
+  <div style="border:1px dashed var(--border);border-radius:8px;padding:.6rem 1rem;margin-top:.8rem;font-size:.82rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text3)">ВОПРОСЫ</span>
+    <span id="quizQInfo" style="font-size:.8rem"></span>
+    <input type="file" id="quizFile" accept="application/json,.json" style="font-size:.78rem">
+    <button class="btn btn-sm" onclick="quizUpload()">Загрузить JSON</button>
+    <button class="btn btn-sm" onclick="quizPreview()">Просмотр с ответами</button>
+    <span id="quizUpStatus" style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text3)"></span>
+    <span style="flex-basis:100%;color:var(--text3);font-size:.75rem">Формат: <code>{"title","durationSec":900,"questions":[{"text","options":[…]}],"answers":[индекс верного, с 0],"explanations":[…]}</code>. Файл хранить вне репозитория (nm/_private/).</span>
+  </div>
+  <div id="quizPreviewBox"></div>
+</div>
+
 <!-- Модалка «Новое / редактирование занятия» -->
 <div id="attFormWrap" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
   <div style="background:var(--card,#fff);border-radius:10px;width:720px;max-width:95%;max-height:90vh;overflow:auto;padding:1rem 1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.2)">
@@ -696,11 +720,12 @@ if (location.search.indexOf('embedded=1') !== -1) {
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="js/firebase-config.js?v=20260907g"></script>
-<script src="js/courses.js?v=20260907g"></script>
+<script src="js/courses.js?v=20261005"></script>
 <script src="js/enrollments.js?v=20260907g"></script>
 <script src="js/homework.js?v=20260907g"></script>
 <script src="js/attendance.js?v=20260907g"></script>
 <script src="js/labs.js?v=20260907g"></script>
+<script src="js/quiz.js?v=20261005"></script>
 <script src="js/update-check.js?v=20260907g"></script>
 <script src="js/gating.js?v=20260907g"></script>
 <!-- Проверялка PDF (пометки маркером): PDF.js + jsPDF + модуль -->
@@ -4629,6 +4654,197 @@ async function labsRenderProgress(cid, lab, sess) {
       + '</div>'
       + '<div style="text-align:right">' + (r.hasCode ? '<button class="btn btn-sm" title="Показать код студента" onclick="labsShowCode(\'' + r.uid + '\')">Код</button>' : '') + '</div>'
       + '</div>').join('');
+}
+
+// ============================================================
+// Тесты с выбором ответа (js/quiz.js)
+// ============================================================
+
+let _quizSessUnsub = null, _quizAttUnsub = null, _quizSess = null, _quizKey = null, _quizAtt = {};
+
+function quizFillList() {
+  const cid = document.getElementById('quizCourse').value;
+  const sel = document.getElementById('quizId');
+  const list = CFDQuiz.quizzesOf(cid);
+  sel.innerHTML = list.map(q => '<option value="' + q.id + '">' + escapeHtml(q.title) + '</option>').join('');
+}
+
+async function renderQuizTab() {
+  const selC = document.getElementById('quizCourse');
+  if (selC.options.length === 0) {
+    (window.CFD_COURSES || []).filter(c => CFDQuiz.quizzesOf(c.id).length).forEach(c => {
+      const o = document.createElement('option'); o.value = c.id; o.textContent = c.name; selC.appendChild(o);
+    });
+    quizFillList();
+  }
+  const cid = selC.value, qid = document.getElementById('quizId').value;
+  if (_quizSessUnsub) { _quizSessUnsub(); _quizSessUnsub = null; }
+  if (_quizAttUnsub) { _quizAttUnsub(); _quizAttUnsub = null; }
+  if (!cid || !qid) { document.getElementById('quizSession').innerHTML = '<div style="color:var(--text3)">В реестре (js/courses.js → CFD_QUIZZES) нет тестов.</div>'; return; }
+  const info = CFDQuiz.quizInfo(cid, qid);
+  document.getElementById('quizLink').href = info.href || '#';
+  document.getElementById('quizSession').innerHTML = '<div style="color:var(--text3)">загрузка…</div>';
+  document.getElementById('quizPreviewBox').innerHTML = '';
+  _quizKey = await CFDQuiz.getKey(cid, qid);
+  const attList = await CFDAttendance.listByCourse(cid);
+  attList.sort((x, y) => ((y.date && y.date.toMillis()) || 0) - ((x.date && x.date.toMillis()) || 0));
+  _quizSessUnsub = CFDQuiz.watchSession(cid, qid, sess => { _quizSess = sess; quizRenderSession(cid, qid, sess, attList); quizRenderResults(); });
+  _quizAttUnsub = CFDQuiz.watchAttempts(cid, qid, att => { _quizAtt = att; quizRenderResults(); });
+}
+
+function quizRenderSession(cid, qid, sess, attList) {
+  const box = document.getElementById('quizSession');
+  const open = !!(sess && sess.open), shown = !!(sess && sess.showAnswers);
+  const allowed = (sess && sess.allowedUids) || [];
+  const nq = ((sess && sess.questions) || []).length;
+  document.getElementById('quizQInfo').innerHTML = nq
+    ? 'загружено вопросов: <b>' + nq + '</b>, ключ ' + (_quizKey ? '<span style="color:var(--st-green,#1a6b5a)">есть ✓</span>' : '<span style="color:#c44">нет</span>')
+    : '<span style="color:#c44">вопросы не загружены</span>';
+  const when = ts => ts ? new Date(ts.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) : '';
+  const status = open
+    ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;background:var(--pale-green,#e8f4f0);color:var(--st-green,#1a6b5a);padding:.2rem .6rem;border-radius:4px">● ОТКРЫТ</span> <span style="font-size:.8rem;color:var(--text2)">допущено ' + allowed.length + (sess.openedAt ? ' · с ' + when(sess.openedAt) + ' МСК' : '') + '</span>'
+    : '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;background:var(--pale-red,#fde8e8);color:var(--st-red,#c44);padding:.2rem .6rem;border-radius:4px">○ ЗАКРЫТ</span>' + (sess && sess.closedAt ? ' <span style="font-size:.8rem;color:var(--text3)">закрыт ' + when(sess.closedAt) + ' МСК</span>' : '');
+  const mskDay = ms => new Date(ms).toLocaleDateString('ru-RU', { timeZone: 'Europe/Moscow' });
+  const today = mskDay(Date.now());
+  const todays = attList.filter(a => a.date && mskDay(a.date.toMillis()) === today);
+  const defaultId = todays.length ? todays[0].id : ((sess && sess.attendanceId) || (attList[0] ? attList[0].id : ''));
+  const opts = attList.map(a => {
+    const d = a.date ? when(a.date) : '—';
+    const p = CFDAttendance.percentFromRecords(a.records || {});
+    return '<option value="' + a.id + '"' + (a.id === defaultId ? ' selected' : '') + '>' + (a.date && mskDay(a.date.toMillis()) === today ? 'сегодня · ' : '') + d + ' · ' + escapeHtml(a.studyGroup || '') + (a.title ? ' · ' + escapeHtml(a.title) : '') + ' · присутствует ' + p.present + '</option>';
+  }).join('');
+  const min = Math.round(((sess && sess.durationSec) || 900) / 60);
+  box.innerHTML = '<div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;margin-bottom:.6rem">' + status
+    + (shown ? ' <span style="font-size:.8rem;color:var(--accent2)">· ответы показаны студентам</span>' : '') + '</div>'
+    + '<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">'
+    + '<label style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3)">Занятие:</label>'
+    + '<select id="quizAtt" style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;max-width:420px">' + (opts || '<option value="">— нет занятий по курсу —</option>') + '</select>'
+    + '<label style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3)">мин:</label>'
+    + '<input id="quizMin" type="number" min="1" max="180" value="' + min + '" style="width:4.5em;font-family:\'JetBrains Mono\',monospace;font-size:.82rem">'
+    + '<button class="btn btn-primary" onclick="quizOpen()">▶ Открыть для отмеченных</button>'
+    + '<button class="btn" onclick="quizClose()">■ Закрыть</button>'
+    + '<button class="btn" onclick="quizToggleAnswers()">' + (shown ? 'Скрыть ответы' : 'Показать ответы') + '</button>'
+    + '<span id="quizMsg" style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text3)"></span></div>';
+}
+
+async function quizOpen() {
+  const cid = document.getElementById('quizCourse').value, qid = document.getElementById('quizId').value;
+  const aid = document.getElementById('quizAtt').value, msg = document.getElementById('quizMsg');
+  const min = parseInt(document.getElementById('quizMin').value, 10);
+  if (!(_quizSess && (_quizSess.questions || []).length)) { alert('Сначала загрузите вопросы (блок ниже).'); return; }
+  if (!aid) { alert('Сначала создайте занятие и отметьте присутствующих на вкладке «Посещаемость».'); return; }
+  if (!(min >= 1 && min <= 180)) { alert('Время — от 1 до 180 минут.'); return; }
+  const a = (await CFDAttendance.listByCourse(cid)).find(x => x.id === aid);
+  const present = a ? Object.keys(a.records || {}).filter(uid => a.records[uid] === 'present') : [];
+  if (!present.length) { alert('В этом занятии никто не отмечен присутствующим.'); return; }
+  if (!confirm('Открыть тест для ' + present.length + ' студ. на ' + min + ' мин?')) return;
+  const r = await CFDQuiz.openSession(cid, qid, present, { attendanceId: aid, durationSec: min * 60 });
+  msg.textContent = r.ok ? '✓ открыт для ' + present.length + ' студ.' : '✗ ' + r.error;
+}
+
+async function quizClose() {
+  const cid = document.getElementById('quizCourse').value, qid = document.getElementById('quizId').value;
+  if (!confirm('Закрыть тест? Незавершённые попытки перестанут принимать ответы; уже отмеченные ответы сохранятся.')) return;
+  const r = await CFDQuiz.closeSession(cid, qid);
+  document.getElementById('quizMsg').textContent = r.ok ? '✓ закрыт' : '✗ ' + r.error;
+}
+
+async function quizToggleAnswers() {
+  const cid = document.getElementById('quizCourse').value, qid = document.getElementById('quizId').value;
+  const show = !(_quizSess && _quizSess.showAnswers);
+  if (show && _quizSess && _quizSess.open && !confirm('Тест ещё открыт. Разбор студенты увидят только после закрытия теста. Продолжить?')) return;
+  const r = await CFDQuiz.setSession(cid, qid, { showAnswers: show });
+  document.getElementById('quizMsg').textContent = r.ok ? (show ? '✓ ответы показаны' : '✓ ответы скрыты') : '✗ ' + r.error;
+}
+
+function quizRows() {
+  const allowed = new Set((_quizSess && _quizSess.allowedUids) || []);
+  const uids = new Set([...allowed, ...Object.keys(_quizAtt)]);
+  const dur = ((_quizSess && _quizSess.durationSec) || 900) * 1000;
+  return Array.from(uids).map(uid => {
+    const u = (allUsers || []).find(x => x.uid === uid) || {};
+    const a = _quizAtt[uid];
+    const sc = a && _quizKey ? CFDQuiz.score(a, _quizKey) : null;
+    let state = 'не начинал', used = '';
+    if (a && a.startedAt) {
+      const end = a.submitted && a.submittedAt ? a.submittedAt.toMillis() : (a.updatedAt ? a.updatedAt.toMillis() : a.startedAt.toMillis());
+      used = Math.max(0, Math.round((end - a.startedAt.toMillis()) / 1000));
+      state = a.submitted ? 'завершил' : (Date.now() > a.startedAt.toMillis() + dur || !(_quizSess && _quizSess.open) ? 'время вышло' : 'пишет');
+    }
+    return { uid, fio: u.fio || (a && a.email) || u.email || uid, sg: u.studyGroup || '', a, sc, state, used,
+             answered: a ? Object.keys(a.answers || {}).length : 0 };
+  }).sort((x, y) => x.fio.localeCompare(y.fio, 'ru'));
+}
+
+function quizRenderResults() {
+  const box = document.getElementById('quizResults');
+  const nq = ((_quizSess && _quizSess.questions) || []).length;
+  const rows = quizRows();
+  if (!rows.length) { box.innerHTML = '<div style="color:var(--text3);font-style:italic;padding:.5rem">Пока никто не допущен и попыток нет.</div>'; return; }
+  const mmss = s => s === '' ? '' : Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  const th = 'style="padding:.3rem .4rem;border-bottom:1px solid var(--border);font-family:\'JetBrains Mono\',monospace;font-size:.7rem;color:var(--text3);text-align:center"';
+  const td = 'style="padding:.3rem .4rem;border-bottom:1px dotted var(--border);text-align:center;font-family:\'JetBrains Mono\',monospace;font-size:.8rem"';
+  const right = new Array(nq).fill(0); let nStarted = 0;
+  const body = rows.map(r => {
+    if (r.a) nStarted++;
+    const cells = Array.from({ length: nq }, (_, i) => {
+      const m = r.sc ? r.sc.marks[i] : null;
+      if (m === true) right[i]++;
+      return '<td ' + td + '>' + (m === true ? '<span style="color:#2c7a3f">✓</span>' : m === false ? '<span style="color:#c44">✗</span>' : '<span style="color:var(--text3)">·</span>') + '</td>';
+    }).join('');
+    return '<tr><td style="padding:.3rem .4rem;border-bottom:1px dotted var(--border);font-size:.85rem;white-space:nowrap">' + escapeHtml(r.fio) + '</td>'
+      + '<td ' + td + '>' + escapeHtml(r.state) + '</td><td ' + td + '>' + mmss(r.used) + '</td><td ' + td + '>' + r.answered + '</td>'
+      + '<td ' + td + '><b>' + (r.sc ? r.sc.score : '—') + '</b></td>' + cells
+      + '<td ' + td + '>' + (r.a ? '<button class="btn btn-sm" title="Удалить попытку — студент сможет пройти тест заново" onclick="quizReset(\'' + r.uid + '\')">сброс</button>' : '') + '</td></tr>';
+  }).join('');
+  const pct = right.map(c => '<td ' + td + '>' + (nStarted ? Math.round(100 * c / nStarted) + '%' : '') + '</td>').join('');
+  box.innerHTML = '<div style="display:flex;gap:.8rem;align-items:center;margin-bottom:.4rem"><span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3)">РЕЗУЛЬТАТЫ · начали ' + nStarted + ' из ' + rows.length + '</span>'
+    + '<button class="btn btn-sm" onclick="quizCsv()">⇩ CSV</button></div>'
+    + '<table style="border-collapse:collapse;width:100%"><thead><tr><th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);font-family:\'JetBrains Mono\',monospace;font-size:.7rem;color:var(--text3);text-align:left">ФИО</th><th ' + th + '>статус</th><th ' + th + '>время</th><th ' + th + '>отв.</th><th ' + th + '>балл</th>'
+    + Array.from({ length: nq }, (_, i) => '<th ' + th + '>' + (i + 1) + '</th>').join('') + '<th ' + th + '></th></tr></thead><tbody>' + body
+    + '<tr><td style="padding:.3rem .4rem;font-size:.75rem;color:var(--text3)" colspan="5">верно ответили (от начавших)</td>' + pct + '<td></td></tr></tbody></table>'
+    + '<div style="font-size:.72rem;color:var(--text3);margin-top:.3rem">Номера столбцов — номера вопросов в загруженном файле; студенту вопросы и варианты показываются в своём порядке.</div>';
+}
+
+function quizCsv() {
+  const nq = ((_quizSess && _quizSess.questions) || []).length;
+  const q = s => '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"';
+  const lines = [['ФИО', 'Учебная группа', 'Статус', 'Время, с', 'Отвечено', 'Балл'].concat(Array.from({ length: nq }, (_, i) => 'В' + (i + 1))).map(q).join(';')];
+  quizRows().forEach(r => lines.push([r.fio, r.sg, r.state, r.used, r.answered, r.sc ? r.sc.score : '']
+    .concat(Array.from({ length: nq }, (_, i) => r.sc ? (r.sc.marks[i] === true ? 1 : r.sc.marks[i] === false ? 0 : '') : '')).map(q).join(';')));
+  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'test_' + document.getElementById('quizCourse').value + '_' + document.getElementById('quizId').value + '.csv'; a.click();
+}
+
+async function quizReset(uid) {
+  const r0 = quizRows().find(r => r.uid === uid);
+  if (!confirm('Удалить попытку «' + (r0 ? r0.fio : uid) + '»? Ответы пропадут, студент сможет начать заново.')) return;
+  const r = await CFDQuiz.resetAttempt(uid, document.getElementById('quizCourse').value, document.getElementById('quizId').value);
+  if (!r.ok) alert('✗ ' + r.error);
+}
+
+async function quizUpload() {
+  const cid = document.getElementById('quizCourse').value, qid = document.getElementById('quizId').value;
+  const f = document.getElementById('quizFile').files[0], st = document.getElementById('quizUpStatus');
+  if (!f) { st.textContent = 'выберите файл'; return; }
+  let data; try { data = JSON.parse(await f.text()); } catch (e) { st.textContent = '✗ не JSON: ' + e.message; return; }
+  if (Object.keys(_quizAtt).length && !confirm('По тесту уже есть попытки. Заменить вопросы? Старые ответы будут сверяться с новым ключом.')) return;
+  const r = await CFDQuiz.upload(cid, qid, data);
+  st.textContent = r.ok ? '✓ загружено вопросов: ' + r.n : '✗ ' + r.error;
+  if (r.ok) { _quizKey = await CFDQuiz.getKey(cid, qid); quizRenderResults(); }
+}
+
+function quizPreview() {
+  const box = document.getElementById('quizPreviewBox');
+  if (box.innerHTML) { box.innerHTML = ''; return; }
+  const qs = (_quizSess && _quizSess.questions) || [];
+  box.innerHTML = '<div style="margin-top:.8rem">' + qs.map((q, i) => '<div style="border:1px solid var(--border);border-radius:6px;padding:.6rem .9rem;margin:.5rem 0;font-size:.88rem"><b>' + (i + 1) + '.</b> ' + q.text
+    + '<ol type="a" style="margin:.3rem 0 0 1.4rem">' + q.options.map((o, j) => '<li style="' + (_quizKey && _quizKey.answers[i] === j ? 'color:var(--st-green,#1a6b5a);font-weight:600' : '') + '">' + o + '</li>').join('') + '</ol>'
+    + (_quizKey && _quizKey.explanations && _quizKey.explanations[i] ? '<div style="font-size:.8rem;color:var(--text2);margin-top:.3rem">' + _quizKey.explanations[i] + '</div>' : '') + '</div>').join('') + '</div>';
+  labsEnsureMathJax();
+  const ts = () => (window.MathJax && MathJax.typesetPromise) ? MathJax.typesetPromise([box]).catch(() => {}) : setTimeout(ts, 300);
+  ts();
 }
 
 let _labProg = {};

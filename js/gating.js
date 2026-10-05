@@ -210,7 +210,7 @@
   // блокер (тогда маркер уже стоит и контент так и не мелькнёт).
   // Закрытые лабораторные (<html data-lab="wNN">) сами управляют доступом
   // через js/labs.js: задания зашифрованы, ключ выдаётся по сеансу.
-  function isLabPage() { return document.documentElement.hasAttribute("data-lab"); }
+  function isLabPage() { return document.documentElement.hasAttribute("data-lab") || document.documentElement.hasAttribute("data-quiz"); }
 
   function preHideLectureIfNeeded() {
     const adminOnly = isAdminOnlyPage();

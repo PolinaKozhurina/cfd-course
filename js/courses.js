@@ -35,3 +35,11 @@ window.CFD_LABS = {
     { id: 'w07', title: 'Лаба 7 · Составные квадратуры и метод Ромберга', href: 'nm/w07-lab.html', total: 8, pass: 6 },
   ],
 };
+
+// Тесты с выбором ответа (вопросы и ключ — в Firestore, грузит преподаватель;
+// см. js/quiz.js, tools/quiz_upload.py). Страница — {course}/test.html?id=…
+window.CFD_QUIZZES = {
+  nm: [
+    { id: 't01', title: 'Тест 1 · Машинная арифметика, ряды, интерполяция (§1–§4)', href: 'nm/test.html?id=t01' },
+  ],
+};

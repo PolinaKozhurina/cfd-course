@@ -611,6 +611,77 @@ service cloud.firestore {
       allow delete: if adminCanManageCourse(resource.data.get('courseId', ''));
     }
 
+    // ---------- Тесты с выбором ответа (js/quiz.js) ----------
+    // quiz_sessions/{cid}_{qid}: вопросы + состояние сеанса. Студент читает
+    // документ (и видит вопросы), только пока тест открыт или открыт разбор,
+    // и только если его uid в allowedUids. Пишет admin курса.
+    match /quiz_sessions/{docId} {
+      function qCid() { return docId.split('_')[0]; }
+      allow read: if isAuth() && (
+                       adminCanManageCourse(qCid())
+                    || (request.auth.uid in resource.data.get('allowedUids', [])
+                        && (resource.data.get('open', false) == true
+                            || resource.data.get('showAnswers', false) == true)));
+      allow create, update, delete: if adminCanManageCourse(qCid());
+    }
+
+    // quiz_keys/{cid}_{qid}: верные ответы и пояснения. Студенту — только
+    // после «показать ответы» в его сеансе.
+    match /quiz_keys/{docId} {
+      function qCid() { return docId.split('_')[0]; }
+      function qSess() { return get(/databases/$(database)/documents/quiz_sessions/$(docId)).data; }
+      allow read: if isAuth() && (
+                       adminCanManageCourse(qCid())
+                    || (exists(/databases/$(database)/documents/quiz_sessions/$(docId))
+                        && qSess().get('showAnswers', false) == true
+                        && request.auth.uid in qSess().get('allowedUids', [])));
+      allow create, update, delete: if adminCanManageCourse(qCid());
+    }
+
+    // quiz_attempts/{uid}_{cid}_{qid}: одна попытка студента. Создаётся только
+    // при открытом сеансе (startedAt = серверное время), меняется только до
+    // startedAt + durationSec + 15 с и пока не нажато «Завершить». Сбросить
+    // попытку (удалить) может admin курса.
+    match /quiz_attempts/{docId} {
+      function parts() { return docId.split('_'); }
+      function sessPath() { return /databases/$(database)/documents/quiz_sessions/$(parts()[1] + '_' + parts()[2]); }
+      function sessOpenForMe() {
+        return exists(sessPath())
+            && get(sessPath()).data.get('open', false) == true
+            && request.auth.uid in get(sessPath()).data.get('allowedUids', []);
+      }
+      allow read: if isAuth() && (
+                       (resource != null
+                        && (resource.data.get('uid', '') == request.auth.uid
+                            || adminCanManageCourse(resource.data.get('courseId', ''))))
+                    || parts()[0] == request.auth.uid
+                  );
+      allow create: if isAuth()
+                    && parts().size() == 3
+                    && parts()[0] == request.auth.uid
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.courseId == parts()[1]
+                    && request.resource.data.quizId == parts()[2]
+                    && request.resource.data.keys().hasOnly(['uid', 'courseId', 'quizId', 'email', 'startedAt', 'updatedAt', 'answers', 'submitted'])
+                    && request.resource.data.startedAt == request.time
+                    && request.resource.data.submitted == false
+                    && request.resource.data.answers is map
+                    && request.resource.data.answers.size() == 0
+                    && sessOpenForMe();
+      allow update: if isAuth() && (
+                       (resource.data.uid == request.auth.uid
+                        && resource.data.submitted == false
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['answers', 'submitted', 'submittedAt', 'updatedAt'])
+                        && request.resource.data.answers is map
+                        && request.resource.data.answers.size() <= 50
+                        && sessOpenForMe()
+                        && request.time <= resource.data.startedAt
+                             + duration.value(get(sessPath()).data.get('durationSec', 900) + 15, 's'))
+                    || adminCanManageCourse(resource.data.courseId)
+                  );
+      allow delete: if adminCanManageCourse(resource.data.get('courseId', ''));
+    }
+
     // notes_keys/{cid}: ключ расшифровки заметок докладчика в слайдах курса.
     // Только admin курса (и superadmin).
     match /notes_keys/{cid} {

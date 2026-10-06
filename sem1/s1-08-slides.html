@@ -28,223 +28,133 @@ pre.code{font-family:'JetBrains Mono',monospace;font-size:.62em;line-height:1.38
 <section class="slide">
   <div class="slide-num">§8–§10 · Практическое занятие · Семестр 1</div>
   <h1>Консервативные, монотонные и TVD-схемы. Схемы с ограничителем потока</h1>
-  <p class="lead" style="font-size:1.02em">Свойства разностных схем, определяющие поведение численного решения на разрывах, и построение нелинейной схемы второго порядка, не порождающей осцилляций.</p>
-  <div class="sub">§8 — консервативная форма, теорема Лакса–Вендроффа, монотонность, принцип максимума, полная вариация · §9 — теорема Годунова · §10 — лемма Хартена, ограничитель потока, условие Свеби</div>
-  <p class="bridge">Практическая часть: схема варианта из практики §5–§6 записывается в консервативной форме, и в её поток вводится ограничитель.</p>
+  <p class="lead" style="font-size:1.02em">Свойства схем, определяющие поведение решения на разрывах, и построение нелинейной схемы второго порядка без осцилляций.</p>
+  <div class="sub">§8 — консервативность, монотонность, полная вариация · §9 — теорема Годунова · §10 — лемма Хартена, ограничитель потока, условие Свеби</div>
+  <p class="bridge">Практическая часть: схема варианта из практики §5–§6 в консервативной форме и с ограничителем потока.</p>
 </section>
 
 <!-- 2 -->
 <section class="slide">
-  <div class="slide-num">§8.1 · Постановка</div>
-  <h2>Закон сохранения, сетка и разности на границах ячеек</h2>
-  <p class="lead">Рассматривается скалярный закон сохранения с плотностью \(u\) и потоком \(f(u)\):</p>
-  <div class="eq">\[ \frac{\partial u}{\partial t} + \frac{\partial f(u)}{\partial x} = 0, \qquad a(u) = f'(u) \ \text{— характеристическая скорость}. \tag{8.1} \]</div>
+  <div class="slide-num">§8.1 · Постановка и обозначения</div>
+  <h2>Закон сохранения, сетка, число Куранта</h2>
+  <div class="eq">\[ \frac{\partial u}{\partial t} + \frac{\partial f(u)}{\partial x} = 0, \qquad a(u) = f'(u); \qquad \text{перенос: } f = au, \quad \text{Бюргерс: } f = \frac{u^2}{2}. \tag{8.1} \]</div>
   <div class="two-col" style="font-size:.86em">
-    <div class="note"><span class="lbl">Модельные задачи</span>
-      Перенос: \(f(u) = au\), \(a = \mathrm{const}\), знак \(a\) произволен: при \(a > 0\) решение переносится вправо, при \(a \lt 0\) — влево.<br>
-      Уравнение Бюргерса: \(f(u) = u^2/2\), \(a(u) = u\).</div>
-    <div class="note"><span class="lbl">Сетка и обозначения</span>
-      Узлы \(x_j = jh\), слои \(t_n = n\tau\); ячейка узла \(j\) — отрезок \([x_{j-1/2}, x_{j+1/2}]\). На слое \(n\) верхний индекс опускается: \(y_j = y_j^n\).
-      \[ \Delta_{j+1/2} = y_{j+1} - y_j = h\,(y_r)_j = h\,(y_l)_{j+1}. \]</div>
+    <div class="note"><span class="lbl">Сетка</span>Узлы \(x_j = jh\), слои \(t_n = n\tau\); ячейка узла \(j\) — отрезок \([x_{j-1/2}, x_{j+1/2}]\). На слое \(n\) верхний индекс опускается: \(y_j = y_j^n\). Разность на границе ячеек:
+      \[ \Delta_{j+1/2} = y_{j+1} - y_j = h\,(y_r)_j. \]</div>
+    <div class="note"><span class="lbl">Число Куранта</span>
+      \[ r = \frac{a\tau}{h}, \qquad r^\pm = \frac{a^\pm\tau}{h}, \qquad a^+ = \max(a, 0),\ \ a^- = \min(a, 0). \]
+      За шаг \(\tau\) решение уравнения переноса сдвигается на \(r\) ячеек; \(|r| \le 1\) — условие Куранта.</div>
   </div>
-  <p class="bridge">Отношение шагов \(\tau\) и \(h\) входит во все схемы через одну безразмерную величину — число Куранта.</p>
+  <p class="bridge">Все построения опираются на две схемы, известные из §5.</p>
 </section>
 
 <!-- 3 -->
 <section class="slide">
-  <div class="slide-num">§8.1 · Число Куранта</div>
-  <h2>Число Куранта и его геометрический смысл</h2>
-  <p class="lead">Для уравнения переноса число Куранта — знаковая безразмерная величина</p>
-  <div class="eq">\[ r = \frac{a\tau}{h}, \qquad |r| = \frac{|a|\tau}{h}, \qquad \operatorname{sign} r = \operatorname{sign} a. \]</div>
-  <div class="two-col wide-right" style="font-size:.86em">
-    <div class="figure" style="margin:0">
-<svg viewBox='0 0 400 230' xmlns='http://www.w3.org/2000/svg' style='width:100%;max-width:420px;font-family:Source Serif 4,serif;font-style:italic'><line x1='20' y1='170' x2='350' y2='170' stroke='#5a4a3a' stroke-width='1.5'/><line x1='20' y1='50' x2='350' y2='50' stroke='#5a4a3a' stroke-width='1.5'/><text x='356' y='177' font-size='22' fill='#5a4a3a'>t<tspan baseline-shift='sub' font-size='15'>n</tspan></text><text x='356' y='57' font-size='22' fill='#5a4a3a'>t<tspan baseline-shift='sub' font-size='15'>n+1</tspan></text><circle cx='70' cy='170' r='6' fill='#5a4a3a'/><circle cx='190' cy='170' r='6' fill='#5a4a3a'/><circle cx='310' cy='170' r='6' fill='#5a4a3a'/><circle cx='190' cy='50' r='6' fill='#b44a2d'/><text x='70' y='205' font-size='22' text-anchor='middle' fill='#3a2e24'>x<tspan baseline-shift='sub' font-size='15'>j−1</tspan></text><text x='190' y='205' font-size='22' text-anchor='middle' fill='#3a2e24'>x<tspan baseline-shift='sub' font-size='15'>j</tspan></text><text x='310' y='205' font-size='22' text-anchor='middle' fill='#3a2e24'>x<tspan baseline-shift='sub' font-size='15'>j+1</tspan></text><line x1='190' y1='50' x2='118' y2='170' stroke='#b44a2d' stroke-width='3'/><circle cx='118' cy='170' r='6' fill='#fff' stroke='#b44a2d' stroke-width='2.5'/><text x='112' y='150' font-size='20' text-anchor='end' fill='#b44a2d'>x<tspan baseline-shift='sub' font-size='15'>j</tspan> − rh</text><text x='170' y='112' font-size='18' text-anchor='start' fill='#b44a2d' font-style='normal' transform='translate(30,0)'>характеристика</text></svg>
-      <div class="caption">Характеристика через \((x_j, t_{n+1})\) при \(0 \lt r \lt 1\): её основание смещено на \(rh\) против направления переноса.</div>
-    </div>
-    <div>
-      <div class="note"><span class="lbl">Аналог</span>Точное решение: \(u(x_j, t_{n+1}) = u(x_j - rh,\, t_n)\). Число \(r\) — смещение основания характеристики, измеренное в шагах \(h\); явная схема приближает значение в точке \(x_j - rh\) по узлам слоя \(n\).</div>
-      <div class="note"><span class="lbl">Роль</span>Условие Куранта–Фридрихса–Леви \(|r| \le 1\): основание характеристики лежит в шаблоне \([x_{j-1}, x_{j+1}]\) — необходимое условие устойчивости явных трёхточечных схем. Знак \(r\) определяет направление «против потока».</div>
-    </div>
-  </div>
-  <p class="bridge">Перейдём к форме записи схемы, наследующей интегральный закон сохранения.</p>
+  <div class="slide-num">§8.1 · Опорные схемы</div>
+  <h2>Противопоточная схема и схема Лакса–Вендроффа</h2>
+  <div class="definition" style="font-size:.86em"><strong>Противопоточная схема (upwind):</strong>
+    \[ y_j^{n+1} = y_j - r^+\,(y_j - y_{j-1}) - r^-\,(y_{j+1} - y_j); \qquad a > 0:\ \ y_j^{n+1} = y_j - r\,(y_j - y_{j-1}). \]
+    Первый порядок; схемная вязкость \(\nu = \tfrac{|a|h}{2}(1 - |r|)\) (§5); монотонна при \(|r| \le 1\).</div>
+  <div class="definition" style="font-size:.86em"><strong>Схема Лакса–Вендроффа:</strong>
+    \[ y_j^{n+1} = y_j - \frac r2\,(y_{j+1} - y_{j-1}) + \frac{r^2}{2}\,(y_{j+1} - 2y_j + y_{j-1}). \]
+    Второй порядок; главный член погрешности дисперсионный — осцилляции у разрывов (§5).</div>
+  <div class="callout" style="font-size:.84em">Далее \(a > 0\). Случай \(a \lt 0\) получается заменой \(j \to -j\) (левые и правые соседи меняются местами, \(r \to |r|\)); исключение — определение ограничителя потока (§10), данное в общем виде.</div>
+  <p class="bridge">Первое свойство — консервативность.</p>
 </section>
 
 <!-- 4 -->
 <section class="slide">
-  <div class="slide-num">§8.2 · Интегральная форма</div>
-  <h2>Интегральная форма закона сохранения на ячейке</h2>
-  <p class="lead">Интегрируя (8.1) по ячейке \([x_{j-1/2}, x_{j+1/2}]\) и по шагу \([t_n, t_{n+1}]\), получаем соотношение, верное и для разрывных решений:</p>
-  <div class="eq">\[ \int_{x_{j-1/2}}^{x_{j+1/2}}\! u(x, t_{n+1})\,dx = \int_{x_{j-1/2}}^{x_{j+1/2}}\! u(x, t_n)\,dx - \int_{t_n}^{t_{n+1}}\!\Bigl[f\bigl(u(x_{j+1/2}, t)\bigr) - f\bigl(u(x_{j-1/2}, t)\bigr)\Bigr]dt. \tag{8.1′} \]</div>
-  <p style="font-size:.9em">Обозначим среднее по ячейке и средний по шагу поток через границу:</p>
-  <div class="eq">\[ \bar u_j^n = \frac1h\int_{x_{j-1/2}}^{x_{j+1/2}}\! u(x, t_n)\,dx, \qquad \bar f_{j+1/2} = \frac1\tau\int_{t_n}^{t_{n+1}}\! f\bigl(u(x_{j+1/2}, t)\bigr)\,dt; \qquad \bar u_j^{n+1} = \bar u_j^n - \frac\tau h\bigl(\bar f_{j+1/2} - \bar f_{j-1/2}\bigr). \]</div>
-  <div class="callout" style="font-size:.86em">Последнее равенство точное. Разностная схема возникает, когда средний поток \(\bar f_{j+1/2}\) приближается функцией сеточных значений — численным потоком; структура равенства при этом сохраняется.</div>
-  <p class="bridge">Схемы, сохраняющие эту структуру, называются консервативными.</p>
+  <div class="slide-num">§8.2 · Определение 8.1</div>
+  <h2>Консервативная схема относительно закона сохранения</h2>
+  <div class="definition" data-num="8.1" style="font-size:.88em">Схема называется <strong>консервативной относительно закона сохранения (8.1)</strong>, если она записывается в виде
+    \[ y_j^{n+1} = y_j - \frac{\tau}{h}\bigl(F_{j+1/2} - F_{j-1/2}\bigr), \qquad F_{j+1/2} = F\bigl(y_{j-p+1}, \dots, y_{j+q}\bigr), \tag{8.2} \]
+    где <strong>численный поток</strong> \(F\) — одна и та же функция для всех \(j\), <strong>согласованная</strong> с \(f\): \(F(v, \dots, v) = f(v)\).</div>
+  <div class="two-col" style="font-size:.84em">
+    <div class="note"><span class="lbl">Аналог</span>Интегральная форма на ячейке, верная и для разрывных решений:
+      \[ \bar u_j^{n+1} = \bar u_j^n - \frac\tau h\bigl(\bar f_{j+1/2} - \bar f_{j-1/2}\bigr), \]
+      \(\bar u_j\) — среднее по ячейке, \(\bar f_{j+1/2}\) — среднее по шагу значение потока на границе.</div>
+    <div class="note"><span class="lbl">Роль</span>Поток \(F_{j+1/2}\) входит в уравнения ячеек \(j\) и \(j+1\) с противоположными знаками: «масса», покидающая ячейку \(j\), поступает в ячейку \(j+1\). Отсюда дискретный закон сохранения и теорема Лакса–Вендроффа.</div>
+  </div>
+  <p class="bridge">Свойство относится к паре «схема — закон сохранения».</p>
 </section>
 
 <!-- 5 -->
 <section class="slide">
-  <div class="slide-num">§8.2 · Определение 8.1</div>
-  <h2>Консервативная схема относительно закона сохранения</h2>
-  <div class="definition" data-num="8.1" style="font-size:.88em">
-    Разностная схема называется <strong>консервативной относительно закона сохранения (8.1)</strong>, если она записывается в виде
-    \[ y_j^{n+1} = y_j - \frac{\tau}{h}\bigl(F_{j+1/2} - F_{j-1/2}\bigr), \qquad F_{j+1/2} = F\bigl(y_{j-p+1}, \dots, y_{j+q}\bigr), \tag{8.2} \]
-    где <strong>численный поток</strong> \(F\) — функция \(p + q\) аргументов, одна и та же для всех \(j\), <strong>согласованная</strong> с потоком \(f\):
-    \[ F(v, v, \dots, v) = f(v) \quad \text{для всех } v. \]
+  <div class="slide-num">§8.2 · Замечание к определению 8.1</div>
+  <h2>Одно уравнение — разные законы сохранения</h2>
+  <div class="eq">\[ \text{(а)}\ \ u_t + \Bigl(\frac{u^2}{2}\Bigr)_x = 0, \qquad \text{(б)}\ \ (u^2)_t + \Bigl(\frac{2u^3}{3}\Bigr)_x = 0, \qquad \text{(в)}\ \ u_t + u\,u_x = 0. \]</div>
+  <div class="two-col" style="font-size:.86em">
+    <div class="note"><span class="lbl">Разрывные решения</span>Для гладких решений (а), (б), (в) равносильны. Условие Ренкина–Гюгонио \(s = [f]/[u]\) даёт разные скорости разрыва:
+      \[ s_{\text{а}} = \frac{u_l + u_r}{2} = 0{,}8, \qquad s_{\text{б}} = \frac23\,\frac{u_l^2 + u_l u_r + u_r^2}{u_l + u_r} \approx 0{,}867 \]
+      при \(u_l = 1{,}2\), \(u_r = 0{,}4\).</div>
+    <div class="note"><span class="lbl">Следствие</span>Схема, консервативная относительно (а), сохраняет \(\sum_j y_j h\), но не \(\sum_j y_j^2 h\); относительно (б) — наоборот. Запись (в) не дивергентна: построенные по ней схемы не имеют вида (8.2). Сохраняемую величину определяет физическая постановка.</div>
   </div>
-  <div class="two-col" style="font-size:.84em">
-    <div class="note"><span class="lbl">Аналог</span>Интегральная форма (8.1′): \(y_j\) — приближение среднего \(\bar u_j\) по ячейке, \(F_{j+1/2}\) — приближение среднего по шагу потока \(\bar f_{j+1/2}\) через границу \(x_{j+1/2}\).</div>
-    <div class="note"><span class="lbl">Роль</span>Поток \(F_{j+1/2}\) входит в уравнения ячеек \(j\) и \(j+1\) с противоположными знаками: «масса», покидающая ячейку \(j\) через границу \(x_{j+1/2}\), поступает в ячейку \(j+1\). Отсюда — дискретный закон сохранения и теорема Лакса–Вендроффа.</div>
-  </div>
-  <p class="bridge">Свойство относится к паре «схема — закон сохранения»; поясним это на уравнении Бюргерса.</p>
+  <p class="bridge">Консервативная схема сохраняет дискретный аналог интеграла от плотности.</p>
 </section>
 
 <!-- 6 -->
 <section class="slide">
-  <div class="slide-num">§8.2 · Замечание к определению 8.1</div>
-  <h2>Одно уравнение — разные законы сохранения</h2>
-  <p class="lead">Для гладких решений уравнение Бюргерса допускает несколько записей; для разрывных решений они не равносильны.</p>
-  <div class="eq">\[ \text{(а)}\ \ u_t + \Bigl(\frac{u^2}{2}\Bigr)_x = 0, \qquad \text{(б)}\ \ (u^2)_t + \Bigl(\frac{2u^3}{3}\Bigr)_x = 0, \qquad \text{(в)}\ \ u_t + u\,u_x = 0. \]</div>
-  <div class="two-col" style="font-size:.84em">
-    <div class="note"><span class="lbl">Разрывные решения</span>Условие Ренкина–Гюгонио \(s = [f]/[u]\) даёт разные скорости разрыва:
-      \[ s_{\text{а}} = \frac{u_l + u_r}{2}, \qquad s_{\text{б}} = \frac23\,\frac{u_l^2 + u_l u_r + u_r^2}{u_l + u_r}; \]
-      при \(u_l = 1{,}2\), \(u_r = 0{,}4\): \(s_{\text{а}} = 0{,}8\), \(s_{\text{б}} \approx 0{,}867\).</div>
-    <div class="note"><span class="lbl">Следствие для схем</span>Схема, консервативная относительно (а), сохраняет \(\sum_j y_j h\), но не \(\sum_j y_j^2 h\); относительно (б) — наоборот. Запись (в) не является дивергентной: построенная по ней схема не имеет вида (8.2) ни с каким согласованным потоком. Какая величина должна сохраняться, определяет физическая постановка задачи.</div>
-  </div>
-  <p class="bridge">Докажем, что консервативная схема сохраняет дискретный аналог интеграла от плотности.</p>
+  <div class="slide-num">§8.2 · Утверждение 8.1</div>
+  <h2>Дискретный закон сохранения</h2>
+  <div class="theorem" style="font-size:0.79em"><strong>Утверждение 8.1.</strong> Для схемы (8.2) на сетке \(j = 1, \dots, N\)
+    \[ \sum_{j=1}^{N} y_j^{n+1}h = \sum_{j=1}^{N} y_j h - \tau\bigl(F_{N+1/2} - F_{1/2}\bigr); \]
+    на периодической сетке \(\sum_j y_j h\) не зависит от \(n\).</div>
+  <div class="proof" style="font-size:0.77em"><strong>Доказательство.</strong> Умножим (8.2) на \(h\) и просуммируем по \(j\); поток \(F_{j+1/2}\), \(1 \le j \le N-1\), входит в слагаемые с номерами \(j\) и \(j+1\) с противоположными знаками, поэтому \(\sum_{j=1}^{N}\bigl(F_{j+1/2} - F_{j-1/2}\bigr) = F_{N+1/2} - F_{1/2}\). При периодических условиях \(F_{N+1/2} = F_{1/2}\). ∎</div>
+  <div class="note" style="font-size:0.74em"><span class="lbl">Аналог и роль</span>\(\tfrac{d}{dt}\int_0^l u\,dx = f\bigl(u(0,t)\bigr) - f\bigl(u(l,t)\bigr)\). «Масса» меняется только через границы; на периодической сетке сохраняется до ошибок округления — проверка программы.</div>
+  <p class="bridge">Сохранение интеграла определяет скорость разрыва в пределе.</p>
 </section>
 
 <!-- 7 -->
 <section class="slide">
-  <div class="slide-num">§8.2 · Утверждение 8.1</div>
-  <h2>Дискретный закон сохранения</h2>
-  <div class="theorem" style="font-size:0.71em"><strong>Утверждение 8.1.</strong> Для схемы (8.2) на сетке \(j = 1, \dots, N\)
-    \[ \sum_{j=1}^{N} y_j^{n+1}h = \sum_{j=1}^{N} y_j^n h - \tau\bigl(F_{N+1/2} - F_{1/2}\bigr); \]
-    на периодической сетке \(\sum_j y_j^n h\) не зависит от \(n\).</div>
-  <div class="proof" style="font-size:0.69em"><strong>Доказательство.</strong> Умножим (8.2) на \(h\) и просуммируем по \(j\). Сумма разностей потоков телескопическая: поток \(F_{j+1/2}\), \(1 \le j \le N-1\), входит в слагаемое с номером \(j\) со знаком «+» и в слагаемое с номером \(j+1\) со знаком «−»:
-    \[ \sum_{j=1}^{N}\bigl(F_{j+1/2} - F_{j-1/2}\bigr) = F_{N+1/2} - F_{1/2}. \]
-    При периодических условиях \(F_{N+1/2} = F_{1/2}\). ∎</div>
-  <div class="note" style="font-size:0.65em"><span class="lbl">Аналог и роль</span>Аналог — \(\tfrac{d}{dt}\int_0^l u\,dx = f\bigl(u(0,t)\bigr) - f\bigl(u(l,t)\bigr)\). «Масса» меняется только через границы; на периодической сетке сохраняется до ошибок округления, что служит проверкой программы.</div>
-  <p class="bridge">Сохранение интеграла определяет скорость разрыва в пределе — теорема Лакса–Вендроффа.</p>
+  <div class="slide-num">§8.2 · Теорема Лакса–Вендроффа · Пример 8.1</div>
+  <h2>Предел консервативной схемы — слабое решение</h2>
+  <div class="theorem" style="font-size:.84em"><strong>Теорема (Лакс, Вендрофф, 1960).</strong> Пусть схема (8.2) консервативна относительно (8.1), поток \(F\) непрерывен и согласован, и при \(h \to 0\), \(\tau/h = \mathrm{const}\), решения сходятся в \(L_1\) на ограниченных множествах к \(u(x, t)\), причём \(\mathrm{TV}(y^n)\) равномерно ограничены. Тогда \(u\) — слабое решение (8.1); на разрывах выполнено условие Ренкина–Гюгонио \(s\,[u] = [f(u)]\).</div>
+  <div class="example" style="font-size:.84em"><span class="lbl">Пример 8.1. Уравнение Бюргерса</span>\(u_l = 1{,}2\), \(u_r = 0{,}4\), разрыв из точки \(x = 0{,}25\); точное положение при \(t = 0{,}5\): \(x = 0{,}65\).
+    \[ \text{конс. (а):}\ \ y_j^{n+1} = y_j - \frac\tau h\Bigl(\frac{y_j^2}{2} - \frac{y_{j-1}^2}{2}\Bigr), \qquad \text{по записи (в):}\ \ y_j^{n+1} = y_j - \frac\tau h\,y_j\,(y_j - y_{j-1}). \]
+    <table style="width:100%">
+      <tr><th style="text-align:left">схема</th><th>\(N = 400\)</th><th>\(N = 800\)</th><th>скорость разрыва</th></tr>
+      <tr><td>консервативная</td><td>0,651</td><td>0,651</td><td>0,80</td></tr>
+      <tr><td>по записи (в)</td><td>0,586</td><td>0,587</td><td>0,67</td></tr>
+    </table></div>
+  <p class="bridge">Погрешность неконсервативной схемы не убывает при измельчении сетки. Когда линейная схема консервативна?</p>
 </section>
 
 <!-- 8 -->
 <section class="slide">
-  <div class="slide-num">§8.2 · Теорема Лакса–Вендроффа</div>
-  <h2>Предел консервативной схемы — слабое решение</h2>
-  <div class="theorem" style="font-size:.88em"><strong>Теорема (Лакс, Вендрофф, 1960).</strong> Пусть схема (8.2) консервативна относительно (8.1), численный поток \(F\) непрерывен и согласован с \(f\), и при \(h \to 0\), \(\tau/h = \mathrm{const}\), её решения сходятся в \(L_1\) на каждом ограниченном множестве к функции \(u(x, t)\), причём \(\mathrm{TV}(y^n)\) ограничены равномерно. Тогда \(u\) — слабое решение (8.1): для всякой гладкой финитной функции \(\psi\)
-    \[ \int_0^\infty\!\!\int_{-\infty}^{\infty}\bigl(u\,\psi_t + f(u)\,\psi_x\bigr)\,dx\,dt + \int_{-\infty}^{\infty} u(x, 0)\,\psi(x, 0)\,dx = 0, \]
-    и на линиях разрыва выполнено условие Ренкина–Гюгонио \(s\,[u] = [f(u)]\).</div>
-  <div class="two-col" style="font-size:.84em">
-    <div class="note"><span class="lbl">Что предполагается</span>Сходимость схемы — условие теоремы, а не её вывод. Теорема определяет, к какому объекту сходится консервативная схема, если сходится.</div>
-    <div class="note"><span class="lbl">Где используется консервативность</span>Суммирование по частям в \(\sum_{j,n}\bigl(F_{j+1/2} - F_{j-1/2}\bigr)\psi_j^n\) переносит разность на пробную функцию; для неконсервативной схемы такой перенос невозможен.</div>
-  </div>
-  <p class="bridge">Численный пример: консервативная и неконсервативная схемы для уравнения Бюргерса.</p>
+  <div class="slide-num">§8.3 · Утверждение 8.2 · Алгоритм 8.1</div>
+  <h2>Консервативная форма линейной схемы</h2>
+  <div class="theorem" style="font-size:.86em"><strong>Утверждение 8.2.</strong> Линейная схема \(y_j^{n+1} = \sum_\mu\alpha_\mu\,y_{j+\mu}\) с постоянными коэффициентами и \(\sum_\mu\alpha_\mu = 1\) записывается в виде (8.2) с линейным потоком; поток согласован с \(f = au\) тогда и только тогда, когда \(\sum_\mu\mu\,\alpha_\mu = -r\) — условие первого порядка (теорема 1 §7).</div>
+  <div class="example" style="font-size:.86em"><span class="lbl">Алгоритм 8.1 (нахождение потока)</span>
+    <ol style="margin:.2rem 0 0 1.2rem">
+      <li>Записать приращение в виде \(y_j^{n+1} - y_j = -\tfrac\tau h\,[\ \cdots\ ]\).</li>
+      <li>Выразить разности в скобке через \(\Delta_{j\pm1/2}\): \(\ y_{j+1} - y_{j-1} = \Delta_{j+1/2} + \Delta_{j-1/2}\), \(\ y_{j+1} - 2y_j + y_{j-1} = \Delta_{j+1/2} - \Delta_{j-1/2}\).</li>
+      <li>Найти \(F_{j+1/2}\), для которого \(F_{j+1/2} - F_{j-1/2}\) совпадает со скобкой. Общий способ — <strong>метод неопределённых коэффициентов</strong> (§7): \(F_{j+1/2} = \sum_k b_k\,y_{j+k}\), коэффициенты при каждом \(y_{j+k}\) приравниваются.</li>
+      <li>Проверить согласованность \(F(v, \dots, v) = av\) и восстановить схему подстановкой в (8.2).</li>
+    </ol></div>
+  <p class="bridge">Применим алгоритм к опорным схемам.</p>
 </section>
 
 <!-- 9 -->
 <section class="slide">
-  <div class="slide-num">§8.2 · Пример 8.1</div>
-  <h2>Скорость разрыва в консервативной и неконсервативной схемах</h2>
-  <p class="lead">Уравнение Бюргерса, \(u(x, 0) = 1{,}2\) при \(x \lt 0{,}25\) и \(0{,}4\) при \(x > 0{,}25\); по (а) \(s = 0{,}8\), при \(t = 0{,}5\) разрыв в точке \(0{,}65\). Обе схемы — первого порядка, разности против потока, \(\max|a|\,\tau/h = 0{,}8\):</p>
-  <div class="eq">\[ \text{конс. относительно (а):}\ \ y_j^{n+1} = y_j - \frac\tau h\Bigl(\frac{y_j^2}{2} - \frac{y_{j-1}^2}{2}\Bigr), \qquad \text{по записи (в):}\ \ y_j^{n+1} = y_j - \frac\tau h\,y_j\,(y_j - y_{j-1}). \]</div>
-  <div class="two-col" style="font-size:.86em">
-    <div class="note"><span class="lbl">Положение разрыва при \(t = 0{,}5\)</span>
-      <table style="width:100%">
-        <tr><th style="text-align:left">схема</th><th>\(N = 400\)</th><th>\(N = 800\)</th><th>скорость</th></tr>
-        <tr><td>точное решение</td><td>0,650</td><td>0,650</td><td>0,80</td></tr>
-        <tr><td>консервативная</td><td>0,651</td><td>0,651</td><td>0,80</td></tr>
-        <tr><td>по записи (в)</td><td>0,586</td><td>0,587</td><td>0,67</td></tr>
-      </table></div>
-    <div class="note"><span class="lbl">Вывод</span>Погрешность положения разрыва у неконсервативной схемы не убывает при измельчении сетки: схема сходится к функции, не являющейся слабым решением задачи (а). Консервативная схема воспроизводит скорость Ренкина–Гюгонио.</div>
+  <div class="slide-num">§8.3 · Пример 8.2</div>
+  <h2>Потоки противопоточной схемы и схемы Лакса–Вендроффа</h2>
+  <div class="two-col wide-right" style="font-size:0.78em">
+    <div class="example"><span class="lbl">Противопоточная схема</span>
+      \[ y_j^{n+1} = y_j - \frac\tau h\bigl(a\,y_j - a\,y_{j-1}\bigr) \ \Rightarrow\ F^{\text{up}}_{j+1/2} = a\,y_j. \]</div>
+    <div class="example"><span class="lbl">Схема Лакса–Вендроффа, шаги 1–2</span>Приращение \(y_j^{n+1} - y_j = -\tfrac\tau h\,[\ \cdots\ ]\), где
+\[ \begin{aligned}{[\ \cdots\ ]} &= \frac{a(1-r)}{2}\Delta_{j+1/2} + \frac{a(1+r)}{2}\Delta_{j-1/2}\\ &= a\,\Delta_{j-1/2} + \frac{a(1-r)}{2}\bigl(\Delta_{j+1/2} - \Delta_{j-1/2}\bigr). \end{aligned} \]</div>
   </div>
-  <p class="bridge">Первый пункт практической работы — запись схемы варианта в консервативной форме. Когда такая запись существует?</p>
+  <div class="eq">\[ F^{\text{ЛВ}}_{j+1/2} = \underbrace{a\,y_j}_{F^{\text{up}}_{j+1/2}} + \underbrace{\frac{a(1 - r)}{2}\,\Delta_{j+1/2}}_{\text{антидиффузионная поправка}} \]</div>
+  <p style="font-size:0.77em;text-align:center">В общем виде: \(F^{\text{up}}_{j+1/2} = a^+y_j + a^-y_{j+1}\), поправка \(\tfrac{|a|}{2}(1 - |r|)\,\Delta_{j+1/2}\).</p>
+  <div class="callout" style="font-size:0.77em">Вклад поправки в схему: \(-\tfrac{r(1-r)}{2}\,(y_{j+1} - 2y_j + y_{j-1})\) — отрицательная схемная вязкость, снимающая вязкость \(\nu = \tfrac{ah}{2}(1 - r)\) противопоточной схемы. Поправка повышает порядок до второго и порождает осцилляции у разрывов.</div>
+  <p class="bridge">Те же потоки — в программе.</p>
 </section>
 
 <!-- 10 -->
 <section class="slide">
-  <div class="slide-num">§8.3 · Утверждение 8.2</div>
-  <h2>Консервативность линейных схем для уравнения переноса</h2>
-  <div class="theorem" style="font-size:.86em"><strong>Утверждение 8.2.</strong> Пусть линейная схема \(y_j^{n+1} = \sum_\mu \alpha_\mu\,y_{j+\mu}\) с постоянными коэффициентами удовлетворяет \(\sum_\mu\alpha_\mu = 1\). Тогда (а) она записывается в виде (8.2) с линейным потоком \(F_{j+1/2} = \sum_k b_k\,y_{j+k}\); (б) поток согласован с \(f = au\) тогда и только тогда, когда \(\sum_\mu \mu\,\alpha_\mu = -r\) — условие первого порядка (теорема 1 §7, \(k = 1\)).</div>
-  <div class="proof" style="font-size:.84em"><strong>Доказательство.</strong> Пусть \((Sy)_j = y_{j+1}\) — оператор сдвига, \(P(z) = \sum_\mu\alpha_\mu z^\mu\) — символ схемы: \(y^{n+1} = P(S)\,y\). Так как \(P(1) = 1\), многочлен Лорана \(P(z) - 1\) делится на \(1 - z^{-1}\):
-    \[ P(z) - 1 = \bigl(1 - z^{-1}\bigr)\,Q(z). \]
-    (а) Поток \(F = -\tfrac h\tau\,Q(S)\,y\) даёт \(F_{j+1/2} - F_{j-1/2} = \bigl((I - S^{-1})F\bigr)_j = -\tfrac h\tau\bigl(y^{n+1} - y\bigr)_j\), что и есть (8.2).<br>
-    (б) \(F(v, \dots, v) = -\tfrac h\tau\,Q(1)\,v\); дифференцируя тождество при \(z = 1\), получаем \(Q(1) = P'(1) = \sum_\mu\mu\,\alpha_\mu\). Равенство \(F(v) = av\) равносильно \(\sum_\mu\mu\,\alpha_\mu = -a\tau/h = -r\). ∎</div>
-  <p class="bridge">Доказательство конструктивно; на практике поток удобнее находить преобразованием разностей.</p>
-</section>
-
-<!-- 11 -->
-<section class="slide">
-  <div class="slide-num">§8.3 · Алгоритм 8.1</div>
-  <h2>Приведение линейной схемы к консервативной форме</h2>
-  <p class="lead">Дана схема \(y_j^{n+1} = \sum_\mu\alpha_\mu\,y_{j+\mu}\), аппроксимирующая уравнение переноса. Требуется найти численный поток \(F_{j+1/2}\).</p>
-  <div class="example" style="font-size:.88em"><span class="lbl">Алгоритм 8.1</span>
-    <ol style="margin:.2rem 0 0 1.2rem">
-      <li>Представить приращение в виде \(y_j^{n+1} - y_j = -\dfrac\tau h\bigl[\ \cdots\ \bigr]\).</li>
-      <li>Выразить все разности в скобке через разности на границах ячеек, используя тождества
-        \[ y_{j+1} - y_{j-1} = \Delta_{j+1/2} + \Delta_{j-1/2}, \qquad y_{j+1} - 2y_j + y_{j-1} = \Delta_{j+1/2} - \Delta_{j-1/2}. \]</li>
-      <li>Подобрать \(F_{j+1/2}\) так, чтобы \(F_{j+1/2} - F_{j-1/2}\) совпало со скобкой; \(F_{j-1/2}\) получается из \(F_{j+1/2}\) заменой \(j \to j-1\). При затруднении — \(F_{j+1/2} = \sum_k b_k\,y_{j+k}\) с неизвестными \(b_k\) (метод неопределённых коэффициентов, §7).</li>
-      <li>Проверить согласованность \(F(v, \dots, v) = av\) и восстановить схему подстановкой потока в (8.2).</li>
-    </ol>
-  </div>
-  <p class="bridge">Применим алгоритм к схемам «уголок» и Лакса–Вендроффа при произвольном знаке \(a\).</p>
-</section>
-
-<!-- 12 -->
-<section class="slide">
-  <div class="slide-num">§8.3 · Пример 8.2</div>
-  <h2>Поток схемы «уголок»</h2>
-  <p class="lead" style="font-size:0.88em">Разность берётся против потока: левая при \(a > 0\), правая при \(a \lt 0\).</p>
-  <div class="two-col" style="font-size:0.74em">
-    <div class="example"><span class="lbl">Скорость положительна</span>
-      \[ y_j^{n+1} = y_j - r\,(y_j - y_{j-1}) = y_j - \frac\tau h\bigl(\underbrace{a\,y_j}_{F_{j+1/2}} - \underbrace{a\,y_{j-1}}_{F_{j-1/2}}\bigr). \]</div>
-    <div class="example"><span class="lbl">Скорость отрицательна</span>
-      \[ y_j^{n+1} = y_j - r\,(y_{j+1} - y_j) = y_j - \frac\tau h\bigl(\underbrace{a\,y_{j+1}}_{F_{j+1/2}} - \underbrace{a\,y_{j}}_{F_{j-1/2}}\bigr). \]</div>
-  </div>
-  <div class="note" style="font-size:0.74em"><span class="lbl">Единая запись</span>Обозначим положительную и отрицательную части скорости
-    \[ a^+ = \max(a, 0) = \frac{a + |a|}{2}, \qquad a^- = \min(a, 0) = \frac{a - |a|}{2}, \qquad a^+ + a^- = a,\quad a^+ - a^- = |a|. \]
-    Тогда при любом знаке \(a\)
-    \[ F^{\text{уг}}_{j+1/2} = a^+\,y_j + a^-\,y_{j+1}: \]
-    через границу \(x_{j+1/2}\) переносится значение из ячейки, лежащей выше по потоку; \(F^{\text{уг}}(v, v) = av\).</div>
-  <p class="bridge">Схема Лакса–Вендроффа записывается одной формулой при любом знаке \(r\); найдём её поток.</p>
-</section>
-
-<!-- 13 -->
-<section class="slide">
-  <div class="slide-num">§8.3 · Пример 8.3 · шаги 1–2</div>
-  <h2>Схема Лакса–Вендроффа: приращение через разности \(\Delta_{j\pm1/2}\)</h2>
-  <p class="lead" style="font-size:0.89em">Схема второго порядка, одна формула при любом знаке \(r\):</p>
-  <div class="eq">\[ y_j^{n+1} = y_j - \frac r2\,(y_{j+1} - y_{j-1}) + \frac{r^2}{2}\,(y_{j+1} - 2y_j + y_{j-1}). \]</div>
-  <div class="example" style="font-size:0.76em"><span class="lbl">Шаги 1 и 2</span>
-    \[ \begin{aligned} y_j^{n+1} - y_j &= -\frac\tau h\Bigl[\frac a2\,(y_{j+1} - y_{j-1}) - \frac{ar}{2}\,(y_{j+1} - 2y_j + y_{j-1})\Bigr]\\ &= -\frac\tau h\Bigl[\frac{a(1 - r)}{2}\,\Delta_{j+1/2} + \frac{a(1 + r)}{2}\,\Delta_{j-1/2}\Bigr]. \end{aligned} \]</div>
-  <div class="two-col" style="font-size:0.74em">
-    <div class="note"><span class="lbl">Скорость положительна</span>Из \(\tfrac{1+r}{2} = 1 - \tfrac{1-r}{2}\):
-      \[ [\ \cdots\ ] = a\,\Delta_{j-1/2} + \frac{a(1 - r)}{2}\bigl(\Delta_{j+1/2} - \Delta_{j-1/2}\bigr). \]</div>
-    <div class="note"><span class="lbl">Скорость отрицательна</span>Из \(\tfrac{1-r}{2} = 1 - \tfrac{1+r}{2}\):
-      \[ [\ \cdots\ ] = a\,\Delta_{j+1/2} - \frac{a(1 + r)}{2}\bigl(\Delta_{j+1/2} - \Delta_{j-1/2}\bigr). \]</div>
-  </div>
-  <p class="bridge">В каждом случае скобка — разность значений одного выражения на границах \(x_{j+1/2}\) и \(x_{j-1/2}\).</p>
-</section>
-
-<!-- 14 -->
-<section class="slide">
-  <div class="slide-num">§8.3 · Пример 8.3 · шаги 3–4</div>
-  <h2>Поток схемы Лакса–Вендроффа</h2>
-  <p class="lead">При \(a > 0\): \(a = |a|\), \(1 - r = 1 - |r|\); при \(a \lt 0\): \(-a = |a|\), \(1 + r = 1 - |r|\). Оба случая дают одну формулу:</p>
-  <div class="eq">\[ F^{\text{ЛВ}}_{j+1/2} = \underbrace{a^+\,y_j + a^-\,y_{j+1}}_{F^{\text{уг}}_{j+1/2}} + \underbrace{\frac{|a|}{2}\,(1 - |r|)\,\Delta_{j+1/2}}_{\text{антидиффузионная поправка}}, \qquad F^{\text{ЛВ}}(v, v) = av. \]</div>
-  <div class="two-col" style="font-size:.84em">
-    <div class="note"><span class="lbl">Вклад поправки в схему</span>
-      \[ \begin{aligned} -\frac\tau h\,\frac{|a|(1 - |r|)}{2}\bigl(\Delta_{j+1/2} - \Delta_{j-1/2}\bigr)\\ &= -\frac{|r|(1 - |r|)}{2}\,\bigl(y_{j+1} - 2y_j + y_{j-1}\bigr) \end{aligned} \]
-      — вторая разность с отрицательным коэффициентом: снимается схемная вязкость «уголка» \(\nu = \tfrac{|a|h}{2}(1 - |r|)\) (§5).</div>
-    <div class="note"><span class="lbl">Следствие</span>Поправка повышает порядок аппроксимации до второго и порождает осцилляции у разрывов (паспорт схемы, §5). Естественно умножить её на коэффициент из \([0, 1]\), зависящий от решения: \(0\) — «уголок», \(1\) — схема Лакса–Вендроффа.</div>
-  </div>
-  <p class="bridge">Прежде чем вводить такой коэффициент, уточним, какие свойства схемы запрещают осцилляции.</p>
-</section>
-
-<!-- 15 -->
-<section class="slide">
   <div class="slide-num">§8.3 · Программная реализация</div>
   <h2>Консервативная форма в программе</h2>
-  <p class="lead">Элемент \(j\) массива потоков хранит \(F_{j+1/2}\); сдвиг массива на один элемент даёт \(F_{j-1/2}\); \(\tau/h = r/a\).</p>
+  <p class="lead">Элемент \(j\) массива потоков хранит \(F_{j+1/2}\); сдвиг на один элемент даёт \(F_{j-1/2}\); \(\tau/h = r/a\).</p>
   <div class="two-col wide-left" style="font-size:.86em">
     <pre class="code"># F[j] = F_{j+1/2};  np.roll(F, 1)[j] = F_{j-1/2};  np.roll(u, -1)[j] = y_{j+1}
 def step_flux(u, r, flux):
@@ -257,310 +167,176 @@ def flux_upwind(u, r):                               # a+ y_j + a- y_{j+1}
 def flux_lw(u, r):                                   # + |a|(1-|r|)/2 * Delta_{j+1/2}
     return flux_upwind(u, r) + 0.5 * abs(A) * (1 - abs(r)) * (np.roll(u, -1) - u)</pre>
     <div class="note"><span class="lbl">Контроль</span>
-      1. \(\max_j\bigl|\)шаг по формуле схемы − шаг через поток\(\bigr|\) порядка \(10^{-16}\) при \(a = 1\) и \(a = -1\).<br><br>
+      1. Шаг через поток совпадает с исходной формулой схемы до \(10^{-16}\).<br><br>
       2. \(\sum_j y_j^n h\) не меняется по шагам (утверждение 8.1).</div>
   </div>
-  <p class="bridge">Перейдём к свойствам, запрещающим появление осцилляций; первое из них — монотонность.</p>
+  <p class="bridge">Перейдём к свойствам, запрещающим осцилляции.</p>
+</section>
+
+<!-- 11 -->
+<section class="slide">
+  <div class="slide-num">§8.4 · Определение 8.2</div>
+  <h2>Три определения монотонности разностной схемы</h2>
+  <p class="lead">Явная двухслойная схема \(y_j^{n+1} = H\bigl(y_{j-p}, \dots, y_{j+q}\bigr)\); \(H(y)_j\) — значение правой части в узле \(j\).</p>
+  <div class="definition" data-num="8.2а" style="font-size:0.76em"><strong>Схема, сохраняющая монотонность</strong> (Годунов, 1959): монотонная сеточная функция переходит в монотонную в том же смысле:
+    \[ \Delta_{j+1/2} \ge 0 \ \ \forall j \ \Longrightarrow\ \ \Delta^{n+1}_{j+1/2} \ge 0 \ \ \forall j \qquad (\text{и так же для } \le 0). \]</div>
+  <div class="definition" data-num="8.2б" style="font-size:0.76em"><strong>Монотонная схема</strong> (Хартен, Хайман, Лакс, 1976): \(H\) не убывает по каждому аргументу:
+    \[ \frac{\partial H}{\partial y_{j+\mu}} \ge 0, \qquad \mu = -p, \dots, q. \tag{8.4} \]</div>
+  <div class="definition" data-num="8.2в" style="font-size:0.76em"><strong>Схема, сохраняющая порядок</strong> (Фридрихс): для любых сеточных функций \(y\), \(z\)
+    \[ y_j \ge z_j \ \ \forall j \ \Longrightarrow\ \ H(y)_j \ge H(z)_j \ \ \forall j. \]</div>
+  <p class="bridge">Как связаны три определения — лемма 8.1.</p>
+</section>
+
+<!-- 12 -->
+<section class="slide">
+  <div class="slide-num">§8.4 · Лемма 8.1</div>
+  <h2>Связь трёх определений монотонности</h2>
+  <div class="theorem" style="font-size:.84em"><strong>Лемма 8.1.</strong> (1) При дифференцируемой \(H\) определения 8.2б и 8.2в равносильны. (2) Для линейной схемы \(y_j^{n+1} = \sum_\mu\alpha_\mu y_{j+\mu}\), \(\sum_\mu\alpha_\mu = 1\), все три определения равносильны условию \(\alpha_\mu \ge 0\) для всех \(\mu\). (3) Для нелинейных схем из 8.2б следует 8.2а; обратное неверно.</div>
+  <div class="proof" style="font-size:.8em"><strong>Доказательство.</strong> (1) 8.2б ⇒ 8.2в: \(H(y)_j - H(z)_j = \sum_\mu \partial_\mu H(\xi)\,(y_{j+\mu} - z_{j+\mu}) \ge 0\). 8.2в ⇒ 8.2б: при увеличении одного аргумента на \(\varepsilon > 0\) разностное отношение неотрицательно; в пределе \(\partial_\mu H \ge 0\).<br>
+    (2) \(\partial_\mu H = \alpha_\mu\), поэтому 8.2б \(\iff \alpha_\mu \ge 0\). При \(\alpha_\mu \ge 0\) разности \(\Delta^{n+1}_{j+1/2} = \sum_\mu\alpha_\mu\Delta_{j+\mu+1/2}\) сохраняют знак — выполнено 8.2а. Обратно, ступенька \(y_j = 1\) (\(j \le 0\)), \(0\) (\(j > 0\)) даёт \(\Delta^1_{j+1/2} = -\alpha_{-j}\); по 8.2а все \(\Delta^1_{j+1/2} \le 0\), т. е. \(\alpha_\mu \ge 0\).<br>
+    (3) 8.2б ⇒ TVD ⇒ 8.2а (Хартен, 1983). Схемы с ограничителем потока (§10) удовлетворяют 8.2а, но не 8.2б. ∎</div>
+  <div class="callout" style="font-size:.82em">Далее «монотонная схема» — в смысле 8.2б. Противопоточная схема: \(\alpha_{-1} = r\), \(\alpha_0 = 1 - r\) — монотонна при \(0 \le r \le 1\). Схема Лакса–Вендроффа: \(\alpha_1 = -\tfrac{r(1-r)}{2} \lt 0\) при \(0 \lt r \lt 1\) — не монотонна.</div>
+  <p class="bridge">Отсутствие новых экстремумов — принцип максимума.</p>
+</section>
+
+<!-- 13 -->
+<section class="slide">
+  <div class="slide-num">§8.4 · Определение 8.4 · Утверждение 8.3</div>
+  <h2>Дискретный принцип максимума</h2>
+  <div class="definition" data-num="8.4" style="font-size:.88em">Схема удовлетворяет <strong>дискретному принципу максимума</strong>, если для всех \(j\) и \(n\)
+    \[ \min_{-p \le \mu \le q} y_{j+\mu} \ \le\ y_j^{n+1}\ \le\ \max_{-p \le \mu \le q} y_{j+\mu}. \tag{8.5} \]</div>
+  <div class="theorem" style="font-size:.86em"><strong>Утверждение 8.3.</strong> Линейная схема с \(\sum_\mu\alpha_\mu = 1\) удовлетворяет (8.5) тогда и только тогда, когда она монотонна.</div>
+  <div class="proof" style="font-size:.84em"><strong>Доказательство.</strong> При \(\alpha_\mu \ge 0\), \(\sum\alpha_\mu = 1\) значение \(y_j^{n+1}\) — выпуклая комбинация значений на шаблоне. Если \(\alpha_\nu \lt 0\), то при \(y_{j+\nu} = 1\) и нулевых остальных значениях \(y_j^{n+1} = \alpha_\nu \lt 0 = \min_\mu y_{j+\mu}\). ∎</div>
+  <div class="note" style="font-size:.82em"><span class="lbl">Аналог и роль</span>Для переноса \(\min u_0 \le u(x, t) \le \max u_0\). Новые экстремумы не возникают; данные из \([0, 1]\) (концентрация, объёмная доля) остаются в \([0, 1]\).</div>
+  <p class="bridge">Глобальная мера осцилляций — полная вариация.</p>
+</section>
+
+<!-- 14 -->
+<section class="slide">
+  <div class="slide-num">§8.4 · Определения 8.5, 8.6</div>
+  <h2>Полная вариация и TVD-схемы</h2>
+  <div class="definition" data-num="8.5" style="font-size:.88em"><strong>Полная вариация</strong> сеточной функции:
+    \[ \mathrm{TV}(y) = \sum_j |\Delta_{j+1/2}| = \sum_j |y_{j+1} - y_j|. \tag{8.7} \]</div>
+  <div class="definition" data-num="8.6" style="font-size:.88em">Схема называется <strong>TVD-схемой</strong> (total variation diminishing, Хартен, 1983), если для любой \(y^n\) с конечной полной вариацией
+    \[ \mathrm{TV}(y^{n+1}) \le \mathrm{TV}(y^n). \tag{8.8} \]</div>
+  <div class="two-col" style="font-size:.84em">
+    <div class="note"><span class="lbl">Аналог</span>\(\mathrm{TV}(u) = \int|u_x|\,dx\). Для переноса \(\mathrm{TV}(u(\cdot, t)) = \mathrm{TV}(u_0)\); для нелинейного закона (8.1) полная вариация энтропийного решения не возрастает.</div>
+    <div class="note"><span class="lbl">Роль</span>Монотонная ступенька: \(\mathrm{TV} = 1\); новый экстремум амплитуды \(\delta\) увеличивает \(\mathrm{TV}\) на \(2\delta\). Свойство TVD проверяется и для нелинейных схем (лемма Хартена).</div>
+  </div>
+  <p class="bridge">Для линейных схем TVD равносильно монотонности.</p>
+</section>
+
+<!-- 15 -->
+<section class="slide">
+  <div class="slide-num">§8.4 · Теорема 8.1</div>
+  <h2>Монотонность и TVD для линейных схем</h2>
+  <div class="theorem" data-num="8.1" style="font-size:0.73em">Пусть \(y_j^{n+1} = \sum_\mu\alpha_\mu\,y_{j+\mu}\), \(\sum_\mu\alpha_\mu = 1\). Схема является TVD-схемой тогда и только тогда, когда она монотонна.</div>
+  <div class="proof" style="font-size:0.72em"><strong>Доказательство.</strong> (а) Монотонность ⇒ TVD. Так как \(\Delta^{n+1}_{j+1/2} = \sum_\mu\alpha_\mu\,\Delta_{j+\mu+1/2}\) и \(\alpha_\mu \ge 0\) (здесь использована монотонность),
+    \[ \mathrm{TV}(y^{n+1}) \le \sum_j\sum_\mu\alpha_\mu\,|\Delta_{j+\mu+1/2}| = \sum_\mu\alpha_\mu\,\mathrm{TV}(y^n) = \mathrm{TV}(y^n). \]
+    (б) TVD ⇒ монотонность. Для ступеньки \(y_j = 1\) (\(j \le 0\)), \(0\) (\(j > 0\)): \(\mathrm{TV}(y) = 1\), \(\Delta^{1}_{j+1/2} = -\alpha_{-j}\),
+    \[ \mathrm{TV}(y^1) = \sum_\mu|\alpha_\mu| \ \ge\ \Bigl|\sum_\mu\alpha_\mu\Bigr| = 1, \]
+    равенство — только при \(\alpha_\mu \ge 0\) для всех \(\mu\). ∎</div>
+  <div class="verdict" style="font-size:0.73em"><strong>Следствие.</strong> Для линейных схем с \(\sum\alpha_\mu = 1\) определения 8.2а–8.2в, принцип максимума (8.5) и TVD (8.8) равносильны; для нелинейных схем они различны.</div>
+  <p class="bridge">Какой порядок совместим с \(\alpha_\mu \ge 0\)?</p>
 </section>
 
 <!-- 16 -->
 <section class="slide">
-  <div class="slide-num">§8.4 · Определение 8.2</div>
-  <h2>Монотонная схема</h2>
-  <div class="definition" data-num="8.2" style="font-size:.88em">Явная двухслойная схема \(y_j^{n+1} = H\bigl(y_{j-p}, \dots, y_{j+q}\bigr)\) называется <strong>монотонной</strong> (по Годунову), если функция \(H\) не убывает по каждому аргументу:
-    \[ \frac{\partial H}{\partial y_{j+\mu}} \ge 0, \qquad \mu = -p, \dots, q. \tag{8.4} \]
-    Для линейной схемы \(y_j^{n+1} = \sum_\mu\alpha_\mu\,y_{j+\mu}\) условие (8.4) равносильно \(\alpha_\mu \ge 0\) для всех \(\mu\).</div>
-  <div class="callout" style="font-size:.86em">Равносильная формулировка (Фридрихс): из \(y_j \ge z_j\) при всех \(j\) следует \(y_j^{n+1} \ge z_j^{n+1}\) при всех \(j\); по теореме о среднем \(H(y) - H(z) = \sum_\mu \partial_\mu H(\xi)\,(y_{j+\mu} - z_{j+\mu}) \ge 0\).</div>
-  <div class="two-col" style="font-size:.84em">
-    <div class="note"><span class="lbl">Аналог</span>Принцип сравнения для (8.1): из \(u_0(x) \le v_0(x)\) следует \(u(x, t) \le v(x, t)\) при всех \(t > 0\). Для переноса оба профиля сдвигаются на одно и то же расстояние.</div>
-    <div class="note"><span class="lbl">Роль</span>Монотонность влечёт принцип максимума и невозрастание полной вариации (теорема 8.1); для линейных схем она ограничивает порядок первым (теорема 9.1).</div>
-  </div>
-  <p class="bridge">Проверим определение на схемах «уголок» и Лакса–Вендроффа.</p>
+  <div class="slide-num">§9 · Теорема 9.1</div>
+  <h2>Теорема Годунова</h2>
+  <p class="lead">Условия порядка \(p\) из метода неопределённых коэффициентов (теорема 1 §7): \(\sum_\mu\alpha_\mu(-\mu)^k = r^k\), \(k = 0, \dots, p\). При \(p = 2\):</p>
+  <div class="eq">\[ \sum_\mu\alpha_\mu = 1, \tag{9.3} \qquad \]</div>
+  <div class="eq">\[ \sum_\mu \mu\,\alpha_\mu = -r, \tag{9.5} \]</div>
+  <div class="eq">\[ \sum_\mu \mu^2\,\alpha_\mu = r^2. \tag{9.6} \]</div>
+  <div class="theorem" data-num="9.1" style="font-size:.9em"><strong>(Годунов, 1959).</strong> Линейная монотонная схема \(y_j^{n+1} = \sum_\mu\alpha_\mu\,y_{j+\mu}\) с постоянными коэффициентами, аппроксимирующая уравнение переноса, при нецелом \(r\) имеет порядок аппроксимации не выше первого. По теореме 8.1 то же верно для линейных TVD-схем.</div>
+  <p class="bridge">Условия (9.3)–(9.6) — первые три момента весов \(\alpha_\mu\); у точного решения это моменты единичной массы в точке \(-r\).</p>
 </section>
 
 <!-- 17 -->
 <section class="slide">
-  <div class="slide-num">§8.4 · Пример 8.4</div>
-  <h2>Монотонность схем «уголок» и Лакса–Вендроффа</h2>
-  <p class="lead">Монотонность линейной схемы проверяется по знакам коэффициентов.</p>
-  <div class="two-col" style="font-size:.86em">
-    <div class="example"><span class="lbl">«Уголок», \(a > 0\)</span>
-      \[ y_j^{n+1} = r\,y_{j-1} + (1 - r)\,y_j: \qquad \alpha_{-1} = r,\ \ \alpha_0 = 1 - r. \]
-      Монотонна \(\iff 0 \le r \le 1\) — условие Куранта. При \(a \lt 0\) — то же с \(|r|\).</div>
-    <div class="example"><span class="lbl">Лакс–Вендрофф</span>
-      \[ \alpha_{-1} = \frac{r(1 + r)}{2}, \qquad \alpha_0 = 1 - r^2, \qquad \alpha_1 = -\frac{r(1 - r)}{2}. \]
-      При \(0 \lt r \lt 1\) отрицателен \(\alpha_1\), при \(-1 \lt r \lt 0\) — \(\alpha_{-1}\): схема не монотонна ни при каком нецелом \(r\).</div>
+  <div class="slide-num">§9 · Доказательство теоремы 9.1</div>
+  <h2>Доказательство теоремы Годунова</h2>
+  <div class="proof" style="font-size:0.83em">
+    <p><strong>Этап 1 (предположение).</strong> Пусть \(\alpha_\mu \ge 0\) для всех \(\mu\) и порядок не ниже второго: выполнены (9.3), (9.5), (9.6).</p>
+    <p><strong>Этап 2 (тождество).</strong> Раскрывая квадрат и подставляя (9.6), (9.5), (9.3):</p>
+    \[ \sum_\mu\alpha_\mu\,(\mu + r)^2 = \sum_\mu\mu^2\alpha_\mu + 2r\sum_\mu\mu\,\alpha_\mu + r^2\sum_\mu\alpha_\mu = r^2 - 2r^2 + r^2 = 0. \tag{9.7} \]
+    <p>Монотонность здесь не использована: (9.7) верно для любой схемы второго порядка.</p>
+    <p><strong>Этап 3 (здесь использована монотонность).</strong> Все слагаемые в (9.7) неотрицательны, сумма равна нулю, поэтому \(\alpha_\mu(\mu + r)^2 = 0\) для всех \(\mu\): \(\alpha_\mu \ne 0\) только при \(\mu = -r\).</p>
+    <p><strong>Этап 4 (противоречие).</strong> Узлы \(\mu\) — целые; при нецелом \(r\) все \(\alpha_\mu = 0\), что противоречит (9.3). ∎</p>
   </div>
-  <div class="callout" style="font-size:.86em">Отрицательный коэффициент \(\alpha_\mu\) означает, что увеличение значения в узле \(j + \mu\) уменьшает \(y_j^{n+1}\); на разрыве это создаёт новый экстремум.</div>
-  <p class="bridge">Отсутствие новых экстремумов формулируется как принцип максимума.</p>
+  <div class="verdict" style="font-size:0.83em"><strong>Следствие 9.1.</strong> Схема второго порядка, не порождающая осцилляций, обязана быть нелинейной: её коэффициенты зависят от решения.</div>
+  <p class="bridge">Для нелинейных схем свойство TVD проверяется леммой Хартена.</p>
 </section>
 
 <!-- 18 -->
 <section class="slide">
-  <div class="slide-num">§8.4 · Определение 8.4</div>
-  <h2>Дискретный принцип максимума</h2>
-  <div class="definition" data-num="8.4" style="font-size:0.80em">Схема удовлетворяет <strong>дискретному принципу максимума</strong>, если для всех \(j\) и \(n\)
-    \[ \min_{-p \le \mu \le q} y_{j+\mu} \ \le\ y_j^{n+1}\ \le\ \max_{-p \le \mu \le q} y_{j+\mu}. \tag{8.5} \]</div>
-  <div class="theorem" style="font-size:0.78em"><strong>Утверждение 8.3.</strong> Линейная схема с \(\sum_\mu\alpha_\mu = 1\) удовлетворяет (8.5) тогда и только тогда, когда она монотонна.</div>
-  <div class="proof" style="font-size:0.76em"><strong>Доказательство.</strong> Если \(\alpha_\mu \ge 0\) и \(\sum\alpha_\mu = 1\), то \(y_j^{n+1}\) — выпуклая комбинация значений на шаблоне и лежит между их минимумом и максимумом. Если \(\alpha_\nu \lt 0\), возьмём \(y_{j+\nu} = 1\), остальные значения на шаблоне равны нулю: тогда \(y_j^{n+1} = \alpha_\nu \lt 0 = \min_\mu y_{j+\mu}\). ∎</div>
-  <div class="two-col" style="font-size:0.76em">
-    <div class="note"><span class="lbl">Аналог</span>Решение уравнения переноса постоянно вдоль характеристик, поэтому \(\min u_0 \le u(x, t) \le \max u_0\).</div>
-    <div class="note"><span class="lbl">Роль</span>Новые локальные экстремумы не возникают; данные из \([0, 1]\) (концентрация, объёмная доля) остаются в \([0, 1]\).</div>
-  </div>
-  <p class="bridge">Принцип максимума локален; глобальной мерой осцилляций служит полная вариация.</p>
+  <div class="slide-num">§10.1 · Теорема 10.2 (лемма Хартена)</div>
+  <h2>Достаточное условие TVD для нелинейных схем</h2>
+  <div class="theorem" data-num="10.2" style="font-size:.86em"><strong>(Хартен, 1983).</strong> Пусть схема записана в приращениях
+    \[ y_j^{n+1} = y_j + C_{j+1/2}\,\Delta_{j+1/2} - D_{j-1/2}\,\Delta_{j-1/2}, \tag{10.4} \]
+    коэффициенты могут зависеть от \(y^n\), и для всех \(j\): \(C_{j+1/2} \ge 0\), \(D_{j+1/2} \ge 0\), \(C_{j+1/2} + D_{j+1/2} \le 1\). Тогда схема TVD.</div>
+  <div class="proof" style="font-size:.84em"><strong>Доказательство.</strong> Вычитая (10.4) для узлов \(j+1\) и \(j\):
+    \[ \Delta^{n+1}_{j+1/2} = \bigl(1 - C_{j+1/2} - D_{j+1/2}\bigr)\Delta_{j+1/2} + C_{j+3/2}\,\Delta_{j+3/2} + D_{j-1/2}\,\Delta_{j-1/2}. \]
+    Все множители неотрицательны (здесь использованы условия теоремы). Берём модуль, суммируем по \(j\), сдвигаем индексы: при каждом \(|\Delta_{j+1/2}|\) коэффициент \((1 - C - D) + C + D = 1\), откуда \(\mathrm{TV}(y^{n+1}) \le \mathrm{TV}(y^n)\). ∎</div>
+  <div class="note" style="font-size:.82em"><span class="lbl">Пример</span>Противопоточная схема: \(y_j^{n+1} = y_j - r\,\Delta_{j-1/2}\), \(C = 0\), \(D = r\) — TVD при \(0 \le r \le 1\). Для схемы Лакса–Вендроффа \(C = -\tfrac{r(1-r)}{2} \lt 0\).</div>
+  <p class="bridge">Построим нелинейную схему, удовлетворяющую лемме и имеющую второй порядок.</p>
 </section>
 
 <!-- 19 -->
 <section class="slide">
-  <div class="slide-num">§8.4 · Определение 8.5</div>
-  <h2>Полная вариация сеточной функции</h2>
-  <div class="definition" data-num="8.5" style="font-size:.88em"><strong>Полной вариацией</strong> сеточной функции \(y\) называется величина
-    \[ \mathrm{TV}(y) = \sum_j |\Delta_{j+1/2}| = \sum_j |y_{j+1} - y_j|. \tag{8.7} \]</div>
-  <div class="two-col" style="font-size:.86em">
-    <div class="note"><span class="lbl">Аналог</span>Полная вариация функции: \(\mathrm{TV}(u) = \displaystyle\int |u_x|\,dx\) для гладкой \(u\); в общем случае — верхняя грань \(\sum_k |u(x_{k+1}) - u(x_k)|\) по всем разбиениям. Сеточная величина (8.7) — значение этой суммы на разбиении, порождённом сеткой.</div>
-    <div class="note"><span class="lbl">Роль</span>Мера суммарной изрезанности профиля. Монотонная ступенька от \(0\) до \(1\): \(\mathrm{TV} = 1\) при любом числе узлов на переходе. Новый локальный экстремум амплитуды \(\delta\) увеличивает \(\mathrm{TV}\) на \(2\delta\).</div>
+  <div class="slide-num">§10.2 · Определение 10.3</div>
+  <h2>Схема с ограничителем потока</h2>
+  <div class="definition" data-num="10.3" style="font-size:.85em"><strong>Схемой с ограничителем потока</strong> называется схема (8.2) с потоком
+    \[ F_{j+1/2} = a^+y_j + a^-y_{j+1} + \frac{|a|}{2}\,(1 - |r|)\,\varphi(\theta_{j+1/2})\,\Delta_{j+1/2}, \qquad \theta_{j+1/2} = \frac{\Delta_{j+1/2-\sigma}}{\Delta_{j+1/2}}, \quad \sigma = \operatorname{sign} a, \tag{10.5} \]
+    где \(\varphi\) — заданная функция, <strong>ограничитель</strong>. При \(a > 0\):
+    \[ F_{j+1/2} = a\,y_j + \frac{a(1 - r)}{2}\,\varphi(\theta_{j+1/2})\,\Delta_{j+1/2}, \qquad \theta_{j+1/2} = \frac{\Delta_{j-1/2}}{\Delta_{j+1/2}}. \]</div>
+  <div class="two-col" style="font-size:.84em">
+    <div class="note"><span class="lbl">Частные случаи</span>\(\varphi \equiv 0\) — противопоточная схема, \(\varphi \equiv 1\) — схема Лакса–Вендроффа. При постоянном \(\varphi\) схема линейна (теорема 9.1); нелинейность — через \(\theta_{j+1/2}\). При \(\Delta_{j+1/2} = 0\) поправка равна нулю.</div>
+    <div class="note"><span class="lbl">Индикатор гладкости</span>Для гладкой \(u\) с \(u_x \ne 0\): \(\theta_{j+1/2} = 1 - h\,u_{xx}/u_x + O(h^2)\). Гладкий монотонный участок — \(\theta \approx 1\); экстремум — \(\theta \lt 0\); разрыв — \(\theta\) близко к нулю или велико.</div>
   </div>
-  <p class="bridge">Требование, чтобы полная вариация не возрастала, — свойство TVD.</p>
+  <p class="bridge">Значение \(\varphi(\theta_{j+1/2})\) допускает три истолкования.</p>
 </section>
 
 <!-- 20 -->
 <section class="slide">
-  <div class="slide-num">§8.4 · Определение 8.6</div>
-  <h2>Схемы с невозрастающей полной вариацией (TVD)</h2>
-  <div class="definition" data-num="8.6" style="font-size:.88em">Схема называется <strong>TVD-схемой</strong> (total variation diminishing, Хартен, 1983), если для любой сеточной функции \(y^n\) с конечной полной вариацией
-    \[ \mathrm{TV}(y^{n+1}) \le \mathrm{TV}(y^n). \tag{8.8} \]</div>
-  <div class="two-col" style="font-size:.86em">
-    <div class="note"><span class="lbl">Аналог</span>Для уравнения переноса \(\mathrm{TV}\bigl(u(\cdot, t)\bigr) = \mathrm{TV}(u_0)\): профиль сдвигается без изменения формы. Для нелинейного закона (8.1) полная вариация энтропийного решения не возрастает.</div>
-    <div class="note"><span class="lbl">Роль</span>Запрет роста осцилляций одним неравенством на весь слой. Проверяется и для нелинейных схем (лемма Хартена, §10); равномерная ограниченность \(\mathrm{TV}\) входит в условия теоремы Лакса–Вендроффа.</div>
-  </div>
-  <p class="bridge">Установим связь между монотонностью и свойством TVD.</p>
+  <div class="slide-num">§10.2 · Смысл \(\varphi\)</div>
+  <h2>Три истолкования значения ограничителя</h2>
+  <div class="note" style="font-size:.85em"><span class="lbl">1. Доля потока Лакса–Вендроффа</span>
+    \[ F_{j+1/2} = \bigl(1 - \varphi\bigr)\,F^{\text{up}}_{j+1/2} + \varphi\,F^{\text{ЛВ}}_{j+1/2}, \qquad \varphi = \varphi(\theta_{j+1/2}). \]</div>
+  <div class="note" style="font-size:.85em"><span class="lbl">2. Схемная вязкость</span>При \(\varphi \approx \mathrm{const}\) первое дифференциальное приближение содержит вязкость
+    \[ \nu_\varphi = \frac{ah}{2}\,(1 - r)\,(1 - \varphi): \qquad \varphi = 0 \text{ — как у противопоточной схемы},\ \ \varphi = 1 \text{ — нулевая},\ \ \varphi > 1 \text{ — отрицательная}. \]</div>
+  <div class="note" style="font-size:.85em"><span class="lbl">3. Ограниченная разность</span>В поправку входит \(\varphi(\theta_{j+1/2})\,\Delta_{j+1/2}\); для ограничителя minmod
+    \[ \varphi(\theta_{j+1/2})\,\Delta_{j+1/2} = \mathrm{minmod}\bigl(\Delta_{j-1/2}, \Delta_{j+1/2}\bigr) = \begin{cases} 0, & \Delta_{j-1/2}\Delta_{j+1/2} \le 0,\\ \text{меньшая по модулю}, & \text{иначе}. \end{cases} \]</div>
+  <p class="bridge">Какие \(\varphi\) обеспечивают свойство TVD — теорема Свеби.</p>
 </section>
 
 <!-- 21 -->
 <section class="slide">
-  <div class="slide-num">§8.4 · Теорема 8.1</div>
-  <h2>Связь монотонности и свойства TVD для линейных схем</h2>
-  <div class="theorem" data-num="8.1" style="font-size:0.78em">Пусть \(y_j^{n+1} = \sum_\mu\alpha_\mu\,y_{j+\mu}\), \(\sum_\mu\alpha_\mu = 1\). Тогда (а) если схема монотонна, она является TVD-схемой; (б) если схема является TVD-схемой, она монотонна.</div>
-  <div class="proof" style="font-size:0.76em"><strong>Доказательство (а).</strong> Коэффициенты не зависят от \(j\), поэтому
-    \[ \Delta^{n+1}_{j+1/2} = y^{n+1}_{j+1} - y^{n+1}_j = \sum_\mu\alpha_\mu\,\Delta_{j+\mu+1/2}. \]
-    Так как \(\alpha_\mu \ge 0\) (здесь использована монотонность),
-    \[ |\Delta^{n+1}_{j+1/2}| \le \sum_\mu\alpha_\mu\,|\Delta_{j+\mu+1/2}|. \]
-    Суммируя по \(j\) и меняя порядок суммирования, получаем
-    \[ \mathrm{TV}(y^{n+1}) \le \sum_\mu\alpha_\mu\sum_j|\Delta_{j+\mu+1/2}| = \sum_\mu\alpha_\mu\,\mathrm{TV}(y^n) = \mathrm{TV}(y^n). \]</div>
-  <p class="bridge">Часть (б) доказывается выбором начальных данных — ступеньки.</p>
+  <div class="slide-num">§10.3 · Теорема 10.3</div>
+  <h2>Условие Свеби</h2>
+  <div class="theorem" data-num="10.3" style="font-size:.88em"><strong>(Свеби, 1984).</strong> Схема (10.5) при \(|r| \le 1\) является TVD-схемой, если
+    \[ \varphi(\theta) = 0 \ \ (\theta \le 0), \qquad 0 \le \varphi(\theta) \le \min(2\theta,\, 2) \ \ (\theta > 0). \tag{10.6} \]</div>
+  <div class="proof" style="font-size:.84em"><strong>Доказательство (\(a > 0\)).</strong> <em>Этап 1.</em> Так как \(\Delta_{j+1/2} = \Delta_{j-1/2}/\theta_{j+1/2}\), схема имеет вид (10.4) с \(C = 0\) и
+    \[ D_{j-1/2} = r\Bigl[1 + \frac{1 - r}{2}\,X\Bigr], \qquad X = \frac{\varphi(\theta_{j+1/2})}{\theta_{j+1/2}} - \varphi(\theta_{j-1/2}). \]
+    <em>Этап 2 (здесь использовано (10.6)).</em> \(0 \le \varphi(\theta)/\theta \le 2\) и \(0 \le \varphi(\theta) \le 2\), поэтому \(-2 \le X \le 2\).<br>
+    <em>Этап 3.</em> \(r^2 \le D_{j-1/2} \le r(2 - r) = 1 - (1 - r)^2 \le 1\); по теореме 10.2 схема TVD. При \(a \lt 0\) — замена \(j \to -j\). ∎</div>
+  <p class="bridge">При \(\theta \le 0\) поправка выключена: в экстремуме схема совпадает с противопоточной. Второй порядок требует условия в точке \(\theta = 1\).</p>
 </section>
 
 <!-- 22 -->
 <section class="slide">
-  <div class="slide-num">§8.4 · Теорема 8.1 · доказательство (б)</div>
-  <h2>Линейная TVD-схема монотонна</h2>
-  <div class="proof" style="font-size:.88em"><strong>Доказательство (б).</strong> Возьмём ступеньку \(y_j^0 = 1\) при \(j \le 0\), \(y_j^0 = 0\) при \(j > 0\). Её единственная ненулевая разность \(\Delta^0_{1/2} = -1\), \(\mathrm{TV}(y^0) = 1\). По формуле из (а)
-    \[ \Delta^1_{j+1/2} = \sum_\mu\alpha_\mu\,\Delta^0_{j+\mu+1/2} = -\alpha_{-j}, \qquad \mathrm{TV}(y^1) = \sum_\mu|\alpha_\mu| \ \ge\ \Bigl|\sum_\mu\alpha_\mu\Bigr| = 1, \]
-    причём равенство достигается тогда и только тогда, когда все \(\alpha_\mu \ge 0\). Если схема TVD, то \(\mathrm{TV}(y^1) \le 1\), следовательно, \(\alpha_\mu \ge 0\) для всех \(\mu\). ∎</div>
-  <div class="verdict" style="font-size:.88em"><strong>Следствие.</strong> Для линейных схем с \(\sum\alpha_\mu = 1\) монотонность, принцип максимума (8.5) и свойство TVD (8.8) равносильны. Для нелинейных схем эти свойства различны.</div>
-  <p class="bridge">Выясним, какой порядок аппроксимации совместим с неотрицательностью коэффициентов.</p>
-</section>
-
-<!-- 23 -->
-<section class="slide">
-  <div class="slide-num">§9.1 · Условия порядка (теорема 1 §7)</div>
-  <h2>Условия аппроксимации как условия на моменты весов</h2>
-  <p class="lead">Линейная схема \(y_j^{n+1} = \sum_\mu\alpha_\mu\,y_{j+\mu}\) аппроксимирует уравнение переноса с порядком \(p\) тогда и только тогда, когда \(\sum_\mu\alpha_\mu(-\mu)^k = r^k\), \(k = 0, 1, \dots, p\) (теорема 1 §7). При \(p = 2\):</p>
-  <div class="eq">\[ \sum_\mu\alpha_\mu = 1, \tag{9.3} \]</div>
-  <div class="eq">\[ \sum_\mu \mu\,\alpha_\mu = -r, \tag{9.5} \]</div>
-  <div class="eq">\[ \sum_\mu \mu^2\,\alpha_\mu = r^2. \tag{9.6} \]</div>
-  <div class="two-col" style="font-size:.84em">
-    <div class="note"><span class="lbl">Аналог</span>Точное решение берёт значение в одной точке \(x_j - rh\): «схема» с единичной массой в точке \(-r\). Её моменты: \(1\), \(-r\), \(r^2, \dots\)</div>
-    <div class="note"><span class="lbl">Роль</span>Условия порядка \(p\) — совпадение первых \(p + 1\) моментов весов \(\alpha_\mu\) с моментами точечной массы в \(-r\). При \(p = 1\) совпадает «центр масс», при \(p = 2\) — и второй момент.</div>
-  </div>
-  <p class="bridge">Неотрицательные веса с теми же первыми тремя моментами, что у точечной массы, обязаны быть точечной массой.</p>
-</section>
-
-<!-- 24 -->
-<section class="slide">
-  <div class="slide-num">§9.2 · Теорема 9.1</div>
-  <h2>Теорема Годунова</h2>
-  <div class="theorem" data-num="9.1" style="font-size:.92em"><strong>(Годунов, 1959).</strong> Линейная монотонная схема \(y_j^{n+1} = \sum_\mu\alpha_\mu\,y_{j+\mu}\) с постоянными коэффициентами, аппроксимирующая уравнение переноса, при нецелом \(r\) имеет порядок аппроксимации не выше первого.</div>
-  <div class="two-col" style="font-size:.86em">
-    <div class="note"><span class="lbl">Условия теоремы</span>Шаблон — любой ширины. Нецелое \(r\) существенно: при целом \(r\) точный сдвиг \(y_j^{n+1} = y_{j-r}\) монотонен и имеет любой порядок.</div>
-    <div class="note"><span class="lbl">Следствие теоремы 8.1</span>Линейная TVD-схема монотонна (теорема 8.1(б)); следовательно, при нецелом \(r\) она также имеет порядок не выше первого.</div>
-  </div>
-  <p class="bridge">Доказательство проводится от противного: предполагаем второй порядок и монотонность.</p>
-</section>
-
-<!-- 25 -->
-<section class="slide">
-  <div class="slide-num">§9.2 · Доказательство теоремы 9.1 · этапы 1–2</div>
-  <h2>Тождество для моментов весов</h2>
-  <div class="proof" style="font-size:.9em">
-    <p><strong>Этап 1 (предположение).</strong> Пусть схема монотонна, \(\alpha_\mu \ge 0\) для всех \(\mu\), и имеет порядок аппроксимации не ниже второго. Тогда выполнены условия (9.3), (9.5), (9.6).</p>
-    <p><strong>Этап 2 (тождество).</strong> Вычислим взвешенную сумму квадратов расстояний от узлов \(\mu\) до точки \(-r\). Раскрывая квадрат и подставляя (9.6), (9.5), (9.3):</p>
-    \[ \sum_\mu\alpha_\mu\,(\mu + r)^2 = \sum_\mu\mu^2\alpha_\mu + 2r\sum_\mu\mu\,\alpha_\mu + r^2\sum_\mu\alpha_\mu = r^2 - 2r\cdot r + r^2\cdot 1 = 0. \tag{9.7} \]
-    <p>На этапе 2 неотрицательность коэффициентов не использована: равенство (9.7) верно для любой схемы второго порядка.</p>
-  </div>
-  <p class="bridge">Используем теперь гипотезу \(\alpha_\mu \ge 0\).</p>
-</section>
-
-<!-- 26 -->
-<section class="slide">
-  <div class="slide-num">§9.2 · Доказательство теоремы 9.1 · этапы 3–4</div>
-  <h2>Неотрицательные веса с нулевым разбросом сосредоточены в одной точке</h2>
-  <div class="proof" style="font-size:.9em">
-    <p><strong>Этап 3 (здесь использована монотонность).</strong> В сумме (9.7) каждое слагаемое \(\alpha_\mu(\mu + r)^2\) неотрицательно, а сумма равна нулю; следовательно,</p>
-    \[ \alpha_\mu\,(\mu + r)^2 = 0 \quad \text{для всех } \mu, \qquad \text{т. е. } \ \alpha_\mu \ne 0 \ \Rightarrow\ \mu = -r. \]
-    <p><strong>Этап 4 (противоречие).</strong> Узлы шаблона — целые числа. При нецелом \(r\) равенство \(\mu = -r\) невозможно, поэтому \(\alpha_\mu = 0\) для всех \(\mu\), что противоречит (9.3). ∎</p>
-  </div>
-  <div class="two-col" style="font-size:.84em">
-    <div class="note"><span class="lbl">Целое \(r\)</span>Остаётся \(\alpha_{-r} = 1\): схема совпадает с точным сдвигом на \(r\) узлов.</div>
-    <div class="note"><span class="lbl">Геометрия §7</span>Для шаблона \(\{-2, -1, 0, 1\}\) при \(0 \lt r \lt 1\) прямая схем второго порядка не пересекает четырёхугольник неотрицательности коэффициентов.</div>
-  </div>
-  <div class="verdict" style="font-size:.88em"><strong>Следствие 9.1.</strong> Схема второго порядка, не порождающая осцилляций, обязана быть нелинейной: её коэффициенты зависят от решения.</div>
-  <p class="bridge">Для нелинейных схем теорема 8.1 неприменима; свойство TVD проверяется леммой Хартена.</p>
-</section>
-
-<!-- 27 -->
-<section class="slide">
-  <div class="slide-num">§10.1 · Теорема 10.2 (лемма Хартена)</div>
-  <h2>Достаточное условие TVD для нелинейных схем</h2>
-  <div class="theorem" data-num="10.2" style="font-size:.9em"><strong>(Хартен, 1983).</strong> Пусть схема записана в приращениях
-    \[ y_j^{n+1} = y_j + C_{j+1/2}\,\Delta_{j+1/2} - D_{j-1/2}\,\Delta_{j-1/2}, \tag{10.4} \]
-    где коэффициенты \(C_{j+1/2}\), \(D_{j+1/2}\) могут зависеть от \(y^n\), и для всех \(j\)
-    \[ C_{j+1/2} \ge 0, \qquad D_{j+1/2} \ge 0, \qquad C_{j+1/2} + D_{j+1/2} \le 1. \]
-    Тогда схема (10.4) является TVD-схемой.</div>
-  <div class="two-col" style="font-size:.84em">
-    <div class="note"><span class="lbl">Смысл условий</span>Новое значение смещается к значениям в соседних узлах (\(C, D \ge 0\)) не далее, чем на величину соответствующей разности (\(C + D \le 1\)).</div>
-    <div class="note"><span class="lbl">Связь с теоремой 8.1</span>Для линейной трёхточечной схемы \(C\), \(D\) постоянны, и условия леммы совпадают с \(\alpha_\mu \ge 0\), \(\sum\alpha_\mu = 1\).</div>
-  </div>
-  <p class="bridge">Доказательство повторяет доказательство теоремы 8.1(а) с переменными коэффициентами.</p>
-</section>
-
-<!-- 28 -->
-<section class="slide">
-  <div class="slide-num">§10.1 · Доказательство теоремы 10.2</div>
-  <h2>Доказательство леммы Хартена</h2>
-  <div class="proof" style="font-size:.9em">
-    <p><strong>Этап 1.</strong> Вычитая (10.4) для узла \(j\) из (10.4) для узла \(j+1\), получаем</p>
-    \[ \Delta^{n+1}_{j+1/2} = \bigl(1 - C_{j+1/2} - D_{j+1/2}\bigr)\Delta_{j+1/2} + C_{j+3/2}\,\Delta_{j+3/2} + D_{j-1/2}\,\Delta_{j-1/2}. \]
-    <p><strong>Этап 2 (здесь использованы условия теоремы).</strong> Все три множителя неотрицательны, поэтому</p>
-    \[ |\Delta^{n+1}_{j+1/2}| \le \bigl(1 - C_{j+1/2} - D_{j+1/2}\bigr)|\Delta_{j+1/2}| + C_{j+3/2}\,|\Delta_{j+3/2}| + D_{j-1/2}\,|\Delta_{j-1/2}|. \]
-    <p><strong>Этап 3.</strong> Суммируя по \(j\) и сдвигая индекс во второй и третьей суммах, получаем при каждом \(|\Delta_{j+1/2}|\) коэффициент \((1 - C - D) + C + D = 1\):</p>
-    \[ \mathrm{TV}(y^{n+1}) \le \sum_j|\Delta_{j+1/2}| = \mathrm{TV}(y^n). \ ∎ \]
-  </div>
-  <p class="bridge">Применим лемму к известным схемам первого порядка.</p>
-</section>
-
-<!-- 29 -->
-<section class="slide">
-  <div class="slide-num">§10.1 · Пример 10.1</div>
-  <h2>Лемма Хартена для схемы «уголок» и схемы Лакса–Вендроффа</h2>
-  <p class="lead">Коэффициенты \(C\), \(D\) находятся представлением схемы через разности \(\Delta_{j\pm1/2}\).</p>
-  <div class="example" style="font-size:.88em"><span class="lbl">Схема «уголок»</span>
-    \[ \begin{aligned}
-    a > 0:&\quad y_j^{n+1} = y_j - r\,\Delta_{j-1/2}, && C = 0,\ \ D = r;\\
-    a \lt 0:&\quad y_j^{n+1} = y_j + |r|\,\Delta_{j+1/2}, && C = |r|,\ \ D = 0.
-    \end{aligned} \]
-    В обоих случаях условия теоремы 10.2 равносильны условию Куранта \(|r| \le 1\).</div>
-  <div class="callout" style="font-size:.86em">Для схемы Лакса–Вендроффа при \(0 \lt r \lt 1\) коэффициент при \(\Delta_{j+1/2}\) равен \(-\tfrac{r(1-r)}{2} \lt 0\): лемма неприменима, и по теореме 8.1(б) схема не является TVD.</div>
-  <p class="bridge">Построим нелинейную схему, коэффициенты \(C\), \(D\) которой удовлетворяют лемме при сохранении второго порядка.</p>
-</section>
-
-<!-- 30 -->
-<section class="slide">
-  <div class="slide-num">§10.2 · Определение 10.3</div>
-  <h2>Схема с ограничителем потока</h2>
-  <div class="definition" data-num="10.3" style="font-size:0.83em"><strong>Схемой с ограничителем потока</strong> для уравнения переноса называется консервативная схема (8.2) с потоком
-    \[ F_{j+1/2} = a^+\,y_j + a^-\,y_{j+1} + \frac{|a|}{2}\,(1 - |r|)\,\varphi\bigl(\theta_{j+1/2}\bigr)\,\Delta_{j+1/2}, \qquad \theta_{j+1/2} = \frac{\Delta_{j+1/2-\sigma}}{\Delta_{j+1/2}}, \quad \sigma = \operatorname{sign} a, \tag{10.5} \]
-    где \(\varphi\colon \mathbb R \to \mathbb R\) — заданная функция, <strong>ограничитель</strong>. В числителе \(\theta_{j+1/2}\) — разность на соседней границе, лежащей выше по потоку:
-    \[ a > 0:\ \ \theta_{j+1/2} = \frac{\Delta_{j-1/2}}{\Delta_{j+1/2}}, \qquad a \lt 0:\ \ \theta_{j+1/2} = \frac{\Delta_{j+3/2}}{\Delta_{j+1/2}}. \]</div>
-  <div class="two-col" style="font-size:0.81em">
-    <div class="note"><span class="lbl">Частные случаи</span>\(\varphi \equiv 0\) — «уголок», \(\varphi \equiv 1\) — схема Лакса–Вендроффа. При \(\Delta_{j+1/2} = 0\) поправка равна нулю при любом \(\theta_{j+1/2}\).</div>
-    <div class="note"><span class="lbl">Нелинейность</span>При постоянном \(\varphi\) схема линейна и подчиняется теореме 9.1. Зависимость от решения вводится только через \(\theta_{j+1/2}\). Для нелинейного закона \(a\) заменяется скоростью \(a_{j+1/2}\) на границе.</div>
-  </div>
-  <p class="bridge">Выясним смысл аргумента \(\theta_{j+1/2}\) и значения \(\varphi\).</p>
-</section>
-
-<!-- 31 -->
-<section class="slide">
-  <div class="slide-num">§10.2 · Смысл \(\theta\)</div>
-  <h2>Отношение соседних разностей как индикатор гладкости</h2>
-  <p class="lead">Пусть \(a > 0\) и \(y_j = u(x_j)\) для гладкой \(u\) с \(u_x(x_j) \ne 0\). Разложение Тейлора в точке \(x_j\) даёт</p>
-  <div class="eq">\[ \theta_{j+1/2} = \frac{h\,u_x - \tfrac{h^2}{2}u_{xx} + O(h^3)}{h\,u_x + \tfrac{h^2}{2}u_{xx} + O(h^3)} = 1 - h\,\frac{u_{xx}}{u_x} + O(h^2). \]</div>
-  <div class="two-col" style="font-size:.84em">
-    <div class="note"><span class="lbl">Значения \(\theta_{j+1/2}\)</span>
-      \(\theta = 1 + O(h)\) — гладкий монотонный участок;<br>
-      \(\theta \lt 0\) — соседние разности разных знаков: экстремум;<br>
-      \(\theta\) близко к нулю или велико — разрыв на одной из двух границ.</div>
-    <div class="note"><span class="lbl">Почему выше по потоку</span>Значение в ячейке на слое \(n+1\) определяется данными, приходящими по характеристикам сверху по потоку. Разность выше по потоку характеризует профиль, который пересечёт границу на следующем шаге; при выборе разности ниже по потоку схема не является TVD.</div>
-  </div>
-  <p class="bridge">Значение \(\varphi(\theta_{j+1/2})\) допускает три равносильных истолкования.</p>
-</section>
-
-<!-- 32 -->
-<section class="slide">
-  <div class="slide-num">§10.2 · Смысл \(\varphi\)</div>
-  <h2>Три истолкования значения ограничителя</h2>
-  <div class="note" style="font-size:0.72em"><span class="lbl">1. Доля потока схемы Лакса–Вендроффа</span>
-    \[ F_{j+1/2} = \bigl(1 - \varphi\bigr)\,F^{\text{уг}}_{j+1/2} + \varphi\,F^{\text{ЛВ}}_{j+1/2}, \qquad \varphi = \varphi(\theta_{j+1/2}); \]
-    значения \(\varphi > 1\) означают поправку с коэффициентом, бо́льшим, чем у схемы Лакса–Вендроффа.</div>
-  <div class="note" style="font-size:0.72em"><span class="lbl">2. Схемная вязкость</span>При \(\varphi \approx \mathrm{const}\) на участке первое дифференциальное приближение содержит вязкость
-    \[ \nu_\varphi = \frac{|a|h}{2}\,(1 - |r|)\,(1 - \varphi): \]
-    \(\varphi = 0\) — вязкость «уголка», \(\varphi = 1\) — нулевая (второй порядок), \(\varphi > 1\) — отрицательная (обострение профиля).</div>
-  <div class="note" style="font-size:0.72em"><span class="lbl">3. Ограниченная разность</span>В поправку входит \(\varphi(\theta_{j+1/2})\,\Delta_{j+1/2}\) вместо \(\Delta_{j+1/2}\). Для ограничителя minmod (\(a > 0\)):
-    \[ \varphi(\theta_{j+1/2})\,\Delta_{j+1/2} = \mathrm{minmod}\bigl(\Delta_{j-1/2}, \Delta_{j+1/2}\bigr) = \begin{cases} 0, & \Delta_{j-1/2}\Delta_{j+1/2} \le 0,\\ \text{меньшая по модулю}, & \text{иначе}. \end{cases} \]</div>
-  <p class="bridge">Какие функции \(\varphi\) обеспечивают свойство TVD — теорема Свеби.</p>
-</section>
-
-<!-- 33 -->
-<section class="slide">
-  <div class="slide-num">§10.3 · Теорема 10.3</div>
-  <h2>Условие Свеби</h2>
-  <div class="theorem" data-num="10.3" style="font-size:.92em"><strong>(Свеби, 1984).</strong> Схема с ограничителем потока (10.5) при \(|r| \le 1\) является TVD-схемой, если
-    \[ \varphi(\theta) = 0 \ \ \text{при } \theta \le 0, \qquad 0 \le \varphi(\theta) \le \min(2\theta,\, 2) \ \ \text{при } \theta > 0. \tag{10.6} \]</div>
-  <div class="two-col" style="font-size:.86em">
-    <div class="note"><span class="lbl">Знак скорости</span>Условие (10.6) от знака \(a\) не зависит; от знака зависит только выбор разности в числителе \(\theta_{j+1/2}\).</div>
-    <div class="note"><span class="lbl">Экстремум</span>При \(\theta \le 0\) поправка выключается: в окрестности экстремума схема совпадает с «уголком».</div>
-  </div>
-  <p class="bridge">Доказательство — приведение схемы к виду (10.4) и проверка условий леммы Хартена.</p>
-</section>
-
-<!-- 34 -->
-<section class="slide">
-  <div class="slide-num">§10.3 · Доказательство теоремы 10.3</div>
-  <h2>Доказательство условия Свеби</h2>
-  <div class="proof" style="font-size:.88em">
-    <p><strong>Этап 1 (\(a > 0\), приведение к виду (10.4)).</strong> Так как \(\Delta_{j+1/2} = \Delta_{j-1/2}/\theta_{j+1/2}\), схема принимает вид (10.4) с \(C_{j+1/2} = 0\) и</p>
-    \[ D_{j-1/2} = r\Bigl[1 + \frac{1 - r}{2}\,X\Bigr], \qquad X = \frac{\varphi(\theta_{j+1/2})}{\theta_{j+1/2}} - \varphi(\theta_{j-1/2}). \]
-    <p><strong>Этап 2 (здесь использовано (10.6)).</strong> Из (10.6) \(0 \le \varphi(\theta)/\theta \le 2\) и \(0 \le \varphi(\theta) \le 2\); следовательно, \(-2 \le X \le 2\).</p>
-    <p><strong>Этап 3.</strong> При \(0 \le r \le 1\)</p>
-    \[ r^2 = r\bigl[1 - (1 - r)\bigr] \le D_{j-1/2} \le r\bigl[1 + (1 - r)\bigr] = 1 - (1 - r)^2 \le 1, \]
-    <p>и по теореме 10.2 схема является TVD. Случай \(a \lt 0\) сводится к рассмотренному заменой \(x \to -x\). ∎</p>
-  </div>
-  <p class="bridge">Условие (10.6) не гарантирует второго порядка; его обеспечивает дополнительное условие в точке \(\theta = 1\).</p>
-</section>
-
-<!-- 35 -->
-<section class="slide">
-  <div class="slide-num">§10.4 · Второй порядок · Определение 10.4</div>
-  <h2>Условие второго порядка и классические ограничители</h2>
-  <div class="theorem" style="font-size:.86em"><strong>Утверждение 10.1</strong> (Свеби, без доказательства). Если \(\varphi(1) = 1\) и при \(0 \le \theta \le 2\) значение \(\varphi(\theta)\) лежит между \(1\) и \(\theta\), то поток (10.5) — выпуклая комбинация потоков двух схем второго порядка (\(\varphi = 1\) и \(\varphi = \theta\)), и на гладких монотонных участках схема имеет второй порядок.</div>
-  <div class="definition" data-num="10.4" style="font-size:.86em"><strong>Классические ограничители:</strong>
-    \[ \begin{aligned}
-    &\text{minmod:} && \varphi(\theta) = \max\bigl(0, \min(1, \theta)\bigr), &\qquad &\text{van Leer:} && \varphi(\theta) = \frac{\theta + |\theta|}{1 + |\theta|},\\
-    &\text{superbee:} && \varphi(\theta) = \max\bigl(0, \min(2\theta, 1), \min(\theta, 2)\bigr), & &\text{MC:} && \varphi(\theta) = \max\bigl(0, \min\bigl(2\theta, \tfrac{1+\theta}{2}, 2\bigr)\bigr).
-    \end{aligned} \]
-    Все четыре удовлетворяют (10.6), \(\varphi(\theta) = 0\) при \(\theta \le 0\) и \(\varphi(1) = 1\).</div>
-  <p class="bridge">Условия (10.6) и утверждения 10.1 наглядно представляются на плоскости \((\theta, \varphi)\).</p>
-</section>
-
-<!-- 36 -->
-<section class="slide">
-  <div class="slide-num">§10.4 · Диаграмма Свеби</div>
-  <h2>Область TVD и графики ограничителей на плоскости \((\theta, \varphi)\)</h2>
-  <div class="two-col wide-right" style="font-size:.84em">
-    <div>
-      <div class="note"><span class="lbl">Области</span>Светлая — множество (10.6): отрезок оси при \(\theta \le 0\), сверху — прямая \(\varphi = 2\theta\) при \(0 \le \theta \le 1\) и уровень \(\varphi = 2\) при \(\theta \ge 1\). Тёмная — условие утверждения 10.1: между прямыми \(\varphi = 1\) и \(\varphi = \theta\).</div>
-      <div class="note"><span class="lbl">Графики</span>Все проходят через точку \((1, 1)\). minmod — нижняя граница тёмной области, superbee — верхняя граница светлой, van Leer и MC — между ними.</div>
-    </div>
+  <div class="slide-num">§10.4 · Утверждение 10.1 · Определение 10.4</div>
+  <h2>Второй порядок и классические ограничители</h2>
+  <div class="theorem" style="font-size:.82em"><strong>Утверждение 10.1</strong> (Свеби, без доказательства). Если \(\varphi(1) = 1\) и при \(0 \le \theta \le 2\) значение \(\varphi(\theta)\) лежит между \(1\) и \(\theta\), то на гладких монотонных участках схема (10.5) имеет второй порядок.</div>
+  <div class="two-col wide-right" style="font-size:.82em">
+    <div class="definition" data-num="10.4"><strong>Ограничители:</strong>
+      \[ \begin{aligned}
+      &\text{minmod:} && \max\bigl(0, \min(1, \theta)\bigr)\\
+      &\text{superbee:} && \max\bigl(0, \min(2\theta, 1), \min(\theta, 2)\bigr)\\
+      &\text{van Leer:} && \frac{\theta + |\theta|}{1 + |\theta|}\\
+      &\text{MC:} && \max\bigl(0, \min\bigl(2\theta, \tfrac{1+\theta}{2}, 2\bigr)\bigr)
+      \end{aligned} \]
+      Все удовлетворяют (10.6) и \(\varphi(1) = 1\).</div>
     <div class="figure" style="margin:0">
       <svg viewBox='0 0 520 300' xmlns='http://www.w3.org/2000/svg' style='width:100%;max-width:640px;font-family:Source Serif 4,serif'>
 <polygon points='50.0,260.0 178.57142857142858,59.99999999999997 500.00000000000006,59.99999999999997 500.00000000000006,260.0' fill='#e8dcc8' stroke='none'/>
@@ -585,35 +361,35 @@ def flux_lw(u, r):                                   # + |a|(1-|r|)/2 * Delta_{j
       <div class="caption">Диаграмма Свеби: светлое — область (10.6), тёмное — область утверждения 10.1.</div>
     </div>
   </div>
-  <p class="bridge">Поясним, как по диаграмме судить о свойствах схемы.</p>
+  <p class="bridge">Как читается диаграмма.</p>
 </section>
 
-<!-- 37 -->
+<!-- 23 -->
 <section class="slide">
-  <div class="slide-num">§10.4 · Диаграмма Свеби</div>
-  <h2>Чтение диаграммы: сечения, границы, порядок графиков</h2>
-  <div class="example" style="font-size:.86em"><span class="lbl">Вертикальное сечение</span>При фиксированном \(\theta\) пересечение вертикали со светлой областью — множество допустимых значений \(\varphi\): при \(\theta \le 0\) только \(\varphi = 0\); при \(\theta = \tfrac12\) — отрезок \([0, 1]\); при \(\theta \ge 1\) — отрезок \([0, 2]\).</div>
-  <div class="example" style="font-size:.86em"><span class="lbl">Смысл границ (\(a > 0\), разности одного знака)</span>
+  <div class="slide-num">§10.4 · Чтение диаграммы Свеби</div>
+  <h2>Сечения, границы и порядок графиков</h2>
+  <div class="example" style="font-size:.86em"><span class="lbl">Вертикальное сечение</span>При фиксированном \(\theta\) — множество допустимых \(\varphi\): при \(\theta \le 0\) только \(\varphi = 0\); при \(\theta = \tfrac12\) — \([0, 1]\); при \(\theta \ge 1\) — \([0, 2]\).</div>
+  <div class="example" style="font-size:.86em"><span class="lbl">Смысл границ (разности одного знака)</span>
     \[ \varphi(\theta_{j+1/2}) \le 2\theta_{j+1/2} \iff \bigl|\varphi(\theta_{j+1/2})\,\Delta_{j+1/2}\bigr| \le 2\,|\Delta_{j-1/2}|: \]
-    ограниченная разность на границе не превосходит удвоенной разности выше по потоку; при нарушении значение в ячейке \(j\) выходит за значения соседей. Граница \(\varphi \le 2\) — то же условие для соседней границы; \(\varphi = 0\) — схема «уголок».</div>
-  <div class="example" style="font-size:.86em"><span class="lbl">Порядок графиков</span>При фиксированном \(\theta\) больший \(\varphi\) — меньшая схемная вязкость: при \(\theta = \tfrac12\) minmod, van Leer, superbee дают \(\tfrac12\), \(\tfrac23\), \(1\); при \(\theta = 2\) — \(1\), \(\tfrac43\), \(2\). Схема Лакса–Вендроффа (\(\varphi \equiv 1\)) при \(\theta \lt \tfrac12\) лежит вне области (10.6).</div>
+    ограниченная разность не превосходит удвоенной разности выше по потоку; при нарушении значение в ячейке выходит за значения соседей. \(\varphi \le 2\) — то же для соседней границы; \(\varphi = 0\) — противопоточная схема.</div>
+  <div class="example" style="font-size:.86em"><span class="lbl">Порядок графиков</span>Больший \(\varphi\) — меньшая схемная вязкость: при \(\theta = \tfrac12\) minmod, van Leer, superbee дают \(\tfrac12\), \(\tfrac23\), \(1\); при \(\theta = 2\) — \(1\), \(\tfrac43\), \(2\). Схема Лакса–Вендроффа (\(\varphi \equiv 1\)) при \(\theta \lt \tfrac12\) лежит вне (10.6).</div>
   <p class="bridge">Проверим эти выводы вычислением одного шага.</p>
 </section>
 
-<!-- 38 -->
+<!-- 24 -->
 <section class="slide">
   <div class="slide-num">§10.4 · Упражнение 10.1 · 7 минут</div>
   <h2>Упражнение 10.1: один шаг схем Лакса–Вендроффа и minmod</h2>
-  <p class="lead">Скорость положительна, \(r = \tfrac12\), периодическое продолжение не требуется: на краях данные постоянны.</p>
+  <p class="lead">\(a > 0\), \(r = \tfrac12\); вне указанных узлов данные постоянны.</p>
   <div class="eq">\[ y^0_j:\quad \underset{j=1}{1},\ \ 1,\ \ 1,\ \ \underset{j=4}{1},\ \ \underset{j=5}{\tfrac34},\ \ \underset{j=6}{\tfrac14},\ \ \underset{j=7}{0},\ \ \underset{j=8}{0}. \]</div>
   <div class="example" style="font-size:.88em"><span class="lbl">Задание</span>
     <ol style="margin:.2rem 0 0 1.2rem">
-      <li>Найти \(\theta_{4+1/2}\), \(\theta_{5+1/2}\), \(\theta_{6+1/2}\); объяснить, почему значение \(\theta_{7+1/2}\) не требуется.</li>
+      <li>Найти \(\theta_{4+1/2}\), \(\theta_{5+1/2}\), \(\theta_{6+1/2}\); объяснить, почему \(\theta_{7+1/2}\) не требуется.</li>
       <li>Вычислить \(F_{j+1/2}/a\), \(j = 3, \dots, 7\), для схемы Лакса–Вендроффа и для ограничителя minmod.</li>
       <li>Найти \(y_j^1\), \(j = 4, \dots, 7\), обеими схемами.</li>
-      <li>Сравнить \(\mathrm{TV}(y^1)\) с \(\mathrm{TV}(y^0) = 1\) и \(\max_j y_j^1\) с \(\max_j y_j^0 = 1\); указать по диаграмме Свеби, в какой точке схема Лакса–Вендроффа нарушает (10.6).</li>
+      <li>Сравнить \(\mathrm{TV}(y^1)\) с \(\mathrm{TV}(y^0) = 1\) и \(\max_j y_j^1\) с единицей; указать по диаграмме Свеби, где схема Лакса–Вендроффа нарушает (10.6).</li>
     </ol>
-    Дополнительно — те же вычисления для ограничителей superbee и van Leer.</div>
+    Дополнительно — ограничители superbee и van Leer.</div>
   <p class="bridge">Время — 7 минут. <button type="button" class="cfd-notes-btn teacher-only" hidden onclick="window.__showTeacher && window.__showTeacher('t-ex101')">Показать ответ</button></p>
 </section>
 
@@ -625,71 +401,69 @@ def flux_lw(u, r):                                   # + |a|(1-|r|)/2 * Delta_{j
   <p class="bridge"><button type="button" class="cfd-notes-btn" onclick="window.__hideTeacher && window.__hideTeacher()">← к упражнению</button></p>
 </section>
 
-<!-- 39 -->
+<!-- 25 -->
 <section class="slide">
   <div class="slide-num">§10.5 · Утверждение 10.2</div>
   <h2>Порядок TVD-схем в окрестности экстремума</h2>
-  <div class="theorem" style="font-size:.88em"><strong>Утверждение 10.2</strong> (Ошер, 1984). TVD-схема в окрестности нелинейного гладкого экстремума решения имеет порядок аппроксимации не выше первого.</div>
+  <div class="theorem" style="font-size:.88em"><strong>Утверждение 10.2</strong> (Ошер, 1984). TVD-схема в окрестности нелинейного гладкого экстремума решения имеет порядок не выше первого.</div>
   <div class="two-col" style="font-size:.84em">
-    <div class="note"><span class="lbl">Причина</span>У экстремума \(\theta_{j+1/2} \lt 0\), и по (10.6) \(\varphi = 0\): схема совпадает с «уголком». Максимум точного решения обычно лежит между узлами; после переноса узловой максимум должен возрасти, что запрещено свойством TVD.</div>
-    <div class="note"><span class="lbl">Наблюдаемый порядок на синусоиде</span>Один оборот, \(r = \tfrac12\), \(N = 50, \dots, 800\):
+    <div class="note"><span class="lbl">Причина</span>У экстремума \(\theta_{j+1/2} \lt 0\), по (10.6) \(\varphi = 0\): схема совпадает с противопоточной. Максимум точного решения лежит между узлами; после переноса узловой максимум должен возрасти, что запрещено свойством TVD.</div>
+    <div class="note"><span class="lbl">Наблюдаемый порядок</span>Синусоида, один оборот, \(r = \tfrac12\), \(N = 50, \dots, 800\):
       <table style="width:100%">
         <tr><th style="text-align:left">схема</th><th>\(L_1\)</th><th>\(C\)</th></tr>
-        <tr><td>«уголок»</td><td>1,0</td><td>1,0</td></tr>
+        <tr><td>противопоточная</td><td>1,0</td><td>1,0</td></tr>
         <tr><td>Лакс–Вендрофф</td><td>2,0</td><td>2,0</td></tr>
         <tr><td>minmod</td><td>1,9</td><td>1,3</td></tr>
         <tr><td>van Leer</td><td>2,2</td><td>1,5</td></tr>
         <tr><td>superbee</td><td>2,0</td><td>1,3</td></tr>
       </table></div>
   </div>
-  <div class="callout" style="font-size:.84em">Погрешность в норме \(C\) сосредоточена в окрестностях экстремумов; их вклад в норму \(L_1\) мал, и в ней порядок близок ко второму.</div>
-  <p class="bridge">Перейдём к программной реализации схемы с ограничителем.</p>
+  <p class="bridge">Погрешность в \(C\) сосредоточена у экстремумов; в \(L_1\) порядок близок ко второму.</p>
 </section>
 
-<!-- 40 -->
+<!-- 26 -->
 <section class="slide">
   <div class="slide-num">§10.5 · Программная реализация</div>
   <h2>Функции, дополняющие программу практики §5–§6</h2>
-  <p class="lead">В файл <code>s1-06-practice.py</code> добавляются функции, реализующие формулы (8.2), (10.5) и определение 10.4.</p>
-  <div class="example" style="font-size:.84em"><span class="lbl">Состав</span>
+  <div class="example" style="font-size:.86em"><span class="lbl">Состав</span>
     <ol style="margin:.2rem 0 0 1.2rem">
       <li><code>step_flux</code>, <code>flux_upwind</code>, <code>flux_lw</code> — по слайду §8.3.</li>
-      <li><code>flux_variant(u, r)</code> — поток схемы варианта, найденный по алгоритму 8.1.</li>
-      <li><code>theta(u)</code> — \(\theta_{j+1/2}\) по (10.5) с выбором разности выше по потоку по знаку \(a\); при \(\Delta_{j+1/2} = 0\) полагается \(\theta_{j+1/2} = 0\), деление на нуль не выполняется.</li>
-      <li>Ограничители minmod, van Leer, MC, superbee — функции массива \(\theta\) по определению 10.4.</li>
+      <li><code>flux_variant(u, r)</code> — поток схемы варианта по алгоритму 8.1.</li>
+      <li><code>theta(u)</code> — \(\theta_{j+1/2}\) по (10.5); при \(\Delta_{j+1/2} = 0\) полагается \(\theta_{j+1/2} = 0\), деление на нуль не выполняется.</li>
+      <li>Ограничители minmod, van Leer, MC, superbee по определению 10.4.</li>
       <li><code>flux_limited(u, r, phi)</code> — поток (10.5).</li>
     </ol></div>
-  <div class="note" style="font-size:.84em"><span class="lbl">Контроль</span>Шаг с <code>flux_variant</code> совпадает с исходной формулой схемы до \(10^{-16}\); при \(\varphi \equiv 1\) и \(\varphi \equiv 0\) поток (10.5) совпадает с <code>flux_lw</code> и <code>flux_upwind</code>; для minmod \(\varphi\,\Delta_{j+1/2} = \mathrm{minmod}(\Delta_{j-1/2}, \Delta_{j+1/2})\); \(\mathrm{TV}(y^{n+1}) \le \mathrm{TV}(y^n) + 10^{-12}\) на каждом шаге; \(\sum_j y_j h\) сохраняется.</div>
-  <p class="bridge">Итоги занятия и задание практической работы.</p>
+  <div class="note" style="font-size:.84em"><span class="lbl">Контроль</span>Шаг с <code>flux_variant</code> совпадает с исходной формулой до \(10^{-16}\); при \(\varphi \equiv 1\), \(\varphi \equiv 0\) поток (10.5) совпадает с <code>flux_lw</code>, <code>flux_upwind</code>; для minmod \(\varphi\Delta_{j+1/2} = \mathrm{minmod}(\Delta_{j-1/2}, \Delta_{j+1/2})\); \(\mathrm{TV}(y^{n+1}) \le \mathrm{TV}(y^n) + 10^{-12}\); \(\sum_j y_j h\) сохраняется.</div>
+  <p class="bridge">Итоги и задание практической работы.</p>
 </section>
 
-<!-- 41 -->
+<!-- 27 -->
 <section class="slide">
   <div class="slide-num">Итоги</div>
   <h2>Итоги занятия</h2>
   <div class="example" style="font-size:.88em">
     <ol style="margin:.2rem 0 0 1.2rem">
-      <li>Консервативность — свойство схемы относительно заданного закона сохранения; она даёт дискретный закон сохранения (утверждение 8.1) и правильную скорость разрыва (теорема Лакса–Вендроффа).</li>
-      <li>Линейная схема для уравнения переноса с \(\sum\alpha_\mu = 1\) консервативна; поток согласован \(\iff\) схема аппроксимирует уравнение (утверждение 8.2); поток находится алгоритмом 8.1.</li>
-      <li>Для линейных схем монотонность, принцип максимума и TVD равносильны (утверждение 8.3, теорема 8.1).</li>
-      <li>Линейная монотонная схема при нецелом \(r\) имеет порядок не выше первого (теорема 9.1); схема второго порядка без осцилляций нелинейна.</li>
-      <li>Схема с ограничителем потока (10.5) при условии (10.6) является TVD (теоремы 10.2, 10.3); при \(\varphi(1) = 1\) — второго порядка на гладких монотонных участках; в экстремумах — первого (утверждение 10.2).</li>
+      <li>Консервативность — свойство схемы относительно закона сохранения; она даёт дискретный закон сохранения и правильную скорость разрыва (теорема Лакса–Вендроффа).</li>
+      <li>Линейная схема для уравнения переноса с \(\sum\alpha_\mu = 1\) консервативна; поток находится алгоритмом 8.1 (метод неопределённых коэффициентов).</li>
+      <li>Три определения монотонности (8.2а–в), принцип максимума и TVD для линейных схем равносильны (лемма 8.1, теорема 8.1).</li>
+      <li>Линейная монотонная схема при нецелом \(r\) — не выше первого порядка (теорема 9.1); схема второго порядка без осцилляций нелинейна.</li>
+      <li>Схема с ограничителем потока (10.5) при (10.6) — TVD (теоремы 10.2, 10.3); при \(\varphi(1) = 1\) — второй порядок на гладких монотонных участках, в экстремумах — первый.</li>
     </ol></div>
   <p class="bridge">Задание практической работы — на следующем слайде.</p>
 </section>
 
-<!-- 42 -->
+<!-- 28 -->
 <section class="slide">
   <div class="slide-num">Практическая работа · задание</div>
-  <h2>Задание: схема варианта в консервативной форме и с ограничителем потока</h2>
-  <p class="lead">Вариант — из практики §5–§6; \(a = 1\) (функции записываются для любого знака \(a\)), \(N = 200\), периодические условия; профили — ступенька, прямоугольник, гауссиан, синусоида.</p>
+  <h2>Задание: схема варианта в консервативной форме и с ограничителем</h2>
+  <p class="lead">Вариант — из практики §5–§6; \(a = 1\) (функции — для любого знака \(a\)), \(N = 200\), периодические условия; профили — ступенька, прямоугольник, гауссиан, синусоида.</p>
   <div class="example" style="font-size:.8em">
     <ol style="margin:.2rem 0 0 1.2rem">
-      <li><strong>Консервативная форма.</strong> По алгоритму 8.1 найти поток \(F_{j+1/2}\) схемы варианта; проверить согласованность и совпадение шага через поток с исходной формулой; проверить сохранение \(\sum_j y_j h\).</li>
-      <li><strong>Ограничитель схемы варианта.</strong> Записать поток в виде (10.5) и найти функцию \(\varphi(\theta)\), отвечающую схеме варианта; установить, при каких \(\theta\) нарушается (10.6), и сопоставить с паспортом схемы (§5): где ожидаются осцилляции.</li>
-      <li><strong>Расчёты.</strong> Схема варианта, «уголок», Лакс–Вендрофф и четыре ограничителя; один оборот при \(r = 0{,}5\) и \(r = 0{,}9\); таблица \(\|e\|_{L_1}\), \(\|e\|_C\), \(\min y\), \(\max y\), \(\mathrm{TV}\); графики для прямоугольника и гауссиана; проверка невозрастания \(\mathrm{TV}\) по шагам.</li>
+      <li><strong>Консервативная форма.</strong> По алгоритму 8.1 найти поток схемы варианта; проверить согласованность, совпадение шага через поток с исходной формулой и сохранение \(\sum_j y_j h\).</li>
+      <li><strong>Ограничитель схемы варианта.</strong> Записать поток в виде (10.5) и найти \(\varphi(\theta)\) схемы варианта; установить, при каких \(\theta\) нарушается (10.6), и сопоставить с паспортом схемы (§5).</li>
+      <li><strong>Расчёты.</strong> Схема варианта, противопоточная, Лакса–Вендроффа и четыре ограничителя; один оборот при \(r = 0{,}5\) и \(0{,}9\); таблица \(\|e\|_{L_1}\), \(\|e\|_C\), \(\min y\), \(\max y\), \(\mathrm{TV}\); графики для прямоугольника и гауссиана; проверка невозрастания \(\mathrm{TV}\) по шагам.</li>
       <li><strong>Порядок.</strong> Синусоида, \(N = 50, 100, \dots, 800\): наблюдаемый порядок в \(L_1\) и \(C\) для схемы варианта и двух ограничителей; объяснение по утверждению 10.2.</li>
-      <li><strong>По варианту.</strong> В1 — проверить свойство TVD леммой Хартена напрямую и сделать вывод о характере условия (10.6). В4 — записать «крест» в консервативной форме и объяснить, почему определение 10.3 к нему неприменимо; ограничитель ввести в поток Лакса–Вендроффа. В5 — выразить ограничитель как переменную вязкость \(q_{j+1/2}\); указать, при каких постоянных \(q\) схема монотонна и какого она порядка.</li>
+      <li><strong>По варианту.</strong> В1 — проверить TVD леммой Хартена и сделать вывод о характере условия (10.6). В4 — консервативная форма «креста»; почему определение 10.3 неприменимо; ограничитель — в поток Лакса–Вендроффа. В5 — выразить ограничитель как переменную вязкость \(q_{j+1/2}\); при каких постоянных \(q\) схема монотонна и какого порядка.</li>
     </ol></div>
   <p class="bridge">Отчёт <code>Фамилия_группа_prac8</code> (pdf или ipynb) загружается в личном кабинете.</p>
 </section>
@@ -697,7 +471,7 @@ def flux_lw(u, r):                                   # + |a|(1-|r|)/2 * Delta_{j
   <a href="s1-08.html" class="back" title="Полный текст лекции">← полная лекция</a>
   <div class="center">
     <button id="btnPrev" onclick="prev()" title="←">◀</button>
-    <span class="counter" id="counter">1 / 42</span>
+    <span class="counter" id="counter">1 / 28</span>
     <button id="btnNext" onclick="next()" title="→ / Space">▶</button>
   </div>
   <a href="s1-09.html" class="back" title="Следующая лекция">§9 →</a>

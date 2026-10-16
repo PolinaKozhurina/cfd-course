@@ -21,12 +21,12 @@ window.MathJax = {
 <nav class="sidebar">
   <h2>§11 Полож. коэффициенты</h2>
   <div class="g">Содержание</div>
-  <a href="#positive">Положительные коэффициенты</a>
+  <a href="#positive">Схемы с положительными…</a>
   <a href="#conservation">Консервативность</a>
-  <a href="#monotonicity">Монотонность</a>
-  <a href="#stability">Устойчивость</a>
-  <a href="#tvd-link">Связь с TVD</a>
-  <a href="#hierarchy">Иерархия свойств</a>
+  <a href="#monotonicity">Монотонность и принцип максимума</a>
+  <a href="#stability">Устойчивость в равномерной норме</a>
+  <a href="#tvd-link">TVD-свойство</a>
+  <a href="#hierarchy">Итог: все свойства равносильны</a>
   <div class="sep"></div>
   <div class="g">Навигация</div>
   <a href="s1-10.html">← §10 TVD</a>
@@ -37,101 +37,90 @@ window.MathJax = {
 <div class="main-inner">
 <span class="lecture-tag tag-props">Свойства</span>
 <div class="lecture-num">§11 · Семестр 1</div>
-<h1>Теоремы об&nbsp;устойчивости, монотонности и&nbsp;консервативности линейных схем с&nbsp;положительными коэффициентами</h1>
-
-<p>Рассматриваются линейные разностные схемы для гиперболических уравнений, в которых обновление решения осуществляется линейным оператором с неотрицательными коэффициентами. Такие схемы играют фундаментальную роль в теории разностных схем, поскольку позволяют установить строгие и наглядные условия устойчивости, монотонности и консервативности.</p>
-
-<h2 id="positive">Линейные схемы с положительными коэффициентами</h2>
-
-<p>Рассмотрим линейную разностную схему вида</p>
-
-<div class="eq">\[
-u_i^{n+1} = \sum_k a_{ik}\, u_k^n,
-\tag{11.1}
-\]</div>
-
-<p>где коэффициенты \(a_{ik}\) не зависят от \(n\).</p>
-
-<div class="definition">
-<strong>Определение 1.</strong> Линейная разностная схема (11.1) называется <em>схемой с положительными коэффициентами</em>, если \(a_{ik} \ge 0\) для всех \(i, k\).
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
+  <h1 style="margin:0">Линейные схемы с положительными коэффициентами: консервативность, монотонность, устойчивость</h1>
+  <a href="s1-11-slides.html" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.4rem .8rem;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none;white-space:nowrap">▶ Слайды</a>
 </div>
 
-<h2 id="conservation">Консервативность</h2>
+<p>Параграф собирает в одном месте свойства линейных схем, полученные в §8–§10, для класса схем с неотрицательными коэффициентами. Главный вывод: для линейных схем консервативность определяется суммой коэффициентов, а монотонность, принцип максимума, устойчивость в равномерной норме и TVD-свойство — <em>одно и то же</em> условие \(a_k \ge 0\).</p>
 
-<div class="theorem">
-<strong>Теорема 1 (необходимое и достаточное условие консервативности).</strong> Линейная разностная схема (11.1) является консервативной тогда и только тогда, когда для всех \(i\) выполняется условие
+<h2 id="positive">§11.1. Схемы с положительными коэффициентами</h2>
+
+<p>Рассмотрим явную линейную схему с постоянными коэффициентами (на сетке с шагами \(\tau\), \(h\)):</p>
+<div class="eq">\[
+y_i^{n+1} = \sum_{k \in S} a_k\, y_{i+k}^n ,
+\tag{11.1}
+\]</div>
+<p>где \(S\) — шаблон (конечное множество целых сдвигов), а коэффициенты \(a_k\) не зависят от \(i\) и \(n\). Для уравнения переноса \(u_t + a\,u_x = 0\) условия аппроксимации нулевого и первого порядка — \(\sum_k a_k = 1\) и \(\sum_k k\,a_k = -r\), \(r = a\tau/h\) (§7, §9).</p>
+
+<div class="definition" data-num="1">
+<strong>Схема с положительными коэффициентами.</strong> Схема (11.1) называется схемой с положительными (точнее, неотрицательными) коэффициентами, если \(a_k \ge 0\) для всех \(k \in S\).
+</div>
+
+<p><strong>Пример.</strong> Противопоточная схема \(y_i^{n+1} = (1 - r)\,y_i^n + r\,y_{i-1}^n\) при \(0 \le r \le 1\) и схема Лакса–Фридрихса при \(|r| \le 1\) — схемы с положительными коэффициентами; у схемы Лакса–Вендроффа при \(0 &lt; r &lt; 1\) коэффициент \(a_{+1} = r(r - 1)/2 &lt; 0\).</p>
+
+<h2 id="conservation">§11.2. Консервативность</h2>
+
+<div class="theorem" data-num="1">
+<strong>Консервативность линейной схемы.</strong> Схема (11.1) записывается в консервативной форме (8.2) с линейным численным потоком \(F_{i+1/2} = \sum_j \beta_j\, y_{i+j}\) тогда и только тогда, когда
 \[
-\sum_k a_{ik} = 1.
+\sum_{k \in S} a_k = 1 .
 \tag{11.2}
 \]
 </div>
 
-<p><em>Доказательство.</em> Необходимость условия (11.2) следует из требования точного сохранения постоянного решения. Достаточность обусловлена тем, что при выполнении (11.2) схема может быть приведена к консервативной форме с численными потоками, которые взаимно компенсируются при суммировании по ячейкам.</p>
-
-<h2 id="monotonicity">Монотонность</h2>
-
-<div class="theorem">
-<strong>Теорема 2 (условие монотонности).</strong> Линейная разностная схема (11.1) является монотонной тогда и только тогда, когда все её коэффициенты неотрицательны, то есть \(a_{ik} \ge 0\) для всех \(i, k\).
+<div class="proof">
+<em>Необходимость.</em> В консервативной схеме на периодической сетке потоки сокращаются, и \(\sum_i y_i^{n+1} = \sum_i y_i^n\). С другой стороны, по (11.1) \(\sum_i y_i^{n+1} = \bigl(\sum_k a_k\bigr)\sum_i y_i^n\). Взяв \(y^n\) с \(\sum_i y_i^n \ne 0\), получаем (11.2).<br>
+<em>Достаточность.</em> При (11.2) \(y_i^{n+1} - y_i^n = \sum_k a_k\,(y_{i+k}^n - y_i^n)\), и каждая разность \(y_{i+k} - y_i\) раскладывается в сумму разностей соседних значений \(\Delta_{i+j+1/2} = y_{i+j+1} - y_{i+j}\). Собирая коэффициенты, получаем \(y_i^{n+1} - y_i^n = \sum_j \gamma_j\,\Delta_{i+j+1/2} = G_{i+1/2} - G_{i-1/2}\), где \(G_{i+1/2} = \sum_j \gamma_j\, y_{i+j+1}\). Это форма (8.2) с потоком \(F = -(h/\tau)\,G\). ∎
 </div>
 
-<h2 id="stability">Устойчивость</h2>
+<div class="remark">
+<strong>Замечание.</strong> Для консервативности знак коэффициентов не важен: схема Лакса–Вендроффа консервативна, хотя у неё есть отрицательный коэффициент. Если коэффициенты зависят от номера узла, \(y_i^{n+1} = \sum_k a_{ik}\,y_k^n\), то условия различаются: сохранение суммы \(\sum_i y_i\) равносильно \(\sum_i a_{ik} = 1\) (суммы по столбцам), а сохранение постоянного решения — \(\sum_k a_{ik} = 1\) (суммы по строкам). Для схем с постоянными коэффициентами оба условия совпадают с (11.2).
+</div>
 
-<div class="theorem">
-<strong>Теорема 3 (устойчивость в \(L_\infty\)).</strong> Если линейная разностная схема (11.1) имеет неотрицательные коэффициенты и удовлетворяет условию консервативности (11.2), то она устойчива в норме \(L_\infty\):
-\[
-\|u^{n+1}\|_\infty \le \|u^n\|_\infty.
-\]
+<h2 id="monotonicity">§11.3. Монотонность и принцип максимума</h2>
+
+<div class="theorem" data-num="2">
+<strong>Монотонность.</strong> Схема (11.1) монотонна в смысле определений 2 и 3 из §8 (оператор перехода не убывает по каждому аргументу, схема сохраняет порядок) тогда и только тогда, когда \(a_k \ge 0\) для всех \(k\). При выполнении (11.2) это равносильно также дискретному принципу максимума (8.5).
 </div>
 
 <div class="proof">
-<p>Из неотрицательности коэффициентов и условия (11.2) следует, что каждое значение \(u_i^{n+1}\) является выпуклой комбинацией значений предыдущего слоя. Следовательно,</p>
-\[
-\min_k u_k^n \le u_i^{n+1} \le \max_k u_k^n,
-\]
-<p>что эквивалентно устойчивости в норме \(L_\infty\).</p>
+Для (11.1) \(\partial y_i^{n+1}/\partial y_{i+k}^n = a_k\), откуда первое утверждение. Если \(a_k \ge 0\) и \(\sum a_k = 1\), то \(y_i^{n+1}\) — выпуклая комбинация значений \(y^n_{i+k}\) и лежит между их минимумом и максимумом. Обратно, если \(a_m &lt; 0\), возьмём \(y^n_{i+m} = 1\), остальные значения нули: тогда \(y_i^{n+1} = a_m &lt; 0 = \min y^n\), принцип максимума нарушен. ∎
 </div>
 
-<h2 id="tvd-link">Связь устойчивости, монотонности и TVD</h2>
+<h2 id="stability">§11.4. Устойчивость в равномерной норме</h2>
 
-<div class="theorem">
-<strong>Теорема 4.</strong> Линейная консервативная монотонная схема с положительными коэффициентами является TVD.
+<div class="theorem" data-num="3">
+<strong>Устойчивость.</strong> Пусть выполнено (11.2). Тогда неравенство \(\|y^{n+1}\|_\infty \le \|y^n\|_\infty\) для всех \(y^n\) выполняется в том и только в том случае, когда \(a_k \ge 0\) для всех \(k\). В частности, схема с положительными коэффициентами устойчива в норме \(C\) (\(\|y\|_\infty = \max_i |y_i|\)).
 </div>
 
-<p><em>Доказательство.</em> Монотонность схемы обеспечивает выполнение дискретного принципа максимума. Из этого следует, что разности между соседними узлами не могут увеличиваться в сумме, что приводит к невозрастанию полной вариации решения.</p>
-
-<div class="remark">
-<strong>Замечание.</strong> Обратное утверждение, вообще говоря, неверно: TVD-свойство не гарантирует монотонности схемы.
+<div class="proof">
+Норма оператора (11.1) в \(\ell_\infty\) равна \(\sum_k |a_k|\): неравенство \(|y_i^{n+1}| \le \sum_k |a_k|\,\|y^n\|_\infty\) очевидно, а равенство достигается на \(y^n_{i+k} = \operatorname{sign} a_k\). При (11.2) \(\sum_k |a_k| \ge \sum_k a_k = 1\), и равенство \(\sum_k |a_k| = 1\) выполняется только при всех \(a_k \ge 0\). ∎
 </div>
 
-<h2 id="hierarchy">Иерархия свойств</h2>
+<p>Вместе с аппроксимацией теорема 3 даёт по теореме Лакса (§3) сходимость в норме \(C\). Это и есть «устойчивость схем с положительными коэффициентами» из названия параграфа: она доказывается без гармоник, одним неравенством, и переносится на схемы с переменными коэффициентами \(a_{ik} \ge 0\), \(\sum_k a_{ik} = 1\).</p>
 
-<div class="remark">
-<strong>Итоговые соотношения.</strong> Для линейных разностных схем с положительными коэффициентами имеет место следующая иерархия свойств:
-\[
-\text{неотрицательные коэффициенты} \Longrightarrow \text{монотонность} \Longrightarrow \text{устойчивость в } L_\infty \Longrightarrow \text{TVD}
-\]
-Эта цепочка лежит в основе классической теории монотонных схем и служит отправной точкой для построения более сложных нелинейных методов.
+<h2 id="tvd-link">§11.5. TVD-свойство</h2>
+
+<div class="theorem" data-num="4">
+<strong>TVD.</strong> Пусть выполнено (11.2). Схема (11.1) является TVD тогда и только тогда, когда \(a_k \ge 0\) для всех \(k\).
 </div>
 
-<!-- SVG: Hierarchy diagram -->
+<div class="proof">
+Достаточность: разности нового слоя \(\Delta^{n+1}_{i+1/2} = \sum_k a_k\,\Delta^n_{i+k+1/2}\); по неравенству треугольника и после суммирования по \(i\) получаем \(\mathrm{TV}(y^{n+1}) \le \sum_k a_k\,\mathrm{TV}(y^n) = \mathrm{TV}(y^n)\) (§8). Необходимость: шаг по ступеньке даёт \(\mathrm{TV}(y^1) = \sum_k |a_k|\), что не превосходит \(\mathrm{TV}(y^0) = 1\) только при \(a_k \ge 0\) (§10). ∎
+</div>
+
+<h2 id="hierarchy">§11.6. Итог: все свойства равносильны</h2>
+
 <div class="figure">
-<svg viewBox="0 0 600 80" xmlns="http://www.w3.org/2000/svg" style="max-width:560px">
-  <defs><marker id="ar11" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2c2419"/></marker></defs>
-  <rect x="0" y="15" width="130" height="50" rx="6" fill="#fdf6ee" stroke="#b44a2d" stroke-width="1.5"/>
-  <text x="65" y="36" font-family="Source Serif 4,serif" font-size="10" fill="#b44a2d" text-anchor="middle" font-weight="600">a_ik ≥ 0</text>
-  <text x="65" y="52" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b5d4f" text-anchor="middle">Σa_ik = 1</text>
-  <line x1="132" y1="40" x2="155" y2="40" stroke="#2c2419" stroke-width="1.5" marker-end="url(#ar11)"/>
-  <rect x="158" y="15" width="120" height="50" rx="6" fill="#e8f4f0" stroke="#1a6b5a" stroke-width="1.5"/>
-  <text x="218" y="44" font-family="Source Serif 4,serif" font-size="11" fill="#1a6b5a" text-anchor="middle" font-weight="600">Монотонность</text>
-  <line x1="280" y1="40" x2="303" y2="40" stroke="#2c2419" stroke-width="1.5" marker-end="url(#ar11)"/>
-  <rect x="306" y="15" width="130" height="50" rx="6" fill="#e6f1fb" stroke="#3a5ba0" stroke-width="1.5"/>
-  <text x="371" y="36" font-family="Source Serif 4,serif" font-size="11" fill="#3a5ba0" text-anchor="middle" font-weight="600">Устойчивость</text>
-  <text x="371" y="52" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b5d4f" text-anchor="middle">в L∞</text>
-  <line x1="438" y1="40" x2="461" y2="40" stroke="#2c2419" stroke-width="1.5" marker-end="url(#ar11)"/>
-  <rect x="464" y="15" width="90" height="50" rx="6" fill="#faeeda" stroke="#854f0b" stroke-width="1.5"/>
-  <text x="509" y="44" font-family="Source Serif 4,serif" font-size="12" fill="#854f0b" text-anchor="middle" font-weight="700">TVD</text>
-</svg>
-<div class="caption">Иерархия свойств линейных схем с положительными коэффициентами.</div>
+<svg viewBox='0 0 720 120' xmlns='http://www.w3.org/2000/svg' style='max-width:720px;width:100%' role='img'><defs><marker id='a11' markerWidth='9' markerHeight='7' refX='8' refY='3.5' orient='auto'><path d='M0,0 L9,3.5 L0,7 z' fill='#2c2419'/></marker></defs><rect x='8' y='22' width='128' height='66' rx='8' fill='#fdf6ee' stroke='#b44a2d' stroke-width='1.8'/><text x='72.0' y='52.0' font-family='Source Serif 4,Georgia,serif' font-size='14.5' fill='#b44a2d' text-anchor='middle' font-style='italic' font-weight='600' >a<tspan font-size="11" dy="4">k</tspan><tspan dy="-4"> ≥ 0</tspan></text><text x='72.0' y='74.0' font-family='Source Serif 4,Georgia,serif' font-size='12.5' fill='#6b5d4f' text-anchor='middle' >коэффициенты</text><text x='146.0' y='62.0' font-family='Source Serif 4,Georgia,serif' font-size='18' fill='#2c2419' text-anchor='middle' >⇔</text><rect x='156' y='22' width='128' height='66' rx='8' fill='#fdf6ee' stroke='#1a6b5a' stroke-width='1.8'/><text x='220.0' y='52.0' font-family='Source Serif 4,Georgia,serif' font-size='14.5' fill='#1a6b5a' text-anchor='middle' font-weight='600' >монотонность</text><text x='220.0' y='74.0' font-family='Source Serif 4,Georgia,serif' font-size='12.5' fill='#6b5d4f' text-anchor='middle' >∂H/∂y ≥ 0</text><text x='294.0' y='62.0' font-family='Source Serif 4,Georgia,serif' font-size='18' fill='#2c2419' text-anchor='middle' >⇔</text><rect x='304' y='22' width='128' height='66' rx='8' fill='#fdf6ee' stroke='#1a6b5a' stroke-width='1.8'/><text x='368.0' y='52.0' font-family='Source Serif 4,Georgia,serif' font-size='14.5' fill='#1a6b5a' text-anchor='middle' font-weight='600' >принцип</text><text x='368.0' y='74.0' font-family='Source Serif 4,Georgia,serif' font-size='12.5' fill='#6b5d4f' text-anchor='middle' >максимума</text><text x='442.0' y='62.0' font-family='Source Serif 4,Georgia,serif' font-size='18' fill='#2c2419' text-anchor='middle' >⇔</text><rect x='452' y='22' width='128' height='66' rx='8' fill='#fdf6ee' stroke='#3a5ba0' stroke-width='1.8'/><text x='516.0' y='52.0' font-family='Source Serif 4,Georgia,serif' font-size='14.5' fill='#3a5ba0' text-anchor='middle' font-weight='600' >‖y‖<tspan font-size="11" dy="4">∞</tspan><tspan dy="-4"> не растёт</tspan></text><text x='516.0' y='74.0' font-family='Source Serif 4,Georgia,serif' font-size='12.5' fill='#6b5d4f' text-anchor='middle' >устойчивость в C</text><text x='590.0' y='62.0' font-family='Source Serif 4,Georgia,serif' font-size='18' fill='#2c2419' text-anchor='middle' >⇔</text><rect x='600' y='22' width='128' height='66' rx='8' fill='#fdf6ee' stroke='#854f0b' stroke-width='1.8'/><text x='664.0' y='52.0' font-family='Source Serif 4,Georgia,serif' font-size='14.5' fill='#854f0b' text-anchor='middle' font-weight='600' >TVD</text><text x='664.0' y='74.0' font-family='Source Serif 4,Georgia,serif' font-size='12.5' fill='#6b5d4f' text-anchor='middle' >TV не растёт</text><text x='360.0' y='112.0' font-family='Source Serif 4,Georgia,serif' font-size='12.5' fill='#6b5d4f' text-anchor='middle' >для линейной схемы с постоянными коэффициентами и Σa<tspan font-size="9" dy="3">k</tspan><tspan dy="-3"> = 1</tspan></text></svg>
+<div class="caption">Рис. 1. Для линейной схемы (11.1) с \(\sum_k a_k = 1\) все пять свойств равносильны. Для нелинейных схем (§10, ограничители потока) остаются только стрелки слева направо: TVD-схема может не быть монотонной.</div>
+</div>
+
+<p>Следствие для дальнейшего: по теореме Годунова (§9) схема с положительными коэффициентами имеет первый порядок аппроксимации. Поэтому для линейных схем «устойчива в \(C\)», «монотонна» и «TVD» — это всегда схемы первого порядка; схемы второго порядка без осцилляций обязаны быть нелинейными (§10) или использовать искусственную вязкость (§13.5).</p>
+
+<div class="remark">
+<strong>Замечание.</strong> Устойчивость в \(L_2\) (по гармоникам, §6) слабее: схема Лакса–Вендроффа устойчива в \(L_2\) при \(|r| \le 1\), но для неё неравенство теоремы 3 не выполняется (у разрыва максимум растёт — появляются осцилляции), и она не является TVD.
 </div>
 
 <div class="lecture-nav">

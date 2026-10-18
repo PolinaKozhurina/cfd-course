@@ -720,12 +720,12 @@ if (location.search.indexOf('embedded=1') !== -1) {
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="js/firebase-config.js?v=20260907g"></script>
-<script src="js/courses.js?v=20261005"></script>
+<script src="js/courses.js?v=20261018"></script>
 <script src="js/enrollments.js?v=20260907g"></script>
 <script src="js/homework.js?v=20260907g"></script>
 <script src="js/attendance.js?v=20260907g"></script>
 <script src="js/labs.js?v=20260907g"></script>
-<script src="js/quiz.js?v=20261005"></script>
+<script src="js/quiz.js?v=20261018"></script>
 <script src="js/update-check.js?v=20260907g"></script>
 <script src="js/gating.js?v=20260907g"></script>
 <!-- Проверялка PDF (пометки маркером): PDF.js + jsPDF + модуль -->
@@ -4660,7 +4660,7 @@ async function labsRenderProgress(cid, lab, sess) {
 // Тесты с выбором ответа (js/quiz.js)
 // ============================================================
 
-let _quizSessUnsub = null, _quizAttUnsub = null, _quizSess = null, _quizKey = null, _quizAtt = {};
+let _quizSessUnsub = null, _quizAttUnsub = null, _quizSess = null, _quizKey = null, _quizAtt = {}, _quizRounds = [];
 
 function quizFillList() {
   const cid = document.getElementById('quizCourse').value;
@@ -4686,6 +4686,7 @@ async function renderQuizTab() {
   document.getElementById('quizSession').innerHTML = '<div style="color:var(--text3)">загрузка…</div>';
   document.getElementById('quizPreviewBox').innerHTML = '';
   _quizKey = await CFDQuiz.getKey(cid, qid);
+  _quizRounds = await CFDQuiz.listRounds(cid, qid);
   const attList = await CFDAttendance.listByCourse(cid);
   attList.sort((x, y) => ((y.date && y.date.toMillis()) || 0) - ((x.date && x.date.toMillis()) || 0));
   _quizSessUnsub = CFDQuiz.watchSession(cid, qid, sess => { _quizSess = sess; quizRenderSession(cid, qid, sess, attList); quizRenderResults(); });
@@ -4715,6 +4716,7 @@ function quizRenderSession(cid, qid, sess, attList) {
   }).join('');
   const min = Math.round(((sess && sess.durationSec) || 900) / 60);
   box.innerHTML = '<div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;margin-bottom:.6rem">' + status
+    + ((Number(sess && sess.round) || 1) > 1 ? ' <span style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;background:var(--bg2,#f5f0e8);padding:.2rem .6rem;border-radius:4px">раунд ' + sess.round + (sess.onlyQuestions && sess.onlyQuestions.length ? ' · вопросы ' + sess.onlyQuestions.map(i => i + 1).join(', ') : ' · все вопросы') + '</span>' : '')
     + (shown ? ' <span style="font-size:.8rem;color:var(--accent2)">· ответы показаны студентам</span>' : '') + '</div>'
     + '<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">'
     + '<label style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3)">Занятие:</label>'
@@ -4724,7 +4726,12 @@ function quizRenderSession(cid, qid, sess, attList) {
     + '<button class="btn btn-primary" onclick="quizOpen()">▶ Открыть для отмеченных</button>'
     + '<button class="btn" onclick="quizClose()">■ Закрыть</button>'
     + '<button class="btn" onclick="quizToggleAnswers()">' + (shown ? 'Скрыть ответы' : 'Показать ответы') + '</button>'
-    + '<span id="quizMsg" style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text3)"></span></div>';
+    + '<span id="quizMsg" style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text3)"></span></div>'
+    + '<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.6rem;padding-top:.6rem;border-top:1px dotted var(--border)">'
+    + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3)">ПЕРЕГОЛОСОВАНИЕ (МАЗУР)</span>'
+    + '<button class="btn" title="Вопросы, на которые верно ответили меньше 70% начавших" onclick="quizRevote(true)">↻ Спорные вопросы</button>'
+    + '<button class="btn" onclick="quizRevote(false)">↻ Все вопросы</button>'
+    + '<span style="font-size:.75rem;color:var(--text3);flex-basis:100%">Ответы раунда уходят в архив, попытки всех допущенных сбрасываются, тест сразу открывается заново на «мин» минут: студенты обсуждают в парах и отвечают ещё раз, страница теста у них переключится сама. По Мазуру: больше 70% верных — дальше, 30–70% — обсуждение в парах и переголосование, меньше 30% — сначала объяснить.</span></div>';
 }
 
 async function quizOpen() {
@@ -4757,6 +4764,44 @@ async function quizToggleAnswers() {
   document.getElementById('quizMsg').textContent = r.ok ? (show ? '✓ ответы показаны' : '✓ ответы скрыты') : '✗ ' + r.error;
 }
 
+// Доли верных ответов по вопросам среди начавших: [доля | null].
+function quizShares(attempts, only) {
+  const nq = ((_quizSess && _quizSess.questions) || []).length, right = new Array(nq).fill(0);
+  // Пробная попытка преподавателя (его нет среди допущенных) в доли не входит.
+  const allowed = new Set((_quizSess && _quizSess.allowedUids) || []);
+  const list = Object.keys(attempts || {}).filter(uid => allowed.has(uid)).map(uid => attempts[uid]);
+  if (!list.length || !_quizKey) return new Array(nq).fill(null);
+  list.forEach(a => CFDQuiz.score(a, _quizKey, only).marks.forEach((m, i) => { if (m === true) right[i]++; }));
+  return right.map((c, i) => (only && only.indexOf(i) === -1) ? null : c / list.length);
+}
+
+// Переголосование по Мазуру: архив раунда, сброс попыток всем, новый раунд открыт сразу.
+async function quizRevote(disputed) {
+  const cid = document.getElementById('quizCourse').value, qid = document.getElementById('quizId').value;
+  const min = parseInt(document.getElementById('quizMin').value, 10);
+  if (!_quizKey) { alert('Нет ключа ответов.'); return; }
+  if (!(min >= 1 && min <= 180)) { alert('Время — от 1 до 180 минут.'); return; }
+  const allowed = new Set((_quizSess && _quizSess.allowedUids) || []);
+  const n = Object.keys(_quizAtt).filter(uid => allowed.has(uid)).length;
+  if (!n) { alert('В этом раунде ещё никто из студентов не отвечал.'); return; }
+  const round = Number(_quizSess && _quizSess.round) || 1;
+  let only = null;
+  if (disputed) {
+    const sh = quizShares(_quizAtt, (_quizSess && _quizSess.onlyQuestions) || null);
+    only = sh.map((x, i) => (x != null && x < 0.7 ? i : -1)).filter(i => i >= 0);
+    if (!only.length) { alert('Спорных вопросов нет: на все вопросы раунда верно ответили не меньше 70%.'); return; }
+  }
+  const what = only ? 'вопросы ' + only.map(i => i + 1).join(', ') : 'все вопросы';
+  if (!confirm('Раунд ' + round + ' → раунд ' + (round + 1) + '.\nПереголосование: ' + what + ', ' + min + ' мин.\n\nОтветы ' + n + ' студ. уйдут в архив, их попытки будут сброшены. Продолжить?')) return;
+  const msg = document.getElementById('quizMsg'); msg.textContent = 'переголосование…';
+  const r = await CFDQuiz.revote(cid, qid, { only: only, durationSec: min * 60 });
+  if (!r.ok) { msg.textContent = '✗ ' + r.error; return; }
+  _quizRounds = await CFDQuiz.listRounds(cid, qid);
+  const m2 = document.getElementById('quizMsg');
+  if (m2) m2.textContent = '✓ раунд ' + r.round + ' открыт, в архив ушло попыток: ' + r.archived;
+  quizRenderResults();
+}
+
 function quizRows() {
   const allowed = new Set((_quizSess && _quizSess.allowedUids) || []);
   const uids = new Set([...allowed, ...Object.keys(_quizAtt)]);
@@ -4767,7 +4812,7 @@ function quizRows() {
   return Array.from(uids).map(uid => {
     const u = (allUsers || []).find(x => x.uid === uid) || {};
     const a = _quizAtt[uid];
-    const sc = a && _quizKey ? CFDQuiz.score(a, _quizKey) : null;
+    const sc = a && _quizKey ? CFDQuiz.score(a, _quizKey, (_quizSess && _quizSess.onlyQuestions) || null) : null;
     let state = 'не начинал', used = '';
     if (a && a.startedAt) {
       const end = a.submitted && a.submittedAt ? a.submittedAt.toMillis() : (a.updatedAt ? a.updatedAt.toMillis() : a.startedAt.toMillis());
@@ -4793,19 +4838,25 @@ function quizRenderResults() {
     const cells = Array.from({ length: nq }, (_, i) => {
       const m = r.sc ? r.sc.marks[i] : null;
       if (m === true) right[i]++;
-      return '<td ' + td + '>' + (m === true ? '<span style="color:#2c7a3f">✓</span>' : m === false ? '<span style="color:#c44">✗</span>' : '<span style="color:var(--text3)">·</span>') + '</td>';
+      return '<td ' + td + '>' + (m === true ? '<span style="color:#2c7a3f">✓</span>' : m === false ? '<span style="color:#c44">✗</span>' : m === undefined ? '' : '<span style="color:var(--text3)">·</span>') + '</td>';
     }).join('');
     return '<tr><td style="padding:.3rem .4rem;border-bottom:1px dotted var(--border);font-size:.85rem;white-space:nowrap">' + escapeHtml(r.fio) + '</td>'
       + '<td ' + td + '>' + escapeHtml(r.state) + '</td><td ' + td + '>' + mmss(r.used) + '</td><td ' + td + '>' + r.answered + '</td>'
       + '<td ' + td + '><b>' + (r.sc ? r.sc.score : '—') + '</b></td>' + cells
       + '<td ' + td + '>' + (r.a ? '<button class="btn btn-sm" title="Удалить попытку — студент сможет пройти тест заново" onclick="quizReset(\'' + r.uid + '\')">сброс</button>' : '') + '</td></tr>';
   }).join('');
-  const pct = right.map(c => '<td ' + td + '>' + (nStarted ? Math.round(100 * c / nStarted) + '%' : '') + '</td>').join('');
+  const curOnly = (_quizSess && _quizSess.onlyQuestions) || null, curRound = Number(_quizSess && _quizSess.round) || 1;
+  const pctCell = x => '<td ' + td + '>' + (x == null ? '' : '<span style="color:' + (x >= 0.7 ? '#2c7a3f' : x >= 0.3 ? '#b07a12' : '#c44') + '">' + Math.round(100 * x) + '%</span>') + '</td>';
+  const pct = right.map((c, i) => pctCell(nStarted && !(curOnly && curOnly.indexOf(i) === -1) ? c / nStarted : null)).join('');
+  const past = (_quizRounds || []).filter(rd => rd.round < curRound).map(rd => {
+    const sh = quizShares(rd.attempts, rd.onlyQuestions || null);
+    return '<tr><td style="padding:.3rem .4rem;font-size:.75rem;color:var(--text3)" colspan="5">раунд ' + rd.round + ' (архив, ' + Object.keys(rd.attempts || {}).filter(u => ((_quizSess && _quizSess.allowedUids) || []).indexOf(u) !== -1).length + ' попыт.)</td>' + sh.map(pctCell).join('') + '<td></td></tr>';
+  }).join('');
   box.innerHTML = '<div style="display:flex;gap:.8rem;align-items:center;margin-bottom:.4rem"><span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3)">РЕЗУЛЬТАТЫ · начали ' + nStarted + ' из ' + rows.length + '</span>'
     + '<button class="btn btn-sm" onclick="quizCsv()">⇩ CSV</button></div>'
     + '<table style="border-collapse:collapse;width:100%"><thead><tr><th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);font-family:\'JetBrains Mono\',monospace;font-size:.7rem;color:var(--text3);text-align:left">ФИО</th><th ' + th + '>статус</th><th ' + th + '>время</th><th ' + th + '>отв.</th><th ' + th + '>балл</th>'
     + Array.from({ length: nq }, (_, i) => '<th ' + th + '>' + (i + 1) + '</th>').join('') + '<th ' + th + '></th></tr></thead><tbody>' + body
-    + '<tr><td style="padding:.3rem .4rem;font-size:.75rem;color:var(--text3)" colspan="5">верно ответили (от начавших)</td>' + pct + '<td></td></tr></tbody></table>'
+    + past + '<tr><td style="padding:.3rem .4rem;font-size:.75rem;color:var(--text3)" colspan="5">верно ответили (от начавших)' + (curRound > 1 ? ', раунд ' + curRound : '') + '</td>' + pct + '<td></td></tr></tbody></table>'
     + '<div style="font-size:.72rem;color:var(--text3);margin-top:.3rem">Номера столбцов — номера вопросов в загруженном файле; студенту вопросы и варианты показываются в своём порядке.</div>';
 }
 

@@ -682,6 +682,15 @@ service cloud.firestore {
       allow delete: if adminCanManageCourse(resource.data.get('courseId', ''));
     }
 
+    // quiz_rounds/{cid}_{qid}_r{N}: архив ответов раунда перед переголосованием
+    // (метод Мазура). Только admin курса: там ответы всех студентов.
+    match /quiz_rounds/{docId} {
+      allow read: if isAuth() && adminCanManageCourse(resource.data.get('courseId', ''));
+      allow create, update: if isAuth() && adminCanManageCourse(docId.split('_')[0])
+                            && request.resource.data.courseId == docId.split('_')[0];
+      allow delete: if adminCanManageCourse(docId.split('_')[0]);
+    }
+
     // notes_keys/{cid}: ключ расшифровки заметок докладчика в слайдах курса.
     // Только admin курса (и superadmin).
     match /notes_keys/{cid} {

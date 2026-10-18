@@ -13,11 +13,20 @@
 //   quiz_sessions/{cid}_{qid} = { courseId, quizId, title, durationSec,
 //                                 questions: [{ text, options: [..] }],
 //                                 open, allowedUids, showAnswers,
-//                                 attendanceId, openedAt, closedAt, updatedAt }
+//                                 attendanceId, openedAt, closedAt, updatedAt,
+//                                 round, onlyQuestions: [номера вопросов] | null }
+//   quiz_rounds/{cid}_{qid}_r{N} = { round, onlyQuestions, attempts: { uid: { answers, submitted } } }
+//                                 — архив раунда перед переголосованием (только admin курса)
 //   quiz_keys/{cid}_{qid}     = { answers: [индекс верного варианта], explanations: [..] }
 //   quiz_attempts/{uid}_{cid}_{qid} = { uid, courseId, quizId, email,
 //                                 startedAt, answers: { "номер вопроса": индекс варианта },
 //                                 submitted, submittedAt, updatedAt }
+//
+// Переголосование по Мазуру (peer instruction): после первого раунда
+// преподаватель нажимает «Переголосование» — ответы раунда копируются в
+// quiz_rounds, попытки всех студентов удаляются, сеанс открывается заново
+// с round + 1 (и, если выбрано, только для «спорных» вопросов onlyQuestions).
+// Страница теста сама замечает новый раунд и предлагает ответить заново.
 //
 // Реестр тестов: window.CFD_QUIZZES (js/courses.js).
 // ============================================================
@@ -49,10 +58,17 @@
     permutation: permutation,
 
     // Балл попытки по ключу: { score, total, marks: [true|false|null] }.
-    score: function (attempt, key) {
+    // only — номера вопросов раунда (null — все); вне раунда marks[i] = undefined.
+    score: function (attempt, key, only) {
       const ans = (attempt && attempt.answers) || {}, right = (key && key.answers) || [];
-      const marks = right.map((r, i) => (ans[i] == null ? null : Number(ans[i]) === Number(r)));
-      return { score: marks.filter(m => m === true).length, total: right.length, marks: marks };
+      const inRound = i => !only || only.indexOf(i) !== -1;
+      const marks = right.map((r, i) => (!inRound(i) ? undefined : ans[i] == null ? null : Number(ans[i]) === Number(r)));
+      return { score: marks.filter(m => m === true).length, total: right.filter((r, i) => inRound(i)).length, marks: marks };
+    },
+    // Вопросы текущего раунда (номера в загруженном файле).
+    roundQuestions: function (sess) {
+      const n = ((sess && sess.questions) || []).length, only = sess && sess.onlyQuestions;
+      return Array.isArray(only) && only.length ? only.filter(i => i >= 0 && i < n) : Array.from({ length: n }, (_, i) => i);
     },
 
     // ---- сеанс (admin) ----
@@ -113,6 +129,42 @@
       return db.collection("quiz_attempts").where("courseId", "==", cid).where("quizId", "==", qid)
         .onSnapshot(s => { const out = {}; s.forEach(d => { out[d.data().uid] = d.data(); }); cb(out); },
                     e => { console.warn("watchAttempts", e); cb({}); });
+    },
+    // Переголосование: архив раунда → удаление всех попыток → сеанс открыт с round + 1.
+    // opts = { only: [номера вопросов] | null, durationSec }.
+    revote: async function (cid, qid, opts) {
+      const me = auth.currentUser; if (!me) return { ok: false, error: "Не авторизован" };
+      opts = opts || {};
+      try {
+        const sess = await API.getSession(cid, qid);
+        if (!sess || !(sess.allowedUids || []).length) return { ok: false, error: "тест ещё не открывали" };
+        const round = Number(sess.round) || 1;
+        const snap = await db.collection("quiz_attempts").where("courseId", "==", cid).where("quizId", "==", qid).get();
+        const attempts = {};
+        snap.forEach(d => { const a = d.data(); attempts[a.uid] = { answers: a.answers || {}, submitted: !!a.submitted }; });
+        await db.collection("quiz_rounds").doc(sid(cid, qid) + "_r" + round).set({
+          courseId: cid, quizId: qid, round: round, onlyQuestions: sess.onlyQuestions || null,
+          attempts: attempts, savedAt: nowTs(), savedBy: me.email,
+        });
+        // Сначала закрываем, чтобы никто не успел создать попытку старого раунда.
+        await API.setSession(cid, qid, { open: false });
+        const refs = snap.docs.map(d => d.ref);
+        for (let i = 0; i < refs.length; i += 400) {
+          const b = db.batch(); refs.slice(i, i + 400).forEach(r => b.delete(r)); await b.commit();
+        }
+        const only = Array.isArray(opts.only) && opts.only.length ? opts.only.map(Number) : null;
+        const extra = { open: true, showAnswers: false, round: round + 1, onlyQuestions: only,
+                        openedAt: nowTs(), openedBy: me.email, closedAt: null };
+        if (opts.durationSec) extra.durationSec = Number(opts.durationSec);
+        const r = await API.setSession(cid, qid, extra);
+        return r.ok ? { ok: true, round: round + 1, archived: refs.length } : r;
+      } catch (e) { return { ok: false, error: e.message }; }
+    },
+    listRounds: async function (cid, qid) {
+      try {
+        const s = await db.collection("quiz_rounds").where("courseId", "==", cid).where("quizId", "==", qid).get();
+        return s.docs.map(d => d.data()).sort((x, y) => x.round - y.round);
+      } catch (e) { console.warn("listRounds", e); return []; }
     },
     resetAttempt: async function (uid, cid, qid) {
       try { await db.collection("quiz_attempts").doc(aid(uid, cid, qid)).delete(); return { ok: true }; }

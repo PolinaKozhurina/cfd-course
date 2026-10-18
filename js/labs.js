@@ -153,8 +153,11 @@
     labsOf: function (cid) { return ((window.CFD_LABS || {})[cid]) || []; },
     labInfo: function (cid, lab) { return API.labsOf(cid).find(l => l.id === lab) || { id: lab, title: lab, href: "" }; },
     // Предыдущая лаба по реестру (или null): следующая открывается только после зачёта по ней.
+    // Предыдущая лаба в цепочке зачётов; работы с standalone (контрольные) в цепочку не входят.
     prevLab: function (cid, lab) {
-      const labs = API.labsOf(cid); const i = labs.findIndex(l => l.id === lab);
+      const all = API.labsOf(cid), me = all.find(l => l.id === lab);
+      if (me && me.standalone) return null;
+      const labs = all.filter(l => !l.standalone); const i = labs.findIndex(l => l.id === lab);
       return i > 0 ? labs[i - 1] : null;
     },
     // Зачёт ставит преподаватель (accepted в lab_progress); автопроверка только подсказывает.

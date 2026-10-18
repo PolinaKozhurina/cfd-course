@@ -33,6 +33,8 @@ window.CFD_LABS = {
     { id: 'w05', title: 'Лаба 5 · Метод наименьших квадратов', href: 'nm/w05-lab.html', total: 14, pass: 12 },
     { id: 'w06', title: 'Лаба 6 · V-образная кривая ошибки и оптимальный шаг', href: 'nm/w06-lab.html', total: 8, pass: 6 },
     { id: 'w07', title: 'Лаба 7 · Составные квадратуры и метод Ромберга', href: 'nm/w07-lab.html', total: 8, pass: 6 },
+    // standalone: вне цепочки зачётов (не требует зачёта предыдущей и не открывается вместе с ней).
+    { id: 'k1', title: 'Полусеместровое задание · §1–§5', href: 'nm/k1-lab.html', total: 3, pass: 2, standalone: true },
   ],
 };
 

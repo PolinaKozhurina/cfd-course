@@ -724,7 +724,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
 <script src="js/enrollments.js?v=20260907g"></script>
 <script src="js/homework.js?v=20260907g"></script>
 <script src="js/attendance.js?v=20260907g"></script>
-<script src="js/labs.js?v=20260907g"></script>
+<script src="js/labs.js?v=20261018"></script>
 <script src="js/quiz.js?v=20261018"></script>
 <script src="js/update-check.js?v=20260907g"></script>
 <script src="js/gating.js?v=20260907g"></script>
@@ -4553,7 +4553,8 @@ async function labsRenderOpenList(cid) {
 
 // Текущая лаба + все предыдущие по реестру (если включён чекбокс).
 function labsTargetIds(cid, lab) {
-  const ids = CFDLabs.labsOf(cid).map(l => l.id);
+  if (CFDLabs.labInfo(cid, lab).standalone) return [lab];   // контрольная — только она сама
+  const ids = CFDLabs.labsOf(cid).filter(l => !l.standalone).map(l => l.id);
   const i = ids.indexOf(lab);
   const withPrev = document.getElementById('labWithPrev') ? document.getElementById('labWithPrev').checked : true;
   return (withPrev && i > 0) ? ids.slice(0, i + 1) : [lab];

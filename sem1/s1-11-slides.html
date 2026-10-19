@@ -28,69 +28,59 @@ pre.code{font-family:'JetBrains Mono',monospace;font-size:.62em;line-height:1.38
 <section class="slide">
   <div class="slide-num">§11 · Семестр 1</div>
   <h1>Линейные схемы с положительными коэффициентами</h1>
-  <p class="lead" style="font-size:1.05em">Консервативность, монотонность, принцип максимума, устойчивость в \(C\) и TVD — что из этого следует из знака коэффициентов.</p>
-  <div class="sub">Определение · Консервативность · Монотонность · Устойчивость · TVD · Итог</div>
-  <p class="bridge">Схема \(y_i^{n+1} = \sum_k a_k\, y_{i+k}^n\) с постоянными коэффициентами.</p>
+  <p class="lead" style="font-size:1.05em">Для линейных схем с постоянными коэффициентами консервативность определяется суммой коэффициентов, а монотонность, принцип максимума, устойчивость в равномерной норме и TVD-свойство — одним и тем же условием: все коэффициенты неотрицательны.</p>
+  <div class="sub">Определение · Консервативность · Монотонность · Устойчивость в \(C\) · TVD · Итог</div>
+  <p class="bridge">Схема \(y_i^{n+1} = \sum_k a_k\, y_{i+k}^n\) с постоянными коэффициентами; свойства — из §8–§10.</p>
 </section>
 
 <!-- 2 -->
 <section class="slide">
-  <div class="slide-num">§11.1 · Определение</div>
+  <div class="slide-num">§11.1 · Определение 1</div>
   <h2>Схема с положительными коэффициентами</h2>
-  <div class="definition" data-num="1"><strong>Определение.</strong> Схема
-    \[ y_i^{n+1} = \sum_{k\in S} a_k\, y_{i+k}^n \]
-    называется схемой с положительными коэффициентами, если \(a_k \ge 0\) при всех \(k\).</div>
-  <div class="two-col" style="font-size:.9em">
-    <div class="example"><span class="lbl">Да</span>Противопоточная схема: \(a_0 = 1 - r\), \(a_{-1} = r\) при \(0 \le r \le 1\). Схема Лакса–Фридрихса при \(|r| \le 1\).</div>
-    <div class="example"><span class="lbl">Нет</span>Схема Лакса–Вендроффа: \(a_{+1} = r(r-1)/2 &lt; 0\) при \(0 &lt; r &lt; 1\).</div>
-  </div>
-  <p class="bridge">Значение \(y_i^{n+1}\) — взвешенная сумма соседних значений; вопрос в том, могут ли веса быть отрицательными.</p>
+  <p class="lead" style="font-size:.92em">Рассмотрим явную линейную схему с постоянными коэффициентами; \(S\) — шаблон, то есть конечное множество целых сдвигов \(k\):</p>
+  <div class="eq">\[ y_i^{n+1} = \sum_{k\in S} a_k\, y_{i+k}^n . \tag{11.1} \]</div>
+  <div class="definition" data-num="1" style="font-size:.92em"><strong>Определение.</strong> Схема (11.1) называется схемой с положительными (точнее, неотрицательными) коэффициентами, если \(a_k \ge 0\) для всех \(k \in S\).</div>
+  <p style="font-size:.9em">Новое значение в такой схеме — взвешенная сумма значений старого слоя на шаблоне с неотрицательными весами.</p>
+  <p style="font-size:.9em">Противопоточная схема \(y_i^{n+1} = (1 - r)\,y_i^n + r\,y_{i-1}^n\) при \(0 \le r \le 1\) и схема Лакса–Фридрихса при \(|r| \le 1\) — схемы с положительными коэффициентами. У схемы Лакса–Вендроффа при \(0 &lt; r &lt; 1\) коэффициент \(a_{+1} = r(r-1)/2\) отрицателен.</p>
+  <p class="bridge">Далее выясним, какие свойства схемы определяются знаком коэффициентов, а какие — их суммой.</p>
 </section>
 
 <!-- 3 -->
 <section class="slide">
   <div class="slide-num">§11.2 · Теорема 1</div>
   <h2>Консервативность определяется суммой коэффициентов</h2>
-  <div class="theorem" data-num="1"><strong>Теорема 1.</strong> Схема записывается в консервативной форме (8.2) с линейным потоком тогда и только тогда, когда
-    \[ \sum_k a_k = 1 . \]</div>
-  <div class="two-col" style="font-size:.9em">
-    <div class="note"><span class="lbl">Почему необходимо</span>В консервативной схеме потоки сокращаются, и сумма \(\sum_i y_i\) не меняется; а по схеме она умножается на \(\sum_k a_k\).</div>
-    <div class="note"><span class="lbl">Почему достаточно</span>При \(\sum a_k = 1\) приращение \(y_i^{n+1} - y_i^n\) раскладывается по разностям соседних значений, и его можно записать как разность потоков.</div>
-  </div>
-  <p class="callout" style="font-size:.86em">Знак коэффициентов здесь не важен: схема Лакса–Вендроффа консервативна.</p>
+  <div class="theorem" data-num="1" style="font-size:.92em"><strong>Теорема 1.</strong> Схема (11.1) записывается в консервативной форме (8.2) с линейным численным потоком тогда и только тогда, когда \[ \sum_{k\in S} a_k = 1 . \tag{11.2} \]</div>
+  <div class="proof" style="font-size:.86em"><em>Необходимость.</em> В консервативной схеме на периодической сетке потоки сокращаются, и \(\sum_i y_i^{n+1} = \sum_i y_i^n\). С другой стороны, из (11.1) \(\sum_i y_i^{n+1} = \bigl(\sum_k a_k\bigr)\sum_i y_i^n\); взяв \(y^n\) с \(\sum_i y_i^n \ne 0\), получаем (11.2).<br><em>Достаточность.</em> При (11.2) \(y_i^{n+1} - y_i^n = \sum_k a_k\,(y_{i+k}^n - y_i^n)\). Каждая разность \(y_{i+k} - y_i\) — сумма разностей соседних значений, поэтому правая часть равна \(G_{i+1/2} - G_{i-1/2}\) с линейным \(G\); это форма (8.2) с потоком \(F = -(h/\tau)\,G\). ∎</div>
+  <p style="font-size:.88em">Знак коэффициентов для консервативности не важен: схема Лакса–Вендроффа консервативна, хотя у неё есть отрицательный коэффициент.</p>
+
 </section>
 
 <!-- 4 -->
 <section class="slide">
   <div class="slide-num">§11.3 · Теорема 2</div>
   <h2>Монотонность и принцип максимума</h2>
-  <div class="theorem" data-num="2"><strong>Теорема 2.</strong> Схема монотонна (оператор перехода не убывает по каждому аргументу) \(\iff a_k \ge 0\). При \(\sum a_k = 1\) это равносильно принципу максимума:
-    \[ \min y^n \le y_i^{n+1} \le \max y^n . \]</div>
-  <div class="two-col" style="font-size:.9em">
-    <div class="note"><span class="lbl">Если \(a_k \ge 0\)</span>Новое значение — выпуклая комбинация старых и лежит между их минимумом и максимумом.</div>
-    <div class="note"><span class="lbl">Если \(a_m &lt; 0\)</span>Возьмём единицу в узле \(i + m\) и нули в остальных: \(y_i^{n+1} = a_m &lt; 0\) — появился новый минимум.</div>
-  </div>
-  <p class="bridge">Отрицательный коэффициент — это источник новых экстремумов, то есть осцилляций.</p>
+  <div class="theorem" data-num="2" style="font-size:.92em"><strong>Теорема 2.</strong> Схема (11.1) монотонна (оператор перехода не убывает по каждому аргументу) тогда и только тогда, когда \(a_k \ge 0\) для всех \(k\). При выполнении (11.2) это равносильно дискретному принципу максимума \[ \min_j y_j^n \le y_i^{n+1} \le \max_j y_j^n . \]</div>
+  <div class="proof" style="font-size:.88em">Для (11.1) \(\partial y_i^{n+1}/\partial y_{i+k}^n = a_k\), откуда первое утверждение. Если \(a_k \ge 0\) и \(\sum_k a_k = 1\), то \(y_i^{n+1}\) — выпуклая комбинация значений \(y^n_{i+k}\) и лежит между их минимумом и максимумом. Обратно, если \(a_m &lt; 0\), возьмём \(y^n_{i+m} = 1\) и нули в остальных узлах: тогда \(y_i^{n+1} = a_m &lt; 0 = \min_j y_j^n\). ∎</div>
+  <p class="bridge">Отрицательный коэффициент создаёт новый экстремум, которого не было на старом слое; у разрыва это проявляется как осцилляции.</p>
 </section>
 
 <!-- 5 -->
 <section class="slide">
   <div class="slide-num">§11.4 · Теорема 3</div>
   <h2>Устойчивость в равномерной норме</h2>
-  <div class="theorem" data-num="3"><strong>Теорема 3.</strong> Пусть \(\sum_k a_k = 1\). Тогда \(\max_i |y_i^{n+1}| \le \max_i |y_i^n|\) для всех \(y^n\) \(\iff a_k \ge 0\).</div>
-  <div class="note" style="font-size:.9em"><span class="lbl">Идея</span>Наибольший рост максимума за шаг равен \(\sum_k |a_k|\) (берём \(y_{i+k} = \operatorname{sign} a_k\)). При \(\sum a_k = 1\) величина \(\sum |a_k|\) равна единице только при неотрицательных \(a_k\).</div>
-  <p class="callout" style="font-size:.88em">Устойчивость доказывается одним неравенством, без гармоник, и переносится на переменные коэффициенты \(a_{ik} \ge 0\), \(\sum_k a_{ik} = 1\). Вместе с аппроксимацией — сходимость по теореме Лакса (§3).</p>
+  <div class="theorem" data-num="3" style="font-size:.92em"><strong>Теорема 3.</strong> Пусть выполнено (11.2). Неравенство \(\max_i |y_i^{n+1}| \le \max_i |y_i^n|\) выполняется для всех \(y^n\) тогда и только тогда, когда \(a_k \ge 0\) для всех \(k\).</div>
+  <div class="proof" style="font-size:.88em">Из (11.1) \(|y_i^{n+1}| \le \sum_k |a_k|\,\max_j |y_j^n|\), и равенство достигается при \(y^n_{i+k} = \operatorname{sign} a_k\); значит, наибольший множитель роста за шаг равен \(\sum_k |a_k|\). При (11.2) \(\sum_k |a_k| \ge \sum_k a_k = 1\), и равенство \(\sum_k |a_k| = 1\) выполняется только при всех \(a_k \ge 0\). ∎</div>
+  <p style="font-size:.88em">Теорема доказывается одним неравенством, без гармоник, и переносится на схемы с переменными коэффициентами \(a_{ik} \ge 0\), \(\sum_k a_{ik} = 1\). Вместе с аппроксимацией она даёт по теореме Лакса (§3) сходимость в норме \(C\).</p>
+
 </section>
 
 <!-- 6 -->
 <section class="slide">
   <div class="slide-num">§11.5 · Теорема 4</div>
-  <h2>TVD — то же самое условие</h2>
-  <div class="theorem" data-num="4"><strong>Теорема 4.</strong> Пусть \(\sum_k a_k = 1\). Схема является TVD \(\iff a_k \ge 0\).</div>
-  <div class="two-col" style="font-size:.9em">
-    <div class="note"><span class="lbl">Достаточность (§8)</span>Разности нового слоя — та же комбинация разностей старого; неравенство треугольника и сумма по \(i\).</div>
-    <div class="note"><span class="lbl">Необходимость (§10)</span>Один шаг по ступеньке: \(\mathrm{TV}(y^1) = \sum |a_k| &gt; 1 = \mathrm{TV}(y^0)\), если есть отрицательный коэффициент.</div>
-  </div>
+  <h2>TVD-свойство</h2>
+  <div class="theorem" data-num="4" style="font-size:.92em"><strong>Теорема 4.</strong> Пусть выполнено (11.2). Схема (11.1) является TVD тогда и только тогда, когда \(a_k \ge 0\) для всех \(k\).</div>
+  <div class="proof" style="font-size:.88em"><em>Достаточность (§8).</em> Разности нового слоя — та же комбинация разностей старого: \(\Delta^{n+1}_{i+1/2} = \sum_k a_k\,\Delta^n_{i+k+1/2}\). По неравенству треугольника и после суммирования по \(i\): \(\mathrm{TV}(y^{n+1}) \le \sum_k a_k\,\mathrm{TV}(y^n) = \mathrm{TV}(y^n)\).<br><em>Необходимость (§10).</em> Один шаг по единичной ступеньке даёт \(\mathrm{TV}(y^1) = \sum_k |a_k|\); это не больше \(\mathrm{TV}(y^0) = 1\) только при \(a_k \ge 0\). ∎</div>
+  <p class="bridge">Условие то же, что в теоремах 2 и 3.</p>
 </section>
 
 <!-- 7 -->
@@ -98,10 +88,8 @@ pre.code{font-family:'JetBrains Mono',monospace;font-size:.62em;line-height:1.38
   <div class="slide-num">§11.6 · Итог</div>
   <h2>Для линейных схем все пять свойств равносильны</h2>
   <div class="figure"><svg viewBox='0 0 720 120' xmlns='http://www.w3.org/2000/svg' style='max-width:1150px;width:100%' role='img'><defs><marker id='a11' markerWidth='9' markerHeight='7' refX='8' refY='3.5' orient='auto'><path d='M0,0 L9,3.5 L0,7 z' fill='#2c2419'/></marker></defs><rect x='8' y='22' width='128' height='66' rx='8' fill='#fdf6ee' stroke='#b44a2d' stroke-width='1.8'/><text x='72.0' y='52.0' font-family='Source Serif 4,Georgia,serif' font-size='14.5' fill='#b44a2d' text-anchor='middle' font-style='italic' font-weight='600' >a<tspan font-size="11" dy="4">k</tspan><tspan dy="-4"> ≥ 0</tspan></text><text x='72.0' y='74.0' font-family='Source Serif 4,Georgia,serif' font-size='12.5' fill='#6b5d4f' text-anchor='middle' >коэффициенты</text><text x='146.0' y='62.0' font-family='Source Serif 4,Georgia,serif' font-size='18' fill='#2c2419' text-anchor='middle' >⇔</text><rect x='156' y='22' width='128' height='66' rx='8' fill='#fdf6ee' stroke='#1a6b5a' stroke-width='1.8'/><text x='220.0' y='52.0' font-family='Source Serif 4,Georgia,serif' font-size='14.5' fill='#1a6b5a' text-anchor='middle' font-weight='600' >монотонность</text><text x='220.0' y='74.0' font-family='Source Serif 4,Georgia,serif' font-size='12.5' fill='#6b5d4f' text-anchor='middle' >∂H/∂y ≥ 0</text><text x='294.0' y='62.0' font-family='Source Serif 4,Georgia,serif' font-size='18' fill='#2c2419' text-anchor='middle' >⇔</text><rect x='304' y='22' width='128' height='66' rx='8' fill='#fdf6ee' stroke='#1a6b5a' stroke-width='1.8'/><text x='368.0' y='52.0' font-family='Source Serif 4,Georgia,serif' font-size='14.5' fill='#1a6b5a' text-anchor='middle' font-weight='600' >принцип</text><text x='368.0' y='74.0' font-family='Source Serif 4,Georgia,serif' font-size='12.5' fill='#6b5d4f' text-anchor='middle' >максимума</text><text x='442.0' y='62.0' font-family='Source Serif 4,Georgia,serif' font-size='18' fill='#2c2419' text-anchor='middle' >⇔</text><rect x='452' y='22' width='128' height='66' rx='8' fill='#fdf6ee' stroke='#3a5ba0' stroke-width='1.8'/><text x='516.0' y='52.0' font-family='Source Serif 4,Georgia,serif' font-size='14.5' fill='#3a5ba0' text-anchor='middle' font-weight='600' >‖y‖<tspan font-size="11" dy="4">∞</tspan><tspan dy="-4"> не растёт</tspan></text><text x='516.0' y='74.0' font-family='Source Serif 4,Georgia,serif' font-size='12.5' fill='#6b5d4f' text-anchor='middle' >устойчивость в C</text><text x='590.0' y='62.0' font-family='Source Serif 4,Georgia,serif' font-size='18' fill='#2c2419' text-anchor='middle' >⇔</text><rect x='600' y='22' width='128' height='66' rx='8' fill='#fdf6ee' stroke='#854f0b' stroke-width='1.8'/><text x='664.0' y='52.0' font-family='Source Serif 4,Georgia,serif' font-size='14.5' fill='#854f0b' text-anchor='middle' font-weight='600' >TVD</text><text x='664.0' y='74.0' font-family='Source Serif 4,Georgia,serif' font-size='12.5' fill='#6b5d4f' text-anchor='middle' >TV не растёт</text><text x='360.0' y='112.0' font-family='Source Serif 4,Georgia,serif' font-size='12.5' fill='#6b5d4f' text-anchor='middle' >для линейной схемы с постоянными коэффициентами и Σa<tspan font-size="9" dy="3">k</tspan><tspan dy="-3"> = 1</tspan></text></svg></div>
-  <div class="two-col" style="font-size:.9em">
-    <div class="note"><span class="lbl">Следствие (§9)</span>По теореме Годунова такие схемы имеют только первый порядок аппроксимации.</div>
-    <div class="note"><span class="lbl">Выход</span>Нелинейные схемы (ограничители потока, §10) или искусственная вязкость в схеме второго порядка (§13).</div>
-  </div>
+  <p style="font-size:.88em">Для линейной схемы (11.1) с \(\sum_k a_k = 1\) неотрицательность коэффициентов, монотонность, принцип максимума, устойчивость в равномерной норме и TVD-свойство равносильны. Для нелинейных схем (§10) остаются только стрелки слева направо: TVD-схема может не быть монотонной.</p>
+  <p style="font-size:.88em">По теореме Годунова (§9) схема с положительными коэффициентами имеет первый порядок аппроксимации. Поэтому схема второго порядка без осцилляций обязана быть нелинейной (ограничители потока, §10) или содержать искусственную вязкость (§13).</p>
   <p class="bridge">Далее — газовая динамика: схема «крест» второго порядка и искусственная вязкость.</p>
 </section>
 

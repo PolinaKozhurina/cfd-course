@@ -36,18 +36,12 @@ pre.code{font-family:'JetBrains Mono',monospace;font-size:.62em;line-height:1.38
 <!-- 2 -->
 <section class="slide">
   <div class="slide-num">§13.1 · Исходная система</div>
-  <h2>Что аппроксимируем: дифференциальные уравнения §12</h2>
-  <p class="lead" style="font-size:.88em">Схема строится для системы (12.7)–(12.9) в переменных \((s, t)\). Прежде чем вводить сетку, выпишем уравнения и отметим, к чему относится каждая неизвестная: к границе частицы или к самой частице.</p>
-  <table class="sum" style="font-size:.8em">
-    <tr><th style="width:27%">Уравнение</th><th>Физический смысл</th><th style="width:27%">Неизвестная относится к</th></tr>
-    <tr><td>\(u_t + p_s = 0\) (12.7)</td><td>Второй закон Ньютона: скорость меняется под действием разности давлений по обе стороны</td><td>\(u\) — к границе частицы</td></tr>
-    <tr><td>\(x_t = u\) (12.8)</td><td>Частица движется со своей скоростью</td><td>\(x\) — к границе частицы</td></tr>
-    <tr><td>\(V_t - u_s = 0\) (12.7)</td><td>Объём частицы меняется из-за разности скоростей её границ</td><td>\(V\) — к частице</td></tr>
-    <tr><td>\(\varepsilon_t + p\,V_t = 0\) (12.9)</td><td>Внутренняя энергия расходуется на работу расширения</td><td>\(\varepsilon\) — к частице</td></tr>
-    <tr><td>\(p = p(V, \varepsilon)\) (12.8)</td><td>Уравнение состояния</td><td>\(p\) — к частице</td></tr>
-    <tr><td>\(x_s = V\) (12.3)</td><td>Длина частицы равна её массе, умноженной на удельный объём</td><td>связывает границы и частицу</td></tr>
-  </table>
-  <p class="bridge">Скорость и координата — величины границ, \(V\), \(\varepsilon\), \(p\) — величины частиц. Это и определит сетку.</p>
+  <h2>Система уравнений газовой динамики в переменных Лагранжа</h2>
+  <div class="two-col wide-left" style="font-size:.9em">
+    <div class="note"><span class="lbl">Законы сохранения (12.7)</span>\[ \frac{\partial u}{\partial t} + \frac{\partial p}{\partial s} = 0, \] \[ \frac{\partial}{\partial t}\Bigl(\frac1\rho\Bigr) - \frac{\partial u}{\partial s} = 0, \] \[ \frac{\partial}{\partial t}\Bigl(\varepsilon + \frac{u^2}{2}\Bigr) + \frac{\partial}{\partial s}(pu) = 0, \] \[ p = p(\rho, T), \qquad \varepsilon = \varepsilon(\rho, T). \]</div>
+    <div><p>Здесь \(s\) — массовая координата, \(x\) — эйлерова координата частицы, заданная уравнением \[ \frac{\partial x}{\partial t} = u . \]</p><p>Для идеального политропного газа без учёта вязкости \[ p = \rho R T, \qquad \varepsilon = \frac{R}{\gamma - 1}\,T . \]</p><p>В схеме «крест» уравнение энергии используется в <em>недивергентном</em> виде (12.9): \[ \frac{\partial \varepsilon}{\partial t} + p\,\frac{\partial V}{\partial t} = 0, \qquad V = \frac1\rho . \]</p></div>
+  </div>
+  <p class="bridge">Скорость \(u\) и координата \(x\) относятся к границам частиц, \(\rho\), \(p\), \(\varepsilon\), \(T\) — к самим частицам.</p>
 </section>
 
 <!-- 3 -->
@@ -71,18 +65,16 @@ pre.code{font-family:'JetBrains Mono',monospace;font-size:.62em;line-height:1.38
 <!-- 5 -->
 <section class="slide">
   <div class="slide-num">§13.3 · Переход</div>
-  <h2>От дифференциальных уравнений к разностным</h2>
-  <p class="lead" style="font-size:.86em">Правило одно: каждая производная заменяется центральной разностью относительно центра своего креста; величина, которой нет в центре, берётся полусуммой соседних значений.</p>
-  <table class="sum" style="font-size:.78em">
-    <tr><th style="width:17%">Уравнение</th><th style="width:15%">Центр креста</th><th>Что во что переходит</th><th style="width:8%">Итог</th></tr>
-    <tr><td>\(u_t + p_s = 0\)</td><td>\((s_i,\ t^n)\)</td><td>\(u_t \;\longrightarrow\; \dfrac{u_i^{n+1/2} - u_i^{n-1/2}}{\tau}\), \(\quad p_s \;\longrightarrow\; \dfrac{p^n_{i+1/2} - p^n_{i-1/2}}{h}\)</td><td>(13.2)</td></tr>
-    <tr><td>\(x_t = u\)</td><td>\((s_i,\ t^{n+1/2})\)</td><td>\(x_t \;\longrightarrow\; \dfrac{x_i^{n+1} - x_i^n}{\tau}\), \(\quad u \;\longrightarrow\; u_i^{n+1/2}\) (значение в центре)</td><td>(13.3)</td></tr>
-    <tr><td>\(V_t - u_s = 0\)</td><td>\((s_{i+1/2},\ t^{n+1/2})\)</td><td>\(V_t \;\longrightarrow\; \dfrac{V^{n+1}_{i+1/2} - V^n_{i+1/2}}{\tau}\), \(\quad u_s \;\longrightarrow\; \dfrac{u^{n+1/2}_{i+1} - u^{n+1/2}_i}{h}\)</td><td>(13.4)</td></tr>
-    <tr><td>\(\varepsilon_t + p\,V_t = 0\)</td><td>\((s_{i+1/2},\ t^{n+1/2})\)</td><td>\(\varepsilon_t \;\longrightarrow\; \dfrac{\varepsilon^{n+1} - \varepsilon^n}{\tau}\), \(\quad V_t \;\longrightarrow\; \dfrac{V^{n+1} - V^n}{\tau}\), \(\quad p \;\longrightarrow\; \bar p = \tfrac12\bigl(p^{n+1} + p^n\bigr)\)</td><td>(13.5)</td></tr>
-    <tr><td>\(p = p(V, \varepsilon)\)</td><td>\((s_{i+1/2},\ t^n)\)</td><td>\(p \;\longrightarrow\; p^n_{i+1/2} = p\bigl(V^n_{i+1/2},\ \varepsilon^n_{i+1/2}\bigr)\) на каждом целом слое</td><td>(13.6)</td></tr>
-    <tr><td>\(x_s = V\)</td><td>\((s_{i+1/2},\ t^n)\)</td><td>\(x_s \;\longrightarrow\; \dfrac{x_{i+1} - x_i}{h}\), \(\quad V \;\longrightarrow\; V_{i+1/2}\)</td><td>(13.1)</td></tr>
-  </table>
-  <p style="font-size:.84em">Скорость в центре креста \(t^{n+1/2}\) есть на сетке сама; давления в центре \(t^{n+1/2}\) нет — его заменяет полусумма \(\bar p\). Обе разности центральные, поэтому каждое уравнение аппроксимируется со вторым порядком по \(\tau\) и \(h\).</p>
+  <h2>От дифференциальных уравнений к схеме</h2>
+  <p class="lead" style="font-size:.86em">Каждая производная заменяется центральной разностью относительно центра своего креста (рис. 2); величина, которой в центре креста нет, берётся полусуммой соседних слоёв.</p>
+  <div style="display:grid;grid-template-columns:auto auto 1fr auto;gap:.45rem 1.4rem;align-items:center;font-size:.88em;margin-top:.4rem">
+    <div>\(\dfrac{\partial u}{\partial t} + \dfrac{\partial p}{\partial s} = 0\)</div><div style="font-size:1.4em;color:var(--accent)">⟶</div><div>\(\dfrac{u_i^{n+1/2} - u_i^{n-1/2}}{\tau} = -\dfrac{p^n_{i+1/2} - p^n_{i-1/2}}{h}\)</div><div>(13.2)</div>
+    <div>\(\dfrac{\partial x}{\partial t} = u\)</div><div style="font-size:1.4em;color:var(--accent)">⟶</div><div>\(\dfrac{x_i^{n+1} - x_i^n}{\tau} = u_i^{n+1/2}\)</div><div>(13.3)</div>
+    <div>\(\dfrac{\partial}{\partial t}\Bigl(\dfrac1\rho\Bigr) - \dfrac{\partial u}{\partial s} = 0\)</div><div style="font-size:1.4em;color:var(--accent)">⟶</div><div>\(\dfrac1\tau\Bigl(\dfrac{1}{\rho^{n+1}_{i+1/2}} - \dfrac{1}{\rho^n_{i+1/2}}\Bigr) = \dfrac{u^{n+1/2}_{i+1} - u^{n+1/2}_i}{h}\)</div><div>(13.4)</div>
+    <div>\(\dfrac{\partial \varepsilon}{\partial t} + p\,\dfrac{\partial V}{\partial t} = 0\)</div><div style="font-size:1.4em;color:var(--accent)">⟶</div><div>\(\dfrac{\varepsilon^{n+1}_{i+1/2} - \varepsilon^n_{i+1/2}}{\tau} = -\,\bar p_{i+1/2}\,\dfrac{u^{n+1/2}_{i+1} - u^{n+1/2}_i}{h}, \quad \bar p = \tfrac12\bigl(p^n + p^{n+1}\bigr)\)</div><div>(13.5)</div>
+    <div>\(p = \rho R T, \ \ \varepsilon = \dfrac{R}{\gamma - 1}\,T\)</div><div style="font-size:1.4em;color:var(--accent)">⟶</div><div>\(p^{n+1}_{i+1/2} = \rho^{n+1}_{i+1/2} R\,T^{n+1}_{i+1/2}, \ \ \varepsilon^{n+1}_{i+1/2} = \dfrac{R}{\gamma - 1}\,T^{n+1}_{i+1/2}\)</div><div>(13.6)</div>
+  </div>
+  <p style="font-size:.84em">Центры крестов: (13.2) — \((s_i, t^n)\); (13.3) — \((s_i, t^{n+1/2})\); (13.4), (13.5) — \((s_{i+1/2}, t^{n+1/2})\). Скорость \(u^{n+1/2}\) в центре креста на сетке есть, а давления на полуцелом слое нет, поэтому в (13.5) стоит \(\bar p\). В (13.5) использовано (13.4): \(\partial V/\partial t = \partial u/\partial s\).</p>
 
 </section>
 
@@ -98,10 +90,16 @@ pre.code{font-family:'JetBrains Mono',monospace;font-size:.62em;line-height:1.38
 <!-- 7 -->
 <section class="slide">
   <div class="slide-num">§13.3 · Энергия</div>
-  <h2>Вычисление внутренней энергии</h2>
-  <p class="lead" style="font-size:.92em">В (13.5) давление нового слоя \(p^{n+1}\) зависит от искомой \(\varepsilon^{n+1}\), поэтому (13.5)–(13.6) — уравнение относительно \(\varepsilon^{n+1}\) в каждой ячейке отдельно. Для политропного газа \(p = (\gamma - 1)\varepsilon/V\) оно линейно; обозначив \(\Delta V = V^{n+1} - V^n\), получаем</p>
-  <div class="eq">\[ \varepsilon^{n+1} = \frac{\varepsilon^n - \tfrac12\, p^n\,\Delta V}{1 + \dfrac{(\gamma - 1)\,\Delta V}{2V^{n+1}}} . \tag{13.7} \]</div>
-  <p style="font-size:.9em">Для произвольного уравнения состояния \(\varepsilon^{n+1}\) находят несколькими итерациями (простыми или по Ньютону), начиная с \(\varepsilon^n\). Вариант \(\bar p = p^{n+1}\) тоже решается явно; вариант \(\bar p = p^n\) явный, но имеет лишь первый порядок по времени.</p>
+  <h2>Вычисление внутренней энергии: вывод формулы</h2>
+  <p class="lead" style="font-size:.86em">В (13.5) давление нового слоя зависит от искомой \(\varepsilon^{n+1}\). Решим (13.5) относительно \(\varepsilon^{n+1}\) в одной ячейке (индекс \(i + \tfrac12\) опущен), \(\Delta V = V^{n+1} - V^n\).</p>
+  <div style="font-size:.86em">
+  <p><strong>Шаг 1.</strong> По (13.4) \(\tau(u_{i+1} - u_i)/h = \Delta V\), поэтому (13.5) — это \(\ \varepsilon^{n+1} - \varepsilon^n = -\tfrac12\bigl(p^n + p^{n+1}\bigr)\Delta V.\)</p>
+  <p><strong>Шаг 2.</strong> Из \(p = \rho R T\), \(\varepsilon = RT/(\gamma - 1)\) исключаем \(T\): \(\ p = (\gamma - 1)\rho\varepsilon = (\gamma - 1)\varepsilon/V\), т. е. \(\ p^{n+1} = (\gamma - 1)\,\varepsilon^{n+1}/V^{n+1}.\)</p>
+  <p><strong>Шаг 3.</strong> Подставляем: \(\ \varepsilon^{n+1} - \varepsilon^n = -\tfrac12 p^n\Delta V - \dfrac{(\gamma - 1)\,\Delta V}{2V^{n+1}}\,\varepsilon^{n+1}.\)</p>
+  <p><strong>Шаг 4.</strong> Переносим слагаемое с \(\varepsilon^{n+1}\) влево и делим на множитель при нём:</p>
+  </div>
+  <div class="eq">\[ \varepsilon^{n+1}\Bigl(1 + \frac{(\gamma - 1)\,\Delta V}{2V^{n+1}}\Bigr) = \varepsilon^n - \tfrac12\,p^n\,\Delta V \quad\Longrightarrow\quad \varepsilon^{n+1} = \frac{\varepsilon^n - \tfrac12\, p^n\,\Delta V}{1 + \dfrac{(\gamma - 1)\,\Delta V}{2V^{n+1}}} . \tag{13.7} \]</div>
+  <p style="font-size:.84em">Затем \(p^{n+1} = (\gamma - 1)\varepsilon^{n+1}/V^{n+1}\), \(T^{n+1} = (\gamma - 1)\varepsilon^{n+1}/R\). Знаменатель равен \(\bigl((\gamma + 1)V^{n+1} - (\gamma - 1)V^n\bigr)/(2V^{n+1})\) и положителен, пока ячейка за шаг сжимается меньше, чем в \((\gamma + 1)/(\gamma - 1)\) раз (6 раз при \(\gamma = 1{,}4\)) — это предельное сжатие на ударной волне. Для произвольного уравнения состояния уравнение шага 1 нелинейно и решается итерациями (простыми или по Ньютону) начиная с \(\varepsilon^n\).</p>
 
 </section>
 

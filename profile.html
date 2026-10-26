@@ -815,7 +815,14 @@ td{padding:5px 10px;border:1px solid var(--border)}
       const p = prog[it.cid + '_' + it.lab.id];
       const prev = CFDLabs.prevLab(it.cid, it.lab.id);
       const prevOk = !prev || CFDLabs.passed(prog[it.cid + '_' + prev.id], prev);
-      const openForMe = !!(sess && sess.open && (sess.allowedUids || []).indexOf(user.uid) !== -1) && prevOk;
+      const listedMe = !!(sess && sess.open && (sess.allowedUids || []).indexOf(user.uid) !== -1) && prevOk;
+      // Окно по таймеру (openFrom/openUntil) — см. js/labs.js.
+      const fromMs = sess && sess.openFrom ? sess.openFrom.toMillis() : null;
+      const untilMs = sess && sess.openUntil ? sess.openUntil.toMillis() : null;
+      const hm = t => new Date(t).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      const early = listedMe && fromMs !== null && Date.now() < fromMs;
+      const late = listedMe && untilMs !== null && Date.now() >= untilMs;
+      const openForMe = listedMe && !early && !late;
       const done = p ? (p.done || 0) : 0, total = (p && p.total) || it.lab.total || 0;
       const pct = total ? Math.round(100 * done / total) : 0;
       const passedThis = CFDLabs.passed(p, it.lab);
@@ -824,6 +831,10 @@ td{padding:5px 10px;border:1px solid var(--border)}
       const upd = p && p.updatedAt ? new Date(p.updatedAt.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) + ' МСК' : 'ещё не начата';
       const action = openForMe
         ? '<a href="' + it.lab.href + '" style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;padding:.3rem .7rem;border-radius:5px;background:#1a6b5a;color:#fff;text-decoration:none;white-space:nowrap">▶ открыта — перейти</a>'
+        : early
+          ? '<a href="' + it.lab.href + '" style="font-family:'JetBrains Mono',monospace;font-size:.68rem;color:#854f0b;white-space:nowrap" title="задание откроется автоматически, страницу можно открыть заранее">⏳ откроется ' + hm(fromMs) + ' МСК' + (untilMs !== null ? ', до ' + hm(untilMs).slice(-5) : '') + '</a>'
+        : late
+          ? '<span style="font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--text3);white-space:nowrap">🔒 время вышло (' + hm(untilMs) + ' МСК)</span>'
         : (!prevOk
             ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.68rem;color:#854f0b;white-space:nowrap" title="преподаватель ещё не зачёл предыдущую лабу">🔒 после зачёта по ' + hwEsc(prev.id) + '</span>'
             : '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.68rem;color:var(--text3);white-space:nowrap">🔒 откроется на занятии</span>');

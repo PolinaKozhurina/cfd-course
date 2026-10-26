@@ -560,6 +560,7 @@ td{padding:5px 10px;border:1px solid var(--border)}
     const hasSomething = submittedFiles.length + submittedLinks.length > 0;
     let statusBadge = '';
     if (grade && grade.grade !== undefined && grade.grade !== null) statusBadge = '<span class="badge b-pass">оценено: '+grade.grade+' / 100</span>';
+    else if (sub && sub.reviewedFiles && sub.reviewedFiles.length) statusBadge = '<span class="badge b-pass">проверено</span>';
     else if (hasSomething) statusBadge = '<span class="badge b-pending">сдано, ожидание проверки</span>';
     else if (isLate) statusBadge = '<span class="badge b-fail">просрочено</span>';
     else statusBadge = '<span class="badge b-pending">не сдано</span>';
@@ -592,13 +593,13 @@ td{padding:5px 10px;border:1px solid var(--border)}
       + (submittedLinks.length ? '<div style="font-size:.85rem;margin-top:.4rem"><span style="color:var(--text2)">Мои ссылки:</span><ul style="list-style:none;padding:0;margin:.2rem 0">' + submittedLinks.map((l,i) =>
           '<li style="padding:2px 0">'
           + '🔗 <a href="'+l.url+'" target="_blank" style="color:var(--accent3);word-break:break-all">'+hwEsc(l.name || l.url)+'</a>'
-          + (grade && grade.grade !== undefined ? '' : ' <button data-rml="'+i+'" title="убрать" style="background:none;border:none;color:#c44;cursor:pointer">×</button>')
+          + ((grade && grade.grade !== undefined) || !canSubmit ? '' : ' <button data-rml="'+i+'" title="убрать" style="background:none;border:none;color:#c44;cursor:pointer">×</button>')
           + '</li>'
         ).join('') + '</ul></div>' : '')
       + (submittedFiles.length ? '<div style="font-size:.82rem;margin-top:.4rem"><span style="color:var(--text2)">Мои файлы:</span> ' + submittedFiles.map((f,i) =>
           '<span style="display:inline-block;margin-right:.4rem">'
           + '<button data-dl="'+i+'" style="background:none;border:none;color:var(--accent3);cursor:pointer;padding:0;font-size:.82rem;text-decoration:underline">📎 '+hwEsc(f.name)+'</button>'
-          + (grade && grade.grade !== undefined ? '' : ' <button data-rmf="'+i+'" title="убрать" style="background:none;border:none;color:#c44;cursor:pointer">×</button>')
+          + ((grade && grade.grade !== undefined) || !canSubmit ? '' : ' <button data-rmf="'+i+'" title="убрать" style="background:none;border:none;color:#c44;cursor:pointer">×</button>')
           + '</span>'
         ).join('') + '</div>' : '')
       + ((sub && sub.reviewedFiles && sub.reviewedFiles.length)

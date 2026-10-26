@@ -553,7 +553,10 @@ service cloud.firestore {
       function sessOpenForMe() {
         return exists(sessPath())
             && get(sessPath()).data.get('open', false) == true
-            && request.auth.uid in get(sessPath()).data.get('allowedUids', []);
+            && request.auth.uid in get(sessPath()).data.get('allowedUids', [])
+            // Окно по таймеру (необязательно): openFrom <= сейчас < openUntil.
+            && request.time >= get(sessPath()).data.get('openFrom', timestamp.value(0))
+            && request.time < get(sessPath()).data.get('openUntil', timestamp.value(253402300799000));
       }
       // Следующая лаба — только после зачёта по предыдущей: сеанс несёт
       // prevLabId/prevPass, а done берётся из lab_progress студента.

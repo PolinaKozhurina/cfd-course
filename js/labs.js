@@ -491,19 +491,36 @@
         try { renderReviews(mount, remote); } catch (e) { console.warn("renderReviews", e); }
       };
 
-      // Следим за сеансом: закрыли — прячем сразу.
-      unsub = API.watchSession(opts.cid, opts.lab, sess => {
-        const allowed = isCourseAdmin
-          || !!(sess && sess.open && Array.isArray(sess.allowedUids) && sess.allowedUids.indexOf(user.uid) !== -1);
+      // Сеанс может нести окно по таймеру: openFrom/openUntil (Timestamp).
+      // Правила проверяют его по времени сервера; здесь — по часам браузера,
+      // поэтому раз в 5 с пересматриваем состояние (и повторяем попытку,
+      // если часы студента чуть спешат относительно сервера).
+      const ms = t => (t && typeof t.toMillis === "function") ? t.toMillis() : null;
+      const hhmm = t => new Date(t).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Moscow" });
+      let lastSess = null, opening = false, waitShown = false;
+      const evaluate = async (fromSnapshot) => {
+        const sess = lastSess;
+        const listed = !!(sess && sess.open && Array.isArray(sess.allowedUids) && sess.allowedUids.indexOf(user.uid) !== -1);
+        const from = ms(sess && sess.openFrom), until = ms(sess && sess.openUntil), now = Date.now();
+        const early = from !== null && now < from, late = until !== null && now >= until;
+        const allowed = isCourseAdmin || (listed && !early && !late);
         if (mounted && !allowed) {
           mounted = false;
           if (typeof opts.onClosed === "function") opts.onClosed();
-          showMsg("🔒 Лаба закрыта", "Преподаватель закрыл доступ. Ваш прогресс сохранён — он виден в личном кабинете.");
-        } else if (!mounted) {
-          tryOpen();
+          showMsg("🔒 Лаба закрыта", (late ? "Время вышло (" + hhmm(until) + " МСК). " : "Преподаватель закрыл доступ. ") + "Ваш прогресс сохранён — он виден в личном кабинете.");
+        } else if (!mounted && !isCourseAdmin && listed && early) {
+          if (!waitShown) { waitShown = true; showMsg("⏳ Откроется в " + hhmm(from) + " МСК", "Задание откроется автоматически" + (until !== null ? " и будет доступно до " + hhmm(until) + " МСК" : "") + ". Обновлять страницу не нужно."); }
+        } else if (!mounted && !isCourseAdmin && listed && late) {
+          showMsg("🔒 Лаба закрыта", "Время вышло (" + hhmm(until) + " МСК). Ваш прогресс сохранён — он виден в личном кабинете.");
+        } else if (!mounted && !opening && (fromSnapshot || allowed)) {
+          waitShown = false; opening = true;
+          try { await tryOpen(); } finally { opening = false; }
         }
-      });
-      return { unmount: () => { if (unsub) unsub(); } };
+      };
+      // Следим за сеансом: закрыли — прячем сразу.
+      unsub = API.watchSession(opts.cid, opts.lab, sess => { lastSess = sess; evaluate(true); });
+      const tick = setInterval(() => { if (lastSess && (lastSess.openFrom || lastSess.openUntil)) evaluate(false); }, 5000);
+      return { unmount: () => { if (unsub) unsub(); clearInterval(tick); } };
     },
   };
 

@@ -143,7 +143,7 @@ td{padding:5px 10px;border:1px solid var(--border)}
 
   <div id="gradesByCourse" style="display:none">
     <h2>Оценки</h2>
-    <p style="font-size:.82rem;color:var(--text2);margin-bottom:.6rem">Оценка выставляется отдельно по каждому курсу: Зачёт (до 50) + Экзамен (до 50). Пока преподаватель курса ещё не выставил, стоят прочерки.</p>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:.6rem">Оценка выставляется отдельно по каждому курсу, итог — из 100 баллов. Численные методы: два полусеместровых задания по 25 баллов (допуск к экзамену — не меньше 30 в сумме) и экзамен до 50 баллов; остальные курсы: зачёт до 50 и экзамен до 50. Пока преподаватель курса ещё не выставил, стоят прочерки.</p>
     <div id="gradesByCourseList" style="display:flex;flex-direction:column;gap:.8rem"></div>
   </div>
 
@@ -207,7 +207,7 @@ td{padding:5px 10px;border:1px solid var(--border)}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <script src="js/firebase-config.js?v=20260907g"></script>
-<script src="js/courses.js?v=20261018"></script>
+<script src="js/courses.js?v=20261028"></script>
 <script src="js/auth.js?v=20260907g"></script>
 <script src="js/enrollments.js?v=20260907g"></script>
 <script src="js/workgroups.js?v=20260907g"></script>
@@ -1042,9 +1042,11 @@ firebase.auth().onAuthStateChanged(async user => {
   if (!userGroup) {
     document.getElementById('resultsBody').innerHTML =
       '<tr><td colspan="4" style="text-align:center;color:var(--text3)">Результаты по общей группе не ведутся; работы по курсам — в разделах «Домашние задания» и «Мои лабы»</td></tr>';
-    return;
   }
 
+  // Общая (legacy) группа: участники, результаты, чек-лист. Без неё блок
+  // пропускается, но оценки по курсам и чаты ниже грузятся всегда.
+  if (userGroup) {
   // Load group members
   try {
     const usersSnap = await db2.collection('users').where('group', '==', userGroup).get();
@@ -1116,6 +1118,8 @@ firebase.auth().onAuthStateChanged(async user => {
     } catch(e) {}
   }
 
+  }
+
   // Load individual grades — по каждому подтверждённому курсу отдельно.
   try {
     const gradeSect = document.getElementById('gradesByCourse');
@@ -1140,22 +1144,35 @@ firebase.auth().onAuthStateChanged(async user => {
           const d = await db2.collection('individual_grades').doc(user.uid + '_' + c.id).get();
           if (d.exists) g = d.data();
         } catch(_) {}
-        const z = (g.zachet !== undefined && g.zachet !== null) ? g.zachet : null;
-        const e = (g.exam   !== undefined && g.exam   !== null) ? g.exam   : null;
+        const scheme = cfdGradeScheme(c.id);
+        const has = k => g[k] !== undefined && g[k] !== null && g[k] !== '';
+        const r1 = x => Math.round(x * 10) / 10;
+        const z = has('zachet') ? g.zachet : null;
+        const e = has('exam')   ? g.exam   : null;
         if (z !== null) { totalZachet += z; gradedCourses++; }
         if (e !== null) { totalExam   += e; }
-        const total = (z || 0) + (e || 0);
+        const anyPart = scheme.parts.some(p => has(p.key));
+        const total = r1(scheme.parts.reduce((s, p) => s + (has(p.key) ? Number(g[p.key]) : 0), 0));
+        let admitHtml = '';
+        if (scheme.admit) {
+          const a = r1(scheme.admit.keys.reduce((s, k) => s + (has(k) ? Number(g[k]) : 0), 0));
+          const done = scheme.admit.keys.every(has);
+          const ok = a >= scheme.admit.min;
+          const txt = ok ? 'Допуск к экзамену получен' : (done ? 'Нет допуска к экзамену' : 'Допуск к экзамену — при сумме полусеместровых не меньше ' + scheme.admit.min);
+          admitHtml = '<div style="font-size:.85rem;margin-top:.5rem;color:' + (ok ? '#1a6b5a' : (done ? '#c44' : 'var(--text2)')) + '">'
+            + txt + (scheme.admit.keys.some(has) ? ' (сейчас ' + a + ' из ' + scheme.admit.keys.length * 25 + ')' : '') + '</div>';
+        }
         parts.push(
           '<div class="card" style="padding:.8rem 1rem">'
           + '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:.4rem">'
           + '<h3 style="font-family:\'Playfair Display\',serif;font-size:.98rem;font-weight:700;color:var(--accent);margin:0">' + c.name + '</h3>'
           + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3)">' + c.semester + '</span>'
           + '</div>'
-          + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem">'
-          + '<div class="grade-box" style="padding:.6rem"><div class="grade-num" style="font-size:2rem">' + (z === null ? '—' : z) + '</div><div class="grade-label">из 50 · Зачёт</div></div>'
-          + '<div class="grade-box" style="padding:.6rem"><div class="grade-num" style="font-size:2rem">' + (e === null ? '—' : e) + '</div><div class="grade-label">из 50 · Экзамен</div></div>'
-          + '<div class="grade-box" style="padding:.6rem;border-color:var(--accent2)"><div class="grade-num" style="font-size:2rem;color:var(--accent2)">' + (z === null && e === null ? '—' : total) + '</div><div class="grade-label">из 100 · Итого</div></div>'
+          + '<div style="display:grid;grid-template-columns:repeat(' + (scheme.parts.length + 1) + ',1fr);gap:.6rem">'
+          + scheme.parts.map(p => '<div class="grade-box" style="padding:.6rem"><div class="grade-num" style="font-size:2rem">' + (has(p.key) ? g[p.key] : '—') + '</div><div class="grade-label">из ' + p.max + ' · ' + p.label + '</div></div>').join('')
+          + '<div class="grade-box" style="padding:.6rem;border-color:var(--accent2)"><div class="grade-num" style="font-size:2rem;color:var(--accent2)">' + (anyPart ? total : '—') + '</div><div class="grade-label">из 100 · Итого</div></div>'
           + '</div>'
+          + admitHtml
           + (g.comment ? '<div style="font-size:.88rem;color:var(--text);font-style:italic;margin-top:.5rem">«' + g.comment + '»</div>' : '')
           + '</div>'
         );

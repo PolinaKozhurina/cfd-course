@@ -720,7 +720,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="js/firebase-config.js?v=20260907g"></script>
-<script src="js/courses.js?v=20261018"></script>
+<script src="js/courses.js?v=20261028"></script>
 <script src="js/enrollments.js?v=20260907g"></script>
 <script src="js/homework.js?v=20260907g"></script>
 <script src="js/attendance.js?v=20260907g"></script>
@@ -2831,18 +2831,16 @@ function renderGrades() {
     const rawGid = cid ? cg[cid] : u.group;
     const rgHtml = rawGid ? '<span class="badge b-group">' + rawGid.replace('group_','№') + '</span>' : '<span class="badge b-pending">—</span>';
     const g = allIndividualGrades[docId] || {};
-    const zachet = (g.zachet !== undefined && g.zachet !== null) ? g.zachet : '';
-    const exam   = (g.exam   !== undefined && g.exam   !== null) ? g.exam   : '';
-    const total  = (parseInt(zachet)||0) + (parseInt(exam)||0);
+    const scheme = cfdGradeScheme(cid);
+    const val = k => (g[k] !== undefined && g[k] !== null) ? g[k] : '';
     const comment = g.comment || '';
     return `<tr>
       <td style="font-weight:600">${fio}</td>
       <td style="font-size:.82rem">${sg}</td>
       <td>${rgHtml}</td>
       <td>${cid ? progressCell(u.uid, cid) : '<span style="color:var(--text3);font-size:.72rem">—</span>'}</td>
-      <td><input type="number" min="0" max="50" value="${zachet}" class="grade-input" id="zachet-${docId}" onchange="autoSaveGrade('${docId}')" oninput="debounceSaveGrade('${docId}')"></td>
-      <td><input type="number" min="0" max="50" value="${exam}" class="grade-input" id="exam-${docId}" onchange="autoSaveGrade('${docId}')" oninput="debounceSaveGrade('${docId}')"></td>
-      <td style="font-weight:700;text-align:center">${total || ''}</td>
+      ${scheme.parts.map(p => `<td><input type="number" min="0" max="${p.max}" value="${val(p.key)}" class="grade-input" id="${p.key}-${docId}" onchange="autoSaveGrade('${docId}')" oninput="debounceSaveGrade('${docId}')"></td>`).join('')}
+      <td class="grade-total" style="font-weight:700;text-align:center">${gradeTotalHtml(g, scheme)}</td>
       <td><input type="text" value="${comment}" class="comment-input" id="comment-${docId}" placeholder="Комментарий" onchange="autoSaveGrade('${docId}')" oninput="debounceSaveGrade('${docId}')"></td>
     </tr>`;
   }
@@ -2897,7 +2895,7 @@ function renderGrades() {
         </summary>
         <div style="padding:.4rem .8rem .8rem">`;
       for (const gk of groupKeys) {
-        const users = groups[gk].slice().sort((a, b) => (a.fio||a.email).localeCompare(b.fio||b.email));
+        const users = groups[gk].slice().sort((a, b) => (a.fio||a.email||'').localeCompare(b.fio||b.email||''));
         const gLabel = gk === '__no-group__' ? '(без рабочей группы)' : ('Группа ' + gk.replace('group_', '№'));
         out += `<details open style="margin-bottom:.35rem;background:var(--card,#fff);border:1px solid var(--border);border-radius:5px">
           <summary style="cursor:pointer;padding:.4rem .7rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text2)">
@@ -2910,9 +2908,8 @@ function renderGrades() {
                 <th style="min-width:100px">Уч. группа</th>
                 <th>Раб. гр.</th>
                 <th style="min-width:130px">Прогресс</th>
-                <th>Зачёт (50)</th>
-                <th>Экзамен (50)</th>
-                <th>Итого</th>
+                ${cfdGradeScheme(cid).parts.map(p => `<th>${p.label} (${p.max})</th>`).join('')}
+                <th>Итого (100)${cfdGradeScheme(cid).admit ? '<div style="font-weight:400;font-size:.68rem">допуск: полусеместровые ≥ ' + cfdGradeScheme(cid).admit.min + '</div>' : ''}</th>
                 <th style="min-width:160px">Комментарий</th>
               </tr></thead>
               <tbody>${users.map(u => row(u, cid, u.uid + '_' + cid, false)).join('')}</tbody>
@@ -2940,11 +2937,26 @@ function renderGrades() {
   }
 
   card.innerHTML = `<h3>Индивидуальные оценки</h3>
-    <p style="font-size:.85rem;color:var(--text2);margin-bottom:.8rem"><strong>Зачёт</strong> (работа за семестр, групповая) — до 50 баллов. <strong>Экзамен</strong> (индивидуальное задание) — до 50 баллов. Итого 100. Раскладка по <em>курсам</em> и <em>рабочим группам</em>.</p>
+    <p style="font-size:.85rem;color:var(--text2);margin-bottom:.8rem">Итого 100 баллов. <strong>Численные методы:</strong> полусеместровые 1 и 2 — по 25 баллов, допуск к экзамену при сумме полусеместровых не меньше 30; экзамен — до 50 баллов. <strong>Остальные курсы:</strong> зачёт (работа за семестр, групповая) — до 50 баллов, экзамен (индивидуальное задание) — до 50 баллов. Раскладка по <em>курсам</em> и <em>рабочим группам</em>.</p>
     ${out}`;
 }
 
 const _saveTimers = {};
+
+// Итого по схеме курса; при наличии admit — отметка допуска (сумма граф admit.keys ≥ admit.min).
+function gradeTotalHtml(g, scheme) {
+  const has = k => g[k] !== undefined && g[k] !== null && g[k] !== '';
+  const vals = scheme.parts.filter(p => has(p.key)).map(p => Number(g[p.key]));
+  if (!vals.length) return '';
+  const r1 = x => Math.round(x * 10) / 10;
+  const total = r1(vals.reduce((s, v) => s + v, 0));
+  if (!scheme.admit) return String(total);
+  const a = r1(scheme.admit.keys.reduce((s, k) => s + (has(k) ? Number(g[k]) : 0), 0));
+  const done = scheme.admit.keys.every(has);
+  const ok = a >= scheme.admit.min;
+  const tag = ok ? 'допуск' : (done ? 'нет допуска' : 'до допуска ' + r1(scheme.admit.min - a));
+  return total + ` <span style="font-size:.7rem;font-weight:500;color:${ok ? '#1a6b5a' : (done ? '#c44' : 'var(--text3)')}">${tag}</span>`;
+}
 
 // docId в новом формате может быть '{uid}_{cid}' или '{uid}' (legacy).
 function debounceSaveGrade(docId) {
@@ -2954,34 +2966,35 @@ function debounceSaveGrade(docId) {
 
 async function autoSaveGrade(docId) {
   if (_saveTimers[docId]) { clearTimeout(_saveTimers[docId]); delete _saveTimers[docId]; }
-  const zachetEl = document.getElementById('zachet-' + docId);
-  const examEl = document.getElementById('exam-' + docId);
-  const commentEl = document.getElementById('comment-' + docId);
-  if (!zachetEl || !examEl || !commentEl) return;
-  const zachet = zachetEl.value;
-  const exam = examEl.value;
-  const comment = commentEl.value;
   const parts = docId.split('_');
   const uid = parts[0];
   const cid = parts.length > 1 ? parts[1] : null;
-  const row = zachetEl.closest('tr');
+  const scheme = cfdGradeScheme(cid);
+  const els = scheme.parts.map(p => document.getElementById(p.key + '-' + docId));
+  const commentEl = document.getElementById('comment-' + docId);
+  if (els.some(e => !e) || !commentEl) return;
+  const comment = commentEl.value;
+  const row = commentEl.closest('tr');
   const me = auth.currentUser;
   try {
     const payload = {
       uid: uid,
-      zachet: parseInt(zachet) || 0,
-      exam: parseInt(exam) || 0,
       comment: comment,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       updatedBy: me ? me.email : null,
     };
+    // Пустая графа не записывается (ещё не выставлено), а не превращается в 0.
+    const saved = { comment, courseId: cid };
+    scheme.parts.forEach((p, i) => {
+      const v = els[i].value.trim();
+      const n = v === '' ? null : Number(v.replace(',', '.'));
+      payload[p.key] = (n === null || isNaN(n)) ? firebase.firestore.FieldValue.delete() : n;
+      if (n !== null && !isNaN(n)) saved[p.key] = n;
+    });
     if (cid) payload.courseId = cid;
     await db.collection('individual_grades').doc(docId).set(payload, { merge: true });
-    allIndividualGrades[docId] = { zachet, exam, comment, courseId: cid };
-    // Итого — 8-я td (index 7)
-    const totalVal = (parseInt(zachet)||0) + (parseInt(exam)||0);
-    const cells = row.querySelectorAll('td');
-    cells[7].textContent = totalVal || '';
+    allIndividualGrades[docId] = saved;
+    row.querySelector('.grade-total').innerHTML = gradeTotalHtml(saved, scheme);
     row.style.transition = 'background .3s';
     row.style.background = 'rgba(26,107,90,0.12)';
     setTimeout(() => { row.style.background = ''; }, 1000);

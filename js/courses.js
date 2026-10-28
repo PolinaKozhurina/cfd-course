@@ -21,6 +21,24 @@ window.CFD_COURSES = [
 window.CFD_COURSE_BY_ID = {};
 window.CFD_COURSES.forEach(function(c){ window.CFD_COURSE_BY_ID[c.id] = c; });
 
+// Схема оценки по курсу: графы individual_grades/{uid}_{id} (итог — сумма из 100)
+// и допуск: сумма граф admit.keys не меньше admit.min (60 % от их максимума).
+// Курс без своей схемы — по умолчанию «Зачёт 50 + Экзамен 50».
+window.CFD_GRADE_SCHEMES = {
+  nm: { parts: [
+    { key: 'k1',    label: 'Полусеместровое 1', max: 25 },
+    { key: 'k2',    label: 'Полусеместровое 2', max: 25 },
+    { key: 'final', label: 'Экзамен',           max: 50 },
+  ], admit: { keys: ['k1', 'k2'], min: 30 } },
+};
+window.CFD_GRADE_SCHEME_DEFAULT = { parts: [
+  { key: 'zachet', label: 'Зачёт',   max: 50 },
+  { key: 'exam',   label: 'Экзамен', max: 50 },
+], admit: null };
+window.cfdGradeScheme = function (cid) {
+  return (cid && window.CFD_GRADE_SCHEMES[cid]) || window.CFD_GRADE_SCHEME_DEFAULT;
+};
+
 // Закрытые лабораторные (текст заданий зашифрован, открывает преподаватель
 // на занятии; см. js/labs.js, tools/lab_encrypt.py). pass — порог зачёта: следующая
 // лаба открывается студенту только после зачёта по предыдущей.

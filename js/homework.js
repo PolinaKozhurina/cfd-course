@@ -567,6 +567,25 @@
       } catch (e) { return { ok: false, error: e.message }; }
     },
 
+    // Admin: загрузить файл в сдачу студента (например, прислан по почте или
+    // заменяет неверный). Файл кладётся в папку студента через /upload-reviewed
+    // и дописывается в files с пометкой uploadedBy. Сдача должна уже существовать:
+    // правила Firestore разрешают создавать её только самому студенту.
+    adminAddSubmissionFile: async function (aid, cid, targetUid, targetFio, file, onProgress) {
+      const me = auth.currentUser;
+      if (!me) return { ok: false, error: "Не авторизован" };
+      try {
+        const ref = db.collection("submissions").doc(subDocId(aid, targetUid));
+        if (!(await ref.get()).exists) return { ok: false, error: "у студента ещё нет сдачи по этому заданию" };
+        const meta = await this.uploadReviewedFile(aid, cid, targetUid, targetFio, file, onProgress);
+        const entry = { path: meta.path, name: meta.name, size: meta.size, uploadedAt: meta.uploadedAt,
+                        contentType: file.type || "", uploadedBy: me.email };
+        const snap = await ref.get();
+        await ref.update({ files: (snap.data().files || []).concat([entry]), updatedAt: nowTs() });
+        return { ok: true };
+      } catch (e) { return { ok: false, error: e.message }; }
+    },
+
     // Убрать один проверенный файл (и с Worker-а, и из Firestore).
     removeReviewedFile: async function (aid, targetUid, path) {
       const ref = db.collection("submissions").doc(subDocId(aid, targetUid));
@@ -604,8 +623,12 @@
                 : 0;
         if (t && t > ms) ms = t;
       };
-      (sub.files || []).forEach(function (f) { take(f.uploadedAt); });
+      // Файлы, загруженные преподавателем за студента (uploadedBy), время
+      // сдачи не сдвигают — учитываются, только если других отметок нет.
+      (sub.files || []).forEach(function (f) { if (!f.uploadedBy) take(f.uploadedAt); });
       (sub.links || []).forEach(function (l) { take(l.addedAt); });
+      if (ms) return ms;
+      (sub.files || []).forEach(function (f) { take(f.uploadedAt); });
       if (ms) return ms;
       // Старые записи, где у файлов нет своих отметок времени.
       take(sub.submittedAt);

@@ -722,7 +722,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
 <script src="js/firebase-config.js?v=20260907g"></script>
 <script src="js/courses.js?v=20261028"></script>
 <script src="js/enrollments.js?v=20260907g"></script>
-<script src="js/homework.js?v=20260907g"></script>
+<script src="js/homework.js?v=20261028"></script>
 <script src="js/attendance.js?v=20260907g"></script>
 <script src="js/labs.js?v=20261018"></script>
 <script src="js/quiz.js?v=20261018"></script>
@@ -1981,13 +1981,16 @@ async function renderHwSubmissionsTable(aid) {
           const annot = isPdf
             ? ' <button onclick="hwOpenAnnotator(\''+aid+'\',\''+u.uid+'\','+fi+')" title="Проверить: пометки маркером и вернуть студенту" style="background:var(--pale-cream,#fdf9f0);border:1px solid #c8bfa8;color:var(--st-amber,#5a4a2a);cursor:pointer;padding:1px 5px;margin-right:.4rem;font-size:.72rem;border-radius:3px">✏️ Проверить</button>'
             : '';
-          return dl + annot;
+          const by = f.uploadedBy ? '<span title="загружено преподавателем: ' + hwEscape(f.uploadedBy) + '" style="font-size:.68rem;color:var(--text3);margin-right:.2rem">(преп.)</span>' : '';
+          const rm = '<button onclick="hwAdminRemoveFile(\''+aid+'\',\''+u.uid+'\','+fi+')" title="Удалить файл из сдачи студента" style="background:none;border:none;color:#c44;cursor:pointer;padding:0 .2rem;margin-right:.35rem;font-size:.85rem">×</button>';
+          return dl + by + annot + rm;
         }).join('')
       : '';
     const reviewedPart = (s && s.reviewedFiles && s.reviewedFiles.length)
       ? '<div style="margin-top:.25rem;padding-top:.25rem;border-top:1px dashed var(--border);font-size:.72rem;color:var(--text2)">✓ проверено: '
-        + s.reviewedFiles.map(rf =>
+        + s.reviewedFiles.map((rf, ri) =>
             '<button onclick="hwAdminDownload(\''+encodeURIComponent(rf.path)+'\',\''+hwEscape(rf.name).replace(/\x27/g,"\\'")+'\')" style="background:none;border:none;color:var(--accent3);cursor:pointer;padding:0;margin-right:.35rem;font-size:.72rem;text-decoration:underline">📄 '+hwEscape(rf.name)+'</button>'
+            + '<button onclick="hwAdminRemoveReviewed(\''+aid+'\',\''+u.uid+'\','+ri+')" title="Удалить проверенный файл" style="background:none;border:none;color:#c44;cursor:pointer;padding:0 .2rem;margin-right:.35rem;font-size:.8rem">×</button>'
           ).join('')
         + '</div>'
       : '';
@@ -1995,9 +1998,14 @@ async function renderHwSubmissionsTable(aid) {
       ? s.links.map((l, li) =>
           '<a href="'+l.url+'" target="_blank" style="color:var(--accent3);margin-right:.25rem;font-size:.78rem" title="'+hwEscape(l.url)+'">🔗 '+hwEscape(l.name || l.url)+'</a>'
           + ' <button onclick="hwOpenAnnotatorLink(\''+aid+'\',\''+u.uid+'\','+li+')" title="Проверить: скачать PDF по ссылке, пометки маркером и вернуть студенту" style="background:var(--pale-cream,#fdf9f0);border:1px solid #c8bfa8;color:var(--st-amber,#5a4a2a);cursor:pointer;padding:1px 5px;margin-right:.4rem;font-size:.72rem;border-radius:3px">✏️ Проверить</button>'
+          + '<button onclick="hwAdminRemoveLink(\''+aid+'\',\''+u.uid+'\','+li+')" title="Удалить ссылку из сдачи студента" style="background:none;border:none;color:#c44;cursor:pointer;padding:0 .2rem;margin-right:.35rem;font-size:.85rem">×</button>'
         ).join('')
       : '';
-    const filesHtml = ((filesPart + linksPart) || '<span style="color:var(--text3);font-style:italic;font-size:.78rem">—</span>') + reviewedPart;
+    const addBtn = s
+      ? '<div style="margin-top:.2rem"><button onclick="hwAdminAddFile(\''+aid+'\',\''+u.uid+'\')" title="Загрузить файл в сдачу студента (например, присланный по почте)" style="background:none;border:1px dashed var(--border);color:var(--text2);cursor:pointer;padding:0 .35rem;font-size:.7rem;border-radius:3px">⬆ файл за студента</button>'
+        + ' <span id="hwAddSt-'+u.uid+'" style="font-size:.68rem;color:var(--text3)"></span></div>'
+      : '';
+    const filesHtml = ((filesPart + linksPart) || '<span style="color:var(--text3);font-style:italic;font-size:.78rem">—</span>') + addBtn + reviewedPart;
     // Время сдачи и просрочка считаются по действиям студента, а не по
     // updatedAt документа: проверка работы преподавателем не должна
     // превращать вовремя сданную работу в просроченную.
@@ -2090,6 +2098,60 @@ async function hwAutoAssignVariants(aid) {
 }
 
 // Скачать файл через Worker (админ, любой файл в scope superadmin).
+// Удалить файл из сдачи студента (и из приватного репо).
+async function hwAdminRemoveFile(aid, uid, fi) {
+  const s = (window._hwSubsCache || {})[uid];
+  const f = s && s.files && s.files[fi];
+  if (!f) { alert('Файл не найден'); return; }
+  const u = allUsers.find(x => x.uid === uid) || {};
+  if (!confirm('Удалить файл «' + f.name + '» из сдачи ' + (u.fio || u.email || uid) + '?\n\nФайл будет удалён без возможности восстановления.')) return;
+  const r = await CFDHomework.removeSubmissionFile(aid, uid, f);
+  if (!r.ok) { alert('Ошибка: ' + r.error); return; }
+  await renderHwSubmissionsTable(aid);
+}
+
+// Удалить ссылку из сдачи студента.
+async function hwAdminRemoveLink(aid, uid, li) {
+  const s = (window._hwSubsCache || {})[uid];
+  const l = s && s.links && s.links[li];
+  if (!l) { alert('Ссылка не найдена'); return; }
+  const u = allUsers.find(x => x.uid === uid) || {};
+  if (!confirm('Удалить ссылку «' + (l.name || l.url) + '» из сдачи ' + (u.fio || u.email || uid) + '?')) return;
+  const r = await CFDHomework.removeSubmissionLink(aid, uid, l.url);
+  if (!r.ok) { alert('Ошибка: ' + r.error); return; }
+  await renderHwSubmissionsTable(aid);
+}
+
+// Удалить проверенный файл преподавателя из сдачи.
+async function hwAdminRemoveReviewed(aid, uid, ri) {
+  const s = (window._hwSubsCache || {})[uid];
+  const f = s && s.reviewedFiles && s.reviewedFiles[ri];
+  if (!f) { alert('Файл не найден'); return; }
+  if (!confirm('Удалить проверенный файл «' + f.name + '»? Студент перестанет его видеть.')) return;
+  const r = await CFDHomework.removeReviewedFile(aid, uid, f.path);
+  if (!r.ok) { alert('Ошибка: ' + r.error); return; }
+  await renderHwSubmissionsTable(aid);
+}
+
+// Загрузить файл в сдачу студента: выбор файла → Worker → files[] с пометкой uploadedBy.
+function hwAdminAddFile(aid, uid) {
+  const a = window._hwCurrentAssignment;
+  if (!a) return;
+  const u = allUsers.find(x => x.uid === uid) || { uid: uid, fio: '' };
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.onchange = async function () {
+    const file = inp.files && inp.files[0];
+    if (!file) return;
+    const st = document.getElementById('hwAddSt-' + uid);
+    const r = await CFDHomework.adminAddSubmissionFile(aid, a.courseId, uid, u.fio || '', file,
+      p => { if (st) st.textContent = Math.round(p * 100) + '%'; });
+    if (!r.ok) { if (st) st.textContent = ''; alert('Ошибка: ' + r.error); return; }
+    await renderHwSubmissionsTable(aid);
+  };
+  inp.click();
+}
+
 async function hwAdminDownload(encodedPath, name) {
   try {
     await CFDHomework.triggerDownload(decodeURIComponent(encodedPath), name);

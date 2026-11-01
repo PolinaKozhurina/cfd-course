@@ -313,10 +313,13 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
   <div class="roadmap"><span class="b on" title="Постановка">I. Постановка</span><span class="b " title="Разности">II</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.0. Постановка задачи</span></div>
   <h2>Постановка задачи</h2>
   <p class="lead"><strong>Цель</strong> — решать дифференциальные уравнения на компьютере. Уравнение содержит производные неизвестной функции, а компьютер хранит только её значения в узлах сетки \(x_i=ih\).</p>
-  <div class="eq tight">\[u_t+au_x=0,\qquad u_x(x_i)\approx\ ?\quad\text{по значениям }\ u_{i-1},\ u_i,\ u_{i+1}.\]</div>
-  <p>Каждую производную в уравнении нужно выразить через значения в соседних узлах. Та же задача возникает при обработке измерений и в оптимизации, где функция задана программой.</p>
+  <table class="cmp big tight"><thead><tr><th>Модель</th><th>Уравнения</th><th>Что заменить разностями</th></tr></thead><tbody>
+  <tr><td>перенос</td><td>\(u_t+au_x=0\)</td><td>\(u_t,\ u_x\)</td></tr>
+  <tr><td>теплопроводность</td><td>\(u_t=\varkappa u_{xx}\)</td><td>вторая производная \(u_{xx}\)</td></tr>
+  <tr><td>Навье — Стокс</td><td>\(\rho\bigl(\mathbf v_t+(\mathbf v\cdot\nabla)\mathbf v\bigr)=-\nabla p+\mu\Delta\mathbf v,\quad \nabla\cdot\mathbf v=0\)</td><td>градиент, дивергенция, лапласиан</td></tr>
+  <tr><td>Максвелл</td><td>\(\mathbf B_t=-\nabla\times\mathbf E,\quad \varepsilon\mathbf E_t=\nabla\times\mathbf H-\mathbf J\)</td><td>ротор</td></tr></tbody></table>
+  <p>Все эти операторы состоят из частных производных, поэтому задача одна: выразить производную через значения в соседних узлах.</p>
   <div class="problem"><b>Дано</b> значения функции \(f\) в узлах сетки с шагом \(h\).<br><b>Найти</b> приближённое значение производной \(f'(x_0)\) или \(f''(x_0)\) и оценку погрешности.</div>
-  <p><strong>План:</strong> вывод разностей и порядок аппроксимации (§&nbsp;6.1–6.3), округление (§&nbsp;6.4–6.5), точные методы для сеток (§&nbsp;6.6), шум (§&nbsp;6.7), функции-программы (§&nbsp;6.8), уравнение переноса (§&nbsp;6.9), измерение ошибки (§&nbsp;6.10).</p>
   <p class="bridge">Значения в узлах мы уже умеем заменять интерполяционным многочленом; с него и начнём.</p>
 </section>
 
@@ -340,13 +343,13 @@ P_1'(x)&=-\frac{f(x_0)}{h}+\frac{f(x_0+h)}{h}=\frac{f(x_0+h)-f(x_0)}{h}&&\class{
   <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.1. Парабола через три узла</span></div>
   <h2>Центральная и вторая разности</h2>
   <p class="lead">Через \(x_0-h,\ x_0,\ x_0+h\) проходит парабола. Обозначим \(t=x-x_0\):</p>
-  <div class="eq tight" style="font-size:.88em">\[\begin{aligned}
+  <div class="eq tight" style="font-size:.82em">\[\begin{aligned}
   \ell_{-1}&=\tfrac{t(t-h)}{2h^2},\quad \ell_{0}=\tfrac{h^2-t^2}{h^2},\quad \ell_{1}=\tfrac{t(t+h)}{2h^2}&&\class{step}{\text{форма Лагранжа}}\\
   \ell_{-1}'&=\tfrac{2t-h}{2h^2},\quad \ell_{0}'=-\tfrac{2t}{h^2},\quad \ell_{1}'=\tfrac{2t+h}{2h^2}&&\class{step}{\text{первая производная}}\\
   \ell_{-1}''&=\tfrac{1}{h^2},\quad \ell_{0}''=-\tfrac{2}{h^2},\quad \ell_{1}''=\tfrac{1}{h^2}&&\class{step}{\text{вторая производная}}\end{aligned}\tag{6.3}\]</div>
-  <div class="definition" data-num="1"><em style="color:inherit;font-weight:600">разности.</em> При \(t=0\) из (6.1) и (6.3), вместе с (6.2), получаем:
-  <span style="font-size:.9em">\[\begin{gathered}D^{+}_hf=\tfrac{f(x_0+h)-f(x_0)}{h},\quad D^{-}_hf=\tfrac{f(x_0)-f(x_0-h)}{h},\\ D^{c}_hf=\tfrac{f(x_0+h)-f(x_0-h)}{2h},\quad D^{2}_hf=\tfrac{f(x_0+h)-2f(x_0)+f(x_0-h)}{h^2}.\end{gathered}\tag{6.4}\]</span></div>
-  <p>При \(t=-h\) получаем формулу для края сетки: \(\bigl(-3f(x_0)+4f(x_0+h)-f(x_0+2h)\bigr)/(2h)\). Глобальный многочлен высокой степени дифференцировать нельзя (§&nbsp;3.10): берут низкую степень по соседним узлам.</p>
+  <div class="definition" data-num="1"><em style="color:inherit;font-weight:600">разности.</em> При \(t=0\) из (6.1)–(6.3) получаем:
+  <span style="font-size:.8em">\[\begin{gathered}D^{+}_hf=\tfrac{f(x_0+h)-f(x_0)}{h},\quad D^{-}_hf=\tfrac{f(x_0)-f(x_0-h)}{h},\\ D^{c}_hf=\tfrac{f(x_0+h)-f(x_0-h)}{2h},\quad D^{2}_hf=\tfrac{f(x_0+h)-2f(x_0)+f(x_0-h)}{h^2}.\end{gathered}\tag{6.4}\]</span></div>
+  <p>При \(t=-h\) получаем формулу для края сетки: \(\bigl(-3f(x_0)+4f(x_0+h)-f(x_0+2h)\bigr)/(2h)\). Многочлен берут низкой степени: глобальный дифференцировать нельзя (§&nbsp;3.10).</p>
   <p class="bridge">Формулы получены. Теперь нужно точно определить, насколько они близки к производной.</p>
 </section>
 

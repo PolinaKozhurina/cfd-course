@@ -310,33 +310,50 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
 </section>
 
 <section class="slide">
-  <div class="roadmap"><span class="b on" title="Постановка">I. Постановка</span><span class="b " title="Разности">II</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.0. Постановка задачи</span></div>
-  <h2>Постановка задачи</h2>
-  <p class="lead"><strong>Цель</strong> — решать дифференциальные уравнения на компьютере. Уравнение содержит производные неизвестной функции, а компьютер хранит только её значения в узлах сетки \(x_i=ih\).</p>
-  <table class="cmp big tight"><thead><tr><th>Модель</th><th>Уравнения</th><th>Что заменить разностями</th></tr></thead><tbody>
-  <tr><td>перенос</td><td>\(u_t+au_x=0\)</td><td>\(u_t,\ u_x\)</td></tr>
-  <tr><td>теплопроводность</td><td>\(u_t=\varkappa u_{xx}\)</td><td>вторая производная \(u_{xx}\)</td></tr>
-  <tr><td>Навье — Стокс</td><td>\(\rho\bigl(\mathbf v_t+(\mathbf v\cdot\nabla)\mathbf v\bigr)=-\nabla p+\mu\Delta\mathbf v,\quad \nabla\cdot\mathbf v=0\)</td><td>градиент, дивергенция, лапласиан</td></tr>
-  <tr><td>Максвелл</td><td>\(\mathbf B_t=-\nabla\times\mathbf E,\quad \varepsilon\mathbf E_t=\nabla\times\mathbf H-\mathbf J\)</td><td>ротор</td></tr></tbody></table>
-  <p>Все эти операторы состоят из частных производных, поэтому задача одна: выразить производную через значения в соседних узлах.</p>
+  <div class="roadmap"><span class="b on" title="Постановка">I. Постановка</span><span class="b " title="Разности">II</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.0. Модели</span></div>
+  <h2>Откуда возникает задача</h2>
+  <p class="lead">Основная цель численного дифференцирования — решение дифференциальных уравнений на компьютере. Уравнения содержат производные неизвестных функций, тогда как в памяти компьютера хранятся лишь значения этих функций в узлах сетки.</p>
+  <table class="cmp big tight" style="font-size:.76em"><thead><tr><th>Модель</th><th>Уравнения</th><th>Заменяемые операторы</th></tr></thead><tbody>
+  <tr><td>Уравнение переноса</td><td>\(u_t+au_x=0\)</td><td>\(\partial_t,\ \partial_x\)</td></tr>
+  <tr><td>Уравнение теплопроводности</td><td>\(u_t=\varkappa u_{xx}\)</td><td>\(\partial_t,\ \partial_{xx}\)</td></tr>
+  <tr><td>Уравнения Навье — Стокса для несжимаемой вязкой жидкости</td><td>\(\rho\bigl(\mathbf v_t+(\mathbf v\cdot\nabla)\mathbf v\bigr)=-\nabla p+\mu\Delta\mathbf v,\quad \nabla\cdot\mathbf v=0\)</td><td>\(\partial_t\), градиент, дивергенция, лапласиан</td></tr>
+  <tr><td>Уравнения Максвелла</td><td>\(\mathbf B_t=-\nabla\times\mathbf E,\quad \varepsilon\mathbf E_t=\nabla\times\mathbf H-\mathbf J\)</td><td>\(\partial_t\), ротор</td></tr></tbody></table>
+  <p style="font-size:.76em">Здесь \(\mathbf v\) — скорость, \(p\) — давление, \(\rho\) — плотность, \(\mu\) — коэффициент вязкости; \(\mathbf E,\mathbf H\) — напряжённости электрического и магнитного полей, \(\mathbf B\) — магнитная индукция, \(\mathbf J\) — плотность тока, \(\varepsilon\) — диэлектрическая проницаемость.</p>
+  <p>Эти операторы составлены из частных производных, поэтому во всех моделях возникает одна задача: выразить производную функции через её значения в соседних узлах.</p>
+  <p class="bridge">Сформулируем математическую задачу, общую для всех этих моделей.</p>
+</section>
+
+<section class="slide">
+  <div class="roadmap"><span class="b on" title="Постановка">I. Постановка</span><span class="b " title="Разности">II</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.0. Задача и план</span></div>
+  <h2>Постановка задачи и план занятия</h2>
   <div class="problem"><b>Дано</b> значения функции \(f\) в узлах сетки с шагом \(h\).<br><b>Найти</b> приближённое значение производной \(f'(x_0)\) или \(f''(x_0)\) и оценку погрешности.</div>
-  <p class="bridge">Значения в узлах мы уже умеем заменять интерполяционным многочленом; с него и начнём.</p>
+  <div class="plan5">
+    <span class="k">I</span><span class="t"><strong>Постановка</strong> (§&nbsp;6.0). Задача возникает при замене производных в дифференциальных уравнениях.</span>
+    <span class="k">II</span><span class="t"><strong>Разности</strong> (§&nbsp;6.1–6.3). Формулы выводятся из интерполяционного многочлена; определяется порядок аппроксимации.</span>
+    <span class="k">III</span><span class="t"><strong>Округление</strong> (§&nbsp;6.4–6.5). Дифференцирование усиливает погрешность, поэтому существует оптимальный шаг.</span>
+    <span class="k">IV</span><span class="t"><strong>Высокая точность</strong> (§&nbsp;6.6). На гладких данных применяют компактные схемы, сплайн и спектральный метод.</span>
+    <span class="k">V</span><span class="t"><strong>Шум</strong> (§&nbsp;6.7). Измерения сначала сглаживают локальным методом наименьших квадратов.</span>
+    <span class="k">VI</span><span class="t"><strong>Программа</strong> (§&nbsp;6.8). Производную программы вычисляют автоматическим дифференцированием.</span>
+    <span class="k">VII</span><span class="t"><strong>Применение</strong> (§&nbsp;6.9). Формулы подставляются в уравнение переноса.</span>
+    <span class="k">VIII</span><span class="t"><strong>Измерение</strong> (§&nbsp;6.10). Ошибку находят в разных нормах и определяют опытный порядок сходимости.</span>
+  </div>
+  <p class="bridge">Значения функции в узлах определяют интерполяционный многочлен (§&nbsp;3), поэтому вывод формул начнём с него.</p>
 </section>
 
 <section class="slide">
   <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.1. Прямая через два узла</span></div>
   <h2>Производная интерполяционного многочлена</h2>
-  <p class="lead">Заменим \(f\) многочленом Лагранжа (3.5) по соседним узлам и возьмём его производную:</p>
-  <div class="eq tight" style="font-size:.9em">\[P(x)=\sum_jf(x_j)\ell_j(x),\qquad f^{(d)}(x_0)\approx P^{(d)}(x_0)=\sum_jf(x_j)\ell_j^{(d)}(x_0).\tag{6.1}\]</div>
-  <p>Два узла \(x_0,\ x_0+h\). Каждый \(\ell_j\) равен единице в своём узле и нулю в другом:</p>
-  <div class="eq tight" style="font-size:.86em">\[\begin{aligned}
-\ell_0(x)&=\frac{x-(x_0+h)}{x_0-(x_0+h)}=\frac{x_0+h-x}{h}&&\class{step}{\text{равен 1 в }x_0\text{ и 0 в }x_0+h}\\
-\ell_1(x)&=\frac{x-x_0}{(x_0+h)-x_0}=\frac{x-x_0}{h}&&\class{step}{\text{равен 0 в }x_0\text{ и 1 в }x_0+h}\\
-P_1(x)&=f(x_0)\,\ell_0(x)+f(x_0+h)\,\ell_1(x)&&\class{step}{\text{прямая через два значения}}\\
-P_1'(x)&=-\frac{f(x_0)}{h}+\frac{f(x_0+h)}{h}=\frac{f(x_0+h)-f(x_0)}{h}&&\class{step}{\ell_0'=-\tfrac1h,\ \ell_1'=\tfrac1h}
-\end{aligned}\tag{6.2}\]</div>
-  <p>Производная прямой постоянна и равна её наклону: это <strong>правая разность</strong>. Те же шаги для узлов \(x_0-h,\ x_0\) дают <strong>левую разность</strong> \((f(x_0)-f(x_0-h))/h\).</p>
-  <p class="bridge">Следующая разность получается из параболы по трём узлам.</p>
+  <p class="lead">Напомним формулу Лагранжа (3.5): многочлен, принимающий в узлах \(x_j\) значения \(f(x_j)\), имеет вид</p>
+  <div class="eq tight" style="font-size:.72em">\[P(x)=\sum_jf(x_j)\,\ell_j(x),\qquad \ell_j(x)=\prod_{k\ne j}\frac{x-x_k}{x_j-x_k}.\]</div>
+  <p>Производную функции приближённо заменим производной этого многочлена:</p>
+  <div class="eq tight" style="font-size:.72em">\[f^{(d)}(x_0)\approx P^{(d)}(x_0)=\sum_jf(x_j)\,\ell_j^{(d)}(x_0).\tag{6.1}\]</div>
+  <p>Для двух узлов \(x_0,\ x_0+h\) выпишем базисные многочлены и продифференцируем \(P_1\):</p>
+  <div class="eq tight" style="font-size:.72em">\[\begin{aligned}
+  \ell_0(x)&=\frac{x-(x_0+h)}{x_0-(x_0+h)}=\frac{x_0+h-x}{h},\qquad \ell_1(x)=\frac{x-x_0}{(x_0+h)-x_0}=\frac{x-x_0}{h}&&\class{step}{\text{формула Лагранжа}}\\
+  P_1(x)&=f(x_0)\,\ell_0(x)+f(x_0+h)\,\ell_1(x)&&\class{step}{\text{прямая через две точки}}\\
+  P_1'(x)&=-\frac{f(x_0)}{h}+\frac{f(x_0+h)}{h}=\frac{f(x_0+h)-f(x_0)}{h}&&\class{step}{\ell_0'=-\tfrac1h,\ \ell_1'=\tfrac1h}\end{aligned}\tag{6.2}\]</div>
+  <p>Производная прямой постоянна и равна её наклону; полученное выражение называют <strong>правой разностью</strong>. Те же действия для узлов \(x_0-h\) и \(x_0\) дают <strong>левую разность</strong> \((f(x_0)-f(x_0-h))/h\).</p>
+  <p class="bridge">Следующие формулы получим из многочлена второй степени по трём узлам.</p>
 </section>
 
 <section class="slide">
@@ -1131,7 +1148,7 @@ Dual y = exp(sin(x));                          // y.v = f(1), y.d = f'(1)</pre>
   <a href="w06.html" class="back" title="К тексту лекции">← к тексту</a>
   <div class="center">
     <button id="btnPrev" onclick="prev()">◀ назад</button>
-    <span class="counter" id="counter">1 / 40</span>
+    <span class="counter" id="counter">1 / 41</span>
     <button id="btnNext" onclick="next()">вперёд ▶</button>
   </div>
   <a href="w07.html" class="back" title="Следующая лекция">§7 →</a>

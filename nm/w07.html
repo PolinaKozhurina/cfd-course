@@ -4,33 +4,43 @@
 <meta charset="UTF-8">
 <link rel="icon" href="../favicon.ico" type="image/x-icon">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Занятие 7 курса «Численные методы»: численное интегрирование по формулам Ньютона-Котеса: прямоугольники, трапеции, Симпсон, составные формулы, порядок точности, экстраполяция Ромберга.">
-<title>ЧМ · §7. Численное интегрирование I. Ньютон-Котес</title>
+<meta name="description" content="Занятие 7 курса «Численные методы»: квадратурные формулы, составные формулы и правило Рунге, трапеции для периодических функций, квадратуры Гаусса, адаптивный метод, многомерные интегралы, задача Коши и метод Рунге — Кутты.">
+<title>ЧМ · §7. Численное интегрирование</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script>window.MathJax = {tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },options: { skipHtmlTags: ['script','noscript','style','textarea'] }};</script>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
 <style>
-:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--sidebar-bg:#2b2520;--sidebar-text:#d9cfc0}
-*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8;--sidebar-bg:#2b2520;--sidebar-text:#d9cfc0}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
 body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
 .sidebar{position:fixed;left:0;top:38px;bottom:0;width:240px;background:var(--sidebar-bg);color:var(--sidebar-text);padding:1.5rem 1rem;overflow-y:auto;z-index:100;border-right:3px solid var(--accent);font-size:.8rem}
 .sidebar h2{font-family:'Playfair Display',serif;font-size:.85rem;font-weight:700;color:#fff;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.03em}
 .sidebar .g{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--accent);margin:.7rem 0 .15rem;text-transform:uppercase;letter-spacing:.08em}
-.sidebar a{display:block;color:var(--sidebar-text);text-decoration:none;font-size:.76rem;line-height:1.35;padding:.15rem 0 .15rem .5rem;border-left:2px solid transparent}
+.sidebar a{display:block;color:var(--sidebar-text);text-decoration:none;font-size:.76rem;line-height:1.35;padding:.15rem 0 .15rem .5rem;border-left:2px solid transparent;transition:all .15s}
 .sidebar a:hover{color:#fff;border-left-color:var(--accent);background:rgba(180,74,45,.08)}
 .sidebar .sep{height:1px;background:rgba(255,255,255,.07);margin:.4rem 0}
-.main{margin-left:240px;padding:2rem 2.5rem 4rem}.main-inner{max-width:960px}
+.main{margin-left:240px;padding:2rem 2.5rem 4rem}
+.main-inner{max-width:960px}
 .lecture-tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;padding:.2rem .5rem;border-radius:3px;display:inline-block;margin-bottom:.5rem;background:#ece9fb;color:#5b54b8}
 .lecture-num{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);margin-bottom:.3rem}
 h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;line-height:1.15;margin-bottom:1.5rem;color:var(--text)}
 h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--accent);margin:2rem 0 .8rem;padding-top:.5rem;border-top:1px solid var(--border)}
 h3{font-family:'Source Serif 4',serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:1.5rem 0 .5rem}
 p{margin-bottom:1rem;text-align:justify;hyphens:auto}
-ul,ol{margin:.5rem 0 1rem 1.5rem}li{margin:.3rem 0}
-.eq{margin:1.5rem 0;text-align:center}
+ul,ol{margin:.5rem 0 1rem 1.5rem}
+li{margin:.3rem 0}
+.eq{margin:1.5rem 0;text-align:center;max-width:100%;overflow-x:auto;overflow-y:hidden}
 code{font-family:'JetBrains Mono',monospace;background:var(--bg2);padding:1px 5px;border-radius:3px;font-size:.9em}
-.definition,.condition,.theorem{position:relative;padding:1rem 1.2rem 1rem 3rem;border-radius:6px;margin:1.2rem 0;overflow:hidden;min-height:10.5rem}
-.definition{background:#e7efe8}.condition{background:#f2e5d6}.theorem{background:#e0e8f2}
+.definition,.condition,.theorem{position:relative;padding:1rem 1.2rem 1rem 3rem;border-radius:6px;margin:1.2rem 0;border:none;overflow:hidden;min-height:10.5rem}
+.definition{background:#e7efe8}
+.condition{background:#f2e5d6}
+.theorem{background:#e0e8f2}
 .definition strong,.condition strong,.theorem strong{color:var(--text)}
 .definition::before,.condition::before,.theorem::before{position:absolute;left:0;top:0;bottom:0;width:2rem;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase}
 .definition::before{background:#d0dfd4;color:#3d6b5a;content:'Определение'}
@@ -39,301 +49,865 @@ code{font-family:'JetBrains Mono',monospace;background:var(--bg2);padding:1px 5p
 .condition[data-num]::before{content:'Условие ' attr(data-num)}
 .theorem::before{background:#c8d5e6;color:#4a5f88;content:'Теорема'}
 .theorem[data-num]::before{content:'Теорема ' attr(data-num)}
-@media(max-width:700px){.definition,.condition,.theorem{padding-left:2.4rem}.definition::before,.condition::before,.theorem::before{width:1.7rem;font-size:.55rem}}
+@media(max-width:700px){.definition,.condition,.theorem{padding-left:2.4rem}.definition::before,.condition::before,.theorem::before{width:1.7rem;font-size:.55rem;letter-spacing:.16em}}
+.definition .mini-ex,.condition .mini-ex,.theorem .mini-ex{margin-top:.8rem;padding-top:.55rem;border-top:1px dashed rgba(44,36,25,.25);font-size:.93em}
+.mini-ex b{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--text2);margin-right:.45rem}
+html.dark .definition .mini-ex,html.dark .condition .mini-ex,html.dark .theorem .mini-ex{border-top-color:rgba(236,227,214,.25)}
 .example{background:#e0e8f2;border-left:3px solid #7d95bd;padding:.7rem 1rem;border-radius:0 6px 6px 0;margin:.4rem 0 1.2rem;font-size:.94em;color:var(--text)}
 .example .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#4a5f88;margin-bottom:.35rem}
+.example .lbl mjx-container{text-transform:none;letter-spacing:0}
+.example ul{margin:.2rem 0 0 1.2rem}
+.example li{margin-bottom:.2rem}
+.example.task{background:#f3efe4;border-left-color:#c9a23a}
+.example.task .lbl{color:#8a6a12}
+.example.task .sol{display:block;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);margin:.6rem 0 .2rem}
 .remark{background:#f0f7f4;border-left:3px solid var(--accent2);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:.95rem}
 .remark strong{color:var(--accent2)}
 .warning{background:#fbeee7;border-left:3px solid var(--accent);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:.95rem}
 .warning strong{color:var(--accent)}
 .algo{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.2rem 1.5rem;margin:1.2rem 0}
-.algo ol{margin:.5rem 0 0 1.2rem;font-size:.95rem}.algo li{margin:.4rem 0}
+.algo ol{margin:.5rem 0 0 1.2rem;font-size:.95rem}
+.algo li{margin:.4rem 0}
+details.proof{background:var(--bg2);border:1px dashed var(--border);border-radius:6px;padding:.5rem 1rem;margin:.8rem 0;font-size:.95rem}
+details.proof summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2)}
+details.proof[open] summary{margin-bottom:.5rem}
+.passport{background:#fff;border:1px solid var(--border);border-left:4px solid var(--accent3);border-radius:0 8px 8px 0;padding:.9rem 1.2rem;margin:1.2rem 0;font-size:.93rem}
+.passport .ttl{font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent3);margin-bottom:.5rem}
+.passport .row{display:grid;grid-template-columns:9.5em 1fr;gap:.6rem;padding:.3rem 0;border-top:1px solid var(--bg3)}
+.passport .row b{color:var(--text2);font-weight:600}
+.passport .good b{color:var(--accent2)}.passport .bad b{color:var(--accent)}
+@media(max-width:700px){.passport .row{grid-template-columns:1fr;gap:.15rem}}
 .figure{margin:1.5rem auto;text-align:center}
 .figure svg{max-width:100%;height:auto}
 .figure .caption{font-size:.82rem;color:var(--text2);margin-top:.5rem;font-style:italic}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1.4rem 0}
+.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
+.intbox select,.intbox input[type=range],.intbox input[type=number]{font-family:'JetBrains Mono',monospace}
+.intbox select,.intbox input[type=number]{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+.intbox canvas{max-width:100%;height:auto;background:#fdf9f3;border-radius:6px;border:1px solid var(--border)}
 .labcta{background:linear-gradient(135deg,#e0e8f2 0%,#e7efe8 100%);border-radius:8px;padding:1rem 1.2rem;margin:1.4rem 0;display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
-.labcta .badge{font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;background:#4a5f88;color:#fff;padding:.35rem .7rem;border-radius:4px}
+.labcta .badge{font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;background:#4a5f88;color:#fff;padding:.35rem .7rem;border-radius:4px;flex:0 0 auto}
 .labcta .text{flex:1;min-width:220px;font-size:.92rem;color:var(--text)}
-.labcta .go{font-family:'JetBrains Mono',monospace;font-size:.78rem;background:var(--accent);color:#fff;padding:.45rem .95rem;border-radius:5px;text-decoration:none}
+.labcta .go{font-family:'JetBrains Mono',monospace;font-size:.78rem;background:var(--accent);color:#fff;padding:.45rem .95rem;border-radius:5px;text-decoration:none;white-space:nowrap;transition:all .15s}
+.labcta .go:hover{background:#8f3a24;transform:translateY(-1px)}
 .lecture-nav{display:flex;justify-content:space-between;gap:1rem;margin-top:3rem;padding-top:1.5rem;border-top:2px solid var(--border);flex-wrap:wrap}
-.lecture-nav a{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);text-decoration:none;padding:.5rem .8rem;border:1px solid var(--border);border-radius:6px;max-width:48%}
+.lecture-nav a{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);text-decoration:none;padding:.5rem .8rem;border:1px solid var(--border);border-radius:6px;transition:all .15s;max-width:48%}
 .lecture-nav a:hover{border-color:var(--accent);background:rgba(180,74,45,.05)}
 .nav-prev{text-align:left}.nav-next{text-align:right;margin-left:auto}
+table.dd{border-collapse:collapse;font-size:.9rem;font-family:'JetBrains Mono',monospace}
+table.dd th,table.dd td{padding:.3rem .8rem;border:1px solid var(--border);vertical-align:middle;text-align:center}
+table.dd th{background:var(--bg2);font-weight:500}
+table.dd td.e{border:none;padding:0;height:1.1rem}
+table.dd td[rowspan]{height:2.2rem}
+table.dd .c0{background:#e7efe8}table.dd .c1{background:#e0e8f2}table.dd .c2{background:#f2e5d6}table.dd .c3{background:#fbeee7}
+table.dd td.diag{box-shadow:inset 0 0 0 2px #b8552e;font-weight:600}
+table.cmp{border-collapse:collapse;min-width:520px;font-size:.9rem}
+table.cmp th{text-align:left;padding:.4rem .8rem;border-bottom:2px solid var(--border);background:var(--bg2)}
+table.cmp td{padding:.35rem .8rem;border-bottom:1px solid var(--border)}
 @media(max-width:1000px){.sidebar{display:none}.main{margin-left:0;padding:1.5rem}.comments-wrap{margin-left:0 !important;padding:0 1.5rem 2rem}}
-@media(max-width:720px){body{font-size:16px}h1{font-size:1.55rem}h2{font-size:1.15rem}.main{padding:1.2rem 1rem 3rem;overflow-x:clip}.main-inner *{min-width:0}.main svg{max-width:100%;height:auto}.eq{max-width:100%;overflow-x:auto;overflow-y:hidden}mjx-container[display="true"]{max-width:100%;overflow-x:auto;overflow-y:hidden}mjx-container:not([display="true"]){display:inline-block !important;max-width:100%;overflow-x:auto;overflow-y:hidden;vertical-align:-0.3em}}
+@media(max-width:720px){body{font-size:16px}h1{font-size:1.55rem}h2{font-size:1.15rem}.main{padding:1.2rem 1rem 3rem;overflow-x:clip}.main-inner [style*="grid-template-columns"]{grid-template-columns:1fr !important}.main-inner *{min-width:0}.main canvas,.main svg{max-width:100%;height:auto}.eq{max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}mjx-container[display="true"]{max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}mjx-container:not([display="true"]){display:inline-block !important;max-width:100%;overflow-x:auto;overflow-y:hidden;vertical-align:-0.3em}}
 .comments-wrap{margin-left:240px;max-width:calc(960px + 5rem);padding:0 2.5rem 2rem}
 #comments-section{max-width:960px}
 html.dark{--bg:#1b1712;--bg2:#231e18;--bg3:#2c261f;--text:#ece3d6;--text2:#bcb0a0;--text3:#8d8173;--accent:#e07a52;--accent2:#46b89c;--accent3:#82a0db;--border:#39322a;--sidebar-bg:#14100c;--sidebar-text:#cabfae}
 html.dark .definition{background:#1e2a24;color:var(--text)}
 html.dark .condition{background:#2a2118;color:var(--text)}
 html.dark .theorem{background:#1a2130;color:var(--text)}
-html.dark .example{background:#1a2130;color:var(--text)}
+html.dark .example{background:#1a2130;color:var(--text);border-left-color:#4a5f88}
 html.dark .example .lbl{color:#82a0db}
+html.dark .example.task{background:#2a2416;border-left-color:#c9a23a}
+html.dark .example.task .lbl{color:#e5cd8c}
 html.dark .definition::before{background:#20362d;color:#8fc4ac}
 html.dark .condition::before{background:#3a2a1a;color:#d3a874}
 html.dark .theorem::before{background:#26314a;color:#9fb6dd}
 html.dark .remark{background:#152420}
 html.dark .warning{background:#2a1a13}
-html.dark .algo{background:#231e18}
+html.dark .algo,html.dark .intbox{background:#231e18}
+html.dark details.proof{background:#231e18}
+html.dark .passport{background:#1e1a15}
 html.dark .figure{background:#f6f1e8;border:1px solid #e2d8c8;border-radius:8px;padding:.7rem .5rem}
 html.dark .figure svg{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8}
 html.dark .figure .caption{color:#6b5d4f}
-@media print{html,html.dark{--bg:#fff;--bg2:#f6f6f4;--text:#000;--text2:#333;--accent:#9c3a20;--accent2:#155f50;--accent3:#2f4d8a;--border:#ccc}#cfd-nav,.sidebar,.lecture-nav,.comments-wrap,.labcta{display:none !important}body{background:#fff;font-size:11pt}.main{margin-left:0 !important;padding:0 1rem !important}h1,h2,h3{page-break-after:avoid;color:#000}.figure,.theorem,.definition,.condition,.example,.remark,.warning,.algo,.eq{page-break-inside:avoid}a{color:#000;text-decoration:none}}
+html.dark .intbox canvas{background:#f6f1e8}
+html.dark table.dd .c0{background:#1e2a24}html.dark table.dd .c1{background:#1a2130}html.dark table.dd .c2{background:#2a2118}html.dark table.dd .c3{background:#2a1a13}
+@media print{html,html.dark{--bg:#fff;--bg2:#f6f6f4;--bg3:#ececec;--text:#000;--text2:#333;--text3:#555;--accent:#9c3a20;--accent2:#155f50;--accent3:#2f4d8a;--border:#ccc}#cfd-nav,.sidebar,.lecture-nav,.comments-wrap,.intbox,.labcta{display:none !important}body{background:#fff;font-size:11pt;padding-top:0 !important}.main{margin-left:0 !important;padding:0 1rem !important}h1,h2,h3{break-after:avoid;page-break-after:avoid;color:#000}.figure,.theorem,.definition,.condition,.example,.remark,.warning,.algo,.eq,table{break-inside:avoid;page-break-inside:avoid}a{color:#000;text-decoration:none}}
+
+.problem{border-left:4px solid var(--accent3,#3a5ba0);background:rgba(58,91,160,.07);padding:.7rem 1.1rem;border-radius:0 6px 6px 0;margin:.9rem 0;line-height:1.6}
+.problem b{font-family:"JetBrains Mono",monospace;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent3,#3a5ba0);display:inline-block;min-width:5.2em;margin-right:.3rem}
+html.dark .problem{background:rgba(143,168,224,.10);border-left-color:#8fa8e0}html.dark .problem b{color:#8fa8e0}
 </style>
+<style>.step{color:#b44a2d}html.dark .step{color:#e07a52}</style>
 </head>
 <body>
 <script src="../js/nav.js"></script>
 
 <nav class="sidebar">
-  <h2>§7. Ньютон-Котес</h2>
+  <h2>§7. Интегрирование</h2>
   <div class="g">Содержание</div>
-  <a href="#task">Задача интегрирования</a>
-  <a href="#idea">Идея квадратуры</a>
-  <a href="#rect">Прямоугольники</a>
-  <a href="#trap">Трапеции</a>
-  <a href="#simp">Симпсон</a>
-  <a href="#comp">Составные формулы</a>
-  <a href="#order">Порядок точности</a>
-  <a href="#romberg">Ромберг</a>
-  <a href="#summary">Итоги</a>
+  <a href="#task">§7.0. Постановка</a>
+  <a href="#simple">§7.1. Простейшие формулы</a>
+  <a href="#comp">§7.2. Составные формулы</a>
+  <a href="#runge">§7.3. Правило Рунге</a>
+  <a href="#periodic">§7.4. Периодические функции</a>
+  <a href="#gauss">§7.5. Квадратуры Гаусса</a>
+  <a href="#adapt">§7.6. Особенности и адаптивность</a>
+  <a href="#multi">§7.7. Многомерные интегралы</a>
+  <a href="#ode">§7.8. Задача Коши</a>
+  <a href="#practice">§7.9. Разбор заданий</a>
+  <a href="#summary">§7.10. Итоги</a>
   <div class="sep"></div>
   <div class="g">Практика</div>
   <a href="w07-slides.html">▶ Слайды лекции</a>
   <a href="w07-lab.html">▶ Лабораторная работа</a>
   <div class="sep"></div>
   <div class="g">Навигация</div>
-  <a href="w06.html">← §6. Численное дифф.</a>
-  <a href="w08.html">→ §8. Гаусс</a>
+  <a href="w06.html">← §6. Численное дифференцирование</a>
+  <a href="w08.html">→ §8. Метод Монте-Карло</a>
 </nav>
 
-<div class="main"><div class="main-inner">
+<div class="main">
+<div class="main-inner">
+
 <span class="lecture-tag">Численные методы</span>
-<div class="lecture-num">§7 · Блок III. Дифференцирование и интегрирование</div>
+<div class="lecture-num">§7 · Блок III. Дифференцирование, интегрирование, Монте-Карло</div>
 <div style="display:flex;align-items:baseline;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
-  <h1 style="margin:0">Численное интегрирование I. Формулы Ньютона-Котеса</h1>
-  <div style="display:flex;gap:.4rem">
-    <a href="w07-slides.html" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.4rem .8rem;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none">▶ Слайды</a>
-    <a href="w07-lab.html" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.4rem .8rem;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none">▶ Лаба</a>
+  <h1 style="margin:0">Численное интегрирование</h1>
+  <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+    <a href="w07-slides.html" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.4rem .8rem;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none;white-space:nowrap">▶ Слайды</a>
+    <a href="w07-lab.html" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.4rem .8rem;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none;white-space:nowrap">▶ Лаба</a>
   </div>
 </div>
 
-<p>Численное интегрирование — обратная задача к дифференцированию: по значениям \(f\) в узлах восстановить определённый интеграл \(I = \int_a^b f(x)\,dx\). В отличие от дифференцирования, здесь ошибка округления играет <em>минимальную</em> роль (сумма положительных величин не теряет значимости), а на первый план выходит ошибка усечения. Классический подход — <em>квадратурные формулы</em> Ньютона-Котеса: интерполируем \(f\) многочленом низкой степени на подотрезках и интегрируем интерполянт.</p>
+<p>В §&nbsp;6 мы приближали производную и видели, что эта операция усиливает погрешности. Интегрирование устроено наоборот: оно их сглаживает, поэтому погрешность данных здесь почти не мешает, а весь вопрос в том, сколько значений функции потребуется для заданной точности. Занятие идёт от простейших формул к формулам Гаусса, затем к функциям с особенностями и заканчивается применением: интегрируя дифференциальное уравнение на одном шаге, мы получим методы Эйлера и Рунге — Кутты.</p>
 
 <!-- =============================================================== -->
-<h2 id="task">Задача численного интегрирования</h2>
+<h2 id="task">§7.0. Постановка: что дано</h2>
+
+<div class="problem"><b>Дано</b> функция \(f\) на отрезке \([a,b]\): таблица значений либо программа, вычисляющая \(f(x)\) в любой точке.<br><b>Найти</b> приближённое значение \(I=\int_a^bf(x)\,dx\) и оценку погрешности.<br><b>План</b> простейшие формулы (§&nbsp;7.1), составные формулы и контроль точности (§&nbsp;7.2–7.3), периодические функции (§&nbsp;7.4), формулы Гаусса (§&nbsp;7.5), особенности и адаптивность (§&nbsp;7.6), многомерные интегралы (§&nbsp;7.7), задача Коши (§&nbsp;7.8).</div>
 
 <div class="definition" data-num="1">
-<em style="color:inherit;font-weight:600">квадратурная формула.</em> Приближение определённого интеграла линейной комбинацией значений подынтегральной функции в фиксированных узлах:
+<em style="color:inherit;font-weight:600">квадратурная формула и степень точности.</em> Квадратурной формулой называют выражение
 \[
-\int_a^b f(x)\,dx \;\approx\; \sum_{i=0}^{n} w_i\,f(x_i).
+Q[f]=\sum_{j=1}^{m}w_jf(x_j)
 \tag{7.1}
 \]
-Узлы \(x_i \in [a, b]\) и веса \(w_i\) не зависят от \(f\) и подбираются заранее.
+с узлами \(x_j\) и весами \(w_j\). Формула имеет <em>степень точности</em> \(r\), если она точна на всех многочленах степени не выше \(r\), но не на всех многочленах степени \(r+1\).
 </div>
 
-<p>Формулы Ньютона-Котеса — семейство квадратур с <em>равномерно</em> расположенными узлами. Веса подбираются так, чтобы формула была <em>точна</em> для многочленов возможно более высокой степени.</p>
-
-<!-- =============================================================== -->
-<h2 id="idea">Идея: интеграл интерполяционного многочлена</h2>
-
-<p>Пусть \(P_n(x)\) — интерполяционный многочлен \(f\) в узлах \(x_0, \ldots, x_n\) (например, форма Лагранжа §&nbsp;3). Тогда естественная квадратурная формула — интеграл интерполянта:</p>
+<p>Выбор метода зависит от данных. На таблице узлы заданы, и выбирать можно только веса. Если функцию можно вычислять где угодно, выбирают и узлы; это даёт формулы Гаусса. Обусловленность задачи проверяется одной строкой: если значения известны с ошибкой не более \(\delta\), то</p>
 
 <div class="eq">\[
-\int_a^b f(x)\,dx \;\approx\; \int_a^b P_n(x)\,dx \;=\; \sum_{i=0}^n f(x_i)\int_a^b \ell_i(x)\,dx \;=\; \sum_{i=0}^n w_i f(x_i),
+\Bigl|\sum_jw_j\tilde f(x_j)-\sum_jw_jf(x_j)\Bigr|\le\delta\sum_j|w_j|.
 \tag{7.2}
 \]</div>
 
-<p>где \(w_i = \int_a^b \ell_i(x)\,dx\) — интегралы базисных многочленов Лагранжа. Формула точно вычисляет любой многочлен степени \(\le n\), потому что для такого многочлена интерполянт \(P_n\) совпадает с \(f\) целиком.</p>
+<p>Если все веса положительны и формула точна на константах, то \(\sum_j|w_j|=b-a\): ошибка данных не усиливается при любом числе узлов. В разностной формуле (§&nbsp;6.4) та же ошибка делится на шаг. Именно поэтому в интегрировании нет оптимального шага: для составных трапеций и \(e^x\) ошибка продолжает падать вплоть до \(n=10^7\), где она равна \(1{,}6\cdot10^{-15}\).</p>
 
-<div class="definition" data-num="2">
-<em style="color:inherit;font-weight:600">степень точности квадратуры.</em> Наибольшая степень \(m\), при которой формула (7.1) вычисляет \(\int_a^b x^k\,dx\) точно для всех \(k = 0, 1, \ldots, m\). Величину \(m\) называют <em>алгебраическим порядком точности</em>.
-</div>
+<p><strong>Итог §&nbsp;7.0.</strong> Квадратурная формула есть взвешенная сумма значений, её качество описывает степень точности, а положительные веса гарантируют устойчивость к погрешности данных.</p>
 
 <!-- =============================================================== -->
-<h2 id="rect">Формулы прямоугольников</h2>
+<h2 id="simple">§7.1. Простейшие формулы</h2>
 
-<p>Самая простая квадратура — <em>средней точки</em> (midpoint rule): интерполируем \(f\) константой \(f((a+b)/2)\):</p>
-
-<div class="theorem" data-num="1">
-<em style="color:inherit;font-weight:600">формула средней точки.</em>
-\[
-M(f) \;=\; (b - a)\,f\!\left(\frac{a+b}{2}\right).
-\tag{7.3}
-\]
-Точна для многочленов степени \(\le 1\) (степень точности 1). Ошибка на гладкой \(f\):
-\[
-\int_a^b f\,dx - M(f) \;=\; \frac{(b-a)^3}{24}\,f''(\xi),\qquad \xi \in (a, b).
-\tag{7.4}
-\]
-</div>
-
-<p>Аналогично строятся формулы <em>левого</em> и <em>правого</em> прямоугольника, интерполирующие \(f\) значением в левом / правом конце. У них степень точности <em>0</em> (точны только для констант), ошибка \(O((b-a)^2)\).</p>
-
-<!-- =============================================================== -->
-<h2 id="trap">Формула трапеций</h2>
-
-<p>Интерполяция \(f\) линейной функцией через два конца отрезка \([a, b]\):</p>
-
-<div class="theorem" data-num="2">
-<em style="color:inherit;font-weight:600">формула трапеций.</em>
-\[
-T(f) \;=\; \frac{b - a}{2}\bigl(f(a) + f(b)\bigr).
-\tag{7.5}
-\]
-Точна для многочленов степени \(\le 1\); ошибка на гладкой \(f\):
-\[
-\int_a^b f\,dx - T(f) \;=\; -\frac{(b-a)^3}{12}\,f''(\xi),\qquad \xi \in (a, b).
-\tag{7.6}
-\]
-</div>
-
-<p>Обратите внимание: константа при \(f''\) у трапеций в 2 раза больше, чем у средних точек — то есть одна средняя точка <em>точнее</em> одной трапеции. Плата — «середина» отрезка неудобна, если функция задана только в узлах равномерной сетки.</p>
-
-<!-- =============================================================== -->
-<h2 id="simp">Формула Симпсона</h2>
-
-<p>Интерполируем \(f\) квадратичной параболой через три равноотстоящие точки: \(a\), \((a+b)/2\), \(b\):</p>
-
-<div class="theorem" data-num="3">
-<em style="color:inherit;font-weight:600">формула Симпсона.</em>
-\[
-S(f) \;=\; \frac{b - a}{6}\left(f(a) + 4\,f\!\left(\frac{a+b}{2}\right) + f(b)\right).
-\tag{7.7}
-\]
-</div>
-
-<p>Удивительный факт: формула Симпсона, построенная по трём точкам (интерполяция квадратичной параболой) точна <em>не только</em> для многочленов степени 2, но и для кубических:</p>
-
-<div class="theorem" data-num="4">
-<em style="color:inherit;font-weight:600">степень точности Симпсона.</em> Формула (7.7) точна для многочленов степени \(\le 3\); ошибка на гладкой \(f\):
-\[
-\int_a^b f\,dx - S(f) \;=\; -\frac{(b-a)^5}{2880}\,f^{(4)}(\xi),\qquad \xi \in (a, b).
-\tag{7.8}
-\]
-</div>
-
-<p><em>Причина.</em> Кубический член в интерполируемой функции \(x^3\) на симметричном интервале даёт нулевой вклад в ошибку — он «убивается» симметрией квадратуры. Это общий эффект: <em>симметричные формулы Ньютона-Котеса</em> с нечётным числом узлов имеют степень точности <em>на единицу выше</em>, чем можно было бы ожидать.</p>
-
-<div class="figure">
-<svg viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg" style="max-width:700px">
-  <!-- ось -->
-  <line x1="50" y1="220" x2="670" y2="220" stroke="#2c2419" stroke-width="1.2"/>
-  <text x="675" y="216" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b5d4f">x</text>
-  <!-- функция -->
-  <path d="M 50 200 Q 200 60 360 100 T 670 180" fill="none" stroke="#2c2419" stroke-width="2"/>
-  <text x="600" y="80" font-family="JetBrains Mono,monospace" font-size="12" fill="#2c2419">f(x)</text>
-  <!-- Прямоугольник -->
-  <rect x="80" y="140" width="140" height="80" fill="#b44a2d" fill-opacity="0.18" stroke="#b44a2d" stroke-width="1.4"/>
-  <text x="150" y="235" font-family="JetBrains Mono,monospace" font-size="10" fill="#b44a2d" text-anchor="middle">средн. точка</text>
-  <!-- Трапеция -->
-  <polygon points="270,155 270,220 410,220 410,100" fill="#3a5ba0" fill-opacity="0.18" stroke="#3a5ba0" stroke-width="1.4"/>
-  <text x="340" y="235" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a5ba0" text-anchor="middle">трапеция</text>
-  <!-- Симпсон -->
-  <path d="M 460 130 Q 545 60 630 165 L 630 220 L 460 220 Z" fill="#1a6b5a" fill-opacity="0.18" stroke="#1a6b5a" stroke-width="1.4"/>
-  <text x="545" y="235" font-family="JetBrains Mono,monospace" font-size="10" fill="#1a6b5a" text-anchor="middle">Симпсон</text>
-</svg>
-<div class="caption">Рис. 1. Три классических квадратуры: прямоугольник (константа), трапеция (прямая), Симпсон (парабола).</div>
-</div>
-
-<!-- =============================================================== -->
-<h2 id="comp">Составные формулы</h2>
-
-<p>На большом отрезке \([a, b]\) одна квадратура высокой степени точна лишь для очень гладкой \(f\); практически удобнее разбить \([a, b]\) на \(N\) подотрезков \([x_i, x_{i+1}]\) с шагом \(h = (b-a)/N\) и применить простую формулу на каждом подотрезке.</p>
-
-<div class="theorem" data-num="5">
-<em style="color:inherit;font-weight:600">составная формула трапеций.</em>
-\[
-T_N(f) \;=\; h\left(\frac{f(x_0) + f(x_N)}{2} + \sum_{i=1}^{N-1} f(x_i)\right),\qquad h = \frac{b - a}{N}.
-\tag{7.9}
-\]
-Ошибка: \(\displaystyle -\frac{(b-a)\,h^2}{12}\,f''(\eta) = O(h^2)\).
-</div>
-
-<div class="theorem" data-num="6">
-<em style="color:inherit;font-weight:600">составная формула Симпсона.</em> При <em>чётном</em> \(N\):
-\[
-S_N(f) \;=\; \frac{h}{3}\!\left(f(x_0) + f(x_N) + 4\!\!\sum_{i\ \text{нечёт}} f(x_i) + 2\!\!\sum_{i\ \text{чёт}, i\ne 0, N} f(x_i)\right).
-\tag{7.10}
-\]
-Ошибка: \(\displaystyle -\frac{(b-a)\,h^4}{180}\,f^{(4)}(\eta) = O(h^4)\).
-</div>
-
-<!-- =============================================================== -->
-<h2 id="order">Порядок точности и выигрыш от Симпсона</h2>
-
-<p>Для гладкой \(f\) удвоение числа узлов при <em>трапециях</em> уменьшает ошибку в 4 раза (порядок 2), при <em>Симпсоне</em> — в 16 раз (порядок 4). Разница особенно заметна при высоких требованиях к точности.</p>
-
-<div class="example">
-<span class="lbl">Пример: \(\int_0^1 e^x dx = e - 1\)</span>
-<ul>
-  <li>Трапеции с \(N = 10\): ошибка \(\sim 2\cdot 10^{-3}\).</li>
-  <li>Трапеции с \(N = 100\): ошибка \(\sim 2\cdot 10^{-5}\) (в 100 раз меньше).</li>
-  <li>Симпсон с \(N = 10\): ошибка \(\sim 5\cdot 10^{-7}\).</li>
-  <li>Симпсон с \(N = 20\): ошибка \(\sim 3\cdot 10^{-8}\) (в 16 раз меньше).</li>
-</ul>
-При том же числе вычислений \(f\) Симпсон точнее трапеций в тысячи раз.
-</div>
-
-<!-- =============================================================== -->
-<h2 id="romberg">Экстраполяция Ромберга</h2>
-
-<p>Как и для дифференцирования (§&nbsp;6), для интегрирования работает <em>экстраполяция Ричардсона</em>. Для составной формулы трапеций справедлива <em>формула Эйлера–Маклорена</em>: разложение ошибки по <em>чётным</em> степеням \(h\):</p>
+<p>Заменим \(f\) на отрезке длины \(H=b-a\) интерполяционным многочленом (§&nbsp;3) и проинтегрируем его. Взяв одно значение в середине \(c=(a+b)/2\), получаем формулу средней точки; два значения на концах дают формулу трапеции, три значения — формулу Симпсона (рис.&nbsp;1).</p>
 
 <div class="eq">\[
-T_N(f) \;=\; I + c_1 h^2 + c_2 h^4 + c_3 h^6 + \ldots
+M=Hf(c),\qquad T=\frac H2\bigl(f(a)+f(b)\bigr),\qquad S=\frac H6\bigl(f(a)+4f(c)+f(b)\bigr).
+\tag{7.3}
+\]</div>
+
+<div class="figure"><svg viewBox="0 0 840 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Три простейшие формулы">
+<rect x="12.0" y="26.0" width="258.0" height="244.0" fill="none" stroke="#2c2419" stroke-width="1.1"/>
+<text x="141.0" y="18.0" text-anchor="middle" font-size="14" font-weight="600" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">средняя точка</text>
+<polygon points="47.2,270.0 47.2,142.7 49.1,142.7 51.0,142.7 52.9,142.7 54.8,142.7 56.7,142.7 58.6,142.7 60.4,142.7 62.3,142.7 64.2,142.7 66.1,142.7 68.0,142.7 69.9,142.7 71.8,142.7 73.7,142.7 75.6,142.7 77.5,142.7 79.4,142.7 81.3,142.7 83.2,142.7 85.1,142.7 87.0,142.7 88.9,142.7 90.8,142.7 92.7,142.7 94.6,142.7 96.5,142.7 98.4,142.7 100.3,142.7 102.1,142.7 104.0,142.7 105.9,142.7 107.8,142.7 109.7,142.7 111.6,142.7 113.5,142.7 115.4,142.7 117.3,142.7 119.2,142.7 121.1,142.7 123.0,142.7 124.9,142.7 126.8,142.7 128.7,142.7 130.6,142.7 132.5,142.7 134.4,142.7 136.3,142.7 138.2,142.7 140.1,142.7 141.9,142.7 143.8,142.7 145.7,142.7 147.6,142.7 149.5,142.7 151.4,142.7 153.3,142.7 155.2,142.7 157.1,142.7 159.0,142.7 160.9,142.7 162.8,142.7 164.7,142.7 166.6,142.7 168.5,142.7 170.4,142.7 172.3,142.7 174.2,142.7 176.1,142.7 178.0,142.7 179.9,142.7 181.7,142.7 183.6,142.7 185.5,142.7 187.4,142.7 189.3,142.7 191.2,142.7 193.1,142.7 195.0,142.7 196.9,142.7 198.8,142.7 200.7,142.7 202.6,142.7 204.5,142.7 206.4,142.7 208.3,142.7 210.2,142.7 212.1,142.7 214.0,142.7 215.9,142.7 217.8,142.7 219.7,142.7 221.6,142.7 223.4,142.7 225.3,142.7 227.2,142.7 229.1,142.7 231.0,142.7 232.9,142.7 234.8,142.7 234.8,270.0" fill="#3a5ba0" fill-opacity=".22" stroke="#3a5ba0" stroke-width="1.6"/>
+<polyline points="17.9,240.0 19.1,238.8 20.3,237.6 21.6,236.5 22.8,235.3 24.1,234.1 25.3,232.9 26.5,231.7 27.8,230.6 29.0,229.4 30.2,228.2 31.5,227.0 32.7,225.8 34.0,224.6 35.2,223.4 36.4,222.2 37.7,221.0 38.9,219.8 40.1,218.6 41.4,217.4 42.6,216.2 43.9,215.0 45.1,213.8 46.3,212.6 47.6,211.4 48.8,210.2 50.0,209.1 51.3,207.9 52.5,206.7 53.8,205.5 55.0,204.4 56.2,203.2 57.5,202.0 58.7,200.9 59.9,199.7 61.2,198.6 62.4,197.4 63.7,196.3 64.9,195.2 66.1,194.1 67.4,192.9 68.6,191.8 69.8,190.7 71.1,189.6 72.3,188.5 73.6,187.5 74.8,186.4 76.0,185.3 77.3,184.3 78.5,183.2 79.7,182.2 81.0,181.1 82.2,180.1 83.5,179.1 84.7,178.1 85.9,177.1 87.2,176.1 88.4,175.1 89.6,174.2 90.9,173.2 92.1,172.3 93.4,171.3 94.6,170.4 95.8,169.5 97.1,168.5 98.3,167.6 99.5,166.8 100.8,165.9 102.0,165.0 103.3,164.1 104.5,163.3 105.7,162.5 107.0,161.6 108.2,160.8 109.4,160.0 110.7,159.2 111.9,158.4 113.2,157.6 114.4,156.9 115.6,156.1 116.9,155.4 118.1,154.6 119.3,153.9 120.6,153.2 121.8,152.5 123.1,151.8 124.3,151.1 125.5,150.4 126.8,149.7 128.0,149.1 129.2,148.4 130.5,147.8 131.7,147.2 133.0,146.5 134.2,145.9 135.4,145.3 136.7,144.7 137.9,144.1 139.1,143.6 140.4,143.0 141.6,142.4 142.9,141.9 144.1,141.3 145.3,140.8 146.6,140.2 147.8,139.7 149.0,139.2 150.3,138.7 151.5,138.2 152.8,137.7 154.0,137.2 155.2,136.7 156.5,136.2 157.7,135.7 158.9,135.2 160.2,134.7 161.4,134.3 162.7,133.8 163.9,133.3 165.1,132.9 166.4,132.4 167.6,132.0 168.8,131.5 170.1,131.1 171.3,130.6 172.6,130.2 173.8,129.7 175.0,129.3 176.3,128.9 177.5,128.4 178.7,128.0 180.0,127.5 181.2,127.1 182.5,126.6 183.7,126.2 184.9,125.8 186.2,125.3 187.4,124.9 188.6,124.4 189.9,124.0 191.1,123.5 192.4,123.0 193.6,122.6 194.8,122.1 196.1,121.6 197.3,121.2 198.5,120.7 199.8,120.2 201.0,119.7 202.3,119.2 203.5,118.7 204.7,118.2 206.0,117.6 207.2,117.1 208.4,116.6 209.7,116.0 210.9,115.5 212.2,114.9 213.4,114.4 214.6,113.8 215.9,113.2 217.1,112.6 218.3,112.0 219.6,111.4 220.8,110.8 222.1,110.1 223.3,109.5 224.5,108.8 225.8,108.2 227.0,107.5 228.2,106.8 229.5,106.1 230.7,105.4 232.0,104.6 233.2,103.9 234.4,103.1 235.7,102.4 236.9,101.6 238.1,100.8 239.4,100.0 240.6,99.2 241.9,98.3 243.1,97.5 244.3,96.6 245.6,95.7 246.8,94.8 248.0,93.9 249.3,93.0 250.5,92.0 251.8,91.1 253.0,90.1 254.2,89.1 255.5,88.1 256.7,87.1 257.9,86.0 259.2,85.0 260.4,83.9 261.7,82.8 262.9,81.7 264.1,80.6" fill="none" stroke="#2c2419" stroke-width="2.2" stroke-linejoin="round"/>
+<circle cx="141.0" cy="142.7" r="4.5" fill="#b44a2d"/>
+<text x="47.2" y="288.0" text-anchor="middle" font-size="14" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">a</text>
+<text x="234.8" y="288.0" text-anchor="middle" font-size="14" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">b</text>
+<rect x="292.0" y="26.0" width="258.0" height="244.0" fill="none" stroke="#2c2419" stroke-width="1.1"/>
+<text x="421.0" y="18.0" text-anchor="middle" font-size="14" font-weight="600" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">трапеция</text>
+<polygon points="327.2,270.0 327.2,211.8 329.1,210.7 331.0,209.6 332.9,208.5 334.8,207.4 336.7,206.3 338.6,205.2 340.4,204.1 342.3,203.0 344.2,201.9 346.1,200.8 348.0,199.7 349.9,198.6 351.8,197.5 353.7,196.4 355.6,195.3 357.5,194.2 359.4,193.1 361.3,192.0 363.2,190.9 365.1,189.8 367.0,188.7 368.9,187.6 370.8,186.5 372.7,185.4 374.6,184.3 376.5,183.2 378.4,182.1 380.3,181.0 382.1,179.9 384.0,178.8 385.9,177.7 387.8,176.6 389.7,175.5 391.6,174.4 393.5,173.3 395.4,172.2 397.3,171.1 399.2,170.0 401.1,168.9 403.0,167.8 404.9,166.7 406.8,165.6 408.7,164.5 410.6,163.4 412.5,162.3 414.4,161.2 416.3,160.1 418.2,159.0 420.1,157.9 421.9,156.8 423.8,155.7 425.7,154.6 427.6,153.5 429.5,152.4 431.4,151.3 433.3,150.2 435.2,149.1 437.1,148.0 439.0,146.9 440.9,145.8 442.8,144.7 444.7,143.6 446.6,142.5 448.5,141.4 450.4,140.3 452.3,139.2 454.2,138.1 456.1,137.0 458.0,135.9 459.9,134.8 461.7,133.7 463.6,132.6 465.5,131.5 467.4,130.4 469.3,129.3 471.2,128.2 473.1,127.1 475.0,126.0 476.9,124.9 478.8,123.8 480.7,122.7 482.6,121.6 484.5,120.5 486.4,119.4 488.3,118.3 490.2,117.2 492.1,116.1 494.0,115.0 495.9,113.9 497.8,112.8 499.7,111.7 501.6,110.6 503.4,109.5 505.3,108.4 507.2,107.3 509.1,106.2 511.0,105.1 512.9,104.0 514.8,102.9 514.8,270.0" fill="#3a5ba0" fill-opacity=".22" stroke="#3a5ba0" stroke-width="1.6"/>
+<polyline points="297.9,240.0 299.1,238.8 300.3,237.6 301.6,236.5 302.8,235.3 304.1,234.1 305.3,232.9 306.5,231.7 307.8,230.6 309.0,229.4 310.2,228.2 311.5,227.0 312.7,225.8 314.0,224.6 315.2,223.4 316.4,222.2 317.7,221.0 318.9,219.8 320.1,218.6 321.4,217.4 322.6,216.2 323.9,215.0 325.1,213.8 326.3,212.6 327.6,211.4 328.8,210.2 330.0,209.1 331.3,207.9 332.5,206.7 333.8,205.5 335.0,204.4 336.2,203.2 337.5,202.0 338.7,200.9 339.9,199.7 341.2,198.6 342.4,197.4 343.7,196.3 344.9,195.2 346.1,194.1 347.4,192.9 348.6,191.8 349.8,190.7 351.1,189.6 352.3,188.5 353.6,187.5 354.8,186.4 356.0,185.3 357.3,184.3 358.5,183.2 359.7,182.2 361.0,181.1 362.2,180.1 363.5,179.1 364.7,178.1 365.9,177.1 367.2,176.1 368.4,175.1 369.6,174.2 370.9,173.2 372.1,172.3 373.4,171.3 374.6,170.4 375.8,169.5 377.1,168.5 378.3,167.6 379.5,166.8 380.8,165.9 382.0,165.0 383.3,164.1 384.5,163.3 385.7,162.5 387.0,161.6 388.2,160.8 389.4,160.0 390.7,159.2 391.9,158.4 393.2,157.6 394.4,156.9 395.6,156.1 396.9,155.4 398.1,154.6 399.3,153.9 400.6,153.2 401.8,152.5 403.1,151.8 404.3,151.1 405.5,150.4 406.8,149.7 408.0,149.1 409.2,148.4 410.5,147.8 411.7,147.2 413.0,146.5 414.2,145.9 415.4,145.3 416.7,144.7 417.9,144.1 419.1,143.6 420.4,143.0 421.6,142.4 422.9,141.9 424.1,141.3 425.3,140.8 426.6,140.2 427.8,139.7 429.0,139.2 430.3,138.7 431.5,138.2 432.8,137.7 434.0,137.2 435.2,136.7 436.5,136.2 437.7,135.7 438.9,135.2 440.2,134.7 441.4,134.3 442.7,133.8 443.9,133.3 445.1,132.9 446.4,132.4 447.6,132.0 448.8,131.5 450.1,131.1 451.3,130.6 452.6,130.2 453.8,129.7 455.0,129.3 456.3,128.9 457.5,128.4 458.7,128.0 460.0,127.5 461.2,127.1 462.5,126.6 463.7,126.2 464.9,125.8 466.2,125.3 467.4,124.9 468.6,124.4 469.9,124.0 471.1,123.5 472.4,123.0 473.6,122.6 474.8,122.1 476.1,121.6 477.3,121.2 478.5,120.7 479.8,120.2 481.0,119.7 482.3,119.2 483.5,118.7 484.7,118.2 486.0,117.6 487.2,117.1 488.4,116.6 489.7,116.0 490.9,115.5 492.2,114.9 493.4,114.4 494.6,113.8 495.9,113.2 497.1,112.6 498.3,112.0 499.6,111.4 500.8,110.8 502.1,110.1 503.3,109.5 504.5,108.8 505.8,108.2 507.0,107.5 508.2,106.8 509.5,106.1 510.7,105.4 512.0,104.6 513.2,103.9 514.4,103.1 515.7,102.4 516.9,101.6 518.1,100.8 519.4,100.0 520.6,99.2 521.9,98.3 523.1,97.5 524.3,96.6 525.6,95.7 526.8,94.8 528.0,93.9 529.3,93.0 530.5,92.0 531.8,91.1 533.0,90.1 534.2,89.1 535.5,88.1 536.7,87.1 537.9,86.0 539.2,85.0 540.4,83.9 541.7,82.8 542.9,81.7 544.1,80.6" fill="none" stroke="#2c2419" stroke-width="2.2" stroke-linejoin="round"/>
+<circle cx="327.2" cy="211.8" r="4.5" fill="#b44a2d"/>
+<circle cx="514.8" cy="102.9" r="4.5" fill="#b44a2d"/>
+<text x="327.2" y="288.0" text-anchor="middle" font-size="14" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">a</text>
+<text x="514.8" y="288.0" text-anchor="middle" font-size="14" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">b</text>
+<rect x="572.0" y="26.0" width="258.0" height="244.0" fill="none" stroke="#2c2419" stroke-width="1.1"/>
+<text x="701.0" y="18.0" text-anchor="middle" font-size="14" font-weight="600" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">Симпсон</text>
+<polygon points="607.2,270.0 607.2,211.8 609.1,210.1 611.0,208.4 612.9,206.8 614.8,205.1 616.7,203.5 618.6,201.9 620.4,200.2 622.3,198.6 624.2,197.1 626.1,195.5 628.0,193.9 629.9,192.4 631.8,190.8 633.7,189.3 635.6,187.8 637.5,186.3 639.4,184.8 641.3,183.3 643.2,181.8 645.1,180.4 647.0,178.9 648.9,177.5 650.8,176.0 652.7,174.6 654.6,173.2 656.5,171.8 658.4,170.5 660.3,169.1 662.1,167.8 664.0,166.4 665.9,165.1 667.8,163.8 669.7,162.5 671.6,161.2 673.5,159.9 675.4,158.6 677.3,157.4 679.2,156.1 681.1,154.9 683.0,153.7 684.9,152.5 686.8,151.3 688.7,150.1 690.6,148.9 692.5,147.8 694.4,146.6 696.3,145.5 698.2,144.4 700.1,143.3 701.9,142.2 703.8,141.1 705.7,140.0 707.6,138.9 709.5,137.9 711.4,136.8 713.3,135.8 715.2,134.8 717.1,133.8 719.0,132.8 720.9,131.8 722.8,130.8 724.7,129.9 726.6,128.9 728.5,128.0 730.4,127.1 732.3,126.2 734.2,125.3 736.1,124.4 738.0,123.5 739.9,122.7 741.7,121.8 743.6,121.0 745.5,120.2 747.4,119.3 749.3,118.5 751.2,117.8 753.1,117.0 755.0,116.2 756.9,115.5 758.8,114.7 760.7,114.0 762.6,113.3 764.5,112.6 766.4,111.9 768.3,111.2 770.2,110.5 772.1,109.9 774.0,109.2 775.9,108.6 777.8,108.0 779.7,107.4 781.6,106.8 783.4,106.2 785.3,105.6 787.2,105.0 789.1,104.5 791.0,104.0 792.9,103.4 794.8,102.9 794.8,270.0" fill="#3a5ba0" fill-opacity=".22" stroke="#3a5ba0" stroke-width="1.6"/>
+<polyline points="577.9,240.0 579.1,238.8 580.3,237.6 581.6,236.5 582.8,235.3 584.1,234.1 585.3,232.9 586.5,231.7 587.8,230.6 589.0,229.4 590.2,228.2 591.5,227.0 592.7,225.8 594.0,224.6 595.2,223.4 596.4,222.2 597.7,221.0 598.9,219.8 600.1,218.6 601.4,217.4 602.6,216.2 603.9,215.0 605.1,213.8 606.3,212.6 607.6,211.4 608.8,210.2 610.0,209.1 611.3,207.9 612.5,206.7 613.8,205.5 615.0,204.4 616.2,203.2 617.5,202.0 618.7,200.9 619.9,199.7 621.2,198.6 622.4,197.4 623.7,196.3 624.9,195.2 626.1,194.1 627.4,192.9 628.6,191.8 629.8,190.7 631.1,189.6 632.3,188.5 633.6,187.5 634.8,186.4 636.0,185.3 637.3,184.3 638.5,183.2 639.7,182.2 641.0,181.1 642.2,180.1 643.5,179.1 644.7,178.1 645.9,177.1 647.2,176.1 648.4,175.1 649.6,174.2 650.9,173.2 652.1,172.3 653.4,171.3 654.6,170.4 655.8,169.5 657.1,168.5 658.3,167.6 659.5,166.8 660.8,165.9 662.0,165.0 663.3,164.1 664.5,163.3 665.7,162.5 667.0,161.6 668.2,160.8 669.4,160.0 670.7,159.2 671.9,158.4 673.2,157.6 674.4,156.9 675.6,156.1 676.9,155.4 678.1,154.6 679.3,153.9 680.6,153.2 681.8,152.5 683.1,151.8 684.3,151.1 685.5,150.4 686.8,149.7 688.0,149.1 689.2,148.4 690.5,147.8 691.7,147.2 693.0,146.5 694.2,145.9 695.4,145.3 696.7,144.7 697.9,144.1 699.1,143.6 700.4,143.0 701.6,142.4 702.9,141.9 704.1,141.3 705.3,140.8 706.6,140.2 707.8,139.7 709.0,139.2 710.3,138.7 711.5,138.2 712.8,137.7 714.0,137.2 715.2,136.7 716.5,136.2 717.7,135.7 718.9,135.2 720.2,134.7 721.4,134.3 722.7,133.8 723.9,133.3 725.1,132.9 726.4,132.4 727.6,132.0 728.8,131.5 730.1,131.1 731.3,130.6 732.6,130.2 733.8,129.7 735.0,129.3 736.3,128.9 737.5,128.4 738.7,128.0 740.0,127.5 741.2,127.1 742.5,126.6 743.7,126.2 744.9,125.8 746.2,125.3 747.4,124.9 748.6,124.4 749.9,124.0 751.1,123.5 752.4,123.0 753.6,122.6 754.8,122.1 756.1,121.6 757.3,121.2 758.5,120.7 759.8,120.2 761.0,119.7 762.3,119.2 763.5,118.7 764.7,118.2 766.0,117.6 767.2,117.1 768.4,116.6 769.7,116.0 770.9,115.5 772.2,114.9 773.4,114.4 774.6,113.8 775.9,113.2 777.1,112.6 778.3,112.0 779.6,111.4 780.8,110.8 782.1,110.1 783.3,109.5 784.5,108.8 785.8,108.2 787.0,107.5 788.2,106.8 789.5,106.1 790.7,105.4 792.0,104.6 793.2,103.9 794.4,103.1 795.7,102.4 796.9,101.6 798.1,100.8 799.4,100.0 800.6,99.2 801.9,98.3 803.1,97.5 804.3,96.6 805.6,95.7 806.8,94.8 808.0,93.9 809.3,93.0 810.5,92.0 811.8,91.1 813.0,90.1 814.2,89.1 815.5,88.1 816.7,87.1 817.9,86.0 819.2,85.0 820.4,83.9 821.7,82.8 822.9,81.7 824.1,80.6" fill="none" stroke="#2c2419" stroke-width="2.2" stroke-linejoin="round"/>
+<circle cx="607.2" cy="211.8" r="4.5" fill="#b44a2d"/>
+<circle cx="701.0" cy="142.7" r="4.5" fill="#b44a2d"/>
+<circle cx="794.8" cy="102.9" r="4.5" fill="#b44a2d"/>
+<text x="607.2" y="288.0" text-anchor="middle" font-size="14" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">a</text>
+<text x="794.8" y="288.0" text-anchor="middle" font-size="14" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">b</text>
+</svg><div class="caption">Рис. 1. Простейшие формулы заменяют функцию константой, прямой и параболой, проходящей через три значения.</div></div>
+
+<p>Веса можно найти и методом неопределённых коэффициентов, как в §&nbsp;6.3: условие точности на \(1,x,x^2,\ldots\) даёт систему. Для Симпсона на \([-1,1]\) с узлами \(-1,0,1\) система \(w_1+w_2+w_3=2\), \(-w_1+w_3=0\), \(w_1+w_3=\tfrac23\) даёт \(w_1=w_3=\tfrac13\), \(w_2=\tfrac43\).</p>
+
+<p>Погрешность находим, разлагая всё в ряд Тейлора в середине отрезка. Нечётные степени при интегрировании по симметричному отрезку обращаются в нуль:</p>
+
+<div class="eq">\[
+\begin{aligned}
+I&=Hf(c)+\frac{H^3}{24}f''(c)+\frac{H^5}{1920}f^{(4)}(c)+\ldots
+&&\class{step}{\text{интегрируем ряд Тейлора}}\\
+T&=Hf(c)+\frac{H^3}{8}f''(c)+\frac{H^5}{384}f^{(4)}(c)+\ldots
+&&\class{step}{\text{подставляем }c\pm H/2\text{ в }T}\\
+M-I&=-\frac{H^3}{24}f''+\ldots,\qquad T-I=\frac{H^3}{12}f''+\ldots
+&&\class{step}{\text{вычитаем}}
+\end{aligned}
+\tag{7.4}
+\]</div>
+
+<p>Ошибки средней точки и трапеции имеют разные знаки, и первая вдвое меньше по модулю. Поэтому сочетание \(S=(2M+T)/3\) уничтожает член с \(f''\); это и есть формула Симпсона:</p>
+
+<div class="eq">\[
+S-I=\frac{H^5}{2880}f^{(4)}+\ldots
+\qquad\class{step}{\text{подставляем (7.4) в }(2M+T)/3}
+\tag{7.5}
+\]</div>
+
+<p>Степени точности равны 1, 1 и 3. Симпсон точен на кубических многочленах, хотя построен по параболе: это снова выигрыш от симметрии, как у центральной разности.</p>
+
+<div class="example"><span class="lbl">Пример A. Одна формула на всём отрезке</span>
+<strong>Дано:</strong> \(I=\int_0^1e^x\,dx=e-1=1{,}718282\). <strong>Задача:</strong> вычислить три формулы и сравнить ошибки с главными членами.
+<div style="overflow-x:auto;margin-top:.4rem"><table class="cmp">
+<thead><tr><th>Формула</th><th>Значение</th><th>Ошибка</th><th>Главный член при \(f''\) или \(f^{(4)}\) в точке \(c\)</th></tr></thead>
+<tbody>
+<tr><td>средняя точка</td><td>1,648721</td><td>\(-6{,}96\cdot10^{-2}\)</td><td>\(-6{,}87\cdot10^{-2}\)</td></tr>
+<tr><td>трапеция</td><td>1,859141</td><td>\(1{,}41\cdot10^{-1}\)</td><td>\(1{,}37\cdot10^{-1}\)</td></tr>
+<tr><td>Симпсон</td><td>1,718861</td><td>\(5{,}79\cdot10^{-4}\)</td><td>\(5{,}72\cdot10^{-4}\)</td></tr>
+</tbody></table></div>
+</div>
+
+<div class="warning"><strong>Повышать степень многочлена на равномерных узлах нельзя.</strong> Формулы этого семейства (Ньютона — Котеса) при большом числе узлов получают отрицательные веса, и оценка (7.2) перестаёт быть безобидной. При 21 узле \(\sum_j|w_j|\approx1088\) на отрезке длины 2, а для функции Рунге \(1/(1+25x^2)\) на \([-1,1]\) ошибка равна \(5{,}9\). Это феномен Рунге (§&nbsp;3.10) в интегральной форме. Точность повышают иначе: дроблением отрезка (§&nbsp;7.2) или выбором узлов (§&nbsp;7.5).</div>
+
+<p><strong>Итог §&nbsp;7.1.</strong> Три простейшие формулы получаются интегрированием интерполянта, а их погрешности следуют из ряда Тейлора.</p>
+
+<!-- =============================================================== -->
+<h2 id="comp">§7.2. Составные формулы</h2>
+
+<p>Разобьём \([a,b]\) на \(n\) равных отрезков длины \(h=(b-a)/n\) и применим простую формулу на каждом. Для узлов \(x_i=a+ih\) и середин \(x_{i+1/2}\) получаем</p>
+
+<div class="eq">\[
+\begin{aligned}
+M_n&=h\sum_{i=0}^{n-1}f(x_{i+1/2}),\qquad
+T_n=h\Bigl(\tfrac12f(x_0)+\sum_{i=1}^{n-1}f(x_i)+\tfrac12f(x_n)\Bigr),\\
+S_n&=\frac h6\Bigl(f(x_0)+4\sum_{i=0}^{n-1}f(x_{i+1/2})+2\sum_{i=1}^{n-1}f(x_i)+f(x_n)\Bigr).
+\end{aligned}
+\tag{7.6}
+\]</div>
+
+<p>Погрешность складывается из \(n\) погрешностей (7.4)–(7.5), где \(H=h\), и теряет одну степень \(h\), так как \(n=(b-a)/h\):</p>
+
+<div class="eq">\[
+\begin{aligned}
+M_n-I&\approx-\frac{(b-a)h^2}{24}f''(\xi),\qquad
+T_n-I\approx\frac{(b-a)h^2}{12}f''(\xi),\\
+S_n-I&\approx\frac{(b-a)h^4}{2880}f^{(4)}(\xi)
+\qquad\class{step}{n\text{ слагаемых, }n\,h=b-a}
+\end{aligned}
+\tag{7.7}
+\]</div>
+
+<p>Составная формула Симпсона здесь использует \(2n+1\) значение: на каждом отрезке \(n\) есть своя середина.</p>
+
+<div class="example"><span class="lbl">Пример B. Опытный порядок</span>
+<strong>Дано:</strong> тот же интеграл. <strong>Задача:</strong> найти опытный порядок по (6.27).
+<div style="overflow-x:auto;margin-top:.4rem"><table class="cmp">
+<thead><tr><th>Формула</th><th>\(n=1\)</th><th>\(n=4\)</th><th>\(n=16\)</th><th>\(n=32\)</th><th>Опытный порядок</th></tr></thead>
+<tbody>
+<tr><td>средние точки</td><td>\(6{,}96\cdot10^{-2}\)</td><td>\(4{,}47\cdot10^{-3}\)</td><td>\(2{,}80\cdot10^{-4}\)</td><td>\(6{,}99\cdot10^{-5}\)</td><td>2,00</td></tr>
+<tr><td>трапеции</td><td>\(1{,}41\cdot10^{-1}\)</td><td>\(8{,}94\cdot10^{-3}\)</td><td>\(5{,}59\cdot10^{-4}\)</td><td>\(1{,}40\cdot10^{-4}\)</td><td>2,00</td></tr>
+<tr><td>Симпсон</td><td>\(5{,}79\cdot10^{-4}\)</td><td>\(2{,}33\cdot10^{-6}\)</td><td>\(9{,}10\cdot10^{-9}\)</td><td>\(5{,}69\cdot10^{-10}\)</td><td>4,00</td></tr>
+</tbody></table></div>
+</div>
+
+<div class="passport">
+<div class="ttl">Паспорт: составные формулы</div>
+<div class="row"><b>Вход</b><span>значения на равномерной сетке (для таблицы подходит только этот вариант); трапеции работают и на неравномерной сетке</span></div>
+<div class="row good"><b>Хорошо</b><span>гладкие функции; простая реализация; значения одной сетки используются повторно на сетке вдвое мельче</span></div>
+<div class="row bad"><b>Плохо</b><span>особенности и резкие пики: порядок падает, и сетка всюду мелкая</span></div>
+<div class="row"><b>Порядок</b><span>2 у средних точек и трапеций, 4 у Симпсона</span></div>
+<div class="row"><b>Стоимость</b><span>\(n+1\) значение у трапеций, \(2n+1\) у Симпсона</span></div>
+<div class="row"><b>Приёмы</b><span>контроль точности удвоением \(n\); особенность убирают заменой переменной (§&nbsp;7.6)</span></div>
+</div>
+
+<p><strong>Итог §&nbsp;7.2.</strong> Точность повышают дроблением отрезка: при уменьшении шага вдвое ошибка падает в 4 раза у трапеций и в 16 раз у Симпсона.</p>
+
+<!-- =============================================================== -->
+<h2 id="runge">§7.3. Контроль точности: правило Рунге</h2>
+
+<p>Старшая производная в (7.7) обычно неизвестна. Как и в §&nbsp;6.5, ошибку оценивают по двум расчётам. Для формулы порядка \(p\) и сеток \(n\) и \(2n\):</p>
+
+<div class="eq">\[
+Q_{2n}-I\approx\frac{Q_n-Q_{2n}}{2^p-1},\qquad
+R=\frac{2^pQ_{2n}-Q_n}{2^p-1}.
+\tag{7.8}
+\]</div>
+
+<div class="example"><span class="lbl">Пример C. Трапеции с уточнением</span>
+<strong>Дано:</strong> \(T_4=1{,}727222\), \(T_8=1{,}720519\), \(p=2\), точное значение \(1{,}718282\). <strong>Задача:</strong> оценить ошибку \(T_8\) и уточнить значение.
+По (7.8) ошибка \(T_8\) приблизительно равна \((1{,}727222-1{,}720519)/3=2{,}234\cdot10^{-3}\), а истинная равна \(2{,}237\cdot10^{-3}\). Уточнённое значение \(R=(4T_8-T_4)/3=1{,}7182842\) имеет ошибку \(2{,}3\cdot10^{-6}\).
+</div>
+
+<p>Значение \(R\) совпало с составной формулой Симпсона \(S_4\): подстановка показывает, что \((4T_{2n}-T_n)/3=S_n\). Если продолжить тот же приём и применять его снова к результатам, получится метод Ромберга. Он даёт высокую точность для гладких функций, но на практике чаще применяют формулы следующих разделов.</p>
+
+<p><strong>Итог §&nbsp;7.3.</strong> Удвоение числа отрезков даёт и оценку ошибки, и более точное значение, причём все ранее вычисленные значения функции используются повторно.</p>
+
+<!-- =============================================================== -->
+<h2 id="periodic">§7.4. Периодические функции: трапеции</h2>
+
+<p>Есть важный случай, когда простейшая формула работает лучше всех. Если \(f\) периодична с периодом \(b-a\), то концы отрезка неразличимы, и (7.6) превращается в простую сумму значений с равными весами. Подставим гармонику на отрезке \([0,2\pi]\) с \(N\) узлами \(x_j=2\pi j/N\):</p>
+
+<div class="eq">\[
+\frac{2\pi}{N}\sum_{j=0}^{N-1}e^{\mathrm ikx_j}=
+\begin{cases}2\pi,&k\text{ кратно }N,\\0,&\text{иначе},\end{cases}
+\qquad\int_0^{2\pi}e^{\mathrm ikx}\,dx=\begin{cases}2\pi,&k=0,\\0,&k\ne0.\end{cases}
+\tag{7.9}
+\]</div>
+
+<p>Формула точна на всех гармониках с \(|k|\lt N\). Для разложения \(f=\sum_k\hat f_ke^{\mathrm ikx}\) (§&nbsp;5.6) ошибка содержит только коэффициенты с номерами, кратными \(N\): \(T_N-I=2\pi\sum_{m\ne0}\hat f_{mN}\). У гладкой функции они очень малы, поэтому ошибка убывает быстрее любой степени \(h\).</p>
+
+<div class="figure" style="max-width:640px"><svg viewBox="0 0 640 370" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Трапеции для периодической функции">
+<line x1="120.4" y1="322.0" x2="120.4" y2="18.0" stroke="#e6ddcf"/>
+<text x="120.4" y="340.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">4</text>
+<line x1="241.9" y1="322.0" x2="241.9" y2="18.0" stroke="#e6ddcf"/>
+<text x="241.9" y="340.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">8</text>
+<line x1="363.4" y1="322.0" x2="363.4" y2="18.0" stroke="#e6ddcf"/>
+<text x="363.4" y="340.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">16</text>
+<line x1="484.8" y1="322.0" x2="484.8" y2="18.0" stroke="#e6ddcf"/>
+<text x="484.8" y="340.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">32</text>
+<line x1="606.3" y1="322.0" x2="606.3" y2="18.0" stroke="#e6ddcf"/>
+<text x="606.3" y="340.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">64</text>
+<line x1="70.0" y1="322.0" x2="622.0" y2="322.0" stroke="#e6ddcf"/>
+<text x="63.0" y="326.0" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻¹⁵</text>
+<line x1="70.0" y1="265.0" x2="622.0" y2="265.0" stroke="#e6ddcf"/>
+<text x="63.0" y="269.0" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻¹²</text>
+<line x1="70.0" y1="208.0" x2="622.0" y2="208.0" stroke="#e6ddcf"/>
+<text x="63.0" y="212.0" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻⁹</text>
+<line x1="70.0" y1="151.0" x2="622.0" y2="151.0" stroke="#e6ddcf"/>
+<text x="63.0" y="155.0" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻⁶</text>
+<line x1="70.0" y1="94.0" x2="622.0" y2="94.0" stroke="#e6ddcf"/>
+<text x="63.0" y="98.0" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻³</text>
+<line x1="70.0" y1="37.0" x2="622.0" y2="37.0" stroke="#e6ddcf"/>
+<text x="63.0" y="41.0" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁰</text>
+<rect x="70.0" y="18.0" width="552.0" height="304.0" fill="none" stroke="#2c2419" stroke-width="1.1"/>
+<text x="346.0" y="360.0" text-anchor="middle" font-size="14" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">число значений функции на отрезке</text>
+<text transform="translate(16,170.0) rotate(-90)" text-anchor="middle" font-size="14" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">модуль ошибки</text>
+<polyline points="120.4,64.8 241.9,149.1 363.4,317.3 484.8,317.3" fill="none" stroke="#b44a2d" stroke-width="2.1" stroke-linejoin="round"/>
+<circle cx="120.4" cy="64.8" r="3.2" fill="#b44a2d"/>
+<circle cx="241.9" cy="149.1" r="3.2" fill="#b44a2d"/>
+<circle cx="363.4" cy="317.3" r="3.2" fill="#b44a2d"/>
+<circle cx="484.8" cy="317.3" r="3.2" fill="#b44a2d"/>
+<polyline points="120.4,41.2 241.9,73.9 363.4,158.2 484.8,317.3 606.3,317.3" fill="none" stroke="#3a5ba0" stroke-width="2.1" stroke-linejoin="round"/>
+<circle cx="120.4" cy="41.2" r="3.2" fill="#3a5ba0"/>
+<circle cx="241.9" cy="73.9" r="3.2" fill="#3a5ba0"/>
+<circle cx="363.4" cy="158.2" r="3.2" fill="#3a5ba0"/>
+<circle cx="484.8" cy="317.3" r="3.2" fill="#3a5ba0"/>
+<circle cx="606.3" cy="317.3" r="3.2" fill="#3a5ba0"/>
+<polyline points="120.4,75.9 241.9,87.4 363.4,98.8 484.8,110.2 606.3,121.7" fill="none" stroke="#1a6b5a" stroke-width="2.1" stroke-linejoin="round"/>
+<circle cx="120.4" cy="75.9" r="3.2" fill="#1a6b5a"/>
+<circle cx="241.9" cy="87.4" r="3.2" fill="#1a6b5a"/>
+<circle cx="363.4" cy="98.8" r="3.2" fill="#1a6b5a"/>
+<circle cx="484.8" cy="110.2" r="3.2" fill="#1a6b5a"/>
+<circle cx="606.3" cy="121.7" r="3.2" fill="#1a6b5a"/>
+<line x1="300" y1="30" x2="326" y2="30" stroke="#b44a2d" stroke-width="2.4"/>
+<text x="332" y="34.5" font-size="13.5" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">трапеции, периодическая e^(sin x)</text>
+<line x1="300" y1="50" x2="326" y2="50" stroke="#3a5ba0" stroke-width="2.4"/>
+<text x="332" y="54.5" font-size="13.5" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">Симпсон, та же функция</text>
+<line x1="300" y1="70" x2="326" y2="70" stroke="#1a6b5a" stroke-width="2.4"/>
+<text x="332" y="74.5" font-size="13.5" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">трапеции, непериодическая eˣ</text>
+</svg><div class="caption">Рис. 2. Для периодической функции трапеции достигают машинной точности при \(N=16\), тогда как для непериодической сохраняется порядок 2.</div></div>
+
+<div class="example"><span class="lbl">Пример D</span>
+<strong>Дано:</strong> \(I=\int_0^{2\pi}e^{\sin x}\,dx=7{,}954927\). При 4, 8 и 16 значениях функции трапеции дают ошибку \(3{,}4\cdot10^{-2}\), \(1{,}3\cdot10^{-6}\) и \(1{,}8\cdot10^{-15}\). Формула Симпсона, имея более высокий номинальный порядок, при тех же числах значений даёт \(6{,}0\cdot10^{-1}\), \(1{,}2\cdot10^{-2}\) и \(4{,}2\cdot10^{-7}\): её неравные веса портят точность на периодической функции.
+</div>
+
+<p><strong>Итог §&nbsp;7.4.</strong> Для гладких периодических функций лучшая формула — простая сумма значений на равномерной сетке. То же относится к функциям, быстро убывающим на всей прямой.</p>
+
+<!-- =============================================================== -->
+<h2 id="gauss">§7.5. Квадратуры Гаусса</h2>
+
+<div class="problem"><b>Дано</b> программа, вычисляющая \(f\) в любой точке, и допустимое число значений \(m\).<br><b>Найти</b> узлы и веса с наибольшей степенью точности.</div>
+
+<p>До сих пор узлы выбирались заранее. Сделаем их неизвестными вместе с весами. Тогда неизвестных \(2m\), и можно потребовать точность на многочленах степени до \(2m-1\). Для \(m=2\) на \([-1,1]\):</p>
+
+<div class="eq">\[
+\begin{aligned}
+w_1+w_2&=2,&\ w_1x_1+w_2x_2&=0,
+&&\class{step}{\text{точность на }1,\ x}\\
+w_1x_1^2+w_2x_2^2&=\tfrac23,&\ w_1x_1^3+w_2x_2^3&=0
+&&\class{step}{\text{точность на }x^2,\ x^3}\\
+x_{1,2}&=\mp\tfrac1{\sqrt3},&\ w_1=w_2&=1
+&&\class{step}{\text{симметрия: }x_1=-x_2,\ w_1=w_2}
+\end{aligned}
+\tag{7.10}
+\]</div>
+
+<p>Числа \(\pm1/\sqrt3\) не случайны: это корни многочлена Лежандра \(P_2=(3x^2-1)/2\) из §&nbsp;5.5.</p>
+
+<div class="theorem" data-num="1">
+<em style="color:inherit;font-weight:600">о квадратурах Гаусса.</em> Пусть \(x_1,\ldots,x_m\) — корни многочлена Лежандра \(P_m\), а веса получены интегрированием интерполянта по этим узлам. Тогда формула (7.1) на \([-1,1]\) имеет степень точности \(2m-1\), а все её веса положительны.
+</div>
+
+<details class="proof"><summary>Доказательство</summary>
+<p>Пусть \(p\) — многочлен степени не выше \(2m-1\). Разделим его на \(P_m\): \(p=qP_m+r\), где степени \(q\) и \(r\) меньше \(m\). Интеграл от \(qP_m\) равен нулю, так как \(P_m\) ортогонален всем многочленам меньшей степени. В узлах \(P_m=0\), поэтому формула вычисляет только \(r\), а на \(r\) она точна как интерполяционная. Следовательно, \(Q[p]=Q[r]=\int r=\int p\). Для положительности подставим \(p=\ell_j^2\) степени \(2m-2\): получаем \(w_j=\int\ell_j^2\gt0\).</p>
+</details>
+
+<p>Отсюда следует устойчивость: сумма модулей весов всегда равна длине отрезка, и (7.2) не даёт усиления при любом \(m\). На произвольный отрезок формула переносится линейной заменой:</p>
+
+<div class="eq">\[
+\int_a^bf(x)\,dx\approx\frac{b-a}{2}\sum_{j=1}^{m}w_jf\Bigl(\frac{a+b}{2}+\frac{b-a}{2}t_j\Bigr).
 \tag{7.11}
 \]</div>
 
-<p>Комбинируя \(T_N\) и \(T_{2N}\) с коэффициентами, «убирающими» \(h^2\), получаем формулу порядка 4. Итерируя, поднимаемся до порядков 6, 8, ... Это <em>метод Ромберга</em>:</p>
-
-<div class="theorem" data-num="7">
-<em style="color:inherit;font-weight:600">метод Ромберга.</em> Пусть \(R_{k,0} = T_{2^k}(f)\) — составные трапеции с \(2^k\) отрезками. Тогда
-\[
-R_{k, j} \;=\; \frac{4^{j}\,R_{k, j-1} - R_{k-1, j-1}}{4^{j} - 1},\qquad j = 1, 2, \ldots, k.
-\tag{7.12}
-\]
-Величина \(R_{k, j}\) имеет порядок точности \(2j + 2\).
+<div style="overflow-x:auto;margin:.4rem 0 1rem">
+<table class="cmp">
+<thead><tr><th>\(m\)</th><th>Узлы \(t_j\)</th><th>Веса</th><th>Степень точности</th><th>Ошибка для \(\int_0^1e^x\,dx\)</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>\(0\)</td><td>\(2\)</td><td>1</td><td>\(6{,}96\cdot10^{-2}\)</td></tr>
+<tr><td>2</td><td>\(\pm1/\sqrt3\)</td><td>\(1,\ 1\)</td><td>3</td><td>\(3{,}85\cdot10^{-4}\)</td></tr>
+<tr><td>3</td><td>\(0,\ \pm\sqrt{3/5}\)</td><td>\(\tfrac89,\ \tfrac59\)</td><td>5</td><td>\(8{,}24\cdot10^{-7}\)</td></tr>
+<tr><td>5</td><td>корни \(P_5\)</td><td>из таблиц</td><td>9</td><td>\(6{,}54\cdot10^{-13}\)</td></tr>
+</tbody>
+</table>
 </div>
 
-<p>Таблица Ромберга — треугольник значений; в правом нижнем углу лежит наиболее точное приближение. При \(k = 4\) (16 подотрезков) и \(j = 4\) достигается порядок 10 — на гладких функциях даёт машинную точность буквально за 32 вычисления \(f\).</p>
+<div class="figure" style="max-width:680px"><svg viewBox="0 0 680 390" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Сходимость квадратур">
+<line x1="70.0" y1="342.0" x2="70.0" y2="18.0" stroke="#e6ddcf"/>
+<text x="70.0" y="360.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">2</text>
+<line x1="188.0" y1="342.0" x2="188.0" y2="18.0" stroke="#e6ddcf"/>
+<text x="188.0" y="360.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">8</text>
+<line x1="305.9" y1="342.0" x2="305.9" y2="18.0" stroke="#e6ddcf"/>
+<text x="305.9" y="360.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">32</text>
+<line x1="423.9" y1="342.0" x2="423.9" y2="18.0" stroke="#e6ddcf"/>
+<text x="423.9" y="360.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">128</text>
+<line x1="541.9" y1="342.0" x2="541.9" y2="18.0" stroke="#e6ddcf"/>
+<text x="541.9" y="360.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">512</text>
+<line x1="659.9" y1="342.0" x2="659.9" y2="18.0" stroke="#e6ddcf"/>
+<text x="659.9" y="360.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">2048</text>
+<line x1="70.0" y1="342.0" x2="662.0" y2="342.0" stroke="#e6ddcf"/>
+<text x="63.0" y="346.0" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻¹⁵</text>
+<line x1="70.0" y1="277.2" x2="662.0" y2="277.2" stroke="#e6ddcf"/>
+<text x="63.0" y="281.2" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻¹²</text>
+<line x1="70.0" y1="212.4" x2="662.0" y2="212.4" stroke="#e6ddcf"/>
+<text x="63.0" y="216.4" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻⁹</text>
+<line x1="70.0" y1="147.6" x2="662.0" y2="147.6" stroke="#e6ddcf"/>
+<text x="63.0" y="151.6" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻⁶</text>
+<line x1="70.0" y1="82.8" x2="662.0" y2="82.8" stroke="#e6ddcf"/>
+<text x="63.0" y="86.8" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻³</text>
+<line x1="70.0" y1="18.0" x2="662.0" y2="18.0" stroke="#e6ddcf"/>
+<text x="63.0" y="22.0" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁰</text>
+<rect x="70.0" y="18.0" width="592.0" height="324.0" fill="none" stroke="#2c2419" stroke-width="1.1"/>
+<text x="366.0" y="380.0" text-anchor="middle" font-size="14" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">число значений функции</text>
+<text transform="translate(16,180.0) rotate(-90)" text-anchor="middle" font-size="14" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">модуль ошибки</text>
+<polyline points="70.0,36.4 104.5,49.3 148.0,62.3 198.0,75.2 252.1,88.3 308.6,101.3 366.3,114.3 424.6,127.3 483.2,140.3 542.1,153.3 601.0,166.3" fill="none" stroke="#1a6b5a" stroke-width="2.1" stroke-linejoin="round"/>
+<circle cx="70.0" cy="36.4" r="3.2" fill="#1a6b5a"/>
+<circle cx="104.5" cy="49.3" r="3.2" fill="#1a6b5a"/>
+<circle cx="148.0" cy="62.3" r="3.2" fill="#1a6b5a"/>
+<circle cx="198.0" cy="75.2" r="3.2" fill="#1a6b5a"/>
+<circle cx="252.1" cy="88.3" r="3.2" fill="#1a6b5a"/>
+<circle cx="308.6" cy="101.3" r="3.2" fill="#1a6b5a"/>
+<circle cx="366.3" cy="114.3" r="3.2" fill="#1a6b5a"/>
+<circle cx="424.6" cy="127.3" r="3.2" fill="#1a6b5a"/>
+<circle cx="483.2" cy="140.3" r="3.2" fill="#1a6b5a"/>
+<circle cx="542.1" cy="153.3" r="3.2" fill="#1a6b5a"/>
+<circle cx="601.0" cy="166.3" r="3.2" fill="#1a6b5a"/>
+<polyline points="104.5,87.9 148.0,113.7 198.0,139.7 252.1,165.7 308.6,191.7 366.3,217.7 424.6,243.7 483.2,269.7 542.1,295.7 601.0,321.7" fill="none" stroke="#3a5ba0" stroke-width="2.1" stroke-linejoin="round"/>
+<circle cx="104.5" cy="87.9" r="3.2" fill="#3a5ba0"/>
+<circle cx="148.0" cy="113.7" r="3.2" fill="#3a5ba0"/>
+<circle cx="198.0" cy="139.7" r="3.2" fill="#3a5ba0"/>
+<circle cx="252.1" cy="165.7" r="3.2" fill="#3a5ba0"/>
+<circle cx="308.6" cy="191.7" r="3.2" fill="#3a5ba0"/>
+<circle cx="366.3" cy="217.7" r="3.2" fill="#3a5ba0"/>
+<circle cx="424.6" cy="243.7" r="3.2" fill="#3a5ba0"/>
+<circle cx="483.2" cy="269.7" r="3.2" fill="#3a5ba0"/>
+<circle cx="542.1" cy="295.7" r="3.2" fill="#3a5ba0"/>
+<circle cx="601.0" cy="321.7" r="3.2" fill="#3a5ba0"/>
+<polyline points="104.5,149.4 163.5,188.2 222.5,227.1 281.5,266.1 340.5,305.2" fill="none" stroke="#5b54b8" stroke-width="2.1" stroke-linejoin="round"/>
+<circle cx="104.5" cy="149.4" r="3.2" fill="#5b54b8"/>
+<circle cx="163.5" cy="188.2" r="3.2" fill="#5b54b8"/>
+<circle cx="222.5" cy="227.1" r="3.2" fill="#5b54b8"/>
+<circle cx="281.5" cy="266.1" r="3.2" fill="#5b54b8"/>
+<circle cx="340.5" cy="305.2" r="3.2" fill="#5b54b8"/>
+<polyline points="70.0,91.7 104.5,149.4 129.0,213.1 148.0,281.2" fill="none" stroke="#b44a2d" stroke-width="2.1" stroke-linejoin="round"/>
+<circle cx="70.0" cy="91.7" r="3.2" fill="#b44a2d"/>
+<circle cx="104.5" cy="149.4" r="3.2" fill="#b44a2d"/>
+<circle cx="129.0" cy="213.1" r="3.2" fill="#b44a2d"/>
+<circle cx="148.0" cy="281.2" r="3.2" fill="#b44a2d"/>
+<line x1="300" y1="34" x2="326" y2="34" stroke="#1a6b5a" stroke-width="2.4"/>
+<text x="332" y="38.5" font-size="13.5" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">составные трапеции, порядок 2</text>
+<line x1="300" y1="54" x2="326" y2="54" stroke="#3a5ba0" stroke-width="2.4"/>
+<text x="332" y="58.5" font-size="13.5" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">составной Симпсон, порядок 4</text>
+<line x1="300" y1="74" x2="326" y2="74" stroke="#5b54b8" stroke-width="2.4"/>
+<text x="332" y="78.5" font-size="13.5" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">составной Гаусс, 3 точки, порядок 6</text>
+<line x1="300" y1="94" x2="326" y2="94" stroke="#b44a2d" stroke-width="2.4"/>
+<text x="332" y="98.5" font-size="13.5" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">один Гаусс, m = 2…5 точек</text>
+</svg><div class="caption">Рис. 3. Ошибка для \(\int_0^1e^x\,dx\) в зависимости от числа значений функции.</div></div>
+
+<p>При \(m=1\) получается формула средней точки. Три значения функции дают у Симпсона ошибку \(5{,}79\cdot10^{-4}\), а у Гаусса \(8{,}24\cdot10^{-7}\). На функции Рунге формула Гаусса сходится, в отличие от формул с равномерными узлами: при \(m=16\) ошибка равна \(1{,}8\cdot10^{-3}\), при \(m=32\) — \(3{,}1\cdot10^{-6}\).</p>
+
+<div class="passport">
+<div class="ttl">Паспорт: квадратуры Гаусса</div>
+<div class="row"><b>Вход</b><span>программа, вычисляющая \(f\) в указанных точках; для таблицы на готовой сетке метод неприменим</span></div>
+<div class="row good"><b>Хорошо</b><span>гладкие функции: наименьшее число значений для заданной точности</span></div>
+<div class="row bad"><b>Плохо</b><span>особенности (выигрыш от степени пропадает); значения при увеличении \(m\) нельзя использовать повторно, так как узлы меняются</span></div>
+<div class="row"><b>Порядок</b><span>степень точности \(2m-1\); составная формула имеет порядок \(2m\)</span></div>
+<div class="row"><b>Устойчивость</b><span>веса положительны, усиления нет</span></div>
+<div class="row"><b>Приёмы</b><span>составная формула на подотрезках; узлы высокого порядка берут из библиотек; весовые варианты для интегралов с заданным весом \(\rho(x)\)</span></div>
+</div>
+
+<p><strong>Итог §&nbsp;7.5.</strong> Свобода в выборе узлов удваивает степень точности, а оптимальные узлы являются корнями ортогональных многочленов.</p>
 
 <!-- =============================================================== -->
+<h2 id="adapt">§7.6. Особенности и адаптивность</h2>
+
+<p>Все оценки выше предполагали гладкость. Для \(\int_0^1\sqrt x\,dx=\tfrac23\) производные на левом конце неограниченны, и порядок любой формулы падает до \(1{,}5\):</p>
+
+<div style="overflow-x:auto;margin:.4rem 0 1rem">
+<table class="cmp">
+<thead><tr><th>Составная формула</th><th>\(n=4\)</th><th>\(n=16\)</th><th>\(n=64\)</th><th>Опытный порядок</th></tr></thead>
+<tbody>
+<tr><td>трапеции</td><td>\(2{,}34\cdot10^{-2}\)</td><td>\(3{,}09\cdot10^{-3}\)</td><td>\(3{,}96\cdot10^{-4}\)</td><td>1,48</td></tr>
+<tr><td>Симпсон</td><td>\(3{,}59\cdot10^{-3}\)</td><td>\(4{,}48\cdot10^{-4}\)</td><td>\(5{,}61\cdot10^{-5}\)</td><td>1,50</td></tr>
+<tr><td>Гаусс, \(m=3\)</td><td>\(3{,}14\cdot10^{-4}\)</td><td>\(3{,}93\cdot10^{-5}\)</td><td>\(4{,}91\cdot10^{-6}\)</td><td>1,50</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><em>Первый приём — замена переменной.</em> Подстановка \(x=t^2\) даёт \(\int_0^1\sqrt x\,dx=\int_0^12t^2\,dt\), и уже одна формула Симпсона вычисляет этот интеграл точно. Если особенность известна, её стоит убрать аналитически.</p>
+
+<p><em>Второй приём — адаптивная сетка.</em> Трудная часть функции занимает малую долю отрезка, и мелкая сетка нужна только там. Правило Рунге сообщает, где именно ошибка велика.</p>
+
+<div class="algo"><strong>Адаптивный метод Симпсона.</strong> Для отрезка \([a,b]\) и допуска \(\varepsilon\):
+<ol>
+<li>Вычислить \(S\) на \([a,b]\) и \(S_l,S_r\) на двух половинах.</li>
+<li>Найти оценку ошибки \(\Delta=(S_l+S_r-S)/15\), это (7.8) при \(p=4\).</li>
+<li>Если \(|\Delta|\le\varepsilon\), вернуть \(S_l+S_r+\Delta\).</li>
+<li>Иначе применить алгоритм к каждой половине с допуском \(\varepsilon/2\) и сложить результаты. Глубину деления ограничить, например, числом 40.</li>
+</ol></div>
+
+<div class="figure" style="max-width:680px"><svg viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Адаптивная сетка для корня">
+<line x1="70.0" y1="252.0" x2="70.0" y2="18.0" stroke="#e6ddcf"/>
+<text x="70.0" y="270.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">0,0</text>
+<line x1="188.4" y1="252.0" x2="188.4" y2="18.0" stroke="#e6ddcf"/>
+<text x="188.4" y="270.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">0,2</text>
+<line x1="306.8" y1="252.0" x2="306.8" y2="18.0" stroke="#e6ddcf"/>
+<text x="306.8" y="270.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">0,4</text>
+<line x1="425.2" y1="252.0" x2="425.2" y2="18.0" stroke="#e6ddcf"/>
+<text x="425.2" y="270.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">0,6</text>
+<line x1="543.6" y1="252.0" x2="543.6" y2="18.0" stroke="#e6ddcf"/>
+<text x="543.6" y="270.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">0,8</text>
+<line x1="662.0" y1="252.0" x2="662.0" y2="18.0" stroke="#e6ddcf"/>
+<text x="662.0" y="270.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">1,0</text>
+<line x1="70.0" y1="228.6" x2="662.0" y2="228.6" stroke="#e6ddcf"/>
+<text x="63.0" y="232.6" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">0</text>
+<line x1="70.0" y1="131.1" x2="662.0" y2="131.1" stroke="#e6ddcf"/>
+<text x="63.0" y="135.1" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">0,5</text>
+<line x1="70.0" y1="33.6" x2="662.0" y2="33.6" stroke="#e6ddcf"/>
+<text x="63.0" y="37.6" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">1</text>
+<rect x="70.0" y="18.0" width="592.0" height="234.0" fill="none" stroke="#2c2419" stroke-width="1.1"/>
+<text x="366.0" y="290.0" text-anchor="middle" font-size="14" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">x</text>
+<text transform="translate(16,135.0) rotate(-90)" text-anchor="middle" font-size="14" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">√x</text>
+<polyline points="70.0,228.6 71.5,218.8 73.0,214.8 74.5,211.7 75.9,209.1 77.4,206.8 78.9,204.7 80.4,202.8 81.9,201.0 83.4,199.3 84.8,197.7 86.3,196.2 87.8,194.8 89.3,193.4 90.8,192.1 92.3,190.8 93.7,189.6 95.2,188.3 96.7,187.2 98.2,186.0 99.7,184.9 101.2,183.9 102.6,182.8 104.1,181.8 105.6,180.8 107.1,179.8 108.6,178.8 110.1,177.9 111.5,176.9 113.0,176.0 114.5,175.1 116.0,174.2 117.5,173.4 119.0,172.5 120.4,171.7 121.9,170.8 123.4,170.0 124.9,169.2 126.4,168.4 127.9,167.6 129.3,166.9 130.8,166.1 132.3,165.3 133.8,164.6 135.3,163.8 136.8,163.1 138.3,162.4 139.7,161.7 141.2,161.0 142.7,160.3 144.2,159.6 145.7,158.9 147.2,158.2 148.6,157.5 150.1,156.9 151.6,156.2 153.1,155.5 154.6,154.9 156.1,154.3 157.5,153.6 159.0,153.0 160.5,152.4 162.0,151.7 163.5,151.1 165.0,150.5 166.4,149.9 167.9,149.3 169.4,148.7 170.9,148.1 172.4,147.5 173.9,146.9 175.3,146.3 176.8,145.8 178.3,145.2 179.8,144.6 181.3,144.1 182.8,143.5 184.2,142.9 185.7,142.4 187.2,141.8 188.7,141.3 190.2,140.7 191.7,140.2 193.1,139.7 194.6,139.1 196.1,138.6 197.6,138.1 199.1,137.5 200.6,137.0 202.1,136.5 203.5,136.0 205.0,135.5 206.5,135.0 208.0,134.5 209.5,134.0 211.0,133.4 212.4,133.0 213.9,132.5 215.4,132.0 216.9,131.5 218.4,131.0 219.9,130.5 221.3,130.0 222.8,129.5 224.3,129.0 225.8,128.6 227.3,128.1 228.8,127.6 230.2,127.1 231.7,126.7 233.2,126.2 234.7,125.7 236.2,125.3 237.7,124.8 239.1,124.4 240.6,123.9 242.1,123.5 243.6,123.0 245.1,122.6 246.6,122.1 248.0,121.7 249.5,121.2 251.0,120.8 252.5,120.3 254.0,119.9 255.5,119.5 256.9,119.0 258.4,118.6 259.9,118.2 261.4,117.7 262.9,117.3 264.4,116.9 265.8,116.4 267.3,116.0 268.8,115.6 270.3,115.2 271.8,114.8 273.3,114.3 274.8,113.9 276.2,113.5 277.7,113.1 279.2,112.7 280.7,112.3 282.2,111.9 283.7,111.5 285.1,111.0 286.6,110.6 288.1,110.2 289.6,109.8 291.1,109.4 292.6,109.0 294.0,108.6 295.5,108.2 297.0,107.8 298.5,107.5 300.0,107.1 301.5,106.7 302.9,106.3 304.4,105.9 305.9,105.5 307.4,105.1 308.9,104.7 310.4,104.3 311.8,104.0 313.3,103.6 314.8,103.2 316.3,102.8 317.8,102.4 319.3,102.1 320.7,101.7 322.2,101.3 323.7,100.9 325.2,100.6 326.7,100.2 328.2,99.8 329.6,99.5 331.1,99.1 332.6,98.7 334.1,98.4 335.6,98.0 337.1,97.6 338.6,97.3 340.0,96.9 341.5,96.5 343.0,96.2 344.5,95.8 346.0,95.5 347.5,95.1 348.9,94.7 350.4,94.4 351.9,94.0 353.4,93.7 354.9,93.3 356.4,93.0 357.8,92.6 359.3,92.3 360.8,91.9 362.3,91.6 363.8,91.2 365.3,90.9 366.7,90.5 368.2,90.2 369.7,89.9 371.2,89.5 372.7,89.2 374.2,88.8 375.6,88.5 377.1,88.1 378.6,87.8 380.1,87.5 381.6,87.1 383.1,86.8 384.5,86.5 386.0,86.1 387.5,85.8 389.0,85.5 390.5,85.1 392.0,84.8 393.4,84.5 394.9,84.1 396.4,83.8 397.9,83.5 399.4,83.1 400.9,82.8 402.4,82.5 403.8,82.2 405.3,81.8 406.8,81.5 408.3,81.2 409.8,80.9 411.3,80.5 412.7,80.2 414.2,79.9 415.7,79.6 417.2,79.3 418.7,78.9 420.2,78.6 421.6,78.3 423.1,78.0 424.6,77.7 426.1,77.4 427.6,77.0 429.1,76.7 430.5,76.4 432.0,76.1 433.5,75.8 435.0,75.5 436.5,75.2 438.0,74.9 439.4,74.6 440.9,74.2 442.4,73.9 443.9,73.6 445.4,73.3 446.9,73.0 448.3,72.7 449.8,72.4 451.3,72.1 452.8,71.8 454.3,71.5 455.8,71.2 457.2,70.9 458.7,70.6 460.2,70.3 461.7,70.0 463.2,69.7 464.7,69.4 466.2,69.1 467.6,68.8 469.1,68.5 470.6,68.2 472.1,67.9 473.6,67.6 475.1,67.3 476.5,67.0 478.0,66.7 479.5,66.4 481.0,66.1 482.5,65.8 484.0,65.5 485.4,65.2 486.9,65.0 488.4,64.7 489.9,64.4 491.4,64.1 492.9,63.8 494.3,63.5 495.8,63.2 497.3,62.9 498.8,62.6 500.3,62.4 501.8,62.1 503.2,61.8 504.7,61.5 506.2,61.2 507.7,60.9 509.2,60.6 510.7,60.4 512.1,60.1 513.6,59.8 515.1,59.5 516.6,59.2 518.1,59.0 519.6,58.7 521.0,58.4 522.5,58.1 524.0,57.8 525.5,57.6 527.0,57.3 528.5,57.0 529.9,56.7 531.4,56.4 532.9,56.2 534.4,55.9 535.9,55.6 537.4,55.3 538.9,55.1 540.3,54.8 541.8,54.5 543.3,54.2 544.8,54.0 546.3,53.7 547.8,53.4 549.2,53.2 550.7,52.9 552.2,52.6 553.7,52.3 555.2,52.1 556.7,51.8 558.1,51.5 559.6,51.3 561.1,51.0 562.6,50.7 564.1,50.5 565.6,50.2 567.0,49.9 568.5,49.7 570.0,49.4 571.5,49.1 573.0,48.9 574.5,48.6 575.9,48.3 577.4,48.1 578.9,47.8 580.4,47.5 581.9,47.3 583.4,47.0 584.8,46.8 586.3,46.5 587.8,46.2 589.3,46.0 590.8,45.7 592.3,45.4 593.7,45.2 595.2,44.9 596.7,44.7 598.2,44.4 599.7,44.1 601.2,43.9 602.7,43.6 604.1,43.4 605.6,43.1 607.1,42.9 608.6,42.6 610.1,42.3 611.6,42.1 613.0,41.8 614.5,41.6 616.0,41.3 617.5,41.1 619.0,40.8 620.5,40.6 621.9,40.3 623.4,40.1 624.9,39.8 626.4,39.6 627.9,39.3 629.4,39.1 630.8,38.8 632.3,38.6 633.8,38.3 635.3,38.0 636.8,37.8 638.3,37.5 639.7,37.3 641.2,37.1 642.7,36.8 644.2,36.6 645.7,36.3 647.2,36.1 648.6,35.8 650.1,35.6 651.6,35.3 653.1,35.1 654.6,34.8 656.1,34.6 657.5,34.3 659.0,34.1 660.5,33.8 662.0,33.6" fill="none" stroke="#2c2419" stroke-width="2.2" stroke-linejoin="round"/>
+<line x1="70.0" y1="248.1" x2="70.0" y2="232.5" stroke="#b44a2d" stroke-width="1.2"/>
+<line x1="70.0" y1="248.1" x2="70.0" y2="232.5" stroke="#b44a2d" stroke-width="1.2"/>
+<line x1="70.1" y1="248.1" x2="70.1" y2="232.5" stroke="#b44a2d" stroke-width="1.2"/>
+<line x1="70.1" y1="248.1" x2="70.1" y2="232.5" stroke="#b44a2d" stroke-width="1.2"/>
+<line x1="70.3" y1="248.1" x2="70.3" y2="232.5" stroke="#b44a2d" stroke-width="1.2"/>
+<line x1="70.6" y1="248.1" x2="70.6" y2="232.5" stroke="#b44a2d" stroke-width="1.2"/>
+<line x1="71.2" y1="248.1" x2="71.2" y2="232.5" stroke="#b44a2d" stroke-width="1.2"/>
+<line x1="72.3" y1="248.1" x2="72.3" y2="232.5" stroke="#b44a2d" stroke-width="1.2"/>
+<line x1="74.6" y1="248.1" x2="74.6" y2="232.5" stroke="#b44a2d" stroke-width="1.2"/>
+<line x1="79.2" y1="248.1" x2="79.2" y2="232.5" stroke="#b44a2d" stroke-width="1.2"/>
+<line x1="88.5" y1="248.1" x2="88.5" y2="232.5" stroke="#b44a2d" stroke-width="1.2"/>
+<line x1="107.0" y1="248.1" x2="107.0" y2="232.5" stroke="#b44a2d" stroke-width="1.2"/>
+<line x1="144.0" y1="248.1" x2="144.0" y2="232.5" stroke="#b44a2d" stroke-width="1.2"/>
+<line x1="218.0" y1="248.1" x2="218.0" y2="232.5" stroke="#b44a2d" stroke-width="1.2"/>
+<line x1="366.0" y1="248.1" x2="366.0" y2="232.5" stroke="#b44a2d" stroke-width="1.2"/>
+<line x1="662.0" y1="248.1" x2="662.0" y2="232.5" stroke="#b44a2d" stroke-width="1.2"/>
+</svg><div class="caption">Рис. 4. Границы подотрезков адаптивного метода для \(\sqrt x\) при допуске \(10^{-5}\): деление сосредоточено у особенности.</div></div>
+
+<div class="example"><span class="lbl">Пример E. Цена адаптивности</span>
+<strong>Дано:</strong> \(\int_0^1\sqrt x\,dx\). <strong>Задача:</strong> сравнить число значений функции с равномерным методом Симпсона при той же достигнутой ошибке.
+<div style="overflow-x:auto;margin-top:.4rem"><table class="cmp">
+<thead><tr><th>Допуск \(\varepsilon\)</th><th>Значений, адаптивный</th><th>Ошибка</th><th>Значений, равномерный</th></tr></thead>
+<tbody>
+<tr><td>\(10^{-4}\)</td><td>37</td><td>\(2{,}7\cdot10^{-6}\)</td><td>1025</td></tr>
+<tr><td>\(10^{-6}\)</td><td>105</td><td>\(2{,}0\cdot10^{-8}\)</td><td>32&nbsp;769</td></tr>
+<tr><td>\(10^{-8}\)</td><td>317</td><td>\(2{,}6\cdot10^{-11}\)</td><td>4&nbsp;194&nbsp;305</td></tr>
+</tbody></table></div>
+На гладкой функции без особенностей такого выигрыша нет, и адаптивная сетка получается почти равномерной.
+</div>
+
+<p>Библиотечные интеграторы, например <code>scipy.integrate.quad</code>, устроены по той же схеме, только вместо Симпсона они используют пару вложенных формул Гаусса — Кронрода, которая даёт оценку ошибки на тех же значениях функции.</p>
+
+<div class="warning"><strong>Адаптивный алгоритм не гарантирует результат.</strong> Он видит функцию только в вычисленных точках. Узкий пик между начальными узлами может быть пропущен, если все оценки \(\Delta\) окажутся малыми. Сведения о расположении особенностей лучше передавать алгоритму, разбивая отрезок вручную.</div>
+
+<p><strong>Итог §&nbsp;7.6.</strong> Особенность снижает порядок всех формул. Её убирают заменой переменной либо обходят адаптивным делением с контролем по правилу Рунге.</p>
+
+<!-- =============================================================== -->
+<h2 id="multi">§7.7. Многомерные интегралы</h2>
+
+<p>Для интеграла по кубу в размерности \(d\) формулу можно применить по каждой переменной. Такая формула использует \(N=n^d\) значений. Поскольку \(h\sim N^{-1/d}\), для формулы порядка \(p\)</p>
+
+<div class="eq">\[
+E\sim h^p\sim N^{-p/d}.
+\tag{7.12}
+\]</div>
+
+<p>При фиксированном \(N=10^6\) в размерности 1 на ось приходится \(10^6\) узлов, в размерности 3 — 100, в размерности 6 — 10, а в размерности 10 — всего 4. Трапеции дают ошибку порядка \(10^{-12}\), \(10^{-4}\), \(10^{-2}\) и \(6\cdot10^{-2}\). Этот эффект называют <em>проклятием размерности</em>. Метод, скорость которого не зависит от \(d\), рассматривается в §&nbsp;8.</p>
+
+<!-- =============================================================== -->
+<h2 id="ode">§7.8. Применение: задача Коши</h2>
+
+<div class="problem"><b>Дано</b> уравнение \(u'=f(t,u)\) с начальным условием \(u(0)=u_0\) и шаг \(\tau\).<br><b>Найти</b> приближённые значения \(u^n\approx u(t_n)\), \(t_n=n\tau\).</div>
+
+<p>Проинтегрируем уравнение по одному шагу:</p>
+
+<div class="eq">\[
+u(t_{n+1})=u(t_n)+\int_{t_n}^{t_{n+1}}f\bigl(t,u(t)\bigr)\,dt.
+\tag{7.13}
+\]</div>
+
+<p>Задача свелась к вычислению интеграла, но подынтегральное значение \(u(t)\) внутри шага неизвестно. Возьмём квадратурную формулу, а неизвестные значения заменим прогнозом по более простой формуле. Обозначим наклоны буквами \(k\).</p>
+
+<p><strong>Левый прямоугольник.</strong> Используется только известное значение \(u^n\), получается метод Эйлера из §&nbsp;6.9:</p>
+
+<div class="eq">\[
+u^{n+1}=u^n+\tau f(t_n,u^n).
+\tag{7.14}
+\]</div>
+
+<p><strong>Трапеция.</strong> Значение в конце шага заранее прогнозируем по методу Эйлера. Получаем метод Хойна второго порядка:</p>
+
+<div class="eq">\[
+k_1=f(t_n,u^n),\quad k_2=f(t_n+\tau,\ u^n+\tau k_1),\quad u^{n+1}=u^n+\tfrac\tau2(k_1+k_2).
+\tag{7.15}
+\]</div>
+
+<p><strong>Симпсон.</strong> Нужны значения в начале, в середине и в конце шага. Середину прогнозируем дважды, вторым прогнозом уточняя первый, а значение \(f\) в середине делим поровну между ними. Получаем классический метод Рунге — Кутты четвёртого порядка:</p>
+
+<div class="eq">\[
+\begin{aligned}
+k_1&=f(t_n,\ u^n),\\
+k_2&=f\bigl(t_n+\tfrac\tau2,\ u^n+\tfrac\tau2k_1\bigr)
+&&\class{step}{\text{прогноз середины по }k_1}\\
+k_3&=f\bigl(t_n+\tfrac\tau2,\ u^n+\tfrac\tau2k_2\bigr)
+&&\class{step}{\text{уточнённый прогноз середины}}\\
+k_4&=f\bigl(t_n+\tau,\ u^n+\tau k_3\bigr)
+&&\class{step}{\text{прогноз конца шага}}\\
+u^{n+1}&=u^n+\tfrac\tau6\bigl(k_1+2k_2+2k_3+k_4\bigr)
+&&\class{step}{\text{Симпсон: }4f_{1/2}\to2k_2+2k_3}
+\end{aligned}
+\tag{7.16}
+\]</div>
+
+<p>Если \(f\) не зависит от \(u\), метод в точности совпадает с составной формулой Симпсона. Порядок 4 в общем случае устанавливается сравнением с рядом Тейлора; это длинная, но прямая выкладка, и здесь мы проверим результат опытом.</p>
+
+<div class="example"><span class="lbl">Пример F. Опыт с порядком</span>
+<strong>Дано:</strong> \(u'=u\cos t\), \(u(0)=1\), точное решение \(e^{\sin t}\), момент \(T=6\). <strong>Задача:</strong> сравнить ошибки.
+<div style="overflow-x:auto;margin-top:.4rem"><table class="cmp">
+<thead><tr><th>Метод</th><th>Значений \(f\) на шаг</th><th>\(\tau=0{,}2\)</th><th>\(\tau=0{,}1\)</th><th>\(\tau=0{,}05\)</th><th>\(\tau=0{,}025\)</th><th>\(p\) на последней паре</th></tr></thead>
+<tbody>
+<tr><td>Эйлер (7.14)</td><td>1</td><td>\(1{,}91\cdot10^{-1}\)</td><td>\(1{,}01\cdot10^{-1}\)</td><td>\(5{,}18\cdot10^{-2}\)</td><td>\(2{,}63\cdot10^{-2}\)</td><td>0,98</td></tr>
+<tr><td>Хойн (7.15)</td><td>2</td><td>\(1{,}25\cdot10^{-3}\)</td><td>\(4{,}19\cdot10^{-4}\)</td><td>\(1{,}17\cdot10^{-4}\)</td><td>\(3{,}09\cdot10^{-5}\)</td><td>1,93</td></tr>
+<tr><td>Рунге — Кутта (7.16)</td><td>4</td><td>\(1{,}04\cdot10^{-6}\)</td><td>\(1{,}14\cdot10^{-7}\)</td><td>\(8{,}56\cdot10^{-9}\)</td><td>\(5{,}80\cdot10^{-10}\)</td><td>3,88</td></tr>
+</tbody></table></div>
+</div>
+
+<div class="figure" style="max-width:640px"><svg viewBox="0 0 640 370" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Сходимость методов для задачи Коши">
+<line x1="137.9" y1="322.0" x2="137.9" y2="18.0" stroke="#e6ddcf"/>
+<text x="137.9" y="340.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">0,025</text>
+<line x1="281.2" y1="322.0" x2="281.2" y2="18.0" stroke="#e6ddcf"/>
+<text x="281.2" y="340.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">0,05</text>
+<line x1="424.5" y1="322.0" x2="424.5" y2="18.0" stroke="#e6ddcf"/>
+<text x="424.5" y="340.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">0,1</text>
+<line x1="567.8" y1="322.0" x2="567.8" y2="18.0" stroke="#e6ddcf"/>
+<text x="567.8" y="340.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">0,2</text>
+<line x1="70.0" y1="322.0" x2="622.0" y2="322.0" stroke="#e6ddcf"/>
+<text x="63.0" y="326.0" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻¹⁰</text>
+<line x1="70.0" y1="261.2" x2="622.0" y2="261.2" stroke="#e6ddcf"/>
+<text x="63.0" y="265.2" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻⁸</text>
+<line x1="70.0" y1="200.4" x2="622.0" y2="200.4" stroke="#e6ddcf"/>
+<text x="63.0" y="204.4" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻⁶</text>
+<line x1="70.0" y1="139.6" x2="622.0" y2="139.6" stroke="#e6ddcf"/>
+<text x="63.0" y="143.6" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻⁴</text>
+<line x1="70.0" y1="78.8" x2="622.0" y2="78.8" stroke="#e6ddcf"/>
+<text x="63.0" y="82.8" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻²</text>
+<line x1="70.0" y1="18.0" x2="622.0" y2="18.0" stroke="#e6ddcf"/>
+<text x="63.0" y="22.0" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁰</text>
+<rect x="70.0" y="18.0" width="552.0" height="304.0" fill="none" stroke="#2c2419" stroke-width="1.1"/>
+<text x="346.0" y="360.0" text-anchor="middle" font-size="14" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">шаг τ</text>
+<text transform="translate(16,170.0) rotate(-90)" text-anchor="middle" font-size="14" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">ошибка в момент T = 6</text>
+<polyline points="567.8,39.9 424.5,48.3 281.2,57.1 137.9,66.0" fill="none" stroke="#1a6b5a" stroke-width="2.1" stroke-linejoin="round"/>
+<circle cx="567.8" cy="39.9" r="3.2" fill="#1a6b5a"/>
+<circle cx="424.5" cy="48.3" r="3.2" fill="#1a6b5a"/>
+<circle cx="281.2" cy="57.1" r="3.2" fill="#1a6b5a"/>
+<circle cx="137.9" cy="66.0" r="3.2" fill="#1a6b5a"/>
+<polyline points="567.8,106.3 424.5,120.7 281.2,137.5 137.9,155.1" fill="none" stroke="#3a5ba0" stroke-width="2.1" stroke-linejoin="round"/>
+<circle cx="567.8" cy="106.3" r="3.2" fill="#3a5ba0"/>
+<circle cx="424.5" cy="120.7" r="3.2" fill="#3a5ba0"/>
+<circle cx="281.2" cy="137.5" r="3.2" fill="#3a5ba0"/>
+<circle cx="137.9" cy="155.1" r="3.2" fill="#3a5ba0"/>
+<polyline points="567.8,199.9 424.5,229.1 281.2,263.3 137.9,298.8" fill="none" stroke="#b44a2d" stroke-width="2.1" stroke-linejoin="round"/>
+<circle cx="567.8" cy="199.9" r="3.2" fill="#b44a2d"/>
+<circle cx="424.5" cy="229.1" r="3.2" fill="#b44a2d"/>
+<circle cx="281.2" cy="263.3" r="3.2" fill="#b44a2d"/>
+<circle cx="137.9" cy="298.8" r="3.2" fill="#b44a2d"/>
+<line x1="350" y1="270" x2="376" y2="270" stroke="#1a6b5a" stroke-width="2.4"/>
+<text x="382" y="274.5" font-size="13.5" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">метод Эйлера, порядок 1</text>
+<line x1="350" y1="290" x2="376" y2="290" stroke="#3a5ba0" stroke-width="2.4"/>
+<text x="382" y="294.5" font-size="13.5" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">метод Хойна, порядок 2</text>
+<line x1="350" y1="310" x2="376" y2="310" stroke="#b44a2d" stroke-width="2.4"/>
+<text x="382" y="314.5" font-size="13.5" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">Рунге — Кутта, порядок 4</text>
+</svg><div class="caption">Рис. 5. Ошибка в момент \(T=6\) в зависимости от шага.</div></div>
+
+<p>Вернёмся к уравнению переноса из §&nbsp;6.9. Там метод Эйлера требовал шага \(\tau=h^2/a\) и скрывал порядок формулы по \(x\). Метод (7.16) применяется к системе (6.23) покомпонентно, величины \(k\) становятся векторами. На чисто мнимом \(\lambda\) его множитель за шаг не превышает единицу при \(|\tau\lambda|\le2\sqrt2\), и шаг можно взять пропорциональным \(h\), например \(\tau=0{,}4h/a\).</p>
+
+<div style="overflow-x:auto;margin:.4rem 0 1rem">
+<table class="cmp">
+<thead><tr><th>Формула для \(u_x\), метод по времени</th><th>\(N=40\)</th><th>\(N=80\)</th><th>\(N=160\)</th><th>\(N=320\)</th><th>Наклон</th><th>Вычислений правой части при \(N=320\)</th></tr></thead>
+<tbody>
+<tr><td>порядок 4, Эйлер</td><td>\(1{,}5\cdot10^{-2}\)</td><td>\(3{,}6\cdot10^{-3}\)</td><td>\(8{,}8\cdot10^{-4}\)</td><td>\(2{,}2\cdot10^{-4}\)</td><td>2</td><td>102&nbsp;400</td></tr>
+<tr><td>порядок 2, Рунге — Кутта</td><td>\(5{,}0\cdot10^{-2}\)</td><td>\(1{,}3\cdot10^{-2}\)</td><td>\(3{,}1\cdot10^{-3}\)</td><td>\(7{,}9\cdot10^{-4}\)</td><td>2</td><td>3200</td></tr>
+<tr><td>порядок 4, Рунге — Кутта</td><td>\(1{,}3\cdot10^{-3}\)</td><td>\(8{,}5\cdot10^{-5}\)</td><td>\(5{,}3\cdot10^{-6}\)</td><td>\(3{,}3\cdot10^{-7}\)</td><td>4</td><td>3200</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="figure" style="max-width:640px"><svg viewBox="0 0 640 370" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Перенос с методом Эйлера и Рунге — Кутты">
+<line x1="118.8" y1="322.0" x2="118.8" y2="18.0" stroke="#e6ddcf"/>
+<text x="118.8" y="340.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">40</text>
+<line x1="270.3" y1="322.0" x2="270.3" y2="18.0" stroke="#e6ddcf"/>
+<text x="270.3" y="340.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">80</text>
+<line x1="421.7" y1="322.0" x2="421.7" y2="18.0" stroke="#e6ddcf"/>
+<text x="421.7" y="340.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">160</text>
+<line x1="573.2" y1="322.0" x2="573.2" y2="18.0" stroke="#e6ddcf"/>
+<text x="573.2" y="340.0" text-anchor="middle" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">320</text>
+<line x1="70.0" y1="322.0" x2="622.0" y2="322.0" stroke="#e6ddcf"/>
+<text x="63.0" y="326.0" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻⁷</text>
+<line x1="70.0" y1="278.6" x2="622.0" y2="278.6" stroke="#e6ddcf"/>
+<text x="63.0" y="282.6" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻⁶</text>
+<line x1="70.0" y1="235.1" x2="622.0" y2="235.1" stroke="#e6ddcf"/>
+<text x="63.0" y="239.1" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻⁵</text>
+<line x1="70.0" y1="191.7" x2="622.0" y2="191.7" stroke="#e6ddcf"/>
+<text x="63.0" y="195.7" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻⁴</text>
+<line x1="70.0" y1="148.3" x2="622.0" y2="148.3" stroke="#e6ddcf"/>
+<text x="63.0" y="152.3" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻³</text>
+<line x1="70.0" y1="104.9" x2="622.0" y2="104.9" stroke="#e6ddcf"/>
+<text x="63.0" y="108.9" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻²</text>
+<line x1="70.0" y1="61.4" x2="622.0" y2="61.4" stroke="#e6ddcf"/>
+<text x="63.0" y="65.4" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁻¹</text>
+<line x1="70.0" y1="18.0" x2="622.0" y2="18.0" stroke="#e6ddcf"/>
+<text x="63.0" y="22.0" text-anchor="end" font-size="13" fill="#6b5d4f" font-family="Source Serif 4,Georgia,serif">10⁰</text>
+<rect x="70.0" y="18.0" width="552.0" height="304.0" fill="none" stroke="#2c2419" stroke-width="1.1"/>
+<text x="346.0" y="360.0" text-anchor="middle" font-size="14" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">число узлов N</text>
+<text transform="translate(16,170.0) rotate(-90)" text-anchor="middle" font-size="14" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">среднеквадратичная ошибка</text>
+<polyline points="118.8,97.9 270.3,124.4 421.7,150.6 573.2,176.8" fill="none" stroke="#5b54b8" stroke-width="2.1" stroke-linejoin="round" stroke-dasharray="6,4"/>
+<circle cx="118.8" cy="97.9" r="3.2" fill="#5b54b8"/>
+<circle cx="270.3" cy="124.4" r="3.2" fill="#5b54b8"/>
+<circle cx="421.7" cy="150.6" r="3.2" fill="#5b54b8"/>
+<circle cx="573.2" cy="176.8" r="3.2" fill="#5b54b8"/>
+<polyline points="118.8,74.6 270.3,100.6 421.7,126.7 573.2,152.9" fill="none" stroke="#b44a2d" stroke-width="2.1" stroke-linejoin="round"/>
+<circle cx="118.8" cy="74.6" r="3.2" fill="#b44a2d"/>
+<circle cx="270.3" cy="100.6" r="3.2" fill="#b44a2d"/>
+<circle cx="421.7" cy="126.7" r="3.2" fill="#b44a2d"/>
+<circle cx="573.2" cy="152.9" r="3.2" fill="#b44a2d"/>
+<polyline points="118.8,142.8 270.3,194.8 421.7,247.0 573.2,299.3" fill="none" stroke="#5b54b8" stroke-width="2.1" stroke-linejoin="round"/>
+<circle cx="118.8" cy="142.8" r="3.2" fill="#5b54b8"/>
+<circle cx="270.3" cy="194.8" r="3.2" fill="#5b54b8"/>
+<circle cx="421.7" cy="247.0" r="3.2" fill="#5b54b8"/>
+<circle cx="573.2" cy="299.3" r="3.2" fill="#5b54b8"/>
+<line x1="80" y1="260" x2="106" y2="260" stroke="#5b54b8" stroke-width="2.4" stroke-dasharray="6,4"/>
+<text x="112" y="264.5" font-size="13.5" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">порядок 4 по x, Эйлер, τ = h²/a</text>
+<line x1="80" y1="280" x2="106" y2="280" stroke="#b44a2d" stroke-width="2.4"/>
+<text x="112" y="284.5" font-size="13.5" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">порядок 2 по x, Рунге — Кутта</text>
+<line x1="80" y1="300" x2="106" y2="300" stroke="#5b54b8" stroke-width="2.4"/>
+<text x="112" y="304.5" font-size="13.5" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">порядок 4 по x, Рунге — Кутта</text>
+</svg><div class="caption">Рис. 6. Гладкий перенос: с методом Рунге — Кутты формула четвёртого порядка показывает свой наклон.</div></div>
+
+<div class="passport">
+<div class="ttl">Паспорт: явные методы для задачи Коши</div>
+<div class="row"><b>Вход</b><span>программа, вычисляющая правую часть \(f(t,u)\), начальное значение</span></div>
+<div class="row good"><b>Хорошо</b><span>гладкие решения без сильно различающихся масштабов времени</span></div>
+<div class="row bad"><b>Плохо</b><span>жёсткие задачи: шаг ограничен устойчивостью, а не точностью; разрывная правая часть снижает порядок</span></div>
+<div class="row"><b>Порядок</b><span>Эйлер 1, Хойн 2, Рунге — Кутта 4</span></div>
+<div class="row"><b>Стоимость</b><span>1, 2 и 4 вычисления \(f\) на шаг</span></div>
+<div class="row"><b>Приёмы</b><span>контроль шага по правилу Рунге; библиотечные методы подбирают шаг автоматически</span></div>
+</div>
+
+<p><strong>Итог §&nbsp;7.8.</strong> Шаг задачи Коши есть вычисление интеграла, и каждой квадратуре соответствует свой метод. При одинаковом числе вычислений правой части метод высокого порядка точнее на много порядков.</p>
+
 <div class="labcta">
   <span class="badge">Лабораторная</span>
-  <div class="text">
-    <strong>Ньютон-Котес на C++.</strong> Реализуйте средние точки, трапеции и Симпсон. Проверьте порядки сходимости на \(\int_0^1 e^x dx\); постройте таблицу Ромберга и увидите, как за 5 итераций достигается машинная точность.
-  </div>
+  <div class="text"><strong>Два задания на C++.</strong> Составные формулы, формула Гаусса и адаптивный метод Симпсона; метод Рунге — Кутты для задачи Коши и уравнения переноса.</div>
   <a href="w07-lab.html" class="go">Открыть →</a>
 </div>
 
 <!-- =============================================================== -->
-<h2 id="summary">Итоги занятия</h2>
+<h2 id="practice">§7.9. Разбор типовых заданий</h2>
 
-<div class="algo">
-<strong>Что нужно унести с занятия 7.</strong>
-<ol>
-<li>Квадратурная формула — линейная комбинация значений \(f\) в узлах; веса — интегралы базисных многочленов Лагранжа.</li>
-<li>Простые формулы: средних точек и трапеций — точны для степени 1; Симпсона — для степени 3 (симметрия «дарит» лишний порядок).</li>
-<li>Составные формулы разбивают отрезок на \(N\) кусков и применяют простую квадратуру. Ошибка убывает как \(O(h^2)\) для трапеций и \(O(h^4)\) для Симпсона.</li>
-<li>Удвоение \(N\) уменьшает ошибку трапеций в 4 раза, Симпсона — в 16 раз.</li>
-<li>Ромберг — итеративная экстраполяция трапеций, поднимающая порядок по два за шаг: 2 → 4 → 6 → 8 → ...</li>
-</ol>
+<div class="example task"><span class="lbl">Задание 1. Выбор числа отрезков</span>
+<strong>Дано:</strong> \(I=\int_0^1e^{x}\,dx\), требуемая точность \(10^{-6}\). <strong>Найти:</strong> \(n\) для трапеций и для Симпсона.
+<span class="sol">Решение</span>
+\(|f''|,|f^{(4)}|\le e\). По (7.7) для трапеций \(\tfrac{e\,h^2}{12}\le10^{-6}\), откуда \(h\le2{,}1\cdot10^{-3}\) и \(n\ge476\). Для Симпсона \(\tfrac{e\,h^4}{2880}\le10^{-6}\), откуда \(h\le0{,}18\) и \(n\ge6\), то есть 13 значений функции против 477.
+</div>
+
+<div class="example task"><span class="lbl">Задание 2. Правило Рунге</span>
+<strong>Дано:</strong> \(S_4=2{,}00456\), \(S_8=2{,}00027\), \(p=4\). <strong>Найти:</strong> оценку ошибки \(S_8\) и уточнённое значение.
+<span class="sol">Решение</span>
+По (7.8) \(S_8-I\approx(S_4-S_8)/15=2{,}86\cdot10^{-4}\). Уточнённое значение равно \(S_8-2{,}86\cdot10^{-4}=1{,}99998\).
+</div>
+
+<div class="example task"><span class="lbl">Задание 3. Степень точности</span>
+<strong>Дано:</strong> формула \(\int_{-1}^1f\,dx\approx f(-1/\sqrt3)+f(1/\sqrt3)\). <strong>Найти:</strong> степень точности и значение \(\int_{-1}^1x^4\,dx\) по формуле.
+<span class="sol">Решение</span>
+На \(1\), \(x\), \(x^2\), \(x^3\) формула даёт \(2\), \(0\), \(\tfrac23\), \(0\), то есть точно. На \(x^4\) она даёт \(2\cdot\tfrac19=\tfrac29\), а точное значение равно \(\tfrac25\). Степень точности равна 3.
+</div>
+
+<div class="example task"><span class="lbl">Задание 4. Шаг метода Рунге — Кутты</span>
+<strong>Дано:</strong> \(u'=u\), \(u(0)=1\), \(\tau=0{,}1\). <strong>Найти:</strong> \(u^1\) методами (7.14)–(7.16).
+<span class="sol">Решение</span>
+Эйлер: \(1{,}1\). Хойн: \(k_1=1\), \(k_2=1{,}1\), \(u^1=1{,}105\). Рунге — Кутта: \(k_1=1\), \(k_2=1{,}05\), \(k_3=1{,}0525\), \(k_4=1{,}10525\), \(u^1=1{,}10517083\). Точное значение \(e^{0{,}1}=1{,}10517092\).
+</div>
+
+<!-- =============================================================== -->
+<h2 id="summary">§7.10. Итоги занятия</h2>
+
+<p>Интегрирование устойчиво к погрешностям данных, поэтому точность определяется числом значений функции и выбором формулы. На таблице применяют составные формулы, а контроль даёт правило Рунге. Для гладких периодических функций лучшими оказываются простые трапеции. Если функцию можно вычислять в любой точке, формулы Гаусса удваивают степень точности за счёт выбора узлов. Особенности снижают порядок всех формул, и тогда применяют замену переменной и адаптивное деление. В больших размерностях все эти формулы теряют эффективность, что приводит к методу следующего занятия. Шаг задачи Коши сам является вычислением интеграла: квадратурам соответствуют методы Эйлера, Хойна и Рунге — Кутты.</p>
+
+<div style="overflow-x:auto;margin:.4rem 0 1rem">
+<table class="cmp">
+<thead><tr><th>Ситуация</th><th>Метод</th><th>Где</th></tr></thead>
+<tbody>
+<tr><td>таблица на сетке, гладкая функция</td><td>составной Симпсон или трапеции (7.6)</td><td>§&nbsp;7.2</td></tr>
+<tr><td>нужен контроль точности</td><td>правило Рунге (7.8)</td><td>§&nbsp;7.3</td></tr>
+<tr><td>гладкая периодическая функция</td><td>трапеции, сумма значений</td><td>§&nbsp;7.4</td></tr>
+<tr><td>программа, значения дороги, функция гладкая</td><td>Гаусс (7.11)</td><td>§&nbsp;7.5</td></tr>
+<tr><td>известная особенность</td><td>замена переменной</td><td>§&nbsp;7.6</td></tr>
+<tr><td>особенность или пик неизвестно где</td><td>адаптивный метод</td><td>§&nbsp;7.6</td></tr>
+<tr><td>большая размерность</td><td>метод Монте-Карло</td><td>§&nbsp;8</td></tr>
+<tr><td>задача Коши</td><td>Рунге — Кутта (7.16)</td><td>§&nbsp;7.8</td></tr>
+</tbody>
+</table>
 </div>
 
 <h3>Литература к §7</h3>
-<ol style="font-size:.92rem">
-<li>Süli E., Mayers D. An Introduction to Numerical Analysis. — CUP, 2003. — <em>гл. 7.</em></li>
-<li>Davis P. J., Rabinowitz P. Methods of Numerical Integration. — 2nd ed., Academic Press, 1984.</li>
-<li>Trefethen L. N. Approximation Theory and Approximation Practice. — SIAM, 2013.</li>
-<li>Бахвалов, Жидков, Кобельков. Численные методы. — БИНОМ, 2011. — <em>гл. 3.</em></li>
-</ol>
+<ul>
+<li>Бахвалов Н. С., Жидков Н. П., Кобельков Г. М. Численные методы. — М.: БИНОМ, 2011. — гл. 3 (численное интегрирование), гл. 8 (задача Коши).</li>
+<li>Калиткин Н. Н. Численные методы. — 2-е изд. — СПб.: БХВ-Петербург, 2011.</li>
+<li>Süli E., Mayers D. An Introduction to Numerical Analysis. — CUP, 2003. — гл. 7, 10, 12.</li>
+<li>Trefethen L. N., Weideman J. A. C. The exponentially convergent trapezoidal rule // SIAM Review. 2014. Vol. 56, № 3. P. 385–458.</li>
+<li>Hairer E., Nørsett S. P., Wanner G. Solving Ordinary Differential Equations I. — Springer, 1993.</li>
+</ul>
 
 <div class="lecture-nav">
-  <a class="nav-prev" href="w06.html">← §6. Численное дифф.</a>
-  <a class="nav-next" href="w08.html">§8. Квадратуры Гаусса →</a>
+  <a href="w06.html" class="nav-prev">← §6. Численное дифференцирование</a>
+  <a href="w08.html" class="nav-next">§8. Метод Монте-Карло →</a>
 </div>
 
-</div></div>
+</div>
+</div>
 
 <div class="comments-wrap">
 <div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">
@@ -353,5 +927,6 @@ R_{k, j} \;=\; \frac{4^{j}\,R_{k, j-1} - R_{k-1, j-1}}{4^{j} - 1},\qquad j = 1, 
 <script src="../js/firebase-config.js"></script>
 <script src="../js/auth.js"></script>
 <script src="../js/comments.js"></script>
+<script src="../js/glossary.js"></script>
 </body>
 </html>

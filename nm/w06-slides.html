@@ -312,10 +312,10 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
 <section class="slide">
   <div class="roadmap"><span class="b on" title="Постановка">I. Постановка</span><span class="b " title="Разности">II</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.0. План занятия</span></div>
   <h2>План занятия</h2>
-  <p class="lead">Метод выбирают по тому, в каком виде задана функция. </p>
+  <p class="lead">Дано: значения функции в узлах сетки с шагом \(h\). Найти: приближённое значение производной и оценку погрешности.</p>
   <div class="plan5">
-    <span class="k">I</span><span class="t"><strong>Постановка</strong> (§&nbsp;6.0). Определяем, что дано и почему дифференцирование усиливает погрешность.</span>
-    <span class="k">II</span><span class="t"><strong>Разности</strong> (§&nbsp;6.1–6.3). Формулы выводятся из ряда Тейлора и общим методом неопределённых коэффициентов.</span>
+    <span class="k">I</span><span class="t"><strong>Постановка</strong> (§&nbsp;6.0). Производную функции заменяет производная многочлена.</span>
+    <span class="k">II</span><span class="t"><strong>Разности</strong> (§&nbsp;6.1–6.3). Вывод из многочлена, порядок аппроксимации, общий способ.</span>
     <span class="k">III</span><span class="t"><strong>Округление</strong> (§&nbsp;6.4–6.5). Шаг нельзя уменьшать бесконечно, поэтому существует оптимальный шаг.</span>
     <span class="k">IV</span><span class="t"><strong>Высокая точность</strong> (§&nbsp;6.6). На гладких данных применяют компактные схемы, сплайн и спектральный метод.</span>
     <span class="k">V</span><span class="t"><strong>Шум</strong> (§&nbsp;6.7). Измерения сначала сглаживают локальным методом наименьших квадратов.</span>
@@ -323,40 +323,15 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
     <span class="k">VII</span><span class="t"><strong>Применение</strong> (§&nbsp;6.9). Формулы подставляются в уравнение переноса.</span>
     <span class="k">VIII</span><span class="t"><strong>Измерение</strong> (§&nbsp;6.10). Ошибку находят в разных нормах и определяют опытный порядок сходимости.</span>
   </div>
-  <p class="bridge">Начнём с вопроса о том, что вообще может быть дано.</p>
+  <p class="bridge">Начнём с многочлена, проходящего через значения в узлах.</p>
 </section>
 
 <section class="slide">
-  <div class="roadmap"><span class="b on" title="Постановка">I. Постановка</span><span class="b " title="Разности">II</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.0. Что дано</span></div>
-  <h2>Выбор метода определяется исходными данными</h2>
-  <p class="lead">Функция редко задана формулой. Чаще она известна значениями на сетке, измерениями или программой, и в каждом из этих случаев применяют свои методы.</p>
-  <table class="cmp big">
-  <thead><tr><th>Что дано</th><th>Основные методы</th><th>Где применяют</th></tr></thead>
-  <tbody>
-  <tr><td>точные значения на сетке</td><td>разности; компактные схемы, сплайн, спектральный метод</td><td>уравнения в частных производных, CFD</td></tr>
-  <tr><td>неструктурированная сетка</td><td>градиент по Грину — Гауссу или локальным МНК</td><td>метод конечных объёмов</td></tr>
-  <tr><td>измерения с шумом</td><td>локальный МНК, сглаживающий сплайн</td><td>эксперимент, обработка сигналов</td></tr>
-  <tr><td>программа, вычисляющая \(f\)</td><td>автоматическое дифференцирование, разности, комплексный шаг</td><td>оптимизация, машинное обучение</td></tr>
-  </tbody></table>
-  <p class="bridge">Какими бы ни были данные, трудность у всех этих задач одна: дифференцирование усиливает погрешности.</p>
-</section>
-
-<section class="slide">
-  <div class="roadmap"><span class="b on" title="Постановка">I. Постановка</span><span class="b " title="Разности">II</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.0. Плохая обусловленность</span></div>
-  <h2>Дифференцирование усиливает погрешность</h2>
-  <p class="lead">Прибавим к функции малую добавку \(\varepsilon\sin(x/\varepsilon^2)\). Значения изменятся не более чем на \(\varepsilon\), а производная — на величину порядка \(1/\varepsilon\), то есть сколь угодно сильно.</p>
-  <div class="example"><span class="lbl">Пример A. Таблица с тремя знаками</span>
-  <strong>Дано:</strong> значения \(\sin x\), округлённые до \(0{,}001\). <strong>Задача:</strong> найти \(f'(1)=0{,}5403\) по формуле \((f(1+h)-f(1-h))/(2h)\).
-  <div class="eq tight" style="font-size:.9em">\[h=0{,}1:\ \tfrac{0{,}891-0{,}783}{0{,}2}=0{,}540;\qquad h=0{,}01:\ \tfrac{0{,}847-0{,}836}{0{,}02}=0{,}55;\qquad h=0{,}001:\ \tfrac{0{,}842-0{,}841}{0{,}002}=0{,}50.\]</div></div>
-  <p>Измельчение шага ухудшило ответ, потому что погрешность таблицы делится на всё меньшее число.</p>
-  <p class="bridge">Пока отложим погрешности данных и выведем сами формулы; затем вернёмся к этому опыту и объясним его количественно.</p>
-</section>
-
-<section class="slide">
-  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.1. Три разности</span></div>
-  <h2>Правая, левая и центральная разности</h2>
-  <p class="lead">Производная есть предел отношения приращений. Возьмём это отношение при конечном шаге \(h\) и заменим касательную секущей. Наклон центральной секущей ближе всего к наклону касательной.</p>
-  <div class="two-col fig"><div class="figure" style="--mh:15rem"><svg viewBox="0 0 640 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Касательная и три секущие">
+  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.1. Прямая через два узла</span></div>
+  <h2>Производная интерполяционного многочлена</h2>
+  <p class="lead">Заменим \(f\) многочленом (3.5) по соседним узлам и возьмём его производную. Многочлен линеен по значениям, поэтому результатом будет сумма значений с весами:</p>
+  <div class="eq tight">\[P(x)=\sum_jf(x_j)\ell_j(x),\qquad f^{(d)}(x_0)\approx P^{(d)}(x_0)=\sum_jf(x_j)\ell_j^{(d)}(x_0).\tag{6.1}\]</div>
+  <div class="two-col fig"><div class="figure" style="--mh:12rem"><svg viewBox="0 0 640 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Касательная и три секущие">
 <rect x="30.0" y="18.0" width="592.0" height="322.0" fill="none" stroke="#2c2419" stroke-width="1.1"/>
 <polyline points="46.4,279.2 49.0,277.6 51.7,276.0 54.3,274.5 56.9,273.0 59.5,271.5 62.1,270.1 64.7,268.7 67.3,267.3 69.9,265.9 72.5,264.5 75.1,263.2 77.7,261.9 80.3,260.6 82.9,259.3 85.5,258.1 88.1,256.8 90.7,255.6 93.3,254.4 95.9,253.2 98.5,252.1 101.1,251.0 103.7,249.8 106.3,248.7 108.9,247.6 111.5,246.6 114.1,245.5 116.7,244.5 119.3,243.5 121.9,242.5 124.5,241.5 127.1,240.5 129.7,239.5 132.3,238.6 134.9,237.7 137.5,236.7 140.2,235.8 142.8,234.9 145.4,234.1 148.0,233.2 150.6,232.3 153.2,231.5 155.8,230.7 158.4,229.8 161.0,229.0 163.6,228.2 166.2,227.4 168.8,226.6 171.4,225.8 174.0,225.1 176.6,224.3 179.2,223.5 181.8,222.8 184.4,222.1 187.0,221.3 189.6,220.6 192.2,219.9 194.8,219.1 197.4,218.4 200.0,217.7 202.6,217.0 205.2,216.3 207.8,215.6 210.4,214.9 213.0,214.2 215.6,213.5 218.2,212.9 220.8,212.2 223.4,211.5 226.1,210.8 228.7,210.1 231.3,209.4 233.9,208.8 236.5,208.1 239.1,207.4 241.7,206.7 244.3,206.0 246.9,205.3 249.5,204.7 252.1,204.0 254.7,203.3 257.3,202.6 259.9,201.9 262.5,201.2 265.1,200.5 267.7,199.7 270.3,199.0 272.9,198.3 275.5,197.6 278.1,196.8 280.7,196.1 283.3,195.3 285.9,194.6 288.5,193.8 291.1,193.0 293.7,192.3 296.3,191.5 298.9,190.7 301.5,189.9 304.1,189.0 306.7,188.2 309.3,187.4 312.0,186.5 314.6,185.7 317.2,184.8 319.8,183.9 322.4,183.0 325.0,182.1 327.6,181.2 330.2,180.2 332.8,179.3 335.4,178.3 338.0,177.4 340.6,176.4 343.2,175.4 345.8,174.3 348.4,173.3 351.0,172.2 353.6,171.2 356.2,170.1 358.8,169.0 361.4,167.8 364.0,166.7 366.6,165.5 369.2,164.4 371.8,163.2 374.4,162.0 377.0,160.7 379.6,159.5 382.2,158.2 384.8,156.9 387.4,155.6 390.0,154.2 392.6,152.9 395.2,151.5 397.9,150.1 400.5,148.6 403.1,147.2 405.7,145.7 408.3,144.2 410.9,142.7 413.5,141.1 416.1,139.6 418.7,137.9 421.3,136.3 423.9,134.7 426.5,133.0 429.1,131.3 431.7,129.5 434.3,127.8 436.9,126.0 439.5,124.2 442.1,122.3 444.7,120.4 447.3,118.5 449.9,116.6 452.5,114.6 455.1,112.6 457.7,110.6 460.3,108.5 462.9,106.5 465.5,104.3 468.1,102.2 470.7,100.0 473.3,97.8 475.9,95.5 478.5,93.2 481.1,90.9 483.8,88.5 486.4,86.2 489.0,83.7 491.6,81.3 494.2,78.8 496.8,76.2 499.4,73.7 502.0,71.0 504.6,68.4 507.2,65.7 509.8,63.0 512.4,60.2 515.0,57.4 517.6,54.6 520.2,51.7 522.8,48.8 525.4,45.8 528.0,42.8 530.6,39.8 533.2,36.7 535.8,33.6 538.4,30.4 541.0,27.2 543.6,24.0 546.2,20.7 548.8,17.3 551.4,14.0 554.0,10.5 556.6,7.1 559.2,3.5 561.8,-0.0 564.4,-3.6" fill="none" stroke="#2c2419" stroke-width="2.4" stroke-linejoin="round"/>
 <polyline points="153.3,242.8 531.6,109.0" fill="none" stroke="#2c2419" stroke-width="1.6" stroke-linejoin="round" stroke-dasharray="2,5"/>
@@ -381,91 +356,201 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
 <line x1="42" y1="88" x2="68" y2="88" stroke="#b44a2d" stroke-width="2.4"/>
 <text x="74" y="92.5" font-size="13.5" fill="#2c2419" font-family="Source Serif 4,Georgia,serif">центральная разность</text>
 </svg></div>
-  <div><div class="definition" data-num="1"><em style="color:inherit;font-weight:600">разности</em> на равномерной сетке:
-  \[\begin{aligned}D^{+}_hf&=\tfrac{f(x_0+h)-f(x_0)}{h},\\ D^{-}_hf&=\tfrac{f(x_0)-f(x_0-h)}{h},\\ D^{c}_hf&=\tfrac{f(x_0+h)-f(x_0-h)}{2h}.\end{aligned}\tag{6.1}\]</div></div></div>
-  <p class="bridge">Погрешность каждой формулы мы найдём подстановкой ряда Тейлора.</p>
+  <div><p>Два узла \(x_0,\ x_0+h\) дают прямую:</p>
+  <div class="eq tight" style="font-size:.86em">\[\begin{aligned}P_1(x)&=f(x_0)\tfrac{x_0+h-x}{h}+f(x_0+h)\tfrac{x-x_0}{h},\\ P_1'(x_0)&=\tfrac{f(x_0+h)-f(x_0)}{h}.\end{aligned}\tag{6.2}\]</div>
+  <p>Это правая разность; узлы \(x_0-h,\ x_0\) дают левую.</p></div></div>
+  <p class="bridge">Следующая разность получается из параболы по трём узлам.</p>
 </section>
 
 <section class="slide">
-  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.1. Погрешность разностей</span></div>
-  <h2>Погрешность находим из ряда Тейлора</h2>
-  <p class="lead">Подставим в правую разность формулу Тейлора (§&nbsp;2.3); затем вычтем разложения вперёд и назад для центральной.</p>
-  <div class="eq tight">\[\begin{aligned}
+  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.1. Парабола через три узла</span></div>
+  <h2>Центральная и вторая разности</h2>
+  <p class="lead">Через \(x_0-h,\ x_0,\ x_0+h\) проходит парабола. Обозначим \(t=x-x_0\):</p>
+  <div class="eq tight" style="font-size:.88em">\[\begin{aligned}
+  \ell_{-1}&=\tfrac{t(t-h)}{2h^2},\quad \ell_{0}=\tfrac{h^2-t^2}{h^2},\quad \ell_{1}=\tfrac{t(t+h)}{2h^2}&&\class{step}{\text{форма Лагранжа}}\\
+  \ell_{-1}'&=\tfrac{2t-h}{2h^2},\quad \ell_{0}'=-\tfrac{2t}{h^2},\quad \ell_{1}'=\tfrac{2t+h}{2h^2}&&\class{step}{\text{первая производная}}\\
+  \ell_{-1}''&=\tfrac{1}{h^2},\quad \ell_{0}''=-\tfrac{2}{h^2},\quad \ell_{1}''=\tfrac{1}{h^2}&&\class{step}{\text{вторая производная}}\end{aligned}\tag{6.3}\]</div>
+  <div class="definition" data-num="1"><em style="color:inherit;font-weight:600">разности.</em> При \(t=0\) из (6.1) и (6.3), вместе с (6.2), получаем:
+  <span style="font-size:.9em">\[\begin{gathered}D^{+}_hf=\tfrac{f(x_0+h)-f(x_0)}{h},\quad D^{-}_hf=\tfrac{f(x_0)-f(x_0-h)}{h},\\ D^{c}_hf=\tfrac{f(x_0+h)-f(x_0-h)}{2h},\quad D^{2}_hf=\tfrac{f(x_0+h)-2f(x_0)+f(x_0-h)}{h^2}.\end{gathered}\tag{6.4}\]</span></div>
+  <p>При \(t=-h\) получаем формулу для края сетки: \(\bigl(-3f(x_0)+4f(x_0+h)-f(x_0+2h)\bigr)/(2h)\). Глобальный многочлен высокой степени дифференцировать нельзя (§&nbsp;3.10): берут низкую степень по соседним узлам.</p>
+  <p class="bridge">Формулы получены. Теперь нужно точно определить, насколько они близки к производной.</p>
+</section>
+
+<section class="slide">
+  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.2. Порядок аппроксимации</span></div>
+  <h2>Порядок аппроксимации: определение</h2>
+  <div class="definition" data-num="2"><em style="color:inherit;font-weight:600">погрешность и порядок аппроксимации.</em> Погрешность аппроксимации производной \(f^{(d)}\) формулой \(D_h\) в точке \(x^*\) есть \(\psi_h(x^*)\). Формула имеет в этой точке порядок \(p\gt0\), если для всякой достаточно гладкой \(f\) найдутся \(M\) и \(h_0\), такие что
+  \[\psi_h(x^*)=D_hf(x^*)-f^{(d)}(x^*),\qquad|\psi_h(x^*)|\le Mh^p\ \text{ при }h\le h_0.\tag{6.5}\]
+  Порядком называют наибольшее такое \(p\). Если \(\psi_h=C\,h^pf^{(p+d)}(x^*)+o(h^p)\), то \(C\ne0\) называют константой погрешности.</div>
+  <p><strong>Как найти порядок:</strong> подставляем гладкую функцию в формулу, разлагаем все значения шаблона в ряд Тейлора относительно \(x^*\), собираем члены и вычитаем \(f^{(d)}(x^*)\). Первая оставшаяся степень \(h\) есть порядок, её коэффициент даёт константу.</p>
+  <p class="bridge">Применим этот способ к полученным разностям.</p>
+</section>
+
+<section class="slide">
+  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.2. Правая и центральная разности</span></div>
+  <h2>Порядок правой, центральной и второй разностей</h2>
+  <div class="eq tight" style="font-size:.86em">\[\begin{aligned}
   f(x_0+h)&=f+hf'+\tfrac{h^2}{2}f''(\xi)&&\class{step}{\text{остаток Лагранжа}}\\
-  D^{+}_hf-f'&=\tfrac h2f''(\xi)&&\class{step}{\text{переносим }f\text{, делим на }h}\end{aligned}\tag{6.2}\]</div>
-  <div class="eq tight" style="font-size:.9em">\[\begin{aligned}
+  \psi_h=D^{+}_hf-f'&=\tfrac h2f''(\xi)&&\class{step}{\text{порядок 1, константа }\tfrac12}\end{aligned}\tag{6.6}\]</div>
+  <div class="eq tight" style="font-size:.86em">\[\begin{aligned}
   f(x_0\pm h)&=f\pm hf'+\tfrac{h^2}{2}f''\pm\tfrac{h^3}{6}f'''+O(h^4)&&\class{step}{\text{вперёд и назад}}\\
   f(x_0+h)-f(x_0-h)&=2hf'+\tfrac{h^3}{3}f'''+O(h^5)&&\class{step}{\text{вычитаем}}\\
-  D^{c}_hf-f'&=\tfrac{h^2}{6}f'''+O(h^4)&&\class{step}{\text{делим на }2h}\end{aligned}\tag{6.3}\]</div>
-  <p>Цена у обеих формул одинакова — два значения функции, однако центральная точнее благодаря симметрии шаблона. На краю сетки её применить нельзя.</p>
-  <p class="bridge">Показатель степени \(h\) в погрешности получает специальное название.</p>
+  \psi_h=D^{c}_hf-f'&=\tfrac{h^2}{6}f'''+O(h^4)&&\class{step}{\text{порядок 2, константа }\tfrac16}\end{aligned}\tag{6.7}\]</div>
+  <div class="eq tight" style="font-size:.86em">\[\begin{aligned}
+  f(x_0+h)+f(x_0-h)&=2f+h^2f''+\tfrac{h^4}{12}f^{(4)}+O(h^6)&&\class{step}{\text{складываем}}\\
+  \psi_h=D^{2}_hf-f''&=\tfrac{h^2}{12}f^{(4)}+O(h^4)&&\class{step}{\text{порядок 2, константа }\tfrac1{12}}\end{aligned}\tag{6.8}\]</div>
+  <p>Левая разность имеет порядок 1 и константу \(-\tfrac12\). Цена центральной и правой разностей одинакова — два значения функции; центральная точнее благодаря симметрии шаблона, но на краю сетки её применить нельзя.</p>
+  <p class="bridge">Проверим порядок опытом и уточним условия, при которых он верен.</p>
 </section>
 
 <section class="slide">
-  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.1. Порядок аппроксимации</span></div>
-  <h2>Порядок аппроксимации и опыт</h2>
-  <div class="definition" data-num="2"><em style="color:inherit;font-weight:600">порядок аппроксимации.</em> Формула \(D_h\) приближает \(f^{(d)}\) с порядком \(p\), если для гладкой \(f\)
-  \[D_hf(x_0)-f^{(d)}(x_0)=C\,h^pf^{(p+d)}(x_0)+o(h^p),\tag{6.4}\]
-  где \(C\ne0\) не зависит от \(f\) и \(h\) и называется константой погрешности.</div>
+  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.2. Опыт и условия</span></div>
+  <h2>Порядок на опыте. Точка и гладкость</h2>
   <p class="lead">При уменьшении шага вдвое ошибка падает примерно в \(2^p\) раз. Проверим это для \(\sin x\) в точке \(x_0=1\).</p>
-  <table class="cmp big"><thead><tr><th>Формула</th><th>\(h=0{,}1\)</th><th>\(h=0{,}05\)</th><th>Отношение</th><th>Порядок</th><th>\(C\)</th></tr></thead>
+  <table class="cmp big tight"><thead><tr><th>Формула</th><th>\(h=0{,}1\)</th><th>\(h=0{,}05\)</th><th>Отношение</th><th>Порядок</th><th>\(C\)</th></tr></thead>
   <tbody><tr><td>правая</td><td>\(4{,}29\cdot10^{-2}\)</td><td>\(2{,}13\cdot10^{-2}\)</td><td>2,02</td><td>1</td><td>\(\tfrac12\)</td></tr>
   <tr><td>левая</td><td>\(4{,}11\cdot10^{-2}\)</td><td>\(2{,}08\cdot10^{-2}\)</td><td>1,98</td><td>1</td><td>\(-\tfrac12\)</td></tr>
-  <tr><td>центральная</td><td>\(9{,}00\cdot10^{-4}\)</td><td>\(2{,}25\cdot10^{-4}\)</td><td>4,00</td><td>2</td><td>\(\tfrac16\)</td></tr></tbody></table>
-  <p class="bridge">Вторую производную получим тем же приёмом, только разложения надо сложить.</p>
+  <tr><td>центральная</td><td>\(9{,}00\cdot10^{-4}\)</td><td>\(2{,}25\cdot10^{-4}\)</td><td>4,00</td><td>2</td><td>\(\tfrac16\)</td></tr>
+  <tr><td>вторая</td><td>\(7{,}01\cdot10^{-4}\)</td><td>\(1{,}75\cdot10^{-4}\)</td><td>4,00</td><td>2</td><td>\(\tfrac1{12}\)</td></tr></tbody></table>
+  <div class="warning"><strong>Порядок зависит от точки.</strong> Выражение \((f(x_0+h)-f(x_0))/h\) в точке \(x_0\) имеет порядок 1, а в точке \(x_0+h/2\) это центральная разность с шагом \(h/2\): \(\psi_h=\tfrac{h^2}{24}f'''+O(h^4)\), порядок 2.</div>
+  <div class="warning"><strong>Порядок требует гладкости.</strong> Для \(f=|x|^{3/2}\) в нуле \(f'(0)=0\), а правая разность равна \(h^{1/2}\): порядок \(\tfrac12\) вместо 1, потому что \(f''\) не ограничена.</div>
+  <p class="bridge">Подбирать сочетания разложений вручную неудобно уже при трёх-четырёх узлах, поэтому нужен общий способ.</p>
 </section>
 
 <section class="slide">
-  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.1. Вторая производная</span></div>
-  <h2>Вторая производная</h2>
-  <p class="lead">Сложим разложения вперёд и назад: теперь сокращаются нечётные степени, и производная первого порядка исчезает.</p>
-  <div class="eq" style="font-size:.9em">\[\begin{aligned}
-  f(x_0+h)+f(x_0-h)&=2f+h^2f''+\tfrac{h^4}{12}f^{(4)}+O(h^6)&&\class{step}{\text{складываем разложения}}\\
-  \frac{f(x_0+h)-2f(x_0)+f(x_0-h)}{h^2}&=f''(x_0)+\tfrac{h^2}{12}f^{(4)}(x_0)+O(h^4)&&\class{step}{\text{делим на }h^2}\end{aligned}\tag{6.5}\]</div>
-  <p>Эта формула второго порядка с весами \(1,-2,1\) стоит в разностных схемах для уравнения теплопроводности, уравнения Пуассона и вязких членов уравнений гидродинамики. Для \(\sin x\) в точке \(1\) ошибка равна \(7{,}01\cdot10^{-4}\) при \(h=0{,}1\) и \(1{,}75\cdot10^{-4}\) при \(h=0{,}05\); отношение равно четырём.</p>
-  <p class="bridge">Подбирать сочетания разложений вручную неудобно уже при трёх узлах, поэтому нужен общий способ.</p>
+  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.3. Шаблон</span></div>
+  <h2>Шаблон формулы</h2>
+  <p class="lead">Шаблон — это набор узлов формулы, записанный номерами относительно \(x_0\): номер \(s\) означает точку \(x_0+sh\). Например, \(\{-1,0,2\}\) — это точки \(x_0-h,\ x_0,\ x_0+2h\).</p>
+  <div class="figure wide"><svg viewBox="0 0 850 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Примеры шаблонов">
+<text x="215.0" y="22.0" text-anchor="middle" font-size="15" fill="#2c2419" font-family="JetBrains Mono,monospace">{0, 1}: правая разность</text>
+<line x1="51.0" y1="52" x2="379.0" y2="52" stroke="#b9ae9f" stroke-width="1.6"/>
+<circle cx="51.0" cy="52" r="4.5" fill="#fff" stroke="#b9ae9f" stroke-width="1.6"/>
+<text x="51.0" y="79" text-anchor="middle" font-size="11.5" fill="#8d8274" font-family="JetBrains Mono,monospace">x₀−2h</text>
+<circle cx="133.0" cy="52" r="4.5" fill="#fff" stroke="#b9ae9f" stroke-width="1.6"/>
+<text x="133.0" y="79" text-anchor="middle" font-size="11.5" fill="#8d8274" font-family="JetBrains Mono,monospace">x₀−h</text>
+<circle cx="215.0" cy="52" r="8" fill="#b44a2d" stroke="#b44a2d" stroke-width="1.6"/>
+<text x="215.0" y="79" text-anchor="middle" font-size="11.5" fill="#2c2419" font-family="JetBrains Mono,monospace">x₀</text>
+<circle cx="297.0" cy="52" r="8" fill="#b44a2d" stroke="#b44a2d" stroke-width="1.6"/>
+<text x="297.0" y="79" text-anchor="middle" font-size="11.5" fill="#2c2419" font-family="JetBrains Mono,monospace">x₀+h</text>
+<circle cx="379.0" cy="52" r="4.5" fill="#fff" stroke="#b9ae9f" stroke-width="1.6"/>
+<text x="379.0" y="79" text-anchor="middle" font-size="11.5" fill="#8d8274" font-family="JetBrains Mono,monospace">x₀+2h</text>
+<text x="645.0" y="22.0" text-anchor="middle" font-size="15" fill="#2c2419" font-family="JetBrains Mono,monospace">{−1, 0}: левая разность</text>
+<line x1="481.0" y1="52" x2="809.0" y2="52" stroke="#b9ae9f" stroke-width="1.6"/>
+<circle cx="481.0" cy="52" r="4.5" fill="#fff" stroke="#b9ae9f" stroke-width="1.6"/>
+<text x="481.0" y="79" text-anchor="middle" font-size="11.5" fill="#8d8274" font-family="JetBrains Mono,monospace">x₀−2h</text>
+<circle cx="563.0" cy="52" r="8" fill="#b44a2d" stroke="#b44a2d" stroke-width="1.6"/>
+<text x="563.0" y="79" text-anchor="middle" font-size="11.5" fill="#2c2419" font-family="JetBrains Mono,monospace">x₀−h</text>
+<circle cx="645.0" cy="52" r="8" fill="#b44a2d" stroke="#b44a2d" stroke-width="1.6"/>
+<text x="645.0" y="79" text-anchor="middle" font-size="11.5" fill="#2c2419" font-family="JetBrains Mono,monospace">x₀</text>
+<circle cx="727.0" cy="52" r="4.5" fill="#fff" stroke="#b9ae9f" stroke-width="1.6"/>
+<text x="727.0" y="79" text-anchor="middle" font-size="11.5" fill="#8d8274" font-family="JetBrains Mono,monospace">x₀+h</text>
+<circle cx="809.0" cy="52" r="4.5" fill="#fff" stroke="#b9ae9f" stroke-width="1.6"/>
+<text x="809.0" y="79" text-anchor="middle" font-size="11.5" fill="#8d8274" font-family="JetBrains Mono,monospace">x₀+2h</text>
+<text x="215.0" y="110.0" text-anchor="middle" font-size="15" fill="#2c2419" font-family="JetBrains Mono,monospace">{−1, 1}: центральная разность</text>
+<line x1="51.0" y1="140" x2="379.0" y2="140" stroke="#b9ae9f" stroke-width="1.6"/>
+<circle cx="51.0" cy="140" r="4.5" fill="#fff" stroke="#b9ae9f" stroke-width="1.6"/>
+<text x="51.0" y="167" text-anchor="middle" font-size="11.5" fill="#8d8274" font-family="JetBrains Mono,monospace">x₀−2h</text>
+<circle cx="133.0" cy="140" r="8" fill="#b44a2d" stroke="#b44a2d" stroke-width="1.6"/>
+<text x="133.0" y="167" text-anchor="middle" font-size="11.5" fill="#2c2419" font-family="JetBrains Mono,monospace">x₀−h</text>
+<circle cx="215.0" cy="140" r="4.5" fill="#fff" stroke="#b9ae9f" stroke-width="1.6"/>
+<text x="215.0" y="167" text-anchor="middle" font-size="11.5" fill="#8d8274" font-family="JetBrains Mono,monospace">x₀</text>
+<circle cx="297.0" cy="140" r="8" fill="#b44a2d" stroke="#b44a2d" stroke-width="1.6"/>
+<text x="297.0" y="167" text-anchor="middle" font-size="11.5" fill="#2c2419" font-family="JetBrains Mono,monospace">x₀+h</text>
+<circle cx="379.0" cy="140" r="4.5" fill="#fff" stroke="#b9ae9f" stroke-width="1.6"/>
+<text x="379.0" y="167" text-anchor="middle" font-size="11.5" fill="#8d8274" font-family="JetBrains Mono,monospace">x₀+2h</text>
+<text x="645.0" y="110.0" text-anchor="middle" font-size="15" fill="#2c2419" font-family="JetBrains Mono,monospace">{−1, 0, 1}: вторая разность</text>
+<line x1="481.0" y1="140" x2="809.0" y2="140" stroke="#b9ae9f" stroke-width="1.6"/>
+<circle cx="481.0" cy="140" r="4.5" fill="#fff" stroke="#b9ae9f" stroke-width="1.6"/>
+<text x="481.0" y="167" text-anchor="middle" font-size="11.5" fill="#8d8274" font-family="JetBrains Mono,monospace">x₀−2h</text>
+<circle cx="563.0" cy="140" r="8" fill="#b44a2d" stroke="#b44a2d" stroke-width="1.6"/>
+<text x="563.0" y="167" text-anchor="middle" font-size="11.5" fill="#2c2419" font-family="JetBrains Mono,monospace">x₀−h</text>
+<circle cx="645.0" cy="140" r="8" fill="#b44a2d" stroke="#b44a2d" stroke-width="1.6"/>
+<text x="645.0" y="167" text-anchor="middle" font-size="11.5" fill="#2c2419" font-family="JetBrains Mono,monospace">x₀</text>
+<circle cx="727.0" cy="140" r="8" fill="#b44a2d" stroke="#b44a2d" stroke-width="1.6"/>
+<text x="727.0" y="167" text-anchor="middle" font-size="11.5" fill="#2c2419" font-family="JetBrains Mono,monospace">x₀+h</text>
+<circle cx="809.0" cy="140" r="4.5" fill="#fff" stroke="#b9ae9f" stroke-width="1.6"/>
+<text x="809.0" y="167" text-anchor="middle" font-size="11.5" fill="#8d8274" font-family="JetBrains Mono,monospace">x₀+2h</text>
+<text x="215.0" y="198.0" text-anchor="middle" font-size="15" fill="#2c2419" font-family="JetBrains Mono,monospace">{0, 1, 2}: край сетки</text>
+<line x1="51.0" y1="228" x2="379.0" y2="228" stroke="#b9ae9f" stroke-width="1.6"/>
+<circle cx="51.0" cy="228" r="4.5" fill="#fff" stroke="#b9ae9f" stroke-width="1.6"/>
+<text x="51.0" y="255" text-anchor="middle" font-size="11.5" fill="#8d8274" font-family="JetBrains Mono,monospace">x₀−2h</text>
+<circle cx="133.0" cy="228" r="4.5" fill="#fff" stroke="#b9ae9f" stroke-width="1.6"/>
+<text x="133.0" y="255" text-anchor="middle" font-size="11.5" fill="#8d8274" font-family="JetBrains Mono,monospace">x₀−h</text>
+<circle cx="215.0" cy="228" r="8" fill="#b44a2d" stroke="#b44a2d" stroke-width="1.6"/>
+<text x="215.0" y="255" text-anchor="middle" font-size="11.5" fill="#2c2419" font-family="JetBrains Mono,monospace">x₀</text>
+<circle cx="297.0" cy="228" r="8" fill="#b44a2d" stroke="#b44a2d" stroke-width="1.6"/>
+<text x="297.0" y="255" text-anchor="middle" font-size="11.5" fill="#2c2419" font-family="JetBrains Mono,monospace">x₀+h</text>
+<circle cx="379.0" cy="228" r="8" fill="#b44a2d" stroke="#b44a2d" stroke-width="1.6"/>
+<text x="379.0" y="255" text-anchor="middle" font-size="11.5" fill="#2c2419" font-family="JetBrains Mono,monospace">x₀+2h</text>
+<text x="645.0" y="198.0" text-anchor="middle" font-size="15" fill="#2c2419" font-family="JetBrains Mono,monospace">{−1, 0, 2}: неравномерные узлы</text>
+<line x1="481.0" y1="228" x2="809.0" y2="228" stroke="#b9ae9f" stroke-width="1.6"/>
+<circle cx="481.0" cy="228" r="4.5" fill="#fff" stroke="#b9ae9f" stroke-width="1.6"/>
+<text x="481.0" y="255" text-anchor="middle" font-size="11.5" fill="#8d8274" font-family="JetBrains Mono,monospace">x₀−2h</text>
+<circle cx="563.0" cy="228" r="8" fill="#b44a2d" stroke="#b44a2d" stroke-width="1.6"/>
+<text x="563.0" y="255" text-anchor="middle" font-size="11.5" fill="#2c2419" font-family="JetBrains Mono,monospace">x₀−h</text>
+<circle cx="645.0" cy="228" r="8" fill="#b44a2d" stroke="#b44a2d" stroke-width="1.6"/>
+<text x="645.0" y="255" text-anchor="middle" font-size="11.5" fill="#2c2419" font-family="JetBrains Mono,monospace">x₀</text>
+<circle cx="727.0" cy="228" r="4.5" fill="#fff" stroke="#b9ae9f" stroke-width="1.6"/>
+<text x="727.0" y="255" text-anchor="middle" font-size="11.5" fill="#8d8274" font-family="JetBrains Mono,monospace">x₀+h</text>
+<circle cx="809.0" cy="228" r="8" fill="#b44a2d" stroke="#b44a2d" stroke-width="1.6"/>
+<text x="809.0" y="255" text-anchor="middle" font-size="11.5" fill="#2c2419" font-family="JetBrains Mono,monospace">x₀+2h</text>
+</svg></div>
+  <p class="bridge">Для заданного шаблона веса находятся общим способом.</p>
 </section>
 
 <section class="slide">
-  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.2. Метод неопределённых коэффициентов</span></div>
+  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.3. Метод неопределённых коэффициентов</span></div>
   <h2>Общий вывод: метод неопределённых коэффициентов</h2>
-  <p class="lead">Шаблон — это набор узлов, записанный номерами относительно \(x_0\): номер \(s\) означает точку \(x_0+sh\); например, \(\{-1,0,2\}\) — это \(x_0-h,\ x_0,\ x_0+2h\). Для шаблона \(s_1,\ldots,s_m\) ищем веса формулы \(D_hf=h^{-d}\sum_jw_jf(x_0+s_jh)\).</p>
-  <div class="eq tight">\[\begin{aligned}
+  <p class="lead">Для шаблона \(s_1,\ldots,s_m\) ищем веса формулы \(D_hf=h^{-d}\sum_jw_jf(x_0+s_jh)\).</p>
+  <div class="eq tight" style="font-size:.88em">\[\begin{aligned}
   \frac{1}{h^d}\sum_jw_jf(x_0+s_jh)&=\frac{1}{h^d}\sum_jw_j\sum_{k\ge0}\frac{(s_jh)^k}{k!}f^{(k)}&&\class{step}{\text{ряд Тейлора в узле}}\\
-  &=\sum_{k\ge0}\frac{h^{k-d}}{k!}\Bigl(\sum_jw_js_j^k\Bigr)f^{(k)}&&\class{step}{\text{меняем порядок сумм}}\end{aligned}\tag{6.6}\]</div>
-  <p>Чтобы осталась только \(f^{(d)}\), момент \(\mu_k=\sum_jw_js_j^k\) должен быть равен \(d!\) при \(k=d\) и нулю при других \(k\); берём \(m\) уравнений:</p>
-  <div class="eq tight">\[\sum_{j=1}^{m}w_js_j^k=\begin{cases}d!,&k=d,\\0,&k\ne d,\end{cases}\qquad k=0,\ldots,m-1.\tag{6.7}\]</div>
+  &=\sum_{k\ge0}\frac{h^{k-d}}{k!}\Bigl(\sum_jw_js_j^k\Bigr)f^{(k)}&&\class{step}{\text{меняем порядок сумм}}\end{aligned}\]</div>
+  <p>Число \(\mu_k=\sum_jw_js_j^k\) называют моментом: это результат применения формулы к \(x^k\) при \(x_0=0\), \(h=1\). Чтобы осталась только \(f^{(d)}\), нужно \(\mu_d=d!\) и \(\mu_k=0\) при других \(k\); берём \(m\) уравнений:</p>
+  <div class="eq tight">\[\sum_{j=1}^{m}w_js_j^k=\begin{cases}d!,&k=d,\\0,&k\ne d,\end{cases}\qquad k=0,\ldots,m-1.\tag{6.9}\]</div>
   <p>Матрица системы — транспонированная матрица Вандермонда (§&nbsp;3.1), поэтому веса единственны.</p>
   <p class="bridge">Первый ненулевой момент даёт погрешность.</p>
 </section>
 
 <section class="slide">
-  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.2. Порядок формулы</span></div>
+  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.3. Порядок формулы</span></div>
   <h2>Первый ненулевой момент даёт порядок и константу</h2>
-  <div class="theorem" data-num="1"><em style="color:inherit;font-weight:600">о порядке формулы.</em> Пусть веса найдены из (6.7), а \(q\ge m\) — наименьший номер, при котором \(\mu_q\ne0\). Тогда
-  \[D_hf(x_0)-f^{(d)}(x_0)=\frac{\mu_q}{q!}\,h^{q-d}f^{(q)}(x_0)+o(h^{q-d}).\tag{6.8}\]
+  <div class="theorem" data-num="1"><em style="color:inherit;font-weight:600">о порядке формулы.</em> Пусть веса найдены из (6.9), а \(q\ge m\) — наименьший номер, при котором \(\mu_q\ne0\). Тогда
+  \[D_hf(x_0)-f^{(d)}(x_0)=\frac{\mu_q}{q!}\,h^{q-d}f^{(q)}(x_0)+o(h^{q-d}).\tag{6.10}\]
   Порядок \(p=q-d\ge m-d\). Если шаблон симметричен и \(m-d\) нечётно, то порядок ещё по крайней мере на единицу выше.</div>
   <p>Последнее утверждение объясняет наблюдавшийся выигрыш. Для шаблона \(\{-1,1\}\) и первой производной общая оценка равна \(m-d=1\), но \(\mu_2=0\), и порядок равен двум. Для \(\{-1,0,1\}\) и второй производной оценка также равна единице, \(\mu_3=0\), и порядок снова равен двум. При этом для \(\{-1,0,1\}\) и первой производной \(m-d=2\) чётно, и выигрыша нет: средний вес равен нулю, и это та же центральная разность.</p>
   <p class="bridge">Применим общий способ там, где центральная разность недоступна, — на краю сетки.</p>
 </section>
 
 <section class="slide">
-  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.2. Пример C</span></div>
-  <h2>Пример C: формула второго порядка для края сетки</h2>
-  <p class="lead"><strong>Дано:</strong> шаблон \(\{0,1,2\}\), первая производная. <strong>Задача:</strong> найти веса, порядок и константу.</p>
+  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.3. Пример B</span></div>
+  <h2>Пример B: формула второго порядка для края сетки</h2>
+  <div class="two-col fig"><div><p class="lead"><strong>Зачем.</strong> Слева от первого узла соседа нет: центральная разность недоступна, а правая имеет лишь порядок 1. <strong>Дано:</strong> шаблон \(\{0,1,2\}\).</p></div><div class="figure"><svg viewBox="0 0 430 84" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Шаблон у края сетки">
+<text x="215.0" y="18.0" text-anchor="middle" font-size="15" fill="#2c2419" font-family="JetBrains Mono,monospace">край сетки: слева от x₀ узлов нет</text>
+<line x1="61.2" y1="48" x2="368.8" y2="48" stroke="#b9ae9f" stroke-width="1.6"/>
+<line x1="10.0" y1="32" x2="10.0" y2="64" stroke="#2c2419" stroke-width="2.4"/>
+<circle cx="61.2" cy="48" r="8" fill="#b44a2d" stroke="#b44a2d" stroke-width="1.6"/>
+<text x="61.2" y="75" text-anchor="middle" font-size="11.5" fill="#2c2419" font-family="JetBrains Mono,monospace">x₀</text>
+<circle cx="163.8" cy="48" r="8" fill="#b44a2d" stroke="#b44a2d" stroke-width="1.6"/>
+<text x="163.8" y="75" text-anchor="middle" font-size="11.5" fill="#2c2419" font-family="JetBrains Mono,monospace">x₀+h</text>
+<circle cx="266.2" cy="48" r="8" fill="#b44a2d" stroke="#b44a2d" stroke-width="1.6"/>
+<text x="266.2" y="75" text-anchor="middle" font-size="11.5" fill="#2c2419" font-family="JetBrains Mono,monospace">x₀+2h</text>
+<circle cx="368.8" cy="48" r="4.5" fill="#fff" stroke="#b9ae9f" stroke-width="1.6"/>
+<text x="368.8" y="75" text-anchor="middle" font-size="11.5" fill="#8d8274" font-family="JetBrains Mono,monospace">x₀+3h</text>
+</svg></div></div>
+  <p>Формула при \(x_0=0\), \(h=1\) должна быть точна на \(1,x,x^2\):</p>
   <div class="eq tight">\[\begin{aligned}
-  w_1+w_2+w_3&=0&&\class{step}{k=0\text{: член с }f\text{ исчезает}}\\
-  w_2+2w_3&=1&&\class{step}{k=1\text{: член с }f'\text{ равен }f'}\\
-  w_2+4w_3&=0&&\class{step}{k=2\text{: член с }f''\text{ исчезает}}
+  w_1+w_2+w_3&=0&&\class{step}{f=1:\ \text{производная }0}\\
+  w_2+2w_3&=1&&\class{step}{f=x:\ \text{производная }1}\\
+  w_2+4w_3&=0&&\class{step}{f=x^2:\ \text{производная в нуле }0}
   \end{aligned}\]</div>
-  <p>Вычитая второе уравнение из третьего, находим \(w_3=-\tfrac12\), затем \(w_2=2\) и \(w_1=-\tfrac32\). Следующий момент равен \(\mu_3=2\cdot1-\tfrac12\cdot8=-2\), поэтому константа равна \(\mu_3/3!=-\tfrac13\):</p>
-  <div class="eq tight">\[\frac{-3f(x_0)+4f(x_0+h)-f(x_0+2h)}{2h}=f'(x_0)-\frac{h^2}{3}f'''(x_0)+o(h^2).\tag{6.9}\]</div>
-  <p>Для \(\sin x\) в точке \(1\) при \(h=0{,}1\) ошибка равна \(1{,}58\cdot10^{-3}\), а главный член даёт \(1{,}80\cdot10^{-3}\).</p>
+  <p>Отсюда \(w_3=-\tfrac12\), \(w_2=2\), \(w_1=-\tfrac32\). На \(x^3\) формула даёт \(\mu_3=-2\) вместо \(0\), поэтому константа равна \(\mu_3/3!=-\tfrac13\):</p>
+  <div class="eq tight">\[\frac{-3f(x_0)+4f(x_0+h)-f(x_0+2h)}{2h}=f'(x_0)-\frac{h^2}{3}f'''(x_0)+o(h^2).\tag{6.11}\]</div>
+  <p><strong>Что это даёт:</strong> для \(\sin x\) в точке \(1\) при \(h=0{,}1\) ошибка правой разности равна \(4{,}29\cdot10^{-2}\), а этой формулы — \(1{,}58\cdot10^{-3}\), примерно в 27 раз меньше, ценой одного дополнительного значения.</p>
   <p class="bridge">Та же процедура приводит ко всем формулам, которыми пользуются на практике.</p>
 </section>
 
 <section class="slide">
-  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.2. Таблица формул</span></div>
+  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.3. Таблица формул</span></div>
   <h2>Основные формулы</h2>
   <table class="cmp big tight"><thead><tr><th>Шаблон</th><th>\(d\)</th><th>Веса</th><th>Порядок</th><th>\(C\)</th></tr></thead><tbody>
   <tr><td>\(\{0,1\}\), \(\{-1,0\}\)</td><td>1</td><td>\(-1,\ 1\)</td><td>1</td><td>\(\pm\tfrac12\)</td></tr>
@@ -477,19 +562,18 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
   <tr><td>\(\{-2,-1,0,1,2\}\)</td><td>2</td><td>\(-\tfrac1{12},\ \tfrac43,\ -\tfrac52,\ \tfrac43,\ -\tfrac1{12}\)</td><td>4</td><td>\(-\tfrac1{90}\)</td></tr>
   </tbody></table>
   <p>Числа \(s_j\) не обязаны быть целыми, поэтому метод работает и на неравномерной сетке. Для \(\{-1,0,2\}\) система даёт веса \(-\tfrac23,\tfrac12,\tfrac16\), порядок 2 и константу \(\tfrac13\). Для \(e^x\) в нуле при \(h=0{,}1\) ошибка равна \(3{,}42\cdot10^{-3}\) при оценке \(3{,}33\cdot10^{-3}\).</p>
-  <p class="bridge">Те же веса получаются и другим путём — через интерполяцию из §&nbsp;3.</p>
+  <p class="bridge">Эти веса совпадают с весами из (6.1): формула из многочлена точна на многочленах степени меньше \(m\), а это и есть система (6.9). Все формулы получены для точных значений; теперь учтём погрешность данных.</p>
 </section>
 
 <section class="slide">
-  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Округление">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.3. Производная интерполянта</span></div>
-  <h2>Второй вывод: производная интерполяционного многочлена</h2>
-  <p class="lead">Построим многочлен \(P\) степени \(m-1\) по узлам шаблона (§&nbsp;3) и примем \(f^{(d)}(x_0)\approx P^{(d)}(x_0)\). Форма Лагранжа линейна по значениям, поэтому получается формула того же вида с весами</p>
-  <div class="eq tight">\[w_j=h^d\,\ell_j^{(d)}(x_0).\tag{6.10}\]</div>
-  <p>Эти веса совпадают с найденными из (6.7): формула точна на многочленах степени меньше \(m\), а условие точности на \(1,x,\ldots,x^{m-1}\) и есть система (6.7). Из формулы погрешности (3.18) получаем в узле</p>
-  <div class="eq tight">\[f'(x_i)-P'(x_i)=\frac{f^{(m)}(\xi)}{m!}\,\omega'(x_i).\tag{6.11}\]</div>
-  <p>Для \(\{0,1,2\}\) имеем \(\omega'(x_0)=2h^2\), откуда \(f'-P'=\tfrac{h^2}{3}f'''(\xi)\), как в (6.9).</p>
-  <div class="warning"><strong>Глобальный многочлен высокой степени дифференцировать нельзя.</strong> Недостатки равномерной интерполяции (§&nbsp;3.10) при дифференцировании усиливаются, поэтому разностная формула использует многочлен низкой степени по нескольким соседним узлам.</div>
-  <p class="bridge">Теперь вернёмся к погрешностям данных, которые пока не учитывались.</p>
+  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b done" title="Разности">II</span><span class="b on" title="Округление">III. Округление</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.4. Плохая обусловленность</span></div>
+  <h2>Дифференцирование усиливает погрешность</h2>
+  <p class="lead">Прибавим к функции малую добавку \(\varepsilon\sin(x/\varepsilon^2)\). Значения изменятся не более чем на \(\varepsilon\), а производная — на величину порядка \(1/\varepsilon\), то есть сколь угодно сильно.</p>
+  <div class="example"><span class="lbl">Пример C. Таблица с тремя знаками</span>
+  <strong>Дано:</strong> значения \(\sin x\), округлённые до \(0{,}001\). <strong>Задача:</strong> найти \(f'(1)=0{,}5403\) по формуле \((f(1+h)-f(1-h))/(2h)\).
+  <div class="eq tight" style="font-size:.9em">\[h=0{,}1:\ \tfrac{0{,}891-0{,}783}{0{,}2}=0{,}540;\qquad h=0{,}01:\ \tfrac{0{,}847-0{,}836}{0{,}02}=0{,}55;\qquad h=0{,}001:\ \tfrac{0{,}842-0{,}841}{0{,}002}=0{,}50.\]</div></div>
+  <p>Измельчение шага ухудшило ответ, потому что погрешность таблицы делится на всё меньшее число.</p>
+  <p class="bridge">Объясним этот опыт количественно.</p>
 </section>
 
 <section class="slide">
@@ -498,7 +582,7 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
   <p class="lead">Пусть каждое значение известно с абсолютной ошибкой не более \(\delta\). В машинной арифметике \(\delta\approx u|f|\), \(u=2^{-53}\approx1{,}1\cdot10^{-16}\) (§&nbsp;1); в таблице \(\delta\) — половина единицы последнего знака.</p>
   <div class="eq">\[\begin{aligned}
   \bigl|\tilde D^{+}_h-D^{+}_h\bigr|&\le\frac{|\delta_1|+|\delta_2|}{h}\le\frac{2\delta}{h}&&\class{step}{\text{ошибка числителя делится на }h}\\
-  E(h)&\le\frac h2M_2+\frac{2\delta}{h}&&\class{step}{\text{прибавляем погрешность метода (6.2)}}\end{aligned}\tag{6.12}\]</div>
+  E(h)&\le\frac h2M_2+\frac{2\delta}{h}&&\class{step}{\text{прибавляем погрешность метода (6.6)}}\end{aligned}\tag{6.12}\]</div>
   <p>Первое слагаемое убывает при уменьшении шага, второе растёт. Значит, у ошибки есть минимум, и уменьшать шаг полезно только до некоторого предела. Формулы для центральной разности и второй производной получаются точно так же; для второй производной деление идёт на \(h^2\), а числитель содержит ошибку \(4\delta\).</p>
   <p class="bridge">Посмотрим, как это выглядит на опыте.</p>
 </section>
@@ -562,7 +646,7 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
   <tr><td>правая</td><td>\(2{,}1\cdot10^{-8}\)</td><td>\(1{,}8\cdot10^{-8}\)</td><td>\(10^{-8}\)</td><td>\(3{,}0\cdot10^{-9}\)</td></tr>
   <tr><td>центральная</td><td>\(8{,}0\cdot10^{-6}\)</td><td>\(1{,}7\cdot10^{-11}\)</td><td>\(10^{-5}\)</td><td>\(1{,}1\cdot10^{-11}\)</td></tr>
   <tr><td>вторая производная</td><td>\(2{,}7\cdot10^{-4}\)</td><td>\(1{,}0\cdot10^{-8}\)</td><td>\(10^{-4}\)</td><td>\(3{,}0\cdot10^{-9}\)</td></tr></tbody></table>
-  <p>В двойной точности берут \(h\approx\sqrt u\), \(u^{1/3}\) и \(u^{1/4}\) соответственно, умножая на масштаб аргумента. Для таблицы из примера A \(\delta=5\cdot10^{-4}\), и \(h_{\rm opt}\approx0{,}14\): так объясняется неудача шага \(0{,}001\).</p>
+  <p>В двойной точности берут \(h\approx\sqrt u\), \(u^{1/3}\) и \(u^{1/4}\) соответственно, умножая на масштаб аргумента. Для таблицы из примера C \(\delta=5\cdot10^{-4}\), и \(h_{\rm opt}\approx0{,}14\): так объясняется неудача шага \(0{,}001\).</p>
   <p class="bridge">Погрешность результата часто нужно оценить, не зная старших производных.</p>
 </section>
 
@@ -576,7 +660,22 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
   <p>Вычтя оценку из результата, получаем формулу более высокого порядка — экстраполяцию Ричардсона:</p>
   <div class="eq tight">\[R_h=\frac{2^pD_{h/2}-D_h}{2^p-1}.\tag{6.15}\]</div>
   <div class="example"><span class="lbl">Пример D</span>Для центральной разности \(\sin x\) в точке \(1\) известны \(D_{0{,}2}=0{,}536707\) и \(D_{0{,}1}=0{,}539402\), \(p=2\). Оценка ошибки равна \(-8{,}98\cdot10^{-4}\) при истинной \(-9{,}00\cdot10^{-4}\). Уточнённое значение \(R=0{,}5403005\) имеет ошибку \(1{,}8\cdot10^{-6}\); это формула шаблона \(\{-2,-1,1,2\}\).</div>
-  <p class="bridge">Следующий вопрос: что применяют, если данные точны и нужна высокая точность.</p>
+  <p class="bridge">Дальнейший выбор метода определяется тем, что дано.</p>
+</section>
+
+<section class="slide">
+  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b done" title="Разности">II</span><span class="b on" title="Округление">III. Округление</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.5. Что дано</span></div>
+  <h2>Выбор метода определяется исходными данными</h2>
+  <p class="lead">Функция редко задана формулой. Чаще она известна значениями на сетке, измерениями или программой, и в каждом из этих случаев применяют свои методы.</p>
+  <table class="cmp big">
+  <thead><tr><th>Что дано</th><th>Основные методы</th><th>Где применяют</th></tr></thead>
+  <tbody>
+  <tr><td>точные значения на сетке</td><td>разности; компактные схемы, сплайн, спектральный метод</td><td>уравнения в частных производных, CFD</td></tr>
+  <tr><td>неструктурированная сетка</td><td>градиент по Грину — Гауссу или локальным МНК</td><td>метод конечных объёмов</td></tr>
+  <tr><td>измерения с шумом</td><td>локальный МНК, сглаживающий сплайн</td><td>эксперимент, обработка сигналов</td></tr>
+  <tr><td>программа, вычисляющая \(f\)</td><td>автоматическое дифференцирование, разности, комплексный шаг</td><td>оптимизация, машинное обучение</td></tr>
+  </tbody></table>
+  <p class="bridge">Начнём с первой строки: данные точны, нужна высокая точность.</p>
 </section>
 
 <section class="slide">
@@ -868,7 +967,7 @@ Dual y = exp(sin(x));                          // y.v = f(1), y.d = f'(1)</pre>
 <section class="slide">
   <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b done" title="Разности">II</span><span class="b done" title="Округление">III</span><span class="b done" title="Высокая точность">IV</span><span class="b done" title="Шум">V</span><span class="b done" title="Программа">VI</span><span class="b on" title="Перенос">VII. Перенос</span><span class="b " title="Измерение">VIII</span><span class="here">§6.9. Шаг по времени</span></div>
   <h2>Шаг по времени: явный метод Эйлера</h2>
-  <p class="lead">Заменим производную по времени правой разностью (6.1) с шагом \(\tau\):</p>
+  <p class="lead">Заменим производную по времени правой разностью (6.4) с шагом \(\tau\):</p>
   <div class="eq tight">\[u_i^{n+1}=u_i^{n}-\frac{a\tau}{h}\sum_jw_ju_{i+s_j}^{n}.\tag{6.25}\]</div>
   <p>За один шаг гармоника умножается на \(1-\sigma\lambda(\theta)\), где \(\sigma=a\tau/h\). Для центральной разности модуль множителя равен \(\sqrt{1+\sigma^2\sin^2\theta}\gt1\), поэтому амплитуда немного растёт на каждом шаге.</p>
   <div class="eq tight">\[\bigl(1+\sigma^2\sin^2\theta\bigr)^{n/2}\approx\exp\frac{\sigma aT\sin^2\theta}{2h},\qquad n=\frac{aT}{\sigma h}.\]</div>
@@ -1036,8 +1135,8 @@ Dual y = exp(sin(x));                          // y.v = f(1), y.d = f'(1)</pre>
   <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b done" title="Разности">II</span><span class="b done" title="Округление">III</span><span class="b done" title="Высокая точность">IV</span><span class="b done" title="Шум">V</span><span class="b done" title="Программа">VI</span><span class="b done" title="Перенос">VII</span><span class="b on" title="Измерение">VIII. Измерение</span><span class="here">§6.12. Итоги</span></div>
   <h2>Итоги: что дано и что применять</h2>
   <table class="cmp big tight"><thead><tr><th>Ситуация</th><th>Метод</th></tr></thead><tbody>
-  <tr><td>сетка, точные значения</td><td>разность нужного порядка по системе (6.7)</td></tr>
-  <tr><td>край сетки</td><td>односторонняя формула вида (6.9)</td></tr>
+  <tr><td>сетка, точные значения</td><td>разность нужного порядка по системе (6.9)</td></tr>
+  <tr><td>край сетки</td><td>односторонняя формула вида (6.11)</td></tr>
   <tr><td>нужен контроль точности</td><td>правило Рунге (6.14)</td></tr>
   <tr><td>нужно проверить программу</td><td>опытный порядок (6.27), (6.28)</td></tr>
   <tr><td>гладкая периодическая функция</td><td>спектральный метод (6.17)</td></tr>
@@ -1055,7 +1154,7 @@ Dual y = exp(sin(x));                          // y.v = f(1), y.d = f'(1)</pre>
   <a href="w06.html" class="back" title="К тексту лекции">← к тексту</a>
   <div class="center">
     <button id="btnPrev" onclick="prev()">◀ назад</button>
-    <span class="counter" id="counter">1 / 39</span>
+    <span class="counter" id="counter">1 / 40</span>
     <button id="btnNext" onclick="next()">вперёд ▶</button>
   </div>
   <a href="w07.html" class="back" title="Следующая лекция">§7 →</a>

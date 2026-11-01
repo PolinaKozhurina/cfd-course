@@ -306,7 +306,7 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
   <div class="course">Численные методы</div>
   <div class="badge">Занятие 6 · Блок III. Дифференцирование и интегрирование</div>
   <h1>Численное <span class="u">дифференцирование</span></h1>
-  <div class="sub">Разностные формулы · Метод неопределённых коэффициентов · Оптимальный шаг · Компактные и спектральные методы · Локальный МНК · Автоматическое дифференцирование · Уравнение переноса</div>
+  <div class="sub">Разностные формулы · Метод неопределённых коэффициентов · Оптимальный шаг · Спектральный метод · Локальный метод наименьших квадратов · Автоматическое дифференцирование · Уравнение переноса</div>
 </section>
 
 <section class="slide">
@@ -328,11 +328,11 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
   <h2>Постановка задачи и план занятия</h2>
   <div class="problem"><b>Дано</b> значения функции \(f\) в узлах сетки с шагом \(h\).<br><b>Найти</b> приближённое значение производной \(f'(x_0)\) или \(f''(x_0)\) и оценку погрешности.</div>
   <div class="plan5">
-    <span class="k">I</span><span class="t"><strong>Постановка</strong> (§&nbsp;6.0). Задача возникает при замене производных в дифференциальных уравнениях. Далее рассматриваются методы 1–8.</span>
+    <span class="k">I</span><span class="t"><strong>Постановка</strong> (§&nbsp;6.0). Задача возникает при замене производных в дифференциальных уравнениях. Далее рассматриваются четыре метода.</span>
     <span class="k">II</span><span class="t"><strong>Разности</strong> (§&nbsp;6.1–6.3). Вывод из интерполяционного многочлена, порядок аппроксимации, общий способ.</span>
-    <span class="k">III</span><span class="t"><strong>Усиление ошибки</strong> (§&nbsp;6.4–6.5). Точная оценка (6.12), оптимальный шаг, метод Ричардсона.</span>
-    <span class="k">IV</span><span class="t"><strong>Высокая точность</strong> (§&nbsp;6.6). На гладких данных применяют компактные схемы, сплайн и спектральный метод.</span>
-    <span class="k">V</span><span class="t"><strong>Шум</strong> (§&nbsp;6.7). Измерения сначала сглаживают локальным методом наименьших квадратов.</span>
+    <span class="k">III</span><span class="t"><strong>Усиление ошибки</strong> (§&nbsp;6.4–6.5). Точная оценка (6.12), оптимальный шаг, контроль точности по правилу Рунге.</span>
+    <span class="k">IV</span><span class="t"><strong>Высокая точность</strong> (§&nbsp;6.6). На гладких периодических данных применяют спектральный метод.</span>
+    <span class="k">V</span><span class="t"><strong>Шум</strong> (§&nbsp;6.7). Для измерений применяют локальный метод наименьших квадратов.</span>
     <span class="k">VI</span><span class="t"><strong>Программа</strong> (§&nbsp;6.8). Производную программы вычисляют автоматическим дифференцированием.</span>
     <span class="k">VII</span><span class="t"><strong>Применение</strong> (§&nbsp;6.9). Уравнение переноса, порядок схемы, первое дифференциальное приближение.</span>
     <span class="k">VIII</span><span class="t"><strong>Измерение</strong> (§&nbsp;6.10). Ошибку находят в разных нормах и определяют опытный порядок сходимости.</span>
@@ -541,14 +541,13 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
 
 <section class="slide">
   <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Разности">II. Разности</span><span class="b " title="Усиление ошибки">III</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.3. Метод неопределённых коэффициентов</span></div>
-  <h2>Общий вывод: метод неопределённых коэффициентов</h2>
-  <p class="lead">Для заданного шаблона \(\{s_1,\ldots,s_m\}\) ищем веса оператора \(L_h\). Подставим в него гладкую функцию \(f\) в точке \(x_0\):</p>
-  <div class="eq tight" style="font-size:.88em">\[\begin{aligned}
-  \frac{1}{h^d}\sum_jw_jf(x_0+s_jh)&=\frac{1}{h^d}\sum_jw_j\sum_{k\ge0}\frac{(s_jh)^k}{k!}f^{(k)}&&\class{step}{\text{ряд Тейлора в узле}}\\
-  &=\sum_{k\ge0}\frac{h^{k-d}}{k!}\Bigl(\sum_jw_js_j^k\Bigr)f^{(k)}&&\class{step}{\text{меняем порядок сумм}}\end{aligned}\]</div>
-  <p>Число \(\mu_k=\sum_jw_js_j^k\) называют моментом: это результат применения формулы к \(x^k\) при \(x_0=0\), \(h=1\). Чтобы осталась только \(f^{(d)}\), нужно \(\mu_d=d!\) и \(\mu_k=0\) при других \(k\); берём \(m\) уравнений:</p>
-  <div class="eq tight">\[\sum_{j=1}^{m}w_js_j^k=\begin{cases}d!,&k=d,\\0,&k\ne d,\end{cases}\qquad k=0,\ldots,m-1.\tag{6.9}\]</div>
-  <p>Матрица системы — транспонированная матрица Вандермонда (§&nbsp;3.1), поэтому веса единственны.</p>
+  <h2>Метод неопределённых коэффициентов</h2>
+  <p class="lead">Задан шаблон \(\{s_1,\ldots,s_m\}\). Коэффициенты оператора объявим неизвестными, а условия аппроксимации превратим в линейную систему для них.</p>
+  <p style="font-size:.86em"><strong>Шаг 1.</strong> Запишем оператор с неопределёнными весами и разложим значения в ряд Тейлора относительно \(x_i\), где \(u=u(x_i)\):</p>
+  <div class="eq tight" style="font-size:.76em">\[(L_hu)_i=\frac{1}{h^d}\Bigl[\Bigl(\sum_jw_j\Bigr)u+h\Bigl(\sum_jw_js_j\Bigr)u'+\frac{h^2}{2}\Bigl(\sum_jw_js_j^2\Bigr)u''+\ldots\Bigr].\]</div>
+  <p style="font-size:.86em"><strong>Шаг 2.</strong> Потребуем, чтобы коэффициент при \(u^{(d)}\) равнялся единице, а остальные обращались в нуль. Получаем систему с транспонированной матрицей Вандермонда (§&nbsp;3.1), поэтому веса единственны:</p>
+  <div class="eq tight" style="font-size:.76em">\[\sum_{j=1}^{m}w_js_j^k=\begin{cases}d!,&k=d,\\0,&k\ne d,\end{cases}\qquad k=0,\ldots,m-1.\tag{6.9}\]</div>
+  <div class="example" style="font-size:.8em"><span class="lbl">Пример. Шаблон \(\{0,1,2\}\), \(d=1\)</span>Система: \(w_1+w_2+w_3=0\), \(w_2+2w_3=1\), \(w_2+4w_3=0\). Отсюда \(w_3=-\tfrac12\), \(w_2=2\), \(w_1=-\tfrac32\), то есть \((L_hu)_i=(-3u_i+4u_{i+1}-u_{i+2})/(2h)\).</div>
   <p class="bridge">Решая систему (6.9) для разных шаблонов, получаем основные формулы.</p>
 </section>
 
@@ -564,7 +563,7 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
   <tr><td>\(\{-1,0,1\}\)</td><td>\(\dfrac{f_{i+1}-2f_i+f_{i-1}}{h^2}\)</td><td>2</td><td>2</td><td>\(\tfrac1{12}\)</td></tr>
   <tr><td>\(\{-2,-1,0,1,2\}\)</td><td>\(\dfrac{-f_{i-2}+16f_{i-1}-30f_i+16f_{i+1}-f_{i+2}}{12h^2}\)</td><td>2</td><td>4</td><td>\(-\tfrac1{90}\)</td></tr>
   </tbody></table>
-  <p style="font-size:.86em">Здесь \(C\) — константа погрешности: \(\xi_h(x_i)=C\,h^pf^{(p+d)}(x_i)+O(h^{p+1})\). Если \(\mu_q=\sum_jw_js_j^q\) — первый ненулевой момент с номером \(q\ge m\), то \(p=q-d\), \(C=\mu_q/q!\) (6.10).</p>
+  <p style="font-size:.86em">Здесь \(C\) — константа погрешности: \(\xi_h(x_i)=C\,h^pf^{(p+d)}(x_i)+O(h^{p+1})\). Если \(q\ge m\) — наименьший номер, при котором \(\sum_jw_js_j^q\ne0\), то \(p=q-d\), а \(C\) равна этой сумме, делённой на \(q!\).</p>
   <p class="bridge">Все формулы получены для точных значений функции; теперь учтём погрешность данных.</p>
 </section>
 
@@ -645,46 +644,26 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
 
 <section class="slide">
   <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b done" title="Разности">II</span><span class="b on" title="Усиление ошибки">III. Усиление ошибки</span><span class="b " title="Высокая точность">IV</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.5. Правило Рунге</span></div>
-  <h2>Метод 2. Правило Рунге и экстраполяция Ричардсона</h2>
-  <p class="lead" style="font-size:.9em">Метод 1 использует один расчёт, и его ошибка \(ch^p+O(h^{p+1})\) содержит неизвестную постоянную \(c\). Два расчёта той же разностью позволяют эту постоянную исключить.</p>
-  <div class="problem" style="font-size:.84em"><b>Дано</b> разность \(D_h\) известного порядка \(p\) и её значения с шагами \(h\) и \(h/2\).<br><b>Найти</b> оценку погрешности без старших производных и более точное значение.<br><b>Применяют</b> контроль точности расчётов на сетках, квадратуры (§&nbsp;7).</div>
-  <div class="definition" data-num="5" style="font-size:.84em"><em style="color:inherit;font-weight:600">правило Рунге и экстраполяция Ричардсона.</em> Вычитая разложения для шагов \(h\) и \(h/2\), получаем оценку погрешности, называемую <em>правилом Рунге</em>; вычитая её из результата, получаем значение <em>экстраполяции Ричардсона</em>:</div>
-  <div class="eq tight" style="font-size:.78em">\[D_{h/2}-f^{(d)}\approx\frac{D_h-D_{h/2}}{2^p-1},\tag{6.14}\]\[R_h=\frac{2^pD_{h/2}-D_h}{2^p-1}.\tag{6.15}\]</div>
-  <p style="font-size:.86em"><strong>Свойства:</strong> для центральной разности \(R_h\) имеет порядок 4. Пример: \(\sin x\), \(x=1\), \(D_{0{,}2}=0{,}536707\), \(D_{0{,}1}=0{,}539402\): оценка ошибки \(-8{,}98\cdot10^{-4}\) при истинной \(-9{,}00\cdot10^{-4}\); \(R=0{,}5403005\), ошибка \(1{,}8\cdot10^{-6}\).</p>
-  <p class="bridge">Следующие методы отличаются исходными данными и требованиями к функции.</p>
-</section>
-
-<section class="slide">
-  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b done" title="Разности">II</span><span class="b done" title="Усиление ошибки">III</span><span class="b on" title="Высокая точность">IV. Высокая точность</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.6. Компактные схемы и сплайн</span></div>
-  <h2>Метод 3. Компактные схемы</h2>
-  <p class="lead" style="font-size:.82em">В методе 1 повышение порядка требует расширения шаблона. Компактная схема сохраняет узкий шаблон, связывая между собой производные в соседних узлах.</p>
-  <div class="problem" style="font-size:.76em"><b>Дано</b> точные значения гладкой функции на равномерной сетке.<br><b>Найти</b> значения \(f\'_i\) во всех узлах сразу.<br><b>Применяют</b> расчёты, где важны мелкие масштабы: прямое численное моделирование турбулентности, аэроакустика.</div>
-  <div class="definition" data-num="6" style="font-size:.76em"><em style="color:inherit;font-weight:600">компактная схема.</em> Компактной схемой называют систему линейных уравнений относительно значений производной, в которой левая и правая части содержат значения лишь в соседних узлах. Схема четвёртого порядка имеет вид\[f'_{i-1}+4f'_i+f'_{i+1}=\frac{3\,(f_{i+1}-f_{i-1})}{h}.\tag{6.16}\]</div>
-  
-  <p style="font-size:.76em"><strong>Свойства:</strong> порядок 4 на трёхточечном шаблоне; система трёхдиагональна и решается прогонкой (§&nbsp;4) за \(O(N)\) действий; множитель усиления ошибки значений около \(2{,}2/h\). То же соотношение связывает наклоны кубического сплайна на равномерной сетке.</p>
-  <p class="bridge">Предельный случай расширения шаблона — использование всех узлов сетки.</p>
+  <h2>Контроль точности: правило Рунге и экстраполяция Ричардсона</h2>
+  <div class="problem" style="font-size:.84em"><b>Дано</b> значения \(D_h\) и \(D_{h/2}\), вычисленные одной разностной формулой порядка \(p\) (метод 1). Точная производная неизвестна.<br><b>Найти</b> оценку погрешности результата и более точное значение производной.</div>
+  <p style="font-size:.9em">По определению 3 главный член погрешности равен \(ch^p\), где \(c=C\,f^{(p+d)}(x^*)\). Постоянная \(C\) известна, но производная \(f^{(p+d)}(x^*)\) неизвестна, поэтому неизвестно и \(c\). Запишем два расчёта и исключим \(c\):</p>
+  <div class="eq tight" style="font-size:.78em">\[\begin{aligned}
+  D_h-f^{(d)}&=ch^p+O(h^{p+1}),\quad D_{h/2}-f^{(d)}=c(h/2)^p+O(h^{p+1})&&\class{step}{\text{два расчёта}}\\
+  D_{h/2}-f^{(d)}&\approx\frac{D_h-D_{h/2}}{2^p-1}&&\class{step}{\text{вычитаем: правило Рунге}}\end{aligned}\tag{6.14}\]</div>
+  <div class="eq tight" style="font-size:.78em">\[R_h=\frac{2^pD_{h/2}-D_h}{2^p-1}.\tag{6.15}\]</div>
+  <p style="font-size:.84em">Значение \(R_h\) называют экстраполяцией Ричардсона: это результат с вычтенной оценкой погрешности. Пример: центральная разность для \(\sin x\) в точке 1, \(p=2\), \(D_{0{,}2}=0{,}536707\), \(D_{0{,}1}=0{,}539402\). Оценка погрешности \(-8{,}98\cdot10^{-4}\) при истинной \(-9{,}00\cdot10^{-4}\); \(R=0{,}5403005\), погрешность \(1{,}8\cdot10^{-6}\).</p>
+  <p class="bridge">Метод 1 рассчитан на значения на сетке. Следующие методы применяют при других исходных данных и требованиях.</p>
 </section>
 
 <section class="slide">
   <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b done" title="Разности">II</span><span class="b done" title="Усиление ошибки">III</span><span class="b on" title="Высокая точность">IV. Высокая точность</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.6. Спектральное дифференцирование</span></div>
-  <h2>Метод 4. Спектральное дифференцирование</h2>
+  <h2>Метод 2. Спектральное дифференцирование</h2>
   <p class="lead" style="font-size:.82em">Метод использует все узлы сетки сразу: функция заменяется тригонометрическим интерполянтом (§&nbsp;5.6), а дифференцирование гармоники есть умножение на \(\mathrm ik\).</p>
   <div class="problem" style="font-size:.76em"><b>Дано</b> значения гладкой периодической функции в \(N\) узлах равномерной сетки.<br><b>Найти</b> значения производной во всех узлах.<br><b>Применяют</b> задачи в простых областях с гладкими решениями: турбулентность в периодической области, волновые задачи.</div>
-  <div class="definition" data-num="7" style="font-size:.76em"><em style="color:inherit;font-weight:600">спектральное дифференцирование.</em> Спектральной производной называют производную тригонометрического интерполянта:\[f(x)=\sum_k\hat f_ke^{\mathrm ikx}\quad\Longrightarrow\quad f'(x)=\sum_k\mathrm ik\,\hat f_ke^{\mathrm ikx}.\tag{6.17}\]</div>
+  <div class="definition" data-num="5" style="font-size:.76em"><em style="color:inherit;font-weight:600">спектральное дифференцирование.</em> Спектральной производной называют производную тригонометрического интерполянта:\[f(x)=\sum_k\hat f_ke^{\mathrm ikx}\quad\Longrightarrow\quad f'(x)=\sum_k\mathrm ik\,\hat f_ke^{\mathrm ikx}.\tag{6.17}\]</div>
   
   <p style="font-size:.76em"><strong>Алгоритм и свойства:</strong> вычислить \(\hat f_k\) быстрым преобразованием Фурье, умножить на \(\mathrm ik\), выполнить обратное преобразование; стоимость \(O(N\log N)\). Для аналитических функций ошибка убывает быстрее любой степени \(h\). Множитель \(k\) усиливает старшие гармоники: усиление ошибки значений около \(10/h\) при \(N=256\) и растёт с \(N\). На разрывах появляются осцилляции по всей области.</p>
-  <p class="bridge">В сложных областях равномерной сетки нет, поэтому нужен иной приём.</p>
-</section>
-
-<section class="slide">
-  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b done" title="Разности">II</span><span class="b done" title="Усиление ошибки">III</span><span class="b on" title="Высокая точность">IV. Высокая точность</span><span class="b " title="Шум">V</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.6. Неструктурированная сетка</span></div>
-  <h2>Метод 5. Градиент на неструктурированной сетке</h2>
-  <p class="lead" style="font-size:.9em">В сложной области ячейки сетки произвольны, поэтому формулы с постоянным шагом неприменимы. Градиент находят по значениям в соседних ячейках.</p>
-  <div class="problem" style="font-size:.84em"><b>Дано</b> значения \(u_i\) в ячейках произвольной сетки, геометрия ячеек.<br><b>Найти</b> градиент \(\nabla u\) в ячейке.<br><b>Применяют</b> коды метода конечных объёмов в инженерном CFD.</div>
-  <div class="definition" data-num="8" style="font-size:.84em"><em style="color:inherit;font-weight:600">градиент по Грину — Гауссу и локальным МНК.</em> Для ячейки объёма \(V\) с гранями площади \(A_f\), нормалями \(\mathbf n_f\) и значениями \(u_f\) на гранях градиентом <em>по Грину — Гауссу</em> называют выражение \(\mathbf g=V^{-1}\sum_fu_f\mathbf n_fA_f\). Градиентом <em>по локальному МНК</em> называют вектор \(\mathbf g\), минимизирующий \(\sum_j\bigl(u_j-u_i-\mathbf g\cdot(\mathbf x_j-\mathbf x_i)\bigr)^2\) по соседним ячейкам.</div>
-  
-  <p style="font-size:.86em"><strong>Свойства:</strong> первая формула следует из теоремы о дивергенции, вторая есть задача §&nbsp;5. Оба способа точны на линейных функциях при подходящей геометрии сетки; порядок зависит от качества сетки.</p>
-  <p class="bridge">Сравним методы для регулярной сетки на одной функции.</p>
+  <p class="bridge">Сравним этот метод с разностями на одной функции.</p>
 </section>
 
 <section class="slide">
@@ -694,18 +673,17 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
   <table class="cmp big"><thead><tr><th>Метод</th><th>\(N=16\)</th><th>\(N=32\)</th><th>\(N=64\)</th></tr></thead><tbody>
   <tr><td>центральная, порядок 2</td><td>\(9{,}4\cdot10^{-2}\)</td><td>\(2{,}6\cdot10^{-2}\)</td><td>\(6{,}5\cdot10^{-3}\)</td></tr>
   <tr><td>центральная, порядок 4</td><td>\(1{,}6\cdot10^{-2}\)</td><td>\(1{,}1\cdot10^{-3}\)</td><td>\(7{,}6\cdot10^{-5}\)</td></tr>
-  <tr><td>компактная (6.16), сплайн</td><td>\(3{,}9\cdot10^{-3}\)</td><td>\(2{,}1\cdot10^{-4}\)</td><td>\(1{,}3\cdot10^{-5}\)</td></tr>
   <tr><td>спектральный (6.17)</td><td>\(1{,}8\cdot10^{-7}\)</td><td>\(3{,}1\cdot10^{-15}\)</td><td>\(1{,}2\cdot10^{-14}\)</td></tr></tbody></table>
   <p>На гладких точных данных порядок окупается, и методы при одном и том же \(N\) различаются на много порядков ошибки. Основным инструментом всё же остаются разности: они просты, применимы в сложных областях и лучше ведут себя у разрывов, где порядок любого метода падает, а спектральный метод даёт осцилляции по всей области.</p>
   <p class="bridge">Теперь изменим одно условие и добавим к данным малый шум.</p>
 </section>
 
 <section class="slide">
-  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b done" title="Разности">II</span><span class="b done" title="Усиление ошибки">III</span><span class="b done" title="Высокая точность">IV</span><span class="b on" title="Шум">V. Шум</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.7. Локальный МНК</span></div>
-  <h2>Метод 6. Локальный МНК для данных с шумом</h2>
+  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b done" title="Разности">II</span><span class="b done" title="Усиление ошибки">III</span><span class="b done" title="Высокая точность">IV</span><span class="b on" title="Шум">V. Шум</span><span class="b " title="Программа">VI</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.7. Локальный метод наименьших квадратов</span></div>
+  <h2>Метод 3. Наименьшие квадраты для данных с шумом</h2>
   <p class="lead" style="font-size:.9em">При шуме разность применять нельзя: по (6.12) её шумовая часть растёт как \(\sigma/h\). Поэтому данные не интерполируют, а приближают (§&nbsp;5).</p>
   <div class="problem" style="font-size:.84em"><b>Дано</b> измерения \(y_i=f(x_i)+\eta_i\) на равномерной сетке, независимый шум с отклонением \(\sigma\).<br><b>Найти</b> значения \(f\'(x_i)\).<br><b>Применяют</b> обработка экспериментальных данных и сигналов.</div>
-  <div class="definition" data-num="9" style="font-size:.84em"><em style="color:inherit;font-weight:600">локальный МНК (фильтр Савицкого — Голея).</em> В окне из \(2q+1\) точек вокруг \(x_i\) строят многочлен МНК и принимают за производную его производную в центре окна. Для многочленов первой и второй степени\[D^{(q)}_hy_i=\frac{\sum_{j=-q}^{q}j\,y_{i+j}}{h\sum_{j=-q}^{q}j^2}.\tag{6.18}\]</div>
+  <div class="definition" data-num="6" style="font-size:.84em"><em style="color:inherit;font-weight:600">локальный МНК (фильтр Савицкого — Голея).</em> В окне из \(2q+1\) точек вокруг \(x_i\) строят многочлен МНК и принимают за производную его производную в центре окна. Для многочленов первой и второй степени\[D^{(q)}_hy_i=\frac{\sum_{j=-q}^{q}j\,y_{i+j}}{h\sum_{j=-q}^{q}j^2}.\tag{6.18}\]</div>
   
   <p style="font-size:.86em"><strong>Свойства:</strong> при \(q=1\) это центральная разность, при \(q=2\) получаем \((-2y_{i-2}-y_{i-1}+y_{i+1}+2y_{i+2})/(10h)\). Множитель усиления \(3/((2q+1)h)\) убывает с ростом окна, а смещение растёт как \((qh)^2\); стоимость \(O(N)\).</p>
   <p class="bridge">Ширина окна играет ту же роль, что и шаг: она задаёт компромисс.</p>
@@ -770,7 +748,6 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
   <tr><td>2048</td><td>\(3{,}2\cdot10^{-1}\)</td><td>\(5{,}9\cdot10^{-2}\)</td><td>\(8{,}7\cdot10^{-3}\)</td></tr></tbody></table>
   <table class="cmp big"><thead><tr><th>Метод, \(N=128\)</th><th>Ошибка</th></tr></thead><tbody>
   <tr><td>спектральный</td><td>\(5{,}6\cdot10^{-2}\)</td></tr>
-  <tr><td>компактная, сплайн</td><td>\(3{,}3\cdot10^{-2}\)</td></tr>
   <tr><td>центральная, порядок 4</td><td>\(2{,}6\cdot10^{-2}\)</td></tr>
   <tr><td>локальный МНК, \(q=2\)</td><td>\(1{,}2\cdot10^{-2}\)</td></tr>
   <tr><td>гармоники до \(|k|\le6\)</td><td>\(1{,}4\cdot10^{-3}\)</td></tr></tbody></table>
@@ -780,22 +757,11 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
 </section>
 
 <section class="slide">
-  <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b done" title="Разности">II</span><span class="b done" title="Усиление ошибки">III</span><span class="b done" title="Высокая точность">IV</span><span class="b done" title="Шум">V</span><span class="b on" title="Программа">VI. Программа</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.8. Разности и комплексный шаг</span></div>
-  <h2>Метод 7. Комплексный шаг</h2>
-  <p class="lead" style="font-size:.82em">Если функция задана программой, разность метода 1 теряет цифры из-за вычитания близких чисел: при оптимальном шаге (6.13) \(h\sim\sqrt u\) остаётся около половины цифр. Комплексный шаг исключает это вычитание.</p>
-  <div class="problem" style="font-size:.76em"><b>Дано</b> программа, вычисляющая аналитическую функцию \(f\) и допускающая комплексный аргумент.<br><b>Найти</b> значение \(f\'(x)\) с машинной точностью.<br><b>Применяют</b> анализ чувствительности в инженерных расчётах, проверка производных.</div>
-  <div class="definition" data-num="10" style="font-size:.76em"><em style="color:inherit;font-weight:600">производная комплексным шагом.</em> Производной комплексным шагом называют величину \(\operatorname{Im}f(x+\mathrm ih)/h\). Её порядок равен 2, а \(C=-\tfrac16\):\[\frac{\operatorname{Im}f(x+\mathrm ih)}{h}=f'(x)-\tfrac{h^2}{6}f'''(x)+\ldots\tag{6.20}\]</div>
-  
-  <p style="font-size:.76em"><strong>Свойства:</strong> вычитания нет, поэтому шаг можно брать сколь угодно малым. Для \(e^{\sin x}\) в точке 1 ошибка равна \(2\cdot10^{-16}\) при \(h=10^{-8}\), а наилучшая центральная разность даёт \(3\cdot10^{-13}\). Цена градиента: \(n\) комплексных вычислений \(f\).</p>
-  <p class="bridge">Автоматическое дифференцирование обходится совсем без шага.</p>
-</section>
-
-<section class="slide">
   <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b done" title="Разности">II</span><span class="b done" title="Усиление ошибки">III</span><span class="b done" title="Высокая точность">IV</span><span class="b done" title="Шум">V</span><span class="b on" title="Программа">VI. Программа</span><span class="b " title="Перенос">VII</span><span class="b " title="Измерение">VIII</span><span class="here">§6.8. Автоматическое дифференцирование</span></div>
-  <h2>Метод 8. Автоматическое дифференцирование</h2>
-  <p class="lead" style="font-size:.82em">Любая программа состоит из элементарных операций, производные которых известны. Поэтому производную можно вычислять вместе со значением, без разностей и без символьных формул.</p>
+  <h2>Метод 4. Автоматическое дифференцирование</h2>
+  <p class="lead" style="font-size:.82em">Если код недоступен, применяют разность метода 1 с оптимальным шагом (6.13), теряя около половины цифр. Если код доступен: любая программа состоит из элементарных операций, производные которых известны. Поэтому производную можно вычислять вместе со значением, без разностей и без символьных формул.</p>
   <div class="problem" style="font-size:.76em"><b>Дано</b> исходный код программы, вычисляющей \(f:\mathbb R^n\to\mathbb R\).<br><b>Найти</b> частные производные или градиент с точностью до округления.<br><b>Применяют</b> обучение нейронных сетей, оптимизация, решатели нелинейных систем.</div>
-  <div class="definition" data-num="11" style="font-size:.76em"><em style="color:inherit;font-weight:600">автоматическое дифференцирование.</em> Автоматическим дифференцированием называют вычисление производной программы применением правила цепочки к каждой её операции. В <em>прямом режиме</em> вместе с каждым значением \(v\) хранится производная \(\dot v\) по входной переменной, что равносильно арифметике дуальных чисел \(v+\dot v\varepsilon\), \(\varepsilon^2=0\):\[(a+\dot a\varepsilon)(b+\dot b\varepsilon)=ab+(\dot ab+a\dot b)\varepsilon,\quad g(a+\dot a\varepsilon)=g(a)+g'(a)\dot a\,\varepsilon.\tag{6.21}\]</div>
+  <div class="definition" data-num="7" style="font-size:.76em"><em style="color:inherit;font-weight:600">автоматическое дифференцирование.</em> Автоматическим дифференцированием называют вычисление производной программы применением правила цепочки к каждой её операции. В <em>прямом режиме</em> вместе с каждым значением \(v\) хранится производная \(\dot v\) по входной переменной, что равносильно арифметике дуальных чисел \(v+\dot v\varepsilon\), \(\varepsilon^2=0\):\[(a+\dot a\varepsilon)(b+\dot b\varepsilon)=ab+(\dot ab+a\dot b)\varepsilon,\quad g(a+\dot a\varepsilon)=g(a)+g'(a)\dot a\,\varepsilon.\tag{6.21}\]</div>
   
   <p style="font-size:.76em"><strong>Свойства:</strong> шага нет, поэтому нет погрешности аппроксимации; это и не символьное дифференцирование, так как вычисляются только числа. Вычисляется производная того, что записано в программе. Проход прямого режима стоит двух-трёх вычислений \(f\) и даёт производную по одной переменной.</p>
   <p class="bridge">Правила прямого режима записываются на языке программирования несколькими строками.</p>
@@ -1114,9 +1080,7 @@ Dual y = exp(sin(x));                          // y.v = f(1), y.d = f'(1)</pre>
   <tr><td>нужен контроль точности</td><td>правило Рунге (6.14)</td></tr>
   <tr><td>нужно проверить программу</td><td>опытный порядок (6.28), (6.29)</td></tr>
   <tr><td>гладкая периодическая функция</td><td>спектральный метод (6.17)</td></tr>
-  <tr><td>высокая точность на регулярной сетке</td><td>компактная схема (6.16)</td></tr>
-  <tr><td>неструктурированная сетка</td><td>Грин — Гаусс или локальный МНК</td></tr>
-  <tr><td>измерения с шумом</td><td>локальный МНК (6.18), окно по (6.19)</td></tr>
+  <tr><td>измерения с шумом</td><td>локальный метод наименьших квадратов (6.18), окно по (6.19)</td></tr>
   <tr><td>программа без доступа к коду</td><td>разность с шагом по (6.13)</td></tr>
   <tr><td>программа с кодом, много переменных</td><td>автоматическое дифференцирование, обратный режим</td></tr></tbody></table>
   <p class="bridge">Уменьшать шаг полезно только до \(h_{\rm opt}\), а для пригодности формулы в уравнении одного порядка недостаточно. На следующем занятии рассматривается обратная операция — интегрирование.</p>
@@ -1128,7 +1092,7 @@ Dual y = exp(sin(x));                          // y.v = f(1), y.d = f'(1)</pre>
   <a href="w06.html" class="back" title="К тексту лекции">← к тексту</a>
   <div class="center">
     <button id="btnPrev" onclick="prev()">◀ назад</button>
-    <span class="counter" id="counter">1 / 40</span>
+    <span class="counter" id="counter">1 / 37</span>
     <button id="btnNext" onclick="next()">вперёд ▶</button>
   </div>
   <a href="w07.html" class="back" title="Следующая лекция">§7 →</a>

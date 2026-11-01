@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <link rel="icon" href="../favicon.ico" type="image/x-icon">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Лабораторная работа №6 курса «Численные методы»: разностные производные, V-образная кривая ошибки, оптимальный шаг, экстраполяция Ричардсона.">
-<title>ЧМ · Лаба 6. Численное дифференцирование</title>
+<meta name="description" content="Лабораторная работа №6 курса «Численные методы»: вывод разностных формул методом неопределённых коэффициентов, уравнение переноса с разными формулами для производной.">
+<title>ЧМ · Лаба 6. Разностные формулы и уравнение переноса</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/material-darker.css">
@@ -109,26 +109,25 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
 
 <nav class="sidebar">
   <h2>Лаба 6. Дифференцирование</h2>
-  <div class="progress" id="side_progress">решено 0 из 8</div>
+  <div class="progress" id="side_progress">решено 0 из 2</div>
   <div class="runtime-state" id="side_runtime">clang: не загружен</div>
   <div class="g">Содержание</div>
   <a href="#intro">Введение</a>
-  <a href="#part0">§0. Правая и центральная</a>
-  <a href="#part1">§1. Оптимальный шаг</a>
-  <a href="#part2">§2. Ричардсон</a>
+  <a href="#part1">§1. Вывод формул</a>
+  <a href="#part2">§2. Уравнение переноса</a>
   <div class="sep"></div>
   <div class="g">Материалы</div>
   <a href="w06.html">§6. Лекция</a>
   <a href="w06-slides.html">▶ Слайды §6</a>
   <a href="index.html">← Обзор курса</a>
-  <a href="w07.html">→ §7. Ньютон-Котес</a>
+  <a href="w07.html">→ §7. Численное интегрирование</a>
 </nav>
 
 <div class="main"><div class="main-inner">
 <span class="lecture-tag">Лабораторная работа</span>
 <div class="lecture-num">Лаба 6 · к §6 «Численное дифференцирование»</div>
 <div style="display:flex;align-items:baseline;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
-  <h1 style="margin:0">V-образная кривая ошибки и оптимальный шаг</h1>
+  <h1 style="margin:0">Разностные формулы и уравнение переноса</h1>
   <a href="w06.html" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.4rem .8rem;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none">▶ Лекция</a>
 </div>
 
@@ -136,13 +135,13 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
   <div class="cell"><b>Формат</b>Парная работа за компьютером</div>
   <div class="cell"><b>Язык</b>C++11, только stdlib</div>
   <div class="cell"><b>Сборка</b>clang++ в браузере (wasm)</div>
-  <div class="cell"><b>Оценка</b>6/8 задач → зачёт</div>
+  <div class="cell"><b>Оценка</b>2 задачи и письменная часть → зачёт</div>
 </div>
 
 <div class="progresspanel">
   <span>Прогресс</span>
   <div class="bar"><div id="prog_bar" style="width:0%"></div></div>
-  <span class="cnt" id="prog_cnt">0/8</span>
+  <span class="cnt" id="prog_cnt">0/2</span>
   <span class="runtime" id="prog_runtime">clang: init…</span>
   <button class="reset" id="prog_reset" type="button">сбросить</button>
 </div>
@@ -158,7 +157,7 @@ html.dark .runtimebanner{background:#1a2130;color:var(--text)}
 
 <div class="lecture-nav">
   <a class="nav-prev" href="w06.html">← §6. Лекция</a>
-  <a class="nav-next" href="w07.html">§7. Ньютон-Котес →</a>
+  <a class="nav-next" href="w07.html">§7. Численное интегрирование →</a>
 </div>
 
 </div></div>
@@ -210,14 +209,25 @@ function setRuntimeState(cls, text){
 async function runCpp(studentCode, harness, outputEl){
   await ensureRuntime();
   const full = studentCode + '\n' + harness;
-  const buffer = []; const answers = []; let sawEnd = false;
+  const buffer = []; const answers = []; const points = []; let sawEnd = false;
+  // clang.js режет большой вывод на куски не по границам строк: собираем целые строки.
+  let pend = '';
+  const handleLine = (l) => {
+    const pm = l.match(/^__(PT|PR)__ (\S+) (\S+) (\S+)/);
+    if (pm) { points.push({k:pm[1], l:pm[2], x:parseFloat(pm[3]), y:parseFloat(pm[4])}); return; }
+    outputEl.insertAdjacentHTML('beforeend', escapeHtml(l)+'\n');
+    outputEl.scrollTop = outputEl.scrollHeight;
+    buffer.push(l);
+    const m = l.match(/^__ANS__(\S+)/); if (m) answers.push(parseFloat(m[1]));
+    if (/^__END__/.test(l)) sawEnd = true;
+  };
   const listener = (line) => {
     const clean = stripAnsi(line);
-    if (isClangDiag(clean)) outputEl.insertAdjacentHTML('beforeend', '<span class="hi">'+escapeHtml(clean)+'</span>\n');
-    else outputEl.insertAdjacentHTML('beforeend', escapeHtml(clean)+'\n');
-    outputEl.scrollTop = outputEl.scrollHeight;
-    buffer.push(clean);
-    clean.split('\n').forEach(l => { const m = l.match(/^__ANS__(\S+)/); if (m) answers.push(parseFloat(m[1])); if (/^__END__/.test(l)) sawEnd = true; });
+    if (isClangDiag(clean)) { outputEl.insertAdjacentHTML('beforeend', '<span class="hi">'+escapeHtml(clean)+'</span>\n'); return; }
+    pend += clean;
+    const parts = pend.split('\n');
+    pend = parts.pop();
+    parts.forEach(handleLine);
   };
   listeners.add(listener);
   outputEl.innerHTML = '';
@@ -225,8 +235,38 @@ async function runCpp(studentCode, harness, outputEl){
   try { await run(full); } catch (e) { outputEl.insertAdjacentHTML('beforeend', '<span class="err">'+escapeHtml(e.message)+'</span>\n'); }
   const deadline = Date.now() + 120000;
   while (!sawEnd && Date.now() < deadline) await new Promise(r=>setTimeout(r,120));
+  if (pend) { handleLine(pend); pend = ''; }
   listeners.delete(listener);
-  return { answers, ended: sawEnd, output: buffer.join('\n') };
+  return { answers, points, ended: sawEnd, output: buffer.join('\n') };
+}
+// Графики лабы: __PT__ метка N ошибка (log-log), __PR__ метка x u (профиль).
+const PLOT_COL = {left:'#1a6b5a', up2:'#a87a12', cen2:'#b44a2d', cen4:'#5b54b8', exact:'#2c2419'};
+function drawLines(canvas, pts, o){
+  canvas.style.display = 'block';
+  const c = canvas.getContext('2d'), W = canvas.width, H = canvas.height, L = 62, R = 14, T = 12, B = 42;
+  c.clearRect(0,0,W,H); c.font = "12px 'JetBrains Mono',monospace";
+  const fx = v => o.logx ? Math.log10(v) : v, fy = v => o.logy ? Math.log10(v) : v;
+  const good = pts.filter(p => isFinite(fx(p.x)) && isFinite(fy(p.y)));
+  const px = v => L + (fx(v)-fx(o.xr[0]))/(fx(o.xr[1])-fx(o.xr[0]))*(W-L-R);
+  const py = v => H-B - (fy(v)-fy(o.yr[0]))/(fy(o.yr[1])-fy(o.yr[0]))*(H-T-B);
+  c.strokeStyle = '#e6ddcf'; c.fillStyle = '#6b5d4f'; c.textAlign = 'center';
+  o.xt.forEach(v => { c.beginPath(); c.moveTo(px(v),T); c.lineTo(px(v),H-B); c.stroke(); c.fillText(String(v).replace('.',','),px(v),H-B+16); });
+  c.textAlign = 'right';
+  o.yt.forEach(v => { c.beginPath(); c.moveTo(L,py(v)); c.lineTo(W-R,py(v)); c.stroke(); c.fillText(o.logy ? '1e'+Math.round(Math.log10(v)) : String(v).replace('.',','),L-6,py(v)+4); });
+  c.textAlign = 'center'; c.fillStyle = '#2c2419'; c.fillText(o.xl,(L+W-R)/2,H-8);
+  c.strokeStyle = '#2c2419'; c.strokeRect(L,T,W-L-R,H-T-B);
+  const labels = []; good.forEach(p => { if (!labels.includes(p.l)) labels.push(p.l); });
+  c.save(); c.beginPath(); c.rect(L,T,W-L-R,H-T-B); c.clip();
+  labels.forEach(l => { c.strokeStyle = PLOT_COL[l] || '#3a5ba0'; c.lineWidth = l==='exact' ? 1.3 : 1.9; c.setLineDash(l==='exact' ? [6,4] : []); c.beginPath(); good.filter(p=>p.l===l).forEach((p,i)=>{ i ? c.lineTo(px(p.x),py(p.y)) : c.moveTo(px(p.x),py(p.y)); }); c.stroke(); });
+  c.restore(); c.setLineDash([]); c.lineWidth = 1; c.textAlign = 'left';
+  labels.forEach((l,i) => { const y = T+16+i*16, x = o.legx || L+12; c.strokeStyle = PLOT_COL[l] || '#3a5ba0'; c.lineWidth = 2; c.beginPath(); c.moveTo(x,y-4); c.lineTo(x+22,y-4); c.stroke(); c.lineWidth = 1; c.fillStyle = '#2c2419'; c.fillText(l,x+28,y); });
+}
+function drawLabPlots(shell, points){
+  if (!points || !points.length) return;
+  const e = shell.querySelector('[data-plot="err"]'), f = shell.querySelector('[data-plot="prof"]');
+  const pt = points.filter(p => p.k==='PT'), pr = points.filter(p => p.k==='PR');
+  if (e && pt.length) drawLines(e, pt, {logx:true, logy:true, xr:[30,420], yr:[1e-8,10], xt:[40,80,160,320], yt:[1e-7,1e-5,1e-3,1e-1,10], xl:'N (RMS error)', legx:70});
+  if (f && pr.length) drawLines(f, pr, {xr:[0,1], yr:[-0.6,1.6], xt:[0,0.2,0.4,0.6,0.8,1], yt:[-0.5,0,0.5,1,1.5], xl:'x (rect, N = 200)', legx:70});
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 const PROG_KEY = 'cfd-nm-w06-lab-cpp-progress';
@@ -257,7 +297,7 @@ function scheduleRemoteSave(){
 window.__labFlush = function(){ clearTimeout(_rsTimer); return remoteSaveNow(); };
 window.addEventListener('beforeunload', function(){ if (_rsTimer) { clearTimeout(_rsTimer); remoteSaveNow(); } });
 document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden' && _rsTimer) { clearTimeout(_rsTimer); _rsTimer = null; remoteSaveNow(); } });
-const TOTAL = 8;
+const TOTAL = 2;
 delete PROG.q31; // задача-обсуждение удалена
 function updateProgUI(){
   const done = Object.values(PROG).filter(v=>v==='ok').length;
@@ -324,6 +364,7 @@ document.querySelectorAll('[data-cpp]').forEach(shell=>{
     try {
       const code = cm.getValue();
       const res = await runCpp(code, harnessV, outputEl);
+      drawLabPlots(shell, res.points);
       let targets = [];
       if (evalAttr) {
         targets = evalAttr.split('|').map(call=>{

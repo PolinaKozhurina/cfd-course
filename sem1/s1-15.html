@@ -913,9 +913,60 @@ jid2=$(sbatch --dependency=afterany:$jid1 srun|sed 's/Submitted batch job //')
 
 squeue -u $USER -o "%.8A %.4C %.10m %.20E"</pre>
 
+<h3>Очередь задач</h3>
+<p>Команда <code>sbatch</code> не запускает программу, а ставит задачу в очередь и печатает её номер. Планировщик запускает задачу, когда освободятся запрошенные ресурсы и подойдёт её очередь. Узлы разбиты на разделы (partition), у каждого своя очередь; их показывает <code>sinfo</code>, раздел по умолчанию отмечен <code>*</code>, а выбрать раздел можно директивой <code>#SBATCH --partition=reserve</code>.</p>
+<p>В выводе <code>squeue</code> столбец <code>ST</code> показывает состояние: <code>PD</code> — ждёт, <code>R</code> — выполняется, <code>CG</code> — завершается. Причина ожидания указана в скобках. Примерный вид вывода (столбцы на кластере могут быть настроены иначе):</p>
+<pre class="code">JOBID         PARTITION  NAME   USER ST  TIME NODES NODELIST(REASON)
+65700_[2-3%2]   reserve   sod  user1 PD  0:00     1 (JobArrayTaskLimit)
+65700_0         reserve   sod  user1  R  0:12     1 c4n2
+65700_1         reserve   sod  user1  R  0:12     1 c4n3
+65701           reserve order  user1 PD  0:00     1 (Dependency)
+65702           compute  test  user2 PD  0:00     1 (Resources)</pre>
+<div class="tbl"><table class="cmp"><tbody>
+<tr><td><code>Resources</code></td><td>нет свободных узлов</td></tr>
+<tr><td><code>Priority</code></td><td>впереди задачи с большим приоритетом</td></tr>
+<tr><td><code>Dependency</code></td><td>задача ждёт завершения другой задачи</td></tr>
+<tr><td><code>JobArrayTaskLimit</code></td><td>достигнут предел одновременно выполняемых задач массива</td></tr>
+</tbody></table></div>
+
+<h3>Массив задач</h3>
+<p>Массив запускает один файл много раз с разным номером. Это удобно для серии расчётов на разных сетках или с разными числами Куранта. Номера задаёт директива <code>--array</code>: <code>0-3</code> — номера от 0 до 3; <code>0-15:4</code> — 0, 4, 8, 12; <code>1,3,7</code> — перечисленные; <code>0-3%2</code> — не более двух одновременно. Внутри задачи номер доступен в переменной <code>$SLURM_ARRAY_TASK_ID</code>, а в имени файла вывода <code>%A</code> и <code>%a</code> дают номер массива и номер задачи. Файл <code>RunArray</code> для задачи Сода на четырёх сетках:</p>
+<pre class="code">#!/bin/bash
+#SBATCH --job-name=sod
+#SBATCH --array=0-3%2
+#SBATCH --nodes=1
+#SBATCH --tasks-per-node=1
+#SBATCH --time=01:00:00
+#SBATCH --output=./stdout/slurm-%A_%a.out
+
+GRIDS=(100 200 400 800)
+./main ${GRIDS[$SLURM_ARRAY_TASK_ID]}</pre>
+<p>Программа должна читать \(N\) из аргумента командной строки, а записываемые ею файлы должны различаться для разных задач. Команда <code>scancel 65700_2</code> снимает одну задачу массива, <code>scancel 65700</code> — весь массив.</p>
+
+<h3>Зависимости между задачами</h3>
+<p>Директива <code>--dependency=тип:номер</code> задерживает запуск задачи до выполнения условия:</p>
+<div class="tbl"><table class="cmp"><tbody>
+<tr><td><code>afterok</code></td><td>после успешного завершения указанной задачи</td></tr>
+<tr><td><code>afterany</code></td><td>после завершения с любым исходом</td></tr>
+<tr><td><code>afternotok</code></td><td>только после ошибки: ненулевой код, сбой узла, превышение времени</td></tr>
+<tr><td><code>after</code></td><td>после начала выполнения или отмены указанной задачи</td></tr>
+<tr><td><code>aftercorr</code></td><td>массив за массивом: задача \(k\) после успешной задачи \(k\)</td></tr>
+<tr><td><code>singleton</code></td><td>одновременно идёт только одна задача с этим именем у пользователя</td></tr>
+</tbody></table></div>
+<p>В файле <code>rAll</code> выше стоит <code>afterany</code>: вторая задача пойдёт, даже если первая завершилась с ошибкой. Для обработки результатов надёжнее <code>afterok</code>. Если условие уже невыполнимо, задача останется в очереди с причиной <code>DependencyNeverSatisfied</code>, и её надо снять. Зависимость от номера массива означает ожидание всех его задач; несколько условий записывают так: <code>afterok:N1:N2</code>. Пример цепочки: расчёт на четырёх сетках, затем опытный порядок, затем графики. Флаг <code>--parsable</code> печатает только номер задачи, поэтому <code>sed</code> не нужен.</p>
+<div class="figure" style="max-width:32rem;margin-left:auto;margin-right:auto"><svg viewBox="0 0 610 270" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Массив из четырёх расчётов, затем обработка и графики" style="width:100%;height:auto"><rect x="5.0" y="5.0" width="150.0" height="54.0" rx="3" style="fill:var(--bg2);stroke:var(--accent3);stroke-width:1.6"/><text x="80.0" y="29.0" text-anchor="middle" style="font-family:'Source Serif 4',Georgia,serif;font-size:15px;fill:var(--text);font-weight:700;"><tspan dy="0.0">sod_0</tspan></text><text x="80.0" y="47.0" text-anchor="middle" style="font-family:'Source Serif 4',Georgia,serif;font-size:13px;fill:var(--text2);"><tspan dy="0.0">N = 100</tspan></text><line x1="155.0" y1="32.0" x2="241.1" y2="121.0" style="stroke:var(--text2);stroke-width:1.3"/><polygon points="245.0,125.0 237.6,121.9 242.1,117.5" style="fill:var(--text2)"/><rect x="5.0" y="67.0" width="150.0" height="54.0" rx="3" style="fill:var(--bg2);stroke:var(--accent3);stroke-width:1.6"/><text x="80.0" y="91.0" text-anchor="middle" style="font-family:'Source Serif 4',Georgia,serif;font-size:15px;fill:var(--text);font-weight:700;"><tspan dy="0.0">sod_1</tspan></text><text x="80.0" y="109.0" text-anchor="middle" style="font-family:'Source Serif 4',Georgia,serif;font-size:13px;fill:var(--text2);"><tspan dy="0.0">N = 200</tspan></text><line x1="155.0" y1="94.0" x2="239.7" y2="123.2" style="stroke:var(--text2);stroke-width:1.3"/><polygon points="245.0,125.0 237.0,125.5 239.0,119.7" style="fill:var(--text2)"/><rect x="5.0" y="129.0" width="150.0" height="54.0" rx="3" style="fill:var(--bg2);stroke:var(--accent3);stroke-width:1.6"/><text x="80.0" y="153.0" text-anchor="middle" style="font-family:'Source Serif 4',Georgia,serif;font-size:15px;fill:var(--text);font-weight:700;"><tspan dy="0.0">sod_2</tspan></text><text x="80.0" y="171.0" text-anchor="middle" style="font-family:'Source Serif 4',Georgia,serif;font-size:13px;fill:var(--text2);"><tspan dy="0.0">N = 400</tspan></text><line x1="155.0" y1="156.0" x2="239.7" y2="126.8" style="stroke:var(--text2);stroke-width:1.3"/><polygon points="245.0,125.0 239.0,130.3 237.0,124.5" style="fill:var(--text2)"/><rect x="5.0" y="191.0" width="150.0" height="54.0" rx="3" style="fill:var(--bg2);stroke:var(--accent3);stroke-width:1.6"/><text x="80.0" y="215.0" text-anchor="middle" style="font-family:'Source Serif 4',Georgia,serif;font-size:15px;fill:var(--text);font-weight:700;"><tspan dy="0.0">sod_3</tspan></text><text x="80.0" y="233.0" text-anchor="middle" style="font-family:'Source Serif 4',Georgia,serif;font-size:13px;fill:var(--text2);"><tspan dy="0.0">N = 800</tspan></text><line x1="155.0" y1="218.0" x2="241.1" y2="129.0" style="stroke:var(--text2);stroke-width:1.3"/><polygon points="245.0,125.0 242.1,132.5 237.6,128.1" style="fill:var(--text2)"/><rect x="245.0" y="92.0" width="165.0" height="66.0" rx="3" style="fill:var(--bg2);stroke:var(--accent);stroke-width:1.6"/><text x="327.5" y="122.0" text-anchor="middle" style="font-family:'Source Serif 4',Georgia,serif;font-size:15px;fill:var(--text);font-weight:700;"><tspan dy="0.0">order</tspan></text><text x="327.5" y="140.0" text-anchor="middle" style="font-family:'Source Serif 4',Georgia,serif;font-size:13px;fill:var(--text2);"><tspan dy="0.0">опытный порядок</tspan></text><line x1="410.0" y1="125.0" x2="464.4" y2="125.0" style="stroke:var(--text2);stroke-width:1.6"/><polygon points="470.0,125.0 462.6,128.1 462.6,121.9" style="fill:var(--text2)"/><rect x="470.0" y="92.0" width="135.0" height="66.0" rx="3" style="fill:var(--bg2);stroke:var(--accent2);stroke-width:1.6"/><text x="537.5" y="122.0" text-anchor="middle" style="font-family:'Source Serif 4',Georgia,serif;font-size:15px;fill:var(--text);font-weight:700;"><tspan dy="0.0">plots</tspan></text><text x="537.5" y="140.0" text-anchor="middle" style="font-family:'Source Serif 4',Georgia,serif;font-size:13px;fill:var(--text2);"><tspan dy="0.0">графики</tspan></text><text x="200.0" y="262.0" text-anchor="middle" style="font-family:'Source Serif 4',Georgia,serif;font-size:14px;fill:var(--accent);font-style:italic;"><tspan dy="0.0">afterok</tspan></text><text x="440.0" y="182.0" text-anchor="middle" style="font-family:'Source Serif 4',Georgia,serif;font-size:14px;fill:var(--accent2);font-style:italic;"><tspan dy="0.0">afterok</tspan></text></svg><div class="caption">Рис. 7а. Цепочка зависимостей: массив расчётов, обработка, графики.</div></div>
+<pre class="code">#! /bin/bash
+
+jid1=$(sbatch --parsable RunArray)
+jid2=$(sbatch --parsable --dependency=afterok:$jid1 srun_order)
+sbatch --dependency=afterok:$jid2 srun_plots
+
+squeue -u $USER</pre>
+
 <h3>Контроль задач</h3>
 <ul>
-<li><code>squeue</code> — посмотреть очередь;</li>
+<li><code>squeue</code> — посмотреть очередь, <code>squeue -u $USER</code> — только свои задачи, <code>squeue --start</code> — оценка времени запуска;</li>
+<li><code>scontrol show job N</code> — всё о задаче, <code>sacct -j N</code> — завершившиеся задачи;</li>
 <li><code>sinfo</code> — состояние узлов;</li>
 <li><code>scancel N</code> — снять задачу с номером \(N\).</li>
 </ul>

@@ -357,6 +357,23 @@ if (location.search.indexOf('embedded=1') !== -1) {
       <div id="hwSubsTable"></div>
     </div>
   </div>
+  <!-- Комментарий к работе в большом окне + «На доработку» -->
+  <div id="hwCmtWrap" style="display:none;position:fixed;inset:0;z-index:10003;background:rgba(0,0,0,.45);align-items:center;justify-content:center;padding:1rem">
+    <div style="background:var(--card,#fff);border-radius:10px;width:760px;max-width:98%;padding:1rem 1.2rem;box-shadow:0 12px 40px rgba(0,0,0,.25);display:flex;flex-direction:column;max-height:94vh">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;margin-bottom:.4rem">
+        <h3 id="hwCmtTitle" style="margin:0;font-size:1.05rem">Комментарий</h3>
+        <button onclick="hwCloseComment()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text3)">×</button>
+      </div>
+      <div id="hwCmtInfo" style="font-size:.8rem;color:var(--text2);margin-bottom:.4rem"></div>
+      <textarea id="hwCmtText" style="width:100%;min-height:340px;flex:1;resize:vertical;font-size:.95rem;line-height:1.45;padding:.6rem .7rem;border:1px solid var(--border);border-radius:6px;font-family:'Source Serif 4',serif;box-sizing:border-box" placeholder="Замечания по работе. Студент увидит этот текст в карточке задания."></textarea>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;margin-top:.7rem">
+        <span id="hwCmtSt" style="flex:1;align-self:center;font-size:.78rem;color:var(--text3)"></span>
+        <button class="btn" onclick="hwCloseComment()">Отмена</button>
+        <button class="btn" id="hwCmtReworkBtn" onclick="hwCommentSave(true)" style="background:#faeeda;color:#854f0b;border:1px solid #e0c48f">↩ Отправить на доработку</button>
+        <button class="btn btn-primary" onclick="hwCommentSave(false)">Сохранить</button>
+      </div>
+    </div>
+  </div>
   <style>
     /* Мобильная адаптация модалки «сдачи и оценки» — на узком экране
        карточка растянута на весь viewport, паддинги минимальны, таблица
@@ -725,7 +742,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
 <script src="js/firebase-config.js?v=20260907g"></script>
 <script src="js/courses.js?v=20261102"></script>
 <script src="js/enrollments.js?v=20260907g"></script>
-<script src="js/homework.js?v=20261110b"></script>
+<script src="js/homework.js?v=20261110c"></script>
 <script src="js/attendance.js?v=20260907g"></script>
 <script src="js/labs.js?v=20261018"></script>
 <script src="js/quiz.js?v=20261018"></script>
@@ -2097,7 +2114,9 @@ async function renderHwSubmissionsTable(aid) {
       + '<td>' + filesHtml + '</td>'
       + '<td style="white-space:nowrap;font-size:.72rem;color:var(--text2)">' + submittedAt + lateBadge + '</td>'
       + '<td style="white-space:nowrap"><input type="number" min="0" max="100" value="'+zVal+'" class="grade-input" id="hwG-'+aid+'-'+u.uid+'" oninput="hwDebounceGrade(\''+aid+'\',\''+u.uid+'\',\''+a.courseId+'\')">' + toGroupBtn + '</td>'
-      + '<td><input type="text" value="'+hwEscape(cVal).replace(/"/g,'&quot;')+'" class="comment-input" id="hwC-'+aid+'-'+u.uid+'" placeholder="Комментарий" oninput="hwDebounceGrade(\''+aid+'\',\''+u.uid+'\',\''+a.courseId+'\')"></td>'
+      + '<td>' + hwCommentCellHtml({ aid: aid, cid: a.courseId, elId: 'hwC-'+aid+'-'+u.uid, uids: [u.uid], value: cVal,
+            oninput: 'hwDebounceGrade(\''+aid+'\',\''+u.uid+'\',\''+a.courseId+'\')',
+            title: u.fio || u.email || '', grades: [g], sub: s }) + '</td>'
       + '</tr>';
   }).join('');
   // Диагностика на случай пустого списка — легче понять, где рвётся.
@@ -2162,7 +2181,7 @@ function hwRenderGroupTable(aid, a, enrolled, rawSubs, grpSubs, grades, gidOf) {
       : '';
     return ((files + links) || '<span style="color:var(--text3);font-style:italic;font-size:.78rem">не сдано</span>') + reviewed;
   };
-  const gradeCells = (key, uids) => {
+  const gradeCells = (key, uids, view) => {
     const vals = uids.map(id => grades[id] || {});
     const gs = vals.map(g => (g.grade === undefined || g.grade === null) ? '' : String(g.grade));
     const cs = vals.map(g => g.comment || '');
@@ -2172,7 +2191,10 @@ function hwRenderGroupTable(aid, a, enrolled, rawSubs, grpSubs, grades, gidOf) {
     const idk = key.replace(/[^A-Za-z0-9_-]/g, '_');
     return '<td><input type="number" min="0" max="100" value="'+gv+'" class="grade-input" id="hwGG-'+aid+'-'+idk+'" data-uids="'+uids.join(',')+'" oninput="hwDebounceGroupGrade(\''+aid+'\',\''+idk+'\',\''+a.courseId+'\')">'
       + (mixed ? '<div title="' + hwEscape(uids.map((id, i) => (fio[id] || id).split(' ')[0] + ': ' + (gs[i] || '—')).join('; ')) + '" style="font-size:.66rem;color:var(--st-red,#a33)">у членов разные</div>' : '') + '</td>'
-      + '<td><input type="text" value="'+hwEscape(cv).replace(/"/g,'&quot;')+'" class="comment-input" id="hwGC-'+aid+'-'+idk+'" placeholder="Комментарий группе" oninput="hwDebounceGroupGrade(\''+aid+'\',\''+idk+'\',\''+a.courseId+'\')"></td>';
+      + '<td>' + hwCommentCellHtml({ aid: aid, cid: a.courseId, elId: 'hwGC-'+aid+'-'+idk, uids: uids, value: cv,
+            oninput: 'hwDebounceGroupGrade(\''+aid+'\',\''+idk+'\',\''+a.courseId+'\')',
+            title: key.indexOf('G:') === 0 ? 'Группа ' + key.slice(2).replace(/^group_/, '') + ' — ' + uids.map(id => (fio[id] || '').split(' ')[0]).join(', ') : (fio[uids[0]] || ''),
+            grades: vals, sub: view, placeholder: uids.length > 1 ? 'Комментарий группе' : 'Комментарий' }) + '</td>';
   };
   let num = 0;
   const rows = gids.map(gid => {
@@ -2202,7 +2224,7 @@ function hwRenderGroupTable(aid, a, enrolled, rawSubs, grpSubs, grades, gidOf) {
       + '<td style="vertical-align:top">' + variant + '</td>'
       + '<td style="vertical-align:top">' + fileBtns(key, view) + '</td>'
       + '<td style="white-space:nowrap;font-size:.72rem;color:var(--text2);vertical-align:top">' + fmt(subMs) + late + '</td>'
-      + gradeCells(key, members.map(u => u.uid))
+      + gradeCells(key, members.map(u => u.uid), view)
       + '</tr>';
   }).join('');
   const lonerRows = loners.map(u => {
@@ -2218,7 +2240,7 @@ function hwRenderGroupTable(aid, a, enrolled, rawSubs, grpSubs, grades, gidOf) {
       + '<td style="vertical-align:top">—</td>'
       + '<td style="vertical-align:top">' + fileBtns(key, s) + '</td>'
       + '<td style="white-space:nowrap;font-size:.72rem;color:var(--text2);vertical-align:top">' + fmt(CFDHomework.studentSubmittedAt(s)) + '</td>'
-      + gradeCells('U:' + u.uid, [u.uid])
+      + gradeCells('U:' + u.uid, [u.uid], s)
       + '</tr>';
   }).join('');
   const metaEl = document.getElementById('hwSubsMeta');
@@ -2233,6 +2255,105 @@ function hwRenderGroupTable(aid, a, enrolled, rawSubs, grpSubs, grades, gidOf) {
     + '<tbody>' + ((rows + lonerRows) || '<tr><td colspan="7" style="text-align:center;color:var(--text3)">Никто не записан на курс</td></tr>') + '</tbody>'
     + '</table></div>';
 }
+
+// ===== Комментарий в большом окне и «На доработку» =====
+// Ячейка комментария: многострочное поле (сохраняется как раньше, через
+// oninput), кнопка «⤢» — открыть в большом окне, кнопка «↩ На доработку»
+// или, если работа уже на доработке, «✓ Принять» (снять статус).
+// Статус и время — в assignment_grades каждого из uids.
+function hwTsMs(v) { return v && typeof v.toMillis === 'function' ? v.toMillis() : (typeof v === 'string' ? Date.parse(v) : 0); }
+function hwFmtShort(ms) { return ms ? new Date(ms).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''; }
+function hwReworkBadge(grades, sub) {
+  const rw = (grades || []).filter(g => g && g.status === 'rework');
+  if (!rw.length) return '';
+  const at = Math.max.apply(null, rw.map(g => hwTsMs(g.reworkAt) || 0));
+  const act = CFDHomework.studentSubmittedAt(sub);
+  const fixed = at && act && act > at;
+  return '<span class="badge" style="background:#faeeda;color:#854f0b" title="отправлено на доработку">↩ на доработке' + (at ? ' с ' + hwFmtShort(at) : '') + '</span>'
+    + (fixed ? ' <span class="badge b-pass" title="студент загрузил файлы после отправки на доработку">исправлено ' + hwFmtShort(act) + '</span>' : '');
+}
+function hwCommentCellHtml(o) {
+  const ids = o.elId;
+  const onRw = (o.grades || []).some(g => g && g.status === 'rework');
+  const data = ' data-aid="' + o.aid + '" data-cid="' + o.cid + '" data-uids="' + o.uids.join(',') + '" data-title="' + hwEscape(o.title || '') + '"';
+  return '<textarea rows="2" class="comment-input" id="' + ids + '"' + data
+    + ' placeholder="' + (o.placeholder || 'Комментарий') + '" oninput="' + o.oninput + '" style="resize:vertical;min-height:2.4em;line-height:1.3">' + hwEscape(o.value || '') + '</textarea>'
+    + '<div style="display:flex;gap:.3rem;flex-wrap:wrap;align-items:center;margin-top:.2rem">'
+    + '<button onclick="hwOpenComment(\'' + ids + '\',false)" title="Открыть комментарий в большом окне" style="background:none;border:1px solid var(--border);border-radius:3px;cursor:pointer;font-size:.7rem;padding:0 .35rem;color:var(--text2)">⤢ развернуть</button>'
+    + (onRw
+        ? '<button onclick="hwReworkClose(\'' + ids + '\')" title="Снять статус «на доработке»: работа принята" style="background:none;border:1px solid #9cc7b5;border-radius:3px;cursor:pointer;font-size:.7rem;padding:0 .35rem;color:#1a6b5a">✓ принять</button>'
+        : '<button onclick="hwOpenComment(\'' + ids + '\',true)" title="Отправить работу на доработку с комментарием" style="background:#faeeda;border:1px solid #e0c48f;border-radius:3px;cursor:pointer;font-size:.7rem;padding:0 .35rem;color:#854f0b">↩ на доработку</button>')
+    + '<span id="' + ids + '-rw">' + hwReworkBadge(o.grades, o.sub) + '</span>'
+    + '</div>';
+}
+let _hwCmtEl = null, _hwCmtRework = false;
+function hwOpenComment(elId, rework) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  _hwCmtEl = el; _hwCmtRework = !!rework;
+  const n = (el.getAttribute('data-uids') || '').split(',').filter(Boolean).length;
+  document.getElementById('hwCmtTitle').textContent = (rework ? '↩ На доработку: ' : 'Комментарий: ') + (el.getAttribute('data-title') || '');
+  document.getElementById('hwCmtInfo').textContent = rework
+    ? 'Напишите, что исправить. Комментарий и статус «на доработке» увидит ' + (n > 1 ? 'каждый участник группы (' + n + ' чел.)' : 'студент') + '; досдать можно и после дедлайна. Оценка не меняется.'
+    : (n > 1 ? 'Комментарий запишется каждому участнику группы (' + n + ' чел.).' : 'Комментарий увидит студент в карточке задания.');
+  document.getElementById('hwCmtReworkBtn').style.fontWeight = rework ? '700' : '';
+  document.getElementById('hwCmtSt').textContent = '';
+  const t = document.getElementById('hwCmtText');
+  t.value = el.value;
+  document.getElementById('hwCmtWrap').style.display = 'flex';
+  setTimeout(() => { t.focus(); t.setSelectionRange(t.value.length, t.value.length); }, 30);
+}
+function hwCloseComment() {
+  document.getElementById('hwCmtWrap').style.display = 'none';
+  _hwCmtEl = null;
+}
+async function hwCommentSave(rework) {
+  const el = _hwCmtEl;
+  if (!el) return;
+  const text = document.getElementById('hwCmtText').value;
+  const st = document.getElementById('hwCmtSt');
+  if (rework && !text.trim()) { st.textContent = 'Напишите, что нужно исправить.'; st.style.color = '#a33'; return; }
+  el.value = text;
+  el.dispatchEvent(new Event('input', { bubbles: true }));   // обычное сохранение комментария
+  if (rework) {
+    const ok = await hwSetReworkFor(el, true, text);
+    if (!ok) { st.textContent = 'Не удалось сохранить статус, см. консоль'; st.style.color = '#a33'; return; }
+  }
+  hwCloseComment();
+}
+async function hwSetReworkFor(el, on, comment) {
+  const aid = el.getAttribute('data-aid'), cid = el.getAttribute('data-cid');
+  const uids = (el.getAttribute('data-uids') || '').split(',').filter(Boolean);
+  let ok = true;
+  const fresh = [];
+  for (const uid of uids) {
+    const r = await CFDHomework.setRework(aid, uid, cid, on, comment);
+    if (!r.ok) { ok = false; console.warn('setRework', uid, r.error); }
+    fresh.push(on ? { status: 'rework', reworkAt: new Date().toISOString() } : {});
+  }
+  // Обновить ячейку на месте: бейдж и кнопку.
+  const cell = el.closest('td');
+  const subKey = Object.keys(window._hwSubsCache || {}).find(k => k === uids[0]);
+  const sub = subKey ? window._hwSubsCache[subKey] : null;
+  if (cell && ok) {
+    const keepVal = el.value;
+    cell.innerHTML = hwCommentCellHtml({ aid: aid, cid: cid, elId: el.id, uids: uids, value: keepVal,
+      oninput: el.getAttribute('oninput'), title: el.getAttribute('data-title'), grades: fresh, sub: sub,
+      placeholder: el.getAttribute('placeholder') });
+  }
+  const row = cell && cell.closest('tr');
+  if (row) { row.style.transition = 'background .3s'; row.style.background = ok ? 'rgba(224,160,60,0.18)' : 'rgba(196,68,68,0.15)'; setTimeout(() => { row.style.background = ''; }, 1000); }
+  return ok;
+}
+async function hwReworkClose(elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!confirm('Снять статус «на доработке» (работа принята)? Комментарий и оценка останутся.')) return;
+  await hwSetReworkFor(el, false, null);
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('hwCmtWrap') && document.getElementById('hwCmtWrap').style.display === 'flex') { e.stopPropagation(); hwCloseComment(); }
+}, true);
 
 // Одна оценка на группу: записывается каждому члену (assignment_grades/{aid}_{uid}).
 const _hwGroupGradeTimers = {};

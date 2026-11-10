@@ -191,6 +191,23 @@ describe('submissions — общая сдача рабочей группы', ()
       { reviewedFiles: [{ path: 'x', name: 'x' }] }));
   });
 
+  it('после строгого дедлайна — только если работа на доработке', async () => {
+    await seed(async db => {
+      await db.collection('assignments').doc('hwg').set({
+        courseId: 'nm', title: 'Практика', mode: 'personal', groupWork: true, strictDeadline: true,
+        deadlineAt: Timestamp.fromMillis(Date.now() - 86400000),
+      });
+      await db.collection('submissions').doc('hwg_group_03').set(base);
+      await db.collection('assignment_grades').doc('hwg_ga').set({ assignmentId: 'hwg', uid: 'ga', courseId: 'nm', status: 'rework' });
+    });
+    const b = await asStudent('gb', { courseGroups: { nm: 'group_03' } });
+    await assertFails(updateDoc(doc(b, 'submissions', 'hwg_group_03'), { links: [{ url: 'https://y', name: 'y' }] }));
+    const a = await asStudent('ga', { courseGroups: { nm: 'group_03' } });
+    await assertSucceeds(updateDoc(doc(a, 'submissions', 'hwg_group_03'), { links: [{ url: 'https://y', name: 'y' }] }));
+    // статус доработки студент сам не ставит
+    await assertFails(updateDoc(doc(b, 'assignment_grades', 'hwg_ga'), { status: '' }));
+  });
+
   it('admin курса читает групповую сдачу', async () => {
     await seed(async db => { await db.collection('submissions').doc('hwg_group_03').set(base); });
     const adm = await asAdminNm();

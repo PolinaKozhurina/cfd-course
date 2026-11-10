@@ -483,11 +483,19 @@ service cloud.firestore {
       }
       // Строгий дедлайн: если у assignment strictDeadline==true — не пускаем
       // после `deadlineAt`.
+      // Работа, отправленная преподавателем на доработку
+      // (assignment_grades/{aid}_{uid}.status == 'rework'), принимается
+      // и после строгого дедлайна.
+      function onRework() {
+        let gPath = /databases/$(database)/documents/assignment_grades/$(subAid() + '_' + request.auth.uid);
+        return exists(gPath) && get(gPath).data.get('status', '') == 'rework';
+      }
       function deadlineOk() {
         let a = get(/databases/$(database)/documents/assignments/$(subAid())).data;
         return a.get('strictDeadline', false) == false
             || a.get('deadlineAt', null) == null
-            || request.time <= a.deadlineAt;
+            || request.time <= a.deadlineAt
+            || onRework();
       }
 
       // Групповая сдача: ключ '{aid}_group_NN' (одна на рабочую группу курса),
@@ -553,7 +561,9 @@ service cloud.firestore {
 
     // ---------- assignment_grades (оценка за одну домашку) ----------
     // ключ '{aid}_{uid}'; поля: { assignmentId, uid, courseId,
-    //   grade:0..100, comment, gradedAt, gradedBy }.
+    //   grade:0..100, comment, gradedAt, gradedBy,
+    //   status:'rework'|'' , reworkAt, reworkBy } — status ставит admin
+    //   кнопкой «На доработку»; студент сам его не меняет.
     match /assignment_grades/{docId} {
       function agUid() { return docId.split('_')[1]; }
       allow read: if isAuth()

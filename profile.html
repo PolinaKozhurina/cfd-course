@@ -211,7 +211,7 @@ td{padding:5px 10px;border:1px solid var(--border)}
 <script src="js/auth.js?v=20260907g"></script>
 <script src="js/enrollments.js?v=20260907g"></script>
 <script src="js/workgroups.js?v=20260907g"></script>
-<script src="js/homework.js?v=20261110b"></script>
+<script src="js/homework.js?v=20261110c"></script>
 <script src="js/attendance.js?v=20260907g"></script>
 <script src="js/labs.js?v=20261018"></script>
 <script src="js/update-check.js?v=20260907g"></script>
@@ -554,7 +554,9 @@ td{padding:5px 10px;border:1px solid var(--border)}
     const isGroupHw = !!grp;
     const myGid = isGroupHw ? (grp.gid || '') : '';
     // Групповое задание без рабочей группы: сдавать некуда.
-    const canSubmit = (!isLate || !strict) && (!isGroupHw || !!myGid);
+    // На доработке — досдавать можно и после строгого дедлайна.
+    const onRework = !!(grade && grade.status === 'rework');
+    const canSubmit = (!isLate || !strict || onRework) && (!isGroupHw || !!myGid);
     let groupHtml = '';
     if (isGroupHw) {
       if (myGid) {
@@ -600,7 +602,9 @@ td{padding:5px 10px;border:1px solid var(--border)}
     const submittedLinks = (sub && sub.links) ? sub.links : [];
     const hasSomething = submittedFiles.length + submittedLinks.length > 0;
     let statusBadge = '';
-    if (grade && grade.grade !== undefined && grade.grade !== null) statusBadge = '<span class="badge b-pass">оценено: '+grade.grade+' / 100</span>';
+    if (onRework) statusBadge = '<span class="badge" style="background:#faeeda;color:#854f0b">↩ на доработке</span>'
+      + (grade.grade !== undefined && grade.grade !== null ? ' <span class="badge b-pending">текущая оценка: ' + grade.grade + ' / 100</span>' : '');
+    else if (grade && grade.grade !== undefined && grade.grade !== null) statusBadge = '<span class="badge b-pass">оценено: '+grade.grade+' / 100</span>';
     else if (sub && sub.reviewedFiles && sub.reviewedFiles.length) statusBadge = '<span class="badge b-pass">проверено</span>';
     else if (hasSomething) statusBadge = '<span class="badge b-pending">сдано, ожидание проверки</span>';
     else if (isLate) statusBadge = '<span class="badge b-fail">просрочено</span>';
@@ -656,7 +660,14 @@ td{padding:5px 10px;border:1px solid var(--border)}
               ).join('')
             + '</div>'
           : '')
-      + (grade && grade.comment ? '<div style="margin-top:.4rem;padding:.4rem .6rem;background:#e8f4f0;color:#1a6b5a;border-radius:4px;font-style:italic;font-size:.88rem">«' + hwEsc(grade.comment) + '»</div>' : '')
+      + (onRework
+          ? '<div style="margin-top:.5rem;padding:.55rem .75rem;background:#faeeda;border-left:3px solid #d08a2e;border-radius:4px;color:#5a3a08">'
+            + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;margin-bottom:.3rem">↩ Отправлено на доработку'
+            + (grade.reworkAt && grade.reworkAt.toMillis ? ' · ' + hwFmtDateMSK(grade.reworkAt) : '') + '</div>'
+            + (grade.comment ? '<div style="font-size:.9rem;white-space:pre-wrap">' + hwEsc(grade.comment) + '</div>' : '')
+            + '<div style="font-size:.78rem;margin-top:.35rem;color:#854f0b">Исправьте работу и загрузите новую версию ниже' + (isGroupHw ? ' (один участник за всю группу)' : '') + ' — преподаватель увидит, что работа исправлена.</div>'
+            + '</div>'
+          : (grade && grade.comment ? '<div style="margin-top:.4rem;padding:.4rem .6rem;background:#e8f4f0;color:#1a6b5a;border-radius:4px;font-style:italic;font-size:.88rem;white-space:pre-wrap">«' + hwEsc(grade.comment) + '»</div>' : ''))
       + (canSubmit
           ? '<div style="margin-top:.5rem;padding:.5rem .7rem;background:var(--bg2);border-radius:5px">'
             + (typeof WORKER_URL !== 'undefined' && WORKER_URL

@@ -696,6 +696,24 @@
       } catch (e) { return { ok: false, error: e.message }; }
     },
 
+    // «На доработку»: status='rework' + комментарий. Оценку не трогает.
+    // on=false — снять доработку (работа принята). Пока статус 'rework',
+    // студент может досдавать и после строгого дедлайна.
+    setRework: async function (aid, uid, cid, on, comment) {
+      const me = auth.currentUser;
+      const upd = {
+        assignmentId: aid, uid: uid, courseId: cid,
+        status: on ? "rework" : "",
+      };
+      if (comment !== undefined && comment !== null) upd.comment = comment;
+      if (on) { upd.reworkAt = nowTs(); upd.reworkBy = me ? me.email : null; }
+      else { upd.reworkClosedAt = nowTs(); }
+      try {
+        await db.collection("assignment_grades").doc(aid + "_" + uid).set(upd, { merge: true });
+        return { ok: true };
+      } catch (e) { return { ok: false, error: e.message }; }
+    },
+
     // ==== LIST ====
 
     listAssignmentsForCourse: async function (cid) {

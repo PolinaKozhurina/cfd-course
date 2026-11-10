@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<title>Анализ разностной схемы</title>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-chtml.js"></script>
+<style>
+  body { font-family: sans-serif; margin: 20px; }
+  td { padding: 2px; text-align: center; }
+  input { width: 75px; }
+</style>
+</head>
+<body>
+
+<h2>Анализ разностной схемы для u<sub>t</sub> + a u<sub>x</sub> = 0</h2>
+<p>В клетке — коэффициент при y<sub>j+k</sub><sup>n+m</sup>, схема: сумма = 0.
+   Число Куранта — <b>s</b> = aτ/h. Пустая клетка — узла нет.
+   Для МНК в клетку достаточно поставить <b>*</b>.</p>
+
+<table border="1" id="grid"></table>
+<br>
+<button onclick="runAnalyze()">Анализ схемы</button>
+<button onclick="runMnk()">МНК: подобрать коэффициенты</button>
+<p id="status">Загрузка Python…</p>
+<div id="out"></div>
+
+<script>
+// ---------- 1. Таблица шаблона ----------
+const XS = [-4, -3, -2, -1, 0, 1, 2, 3, 4];   // сдвиги по x
+const TS = [2, 1, 0, -1, -2];                // слои по времени
+
+function label(base, d) {
+  return d === 0 ? base : base + (d > 0 ? '+' : '') + d;
+}
+
+function buildGrid() {
+  let html = '<tr><td></td>' + XS.map(k => `<td>${label('j', k)}</td>`).join('') + '</tr>';
+  for (const m of TS) {
+    html += `<tr><td>${label('n', m)}</td>`;
+    for (const k of XS) html += `<td><input id="c_${k}_${m}"></td>`;
+    html += '</tr>';
+  }
+  document.getElementById('grid').innerHTML = html;
+}
+
+// заполненные клетки -> {"k,m": "текст"}
+function readGrid() {
+  const cells = {};
+  for (const k of XS) for (const m of TS) {
+    const v = document.getElementById(`c_${k}_${m}`).value.trim();
+    if (v) cells[`${k},${m}`] = v;
+  }
+  return cells;
+}
+
+// {"k,m": "текст"} -> в клетки
+function writeGrid(cells) {
+  for (const key in cells) {
+    const [k, m] = key.split(',');
+    document.getElementById(`c_${k}_${m}`).value = cells[key];
+  }
+}
+
+// ---------- 2. Python в браузере ----------
+let py = null;
+
+async function startPython() {
+  py = await loadPyodide();
+  await py.loadPackage(['sympy', 'numpy']);
+  py.runPython(await (await fetch('core.py')).text());   // ядро расчёта
+  py.runPython(await (await fetch('web.py')).text());    // функции для страницы
+  setStatus('Готово.');
+}
+
+// вызвать функцию из web.py: на вход — ячейки, на выход — JSON
+async function callPython(funcName, cells) {
+  if (!py) { setStatus('Python ещё загружается…'); return null; }
+  setStatus('Считаю…');
+  await new Promise(r => setTimeout(r, 50));   // дать браузеру обновить надпись
+  try {
+    const answer = py.globals.get(funcName)(JSON.stringify(cells));
+    setStatus('Готово.');
+    return JSON.parse(answer);
+  } catch (e) {
+    setStatus('Ошибка: ' + e.message.split('\n').slice(-2).join(' '));
+    return null;
+  }
+}
+
+// ---------- 3. Кнопки ----------
+async function runAnalyze() {
+  const res = await callPython('analyze_cells', readGrid());
+  if (res) showResult(res);
+}
+
+async function runMnk() {
+  const res = await callPython('mnk_cells', readGrid());
+  if (!res) return;
+  if (res.cells) writeGrid(res.cells);
+  showResult(res.rows);
+}
+
+// ---------- 4. Вывод ----------
+function showResult(rows) {
+  document.getElementById('out').innerHTML =
+    '<hr>' + rows.map(([title, text]) => `<h3>${title}</h3><p>${text}</p>`).join('');
+  MathJax.typeset();
+}
+
+function setStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+buildGrid();
+startPython();
+</script>
+</body>
+</html>

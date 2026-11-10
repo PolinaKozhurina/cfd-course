@@ -226,6 +226,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
   <button class="tab" onclick="showTab('checklist');loadChecklistProgress()" style="display:none">Чек-лист (самооценка)</button>
   <button class="tab" onclick="showTab('tasks')" style="display:none">Задания</button>
   <button class="tab" onclick="showTab('grades');renderGrades()">Оценки</button>
+  <button class="tab" onclick="showTab('vedomost');renderVedomost()">Ведомость</button>
   <button class="tab" onclick="showTab('github')">GitHub-проверка</button>
   <button class="tab" onclick="showTab('messages')" id="tabBtnMessages">Сообщения <span id="msgTabBadge" style="display:none;min-width:16px;height:16px;border-radius:8px;background:var(--st-red,#c44);color:var(--on-accent,#fff);font-size:.6rem;font-weight:700;font-family:JetBrains Mono,monospace;align-items:center;justify-content:center;padding:0 4px;margin-left:2px;vertical-align:middle"></span></button>
 </div>
@@ -676,6 +677,43 @@ if (location.search.indexOf('embedded=1') !== -1) {
   </div>
 </div>
 
+<!-- TAB: Ведомость — курс → учебная группа → студенты по алфавиту -->
+<div id="tab-vedomost" class="panel">
+  <div class="card">
+    <div class="ved-noprint" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.7rem">
+      <h3 style="margin:0 .6rem 0 0">Ведомость</h3>
+      <label style="font-size:.82rem">Курс <select id="vedCourse" onchange="renderVedomost()"></select></label>
+      <label style="font-size:.82rem">Учебная группа <select id="vedGroup" onchange="renderVedomost()"><option value="all">все</option></select></label>
+      <span style="flex:1"></span>
+      <button class="btn" onclick="vedReload()" title="Заново загрузить оценки из базы">↻ Обновить</button>
+      <button class="btn" onclick="vedCsv()" title="Таблица для Excel">⬇ Excel (CSV)</button>
+      <button class="btn btn-primary" onclick="vedPrint()">🖨 Печать</button>
+      <span id="vedSt" style="font-size:.75rem;color:var(--text3)"></span>
+    </div>
+    <p class="ved-noprint" style="font-size:.8rem;color:var(--text2);margin:0 0 .6rem">Баллы вводятся на вкладке «Оценки»; здесь — сводка только для просмотра, печати и выгрузки. Студенты внутри учебной группы — по алфавиту.</p>
+    <div id="vedOut"></div>
+  </div>
+</div>
+<style>
+  .ved-table { width:100%; border-collapse:collapse; margin-bottom:1rem; font-size:.9rem }
+  .ved-table th, .ved-table td { border:1px solid var(--border); padding:.3rem .5rem }
+  .ved-table th { background:var(--bg2); font-size:.78rem; text-align:center }
+  .ved-table td.n { text-align:center; font-family:'JetBrains Mono',monospace; width:5.5em }
+  .ved-table td.n.empty { color:var(--text3) }
+  .ved-table td.tot { font-weight:700 }
+  .ved-table tfoot td { font-size:.78rem; color:var(--text2); background:var(--bg2) }
+  .ved-h { font-family:'Playfair Display',serif; margin:.9rem 0 .35rem; font-size:1rem }
+  .ved-h small { font-family:'JetBrains Mono',monospace; font-size:.72rem; color:var(--text3); font-weight:400 }
+  @media print {
+    body.ved-printing { background:#fff !important }
+    body.ved-printing > *:not(#vedPrintRoot) { display:none !important }
+    #vedPrintRoot { display:block !important; color:#000; background:#fff }
+    #vedPrintRoot .ved-block { page-break-inside:avoid }
+    #vedPrintRoot .ved-block + .ved-block { page-break-before:always }
+    #vedPrintRoot .ved-table th { background:#eee !important; -webkit-print-color-adjust:exact; print-color-adjust:exact }
+  }
+</style>
+
 <!-- TAB: GitHub check -->
 <div id="tab-github" class="panel">
   <div class="card">
@@ -740,7 +778,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="js/firebase-config.js?v=20260907g"></script>
-<script src="js/courses.js?v=20261102"></script>
+<script src="js/courses.js?v=20261110"></script>
 <script src="js/enrollments.js?v=20260907g"></script>
 <script src="js/homework.js?v=20261110c"></script>
 <script src="js/attendance.js?v=20260907g"></script>
@@ -1356,6 +1394,7 @@ function _adminOpenInitialTab() {
   if (want === 'gating'   && typeof renderGatingTab === 'function')      renderGatingTab();
   if (want === 'homework' && typeof renderHomeworkTab === 'function')    { renderHomeworkTab(); _hwApplyPrefillFromUrl(); }
   if (want === 'grades'   && typeof renderGrades === 'function')         renderGrades();
+  if (want === 'vedomost' && typeof renderVedomost === 'function')       renderVedomost();
   if (want === 'checklist'&& typeof loadChecklistProgress === 'function') loadChecklistProgress();
   if (want === 'groups'   && typeof renderGroupResults === 'function')   renderGroupResults();
   if (want === 'attendance' && typeof renderAttendanceTab === 'function') renderAttendanceTab();
@@ -3342,8 +3381,133 @@ function renderGrades() {
   }
 
   card.innerHTML = `<h3>Индивидуальные оценки</h3>
-    <p style="font-size:.85rem;color:var(--text2);margin-bottom:.8rem">Итого 100 баллов. <strong>Численные методы:</strong> полусеместровые 1 и 2 — по 25 баллов, допуск к экзамену при сумме полусеместровых не меньше 30; экзамен — до 50 баллов. <strong>Остальные курсы:</strong> зачёт (работа за семестр, групповая) — до 50 баллов, экзамен (индивидуальное задание) — до 50 баллов. Раскладка по <em>курсам</em> и <em>рабочим группам</em>.</p>
+    <p style="font-size:.85rem;color:var(--text2);margin-bottom:.8rem">Итого 100 баллов: полусеместровые 1 и 2 — по 25 баллов, зачёт или экзамен — до 50 баллов. <strong>Численные методы:</strong> допуск к экзамену при сумме полусеместровых не меньше 30. Раскладка по <em>курсам</em> и <em>рабочим группам</em>; сводная ведомость по учебным группам — на вкладке «Ведомость».</p>
     ${out}`;
+}
+
+// ===== Ведомость: курс → учебная группа → студенты по алфавиту =====
+// Данные — individual_grades/{uid}_{cid} (те же, что на вкладке «Оценки»),
+// графы — по схеме курса (cfdGradeScheme): полусеместровые 1, 2 и итоговая.
+function vedData() {
+  const enrollsByUid = window._enrollmentsByUid || {};
+  const out = {};   // cid -> studyGroup -> [user]
+  for (const u of allUsers) {
+    if (isAdmin(u.email)) continue;
+    const en = enrollsByUid[u.uid] || {};
+    for (const cid of Object.keys(en)) {
+      if (en[cid] !== 'approved') continue;
+      if (_currentAdminCourses !== null && _currentAdminCourses.indexOf(cid) === -1) continue;
+      const sg = (u.studyGroup || '').trim() || '—';
+      ((out[cid] = out[cid] || {})[sg] = out[cid][sg] || []).push(u);
+    }
+  }
+  return out;
+}
+function vedSortGroups(keys) {
+  return keys.sort((a, b) => (a === '—') - (b === '—') || a.localeCompare(b, 'ru'));
+}
+function vedFio(u) { return (u.fio || u.email || '').trim(); }
+function vedRow(u, cid) {
+  const g = allIndividualGrades[u.uid + '_' + cid] || {};
+  const scheme = cfdGradeScheme(cid);
+  const has = k => g[k] !== undefined && g[k] !== null && g[k] !== '';
+  const vals = scheme.parts.map(p => has(p.key) ? Number(g[p.key]) : null);
+  const any = vals.some(v => v !== null);
+  const total = any ? Math.round(vals.reduce((s, v) => s + (v || 0), 0) * 10) / 10 : null;
+  let admit = null;
+  if (scheme.admit) {
+    const a = scheme.admit.keys.reduce((s, k) => s + (has(k) ? Number(g[k]) : 0), 0);
+    const done = scheme.admit.keys.every(has);
+    admit = a >= scheme.admit.min ? 'допуск' : (done ? 'нет допуска' : '');
+  }
+  return { u, vals, total, admit };
+}
+function renderVedomost() {
+  const data = vedData();
+  const cSel = document.getElementById('vedCourse'), gSel = document.getElementById('vedGroup');
+  const cids = (window.CFD_COURSES || []).map(c => c.id).filter(cid => data[cid]);
+  const prevC = cSel.value;
+  cSel.innerHTML = (cids.length > 1 ? '<option value="all">все курсы</option>' : '')
+    + cids.map(cid => '<option value="' + cid + '">' + hwEscape(((window.CFD_COURSE_BY_ID || {})[cid] || {}).name || cid) + '</option>').join('');
+  if (prevC && Array.from(cSel.options).some(o => o.value === prevC)) cSel.value = prevC;
+  const selC = cSel.value;
+  const showC = selC === 'all' || !selC ? cids : [selC];
+  const allSg = vedSortGroups(Array.from(new Set(showC.flatMap(cid => Object.keys(data[cid] || {})))));
+  const prevG = gSel.value;
+  gSel.innerHTML = '<option value="all">все</option>' + allSg.map(s => '<option value="' + hwEscape(s) + '">' + hwEscape(s) + '</option>').join('');
+  if (allSg.indexOf(prevG) !== -1) gSel.value = prevG;
+  const selG = gSel.value;
+  const fmt = v => v === null ? '' : String(v).replace('.', ',');
+  let html = '';
+  window._vedRows = [];
+  for (const cid of showC) {
+    const course = (window.CFD_COURSE_BY_ID || {})[cid] || { name: cid, semester: '' };
+    const scheme = cfdGradeScheme(cid);
+    for (const sg of vedSortGroups(Object.keys(data[cid]))) {
+      if (selG !== 'all' && sg !== selG) continue;
+      const users = data[cid][sg].slice().sort((a, b) => vedFio(a).localeCompare(vedFio(b), 'ru'));
+      const rows = users.map(u => vedRow(u, cid));
+      rows.forEach((r, i) => window._vedRows.push({ course: course.name, sg, i: i + 1, fio: vedFio(r.u), vals: r.vals, total: r.total, admit: r.admit, scheme }));
+      const avg = (j) => { const xs = rows.map(r => j < 0 ? r.total : r.vals[j]).filter(v => v !== null); return xs.length ? Math.round(xs.reduce((s, v) => s + v, 0) / xs.length * 10) / 10 : null; };
+      html += '<div class="ved-block">'
+        + '<div class="ved-h">' + hwEscape(course.name) + ' · группа ' + hwEscape(sg)
+        + ' <small>' + hwEscape(course.semester || '') + ' · ' + users.length + ' студ.</small></div>'
+        + '<table class="ved-table"><thead><tr><th style="width:2.5em">№</th><th style="text-align:left">ФИО</th>'
+        + scheme.parts.map(p => '<th>' + p.label + '<br><span style="font-weight:400">из ' + p.max + '</span></th>').join('')
+        + '<th>Итого<br><span style="font-weight:400">из 100</span></th>'
+        + (scheme.admit ? '<th>Допуск<br><span style="font-weight:400">≥ ' + scheme.admit.min + '</span></th>' : '')
+        + '</tr></thead><tbody>'
+        + rows.map((r, i) => '<tr><td class="n">' + (i + 1) + '</td><td>' + hwEscape(vedFio(r.u)) + '</td>'
+            + r.vals.map(v => '<td class="n' + (v === null ? ' empty' : '') + '">' + (v === null ? '—' : fmt(v)) + '</td>').join('')
+            + '<td class="n tot' + (r.total === null ? ' empty' : '') + '">' + (r.total === null ? '—' : fmt(r.total)) + '</td>'
+            + (scheme.admit ? '<td class="n" style="font-size:.78rem;color:' + (r.admit === 'допуск' ? '#1a6b5a' : '#c44') + '">' + (r.admit || '') + '</td>' : '')
+            + '</tr>').join('')
+        + '</tbody><tfoot><tr><td></td><td>Средний балл</td>'
+        + scheme.parts.map((p, j) => '<td class="n">' + fmt(avg(j)) + '</td>').join('')
+        + '<td class="n tot">' + fmt(avg(-1)) + '</td>' + (scheme.admit ? '<td></td>' : '') + '</tr></tfoot></table></div>';
+    }
+  }
+  document.getElementById('vedOut').innerHTML = html || '<div style="color:var(--text3);padding:1rem;text-align:center">Нет студентов с одобренными курсами.</div>';
+}
+async function vedReload() {
+  const st = document.getElementById('vedSt');
+  st.textContent = 'загрузка…';
+  try {
+    const snap = await db.collection('individual_grades').get();
+    allIndividualGrades = {};
+    snap.forEach(d => { allIndividualGrades[d.id] = d.data(); });
+    renderVedomost();
+    st.textContent = '✓ обновлено ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) { st.textContent = 'ошибка: ' + e.message; }
+}
+function vedPrint() {
+  let root = document.getElementById('vedPrintRoot');
+  if (!root) { root = document.createElement('div'); root.id = 'vedPrintRoot'; root.style.display = 'none'; document.body.appendChild(root); }
+  root.innerHTML = '<div style="font-size:.8rem;margin-bottom:.4rem">Ведомость · ' + new Date().toLocaleDateString('ru-RU') + '</div>' + document.getElementById('vedOut').innerHTML;
+  document.body.classList.add('ved-printing');
+  const done = () => { document.body.classList.remove('ved-printing'); window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  window.print();
+  setTimeout(done, 1500);
+}
+function vedCsv() {
+  const rows = window._vedRows || [];
+  if (!rows.length) return;
+  const q = s => '"' + String(s).replace(/"/g, '""') + '"';
+  const num = v => v === null ? '' : String(v).replace('.', ',');
+  const lines = [];
+  let lastHead = '';
+  rows.forEach(r => {
+    const head = ['Курс', 'Учебная группа', '№', 'ФИО'].concat(r.scheme.parts.map(p => p.label + ' (' + p.max + ')'), ['Итого (100)'], r.scheme.admit ? ['Допуск'] : []).map(q).join(';');
+    if (head !== lastHead) { if (lines.length) lines.push(''); lines.push(head); lastHead = head; }
+    lines.push([q(r.course), q(r.sg), r.i, q(r.fio)].concat(r.vals.map(num), [num(r.total)], r.scheme.admit ? [q(r.admit || '')] : []).join(';'));
+  });
+  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'vedomost_' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
 const _saveTimers = {};

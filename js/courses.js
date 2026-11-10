@@ -31,9 +31,12 @@ window.CFD_GRADE_SCHEMES = {
     { key: 'final', label: 'Экзамен',           max: 50 },
   ], admit: { keys: ['k1', 'k2'], min: 30 } },
 };
+// По умолчанию (10.11.2026): как у ЧМ — два полусеместровых и итоговая
+// аттестация. Старые поля zachet/exam остались только в legacy-записях {uid}.
 window.CFD_GRADE_SCHEME_DEFAULT = { parts: [
-  { key: 'zachet', label: 'Зачёт',   max: 50 },
-  { key: 'exam',   label: 'Экзамен', max: 50 },
+  { key: 'k1',    label: 'Полусеместровое 1', max: 25 },
+  { key: 'k2',    label: 'Полусеместровое 2', max: 25 },
+  { key: 'final', label: 'Зачёт / экзамен',   max: 50 },
 ], admit: null };
 window.cfdGradeScheme = function (cid) {
   return (cid && window.CFD_GRADE_SCHEMES[cid]) || window.CFD_GRADE_SCHEME_DEFAULT;

@@ -1262,7 +1262,8 @@
       // группы и в общую сдачу — его увидят все члены группы.
       var sub = this.opts.submission || {};
       var sf = this.opts.sourceFile || {};
-      var toGroup = !!(sf._group && sub._groupDir);
+      // Вид «вся группа» (таблица по группам) — всегда в общую сдачу группы.
+      var toGroup = !!(sub._groupDir && (sf._group || sub._groupView));
       var meta = await CFDHomework.uploadReviewedFile(
         this.opts.assignment.id, this.opts.assignment.courseId,
         toGroup ? sub._groupDir : this.opts.student.uid,
@@ -1270,7 +1271,7 @@
         function (p) { self._setStatus("Загрузка… " + Math.round(p * 100) + "%"); }
       );
       var r = await CFDHomework.addReviewedFile(this.opts.assignment.id, this.opts.student.uid, meta, "",
-        sf._doc || sub._reviewDoc || null);
+        toGroup ? sub._reviewDoc : (sf._doc || sub._reviewDoc || null));
       if (!r.ok) throw new Error(r.error);
       this._setStatus("✓ Отправлено студенту");
       setTimeout(function () {

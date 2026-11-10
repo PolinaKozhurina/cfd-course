@@ -725,7 +725,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
 <script src="js/firebase-config.js?v=20260907g"></script>
 <script src="js/courses.js?v=20261102"></script>
 <script src="js/enrollments.js?v=20260907g"></script>
-<script src="js/homework.js?v=20261110a"></script>
+<script src="js/homework.js?v=20261110b"></script>
 <script src="js/attendance.js?v=20260907g"></script>
 <script src="js/labs.js?v=20261018"></script>
 <script src="js/quiz.js?v=20261018"></script>
@@ -734,7 +734,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
 <!-- Проверялка PDF (пометки маркером): PDF.js + jsPDF + модуль -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="js/hw-annotate.js?v=20261110a"></script>
+<script src="js/hw-annotate.js?v=20261110b"></script>
 <script>
 // ============================================================
 // ADMIN PANEL LOGIC
@@ -2008,6 +2008,8 @@ async function renderHwSubmissionsTable(aid) {
     + ' · Оценено <strong>' + gradedCnt + '</strong>';
 
   const variantsOpts = (a.variants || []).map((v, i) => '<option value="' + i + '">В' + (i+1) + '</option>').join('');
+  // Групповое задание: одна строка на рабочую группу, одна оценка на группу.
+  if (isGroupHw) { hwRenderGroupTable(aid, a, enrolled, rawSubs, grpSubs, grades, gidOf); return; }
   const rows = enrolled.map((u, _idx) => {
     const s = subs[u.uid];
     const g = grades[u.uid] || {};
@@ -2119,6 +2121,143 @@ async function renderHwSubmissionsTable(aid) {
     + '<tbody>' + (rows || emptyRow) + '</tbody>'
     + '</table>'
     + '</div>';
+}
+
+// Таблица сдач группового задания: строка = рабочая группа (состав, файлы
+// всей группы, одна оценка и один комментарий — пишутся каждому члену).
+// Студенты без рабочей группы — отдельными строками в конце.
+function hwRenderGroupTable(aid, a, enrolled, rawSubs, grpSubs, grades, gidOf) {
+  const subs = window._hwSubsCache;
+  const byGid = {}; const loners = [];
+  enrolled.forEach(u => { const g = gidOf(u); if (g) (byGid[g] = byGid[g] || []).push(u); else loners.push(u); });
+  const fio = {}; enrolled.forEach(u => { fio[u.uid] = u.fio || u.email || ''; });
+  const gids = Object.keys(byGid).sort();
+  let submittedCnt = 0, gradedCnt = 0;
+  const fmt = (ts) => ts ? new Date(ts).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) : '';
+  const fileBtns = (key, s) => {
+    const files = (s.files || []).map((f, fi) => {
+      const isPdf = /\.pdf$/i.test(f.name || '') || /pdf/i.test(f.contentType || '');
+      const nameEsc = hwEscape(f.name).replace(/\x27/g, "\\'");
+      const dl = f.url
+        ? '<a href="'+f.url+'" target="_blank" style="color:var(--accent3);margin-right:.25rem;font-size:.78rem">📎 '+hwEscape(f.name)+'</a>'
+        : '<button onclick="hwAdminDownload(\''+encodeURIComponent(f.path)+'\',\''+nameEsc+'\')" style="background:none;border:none;color:var(--accent3);cursor:pointer;padding:0;margin-right:.25rem;font-size:.78rem;text-decoration:underline">📎 '+hwEscape(f.name)+'</button>';
+      const by = f.uploadedBy ? '<span style="font-size:.68rem;color:var(--text3);margin-right:.2rem">(преп.)</span>'
+        : (f.byFio ? '<span style="font-size:.68rem;color:#4a6fa5;margin-right:.2rem">(' + hwEscape(String(f.byFio).split(' ')[0]) + ')</span>' : '');
+      const annot = isPdf ? ' <button onclick="hwOpenAnnotator(\''+aid+'\',\''+key+'\','+fi+')" title="Проверить: пометки маркером и вернуть всей группе" style="background:var(--pale-cream,#fdf9f0);border:1px solid #c8bfa8;color:var(--st-amber,#5a4a2a);cursor:pointer;padding:1px 5px;margin-right:.4rem;font-size:.72rem;border-radius:3px">✏️ Проверить</button>' : '';
+      const rm = '<button onclick="hwAdminRemoveFile(\''+aid+'\',\''+key+'\','+fi+')" title="Удалить файл" style="background:none;border:none;color:#c44;cursor:pointer;padding:0 .2rem;margin-right:.35rem;font-size:.85rem">×</button>';
+      return '<div>' + dl + by + annot + rm + '</div>';
+    }).join('');
+    const links = (s.links || []).map((l, li) =>
+      '<div><a href="'+l.url+'" target="_blank" style="color:var(--accent3);margin-right:.25rem;font-size:.78rem" title="'+hwEscape(l.url)+'">🔗 '+hwEscape(l.name || l.url)+'</a>'
+      + (l.byFio ? '<span style="font-size:.68rem;color:#4a6fa5;margin-right:.2rem">(' + hwEscape(String(l.byFio).split(' ')[0]) + ')</span>' : '')
+      + ' <button onclick="hwOpenAnnotatorLink(\''+aid+'\',\''+key+'\','+li+')" title="Проверить PDF по ссылке" style="background:var(--pale-cream,#fdf9f0);border:1px solid #c8bfa8;color:var(--st-amber,#5a4a2a);cursor:pointer;padding:1px 5px;margin-right:.4rem;font-size:.72rem;border-radius:3px">✏️ Проверить</button>'
+      + '<button onclick="hwAdminRemoveLink(\''+aid+'\',\''+key+'\','+li+')" title="Удалить ссылку" style="background:none;border:none;color:#c44;cursor:pointer;padding:0 .2rem;font-size:.85rem">×</button></div>'
+    ).join('');
+    const reviewed = (s.reviewedFiles || []).length
+      ? '<div style="margin-top:.25rem;padding-top:.25rem;border-top:1px dashed var(--border);font-size:.72rem;color:var(--text2)">✓ проверено: '
+        + s.reviewedFiles.map((rf, ri) =>
+            '<button onclick="hwAdminDownload(\''+encodeURIComponent(rf.path)+'\',\''+hwEscape(rf.name).replace(/\x27/g, "\\'")+'\')" style="background:none;border:none;color:var(--accent3);cursor:pointer;padding:0;margin-right:.35rem;font-size:.72rem;text-decoration:underline">📄 '+hwEscape(rf.name)+'</button>'
+            + '<button onclick="hwAdminRemoveReviewed(\''+aid+'\',\''+key+'\','+ri+')" title="Удалить проверенный файл" style="background:none;border:none;color:#c44;cursor:pointer;padding:0 .2rem;margin-right:.35rem;font-size:.8rem">×</button>'
+          ).join('') + '</div>'
+      : '';
+    return ((files + links) || '<span style="color:var(--text3);font-style:italic;font-size:.78rem">не сдано</span>') + reviewed;
+  };
+  const gradeCells = (key, uids) => {
+    const vals = uids.map(id => grades[id] || {});
+    const gs = vals.map(g => (g.grade === undefined || g.grade === null) ? '' : String(g.grade));
+    const cs = vals.map(g => g.comment || '');
+    const gv = gs.find(x => x !== '') || '';
+    const cv = cs.find(x => x !== '') || '';
+    const mixed = new Set(gs).size > 1 || new Set(cs.filter(Boolean)).size > 1;
+    const idk = key.replace(/[^A-Za-z0-9_-]/g, '_');
+    return '<td><input type="number" min="0" max="100" value="'+gv+'" class="grade-input" id="hwGG-'+aid+'-'+idk+'" data-uids="'+uids.join(',')+'" oninput="hwDebounceGroupGrade(\''+aid+'\',\''+idk+'\',\''+a.courseId+'\')">'
+      + (mixed ? '<div title="' + hwEscape(uids.map((id, i) => (fio[id] || id).split(' ')[0] + ': ' + (gs[i] || '—')).join('; ')) + '" style="font-size:.66rem;color:var(--st-red,#a33)">у членов разные</div>' : '') + '</td>'
+      + '<td><input type="text" value="'+hwEscape(cv).replace(/"/g,'&quot;')+'" class="comment-input" id="hwGC-'+aid+'-'+idk+'" placeholder="Комментарий группе" oninput="hwDebounceGroupGrade(\''+aid+'\',\''+idk+'\',\''+a.courseId+'\')"></td>';
+  };
+  let num = 0;
+  const rows = gids.map(gid => {
+    const members = byGid[gid];
+    const key = 'G:' + gid;
+    const view = CFDHomework.mergeGroupView(aid, gid, grpSubs[gid] || null, members.map(u => rawSubs[u.uid]).filter(Boolean), fio);
+    subs[key] = view;
+    members.forEach(u => { subs[u.uid] = view; });
+    const has = (view.files.length + view.links.length) > 0;
+    if (has) submittedCnt += members.length;
+    members.forEach(u => { const g = grades[u.uid]; if (g && g.grade !== undefined && g.grade !== null) gradedCnt++; });
+    const subMs = CFDHomework.studentSubmittedAt(view);
+    const late = (subMs && a.deadlineAt && subMs > a.deadlineAt.toMillis()) ? ' <span class="badge b-fail">late</span>' : '';
+    let variant = '—';
+    if (a.mode === 'personal') {
+      const vs = Array.from(new Set(members.map(u => (a.assignedVariants || {})[u.uid]).filter(v => v !== undefined && v !== null)));
+      variant = vs.length ? vs.map(v => {
+        const vf = (((a.variants || [])[v] || {}).files || [])[0];
+        return '<strong style="font-family:\'JetBrains Mono\',monospace;color:var(--accent)">В' + (v + 1) + '</strong>' + (vf && vf.url ? ' <a href="' + vf.url + '" target="_blank" style="color:var(--accent3);font-size:.78rem">📎 PDF</a>' : '');
+      }).join(', ') : '<span style="color:var(--st-red,#a33);font-size:.78rem">не назначен</span>';
+    }
+    num++;
+    return '<tr style="border-top:2px solid var(--border)">'
+      + '<td style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3);text-align:right;padding-right:.4rem;vertical-align:top">' + num + '.</td>'
+      + '<td style="vertical-align:top"><div style="font-weight:600;color:#4a6fa5">👥 Группа ' + hwEscape(gid.replace(/^group_/, '')) + '</div>'
+      + members.map(u => '<div style="font-size:.8rem">' + hwEscape(u.fio || u.email) + ' <span style="color:var(--text3);font-size:.7rem">' + hwEscape(u.studyGroup || '') + '</span></div>').join('') + '</td>'
+      + '<td style="vertical-align:top">' + variant + '</td>'
+      + '<td style="vertical-align:top">' + fileBtns(key, view) + '</td>'
+      + '<td style="white-space:nowrap;font-size:.72rem;color:var(--text2);vertical-align:top">' + fmt(subMs) + late + '</td>'
+      + gradeCells(key, members.map(u => u.uid))
+      + '</tr>';
+  }).join('');
+  const lonerRows = loners.map(u => {
+    const key = u.uid;
+    const s = rawSubs[u.uid] ? CFDHomework.mergeGroupSubmission(rawSubs[u.uid], null) : { files: [], links: [], reviewedFiles: [] };
+    subs[key] = s;
+    if ((s.files || []).length + (s.links || []).length) submittedCnt++;
+    const g = grades[u.uid]; if (g && g.grade !== undefined && g.grade !== null) gradedCnt++;
+    num++;
+    return '<tr style="border-top:2px solid var(--border)">'
+      + '<td style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3);text-align:right;padding-right:.4rem;vertical-align:top">' + num + '.</td>'
+      + '<td style="vertical-align:top"><div style="font-weight:600">' + hwEscape(u.fio || u.email) + '</div><div style="font-size:.72rem;color:var(--st-red,#a33)">нет рабочей группы</div></td>'
+      + '<td style="vertical-align:top">—</td>'
+      + '<td style="vertical-align:top">' + fileBtns(key, s) + '</td>'
+      + '<td style="white-space:nowrap;font-size:.72rem;color:var(--text2);vertical-align:top">' + fmt(CFDHomework.studentSubmittedAt(s)) + '</td>'
+      + gradeCells('U:' + u.uid, [u.uid])
+      + '</tr>';
+  }).join('');
+  const metaEl = document.getElementById('hwSubsMeta');
+  metaEl.innerHTML = metaEl.innerHTML.split(' · Сдало')[0]
+    + ' · Групп: <strong>' + gids.length + '</strong>'
+    + ' · Сдало <strong>' + submittedCnt + '/' + enrolled.length + '</strong> чел.'
+    + ' · Оценено <strong>' + gradedCnt + '</strong>';
+  document.getElementById('hwSubsTable').innerHTML =
+    '<div class="hw-subs-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -0.3rem">'
+    + '<table style="width:100%;min-width:820px;border-collapse:collapse">'
+    + '<thead><tr><th style="width:2em">№</th><th>Группа и состав</th><th>Вар.</th><th>Файлы группы</th><th>Сдано</th><th>Оценка</th><th>Комментарий</th></tr></thead>'
+    + '<tbody>' + ((rows + lonerRows) || '<tr><td colspan="7" style="text-align:center;color:var(--text3)">Никто не записан на курс</td></tr>') + '</tbody>'
+    + '</table></div>';
+}
+
+// Одна оценка на группу: записывается каждому члену (assignment_grades/{aid}_{uid}).
+const _hwGroupGradeTimers = {};
+function hwDebounceGroupGrade(aid, idk, cid) {
+  const key = aid + '_' + idk;
+  if (_hwGroupGradeTimers[key]) clearTimeout(_hwGroupGradeTimers[key]);
+  _hwGroupGradeTimers[key] = setTimeout(() => hwSaveGroupGrade(aid, idk, cid), 700);
+}
+async function hwSaveGroupGrade(aid, idk, cid) {
+  delete _hwGroupGradeTimers[aid + '_' + idk];
+  const zEl = document.getElementById('hwGG-' + aid + '-' + idk);
+  const cEl = document.getElementById('hwGC-' + aid + '-' + idk);
+  if (!zEl || !cEl) return;
+  const grade = zEl.value === '' ? null : Math.max(0, Math.min(100, parseInt(zEl.value, 10)));
+  const comment = cEl.value;
+  const uids = (zEl.getAttribute('data-uids') || '').split(',').filter(Boolean);
+  const row = zEl.closest('tr');
+  let ok = true;
+  for (const uid of uids) {
+    const r = await CFDHomework.setGrade(aid, uid, cid, grade, comment);
+    if (!r.ok) ok = false;
+  }
+  row.style.transition = 'background .3s';
+  row.style.background = ok ? 'rgba(26,107,90,0.12)' : 'rgba(196,68,68,0.15)';
+  setTimeout(() => { row.style.background = ''; }, ok ? 800 : 1500);
 }
 
 // Подпись у файла/ссылки группового задания: общий (кто загрузил) или личный.
@@ -2246,7 +2385,8 @@ function hwOpenAnnotator(aid, uid, fileIdx) {
   if (!a) return;
   const s = subs[uid];
   if (!s || !s.files || !s.files[fileIdx]) { alert('Файл не найден'); return; }
-  const u = allUsers.find(x => x.uid === uid) || { uid: uid, fio: '', email: '' };
+  const u = allUsers.find(x => x.uid === uid)
+    || (String(uid).indexOf('G:') === 0 ? { uid: uid, fio: 'Группа ' + uid.slice(2).replace(/^group_/, ''), email: '' } : { uid: uid, fio: '', email: '' });
   if (!window.CFDAnnotator || typeof CFDAnnotator.open !== 'function') {
     alert('Модуль проверки не загружен — обновите страницу');
     return;
@@ -2288,7 +2428,8 @@ async function hwOpenAnnotatorLink(aid, uid, linkIdx) {
     alert('Модуль проверки не загружен — обновите страницу');
     return;
   }
-  const u = allUsers.find(x => x.uid === uid) || { uid: uid, fio: '', email: '' };
+  const u = allUsers.find(x => x.uid === uid)
+    || (String(uid).indexOf('G:') === 0 ? { uid: uid, fio: 'Группа ' + uid.slice(2).replace(/^group_/, ''), email: '' } : { uid: uid, fio: '', email: '' });
   const subsWrap = document.getElementById('hwSubsWrap');
   const openWith = (blob, name) => {
     const subsWasOpen = subsWrap && subsWrap.style.display !== 'none';

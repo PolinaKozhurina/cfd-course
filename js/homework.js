@@ -580,7 +580,17 @@
         comment: reviewComment || "",
       });
       try {
-        const snap = await ref.get();
+        let snap = await ref.get();
+        // Общая сдача группы может ещё не существовать (группа сдавала по
+        // старинке, каждый себе) — заводим её, чтобы проверенный файл
+        // увидели все члены группы.
+        if (!snap.exists && docId && /^[^_]+_group_[^_]+$/.test(docId)) {
+          const asg = await db.collection("assignments").doc(aid).get();
+          const cid = asg.exists ? asg.data().courseId : "";
+          await ref.set({ assignmentId: aid, courseId: cid, groupId: docId.slice(aid.length + 1),
+                          isGroup: true, files: [], links: [], reviewedFiles: [] });
+          snap = await ref.get();
+        }
         if (!snap.exists) return { ok: false, error: "нет сдачи для этого студента" };
         const cur = snap.data();
         const reviewed = (cur.reviewedFiles || []).concat([entry]);
@@ -733,14 +743,48 @@
       const gId = grp ? (grp._id || groupSubId(grp.assignmentId, grp.groupId)) : null;
       const iId = indiv ? (indiv._id || subDocId(indiv.assignmentId, indiv.uid)) : null;
       const m = Object.assign({}, indiv || {}, grp ? { groupId: grp.groupId } : {});
-      m.files = tag(grp && grp.files, gId, true).concat(tag(indiv && indiv.files, iId, false));
-      m.links = tag(grp && grp.links, gId, true).concat(tag(indiv && indiv.links, iId, false));
+      // Личные записи, уже перенесённые в общую сдачу, второй раз не показываем.
+      const gPaths = new Set(((grp && grp.files) || []).map(f => f.path));
+      const gUrls = new Set(((grp && grp.links) || []).map(l => l.url));
+      const ownFiles = ((indiv && indiv.files) || []).filter(f => !gPaths.has(f.path));
+      const ownLinks = ((indiv && indiv.links) || []).filter(l => !gUrls.has(l.url));
+      m.files = tag(grp && grp.files, gId, true).concat(tag(ownFiles, iId, false));
+      m.links = tag(grp && grp.links, gId, true).concat(tag(ownLinks, iId, false));
       m.reviewedFiles = tag(grp && grp.reviewedFiles, gId, true).concat(tag(indiv && indiv.reviewedFiles, iId, false));
       m.submittedAt = (indiv && indiv.submittedAt) || (grp && grp.submittedAt) || null;
       m.updatedAt = (grp && grp.updatedAt) || (indiv && indiv.updatedAt) || null;
       m._reviewDoc = gId || iId;
       m._groupDir = grp ? "grp_" + grp.groupId : null;
       m._hasGroup = !!grp;
+      return m;
+    },
+
+    // Вид «вся группа» для таблицы преподавателя: общая сдача группы плюс
+    // личные сдачи её членов (если остались от времени до групповой сдачи).
+    // indivs — массив личных сдач членов, fioByUid — подписи «кто загрузил».
+    mergeGroupView: function (aid, gid, grp, indivs, fioByUid) {
+      const gDoc = groupSubId(aid, gid);
+      const tag = (arr, doc, isG, by) => (arr || []).map(x => Object.assign({}, x, { _doc: doc, _group: !!isG },
+        (!isG && by && !x.byFio) ? { byFio: by } : {}));
+      const gPaths = new Set(((grp && grp.files) || []).map(f => f.path));
+      const gUrls = new Set(((grp && grp.links) || []).map(l => l.url));
+      const m = { assignmentId: aid, groupId: gid, _groupView: true,
+                  _groupDir: "grp_" + gid, _reviewDoc: gDoc, _hasGroup: !!grp };
+      m.files = tag(grp && grp.files, gDoc, true);
+      m.links = tag(grp && grp.links, gDoc, true);
+      m.reviewedFiles = tag(grp && grp.reviewedFiles, gDoc, true);
+      let first = grp && grp.submittedAt ? grp.submittedAt : null;
+      (indivs || []).forEach(s => {
+        if (!s) return;
+        const doc = s._id || subDocId(aid, s.uid);
+        const by = (fioByUid || {})[s.uid] || "";
+        m.files = m.files.concat(tag((s.files || []).filter(f => !gPaths.has(f.path)), doc, false, by));
+        m.links = m.links.concat(tag((s.links || []).filter(l => !gUrls.has(l.url)), doc, false, by));
+        m.reviewedFiles = m.reviewedFiles.concat(tag(s.reviewedFiles, doc, false));
+        if (s.submittedAt && (!first || s.submittedAt.toMillis() < first.toMillis())) first = s.submittedAt;
+      });
+      m.submittedAt = first;
+      m.updatedAt = grp && grp.updatedAt ? grp.updatedAt : null;
       return m;
     },
 

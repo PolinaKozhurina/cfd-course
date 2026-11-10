@@ -21,7 +21,7 @@
 const CACHE_JWKS_TTL_SEC = 3600;
 // Версия кода воркера: видна в GET /health → проверка, что Cloudflare
 // выкатил свежий коммит (Workers Builds деплоит при каждом push в master).
-const WORKER_VERSION = "2026-11-10.1";
+const WORKER_VERSION = "2026-11-10.2";
 
 export default {
   async fetch(request, env, ctx) {
@@ -804,6 +804,18 @@ async function authorizePath(claims, path, env) {
       if (groups[parts[0]] === studentDir.slice(4)) return true;
     } catch (_) {}
   }
+  // Групповое задание: член рабочей группы видит личные файлы товарищей
+  // по группе (загруженные до перехода на общую сдачу).
+  if (uid && parts.length >= 4 && !studentDir.startsWith("grp_")) {
+    try {
+      const owner = studentDir.split("_")[0];
+      if (owner && owner !== uid && await fetchGroupWork(parts[1], env)) {
+        const mine = await fetchCourseGroups(uid, env);
+        const theirs = await fetchCourseGroups(owner, env);
+        if (mine[parts[0]] && mine[parts[0]] === theirs[parts[0]]) return true;
+      }
+    } catch (_) {}
+  }
   // Курсовой admin — файлы сдач своего курса (первый сегмент пути = cid).
   return await authorizeAdminForCourse(claims, parts[0], env);
 }
@@ -861,6 +873,29 @@ async function fetchManagedCourses(uid, env) {
   }
   _managedCache.set(uid, { courses: courses, exp: Date.now() + 60 * 1000 });
   return courses;
+}
+
+// assignments/{aid}.groupWork (кэш 60 с).
+const _gwCache = new Map();
+async function fetchGroupWork(aid, env) {
+  if (!aid) return false;
+  const hit = _gwCache.get(aid);
+  if (hit && hit.exp > Date.now()) return hit.v;
+  if (!env.FIREBASE_ADMIN_SA_JSON || !env.FIREBASE_PROJECT_ID) return false;
+  const sa = JSON.parse(env.FIREBASE_ADMIN_SA_JSON);
+  const accessToken = await getGoogleAccessToken(sa);
+  const resp = await fetch(
+    "https://firestore.googleapis.com/v1/projects/" + env.FIREBASE_PROJECT_ID
+      + "/databases/(default)/documents/assignments/" + encodeURIComponent(aid),
+    { headers: { Authorization: "Bearer " + accessToken } }
+  );
+  let v = false;
+  if (resp.ok) {
+    const doc = await resp.json();
+    v = !!(doc && doc.fields && doc.fields.groupWork && doc.fields.groupWork.booleanValue === true);
+  }
+  _gwCache.set(aid, { v: v, exp: Date.now() + 60 * 1000 });
+  return v;
 }
 
 // users/{uid}.courseGroups → { cid: 'group_NN' }. Кэш 60 с, как у managedCourses.

@@ -515,6 +515,13 @@ service cloud.firestore {
                     && inSubGroup(request.resource.data.get('courseId', ''))
                     && deadlineOk();
 
+      // admin курса заводит общую сдачу группы (например, чтобы вернуть
+      // проверенный файл группе, сдававшей ещё каждый себе).
+      allow create: if isGroupSub()
+                    && request.resource.data.assignmentId == subAid()
+                    && request.resource.data.groupId == subGroupId()
+                    && adminCanManageCourse(request.resource.data.get('courseId', ''));
+
       allow create: if isVerified()
                     && isOwnSub()
                     && docId.split('_').size() == 2

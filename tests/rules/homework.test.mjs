@@ -155,3 +155,45 @@ describe('assignment_grades — оценки', () => {
     await assertFails(updateDoc(doc(admNm, 'assignment_grades', 'hw2_s9'), { grade: 80 }));
   });
 });
+
+describe('submissions — общая сдача рабочей группы', () => {
+  // docId = {aid}_group_NN; члены — у кого courseGroups[courseId] == group_NN.
+  beforeEach(async () => {
+    await seed(async db => {
+      await db.collection('assignments').doc('hwg').set({
+        courseId: 'nm', title: 'Практика', mode: 'personal', groupWork: true, strictDeadline: false,
+      });
+    });
+  });
+  const base = { assignmentId: 'hwg', courseId: 'nm', groupId: 'group_03', isGroup: true, files: [], links: [] };
+
+  it('член группы создаёт сдачу, другой член видит и дозаливает', async () => {
+    const a = await asStudent('ga', { courseGroups: { nm: 'group_03' } });
+    await assertSucceeds(setDoc(doc(a, 'submissions', 'hwg_group_03'), base));
+    const b = await asStudent('gb', { courseGroups: { nm: 'group_03' } });
+    await assertSucceeds(getDoc(doc(b, 'submissions', 'hwg_group_03')));
+    await assertSucceeds(updateDoc(doc(b, 'submissions', 'hwg_group_03'),
+      { links: [{ url: 'https://x', name: 'x' }] }));
+  });
+
+  it('чужая группа не читает и не пишет', async () => {
+    await seed(async db => { await db.collection('submissions').doc('hwg_group_03').set(base); });
+    const c = await asStudent('gc', { courseGroups: { nm: 'group_04' } });
+    await assertFails(getDoc(doc(c, 'submissions', 'hwg_group_03')));
+    await assertFails(updateDoc(doc(c, 'submissions', 'hwg_group_03'), { files: [] }));
+    await assertFails(setDoc(doc(c, 'submissions', 'hwg_group_05'), { ...base, groupId: 'group_05' }));
+  });
+
+  it('член группы не подделывает проверенные файлы', async () => {
+    await seed(async db => { await db.collection('submissions').doc('hwg_group_03').set(base); });
+    const a = await asStudent('ga', { courseGroups: { nm: 'group_03' } });
+    await assertFails(updateDoc(doc(a, 'submissions', 'hwg_group_03'),
+      { reviewedFiles: [{ path: 'x', name: 'x' }] }));
+  });
+
+  it('admin курса читает групповую сдачу', async () => {
+    await seed(async db => { await db.collection('submissions').doc('hwg_group_03').set(base); });
+    const adm = await asAdminNm();
+    await assertSucceeds(getDoc(doc(adm, 'submissions', 'hwg_group_03')));
+  });
+});

@@ -389,6 +389,9 @@ if (location.search.indexOf('embedded=1') !== -1) {
           <input type="checkbox" id="hwFormStrict"> строгий (не принимать после)
         </label>
       </div>
+      <label style="display:inline-flex;align-items:center;gap:.3rem;font-size:.82rem;color:var(--text2);cursor:pointer;margin-top:.5rem">
+        <input type="checkbox" id="hwFormGroup"> 👥 групповое: один участник рабочей группы загружает отчёт — он появляется у всей группы
+      </label>
       <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2);display:block;margin-top:.6rem">Режим</label>
       <div style="display:flex;gap:.8rem;font-size:.85rem;margin-bottom:.5rem">
         <label style="display:inline-flex;align-items:center;gap:.3rem;cursor:pointer"><input type="radio" name="hwMode" value="common" checked onchange="hwToggleMode()"> Common (всем одно)</label>
@@ -722,7 +725,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
 <script src="js/firebase-config.js?v=20260907g"></script>
 <script src="js/courses.js?v=20261102"></script>
 <script src="js/enrollments.js?v=20260907g"></script>
-<script src="js/homework.js?v=20261028"></script>
+<script src="js/homework.js?v=20261110a"></script>
 <script src="js/attendance.js?v=20260907g"></script>
 <script src="js/labs.js?v=20261018"></script>
 <script src="js/quiz.js?v=20261018"></script>
@@ -731,7 +734,7 @@ if (location.search.indexOf('embedded=1') !== -1) {
 <!-- Проверялка PDF (пометки маркером): PDF.js + jsPDF + модуль -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="js/hw-annotate.js?v=20260907g"></script>
+<script src="js/hw-annotate.js?v=20261110a"></script>
 <script>
 // ============================================================
 // ADMIN PANEL LOGIC
@@ -1763,11 +1766,12 @@ function hwRenderCard(a) {
     ? new Date(a.deadlineAt.toMillis()).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) + ' МСК'
     : 'без дедлайна';
   const strictBadge = a.strictDeadline ? '<span class="badge b-fail" title="Не принимается после дедлайна">строгий</span>' : '';
+  const groupBadge = a.groupWork ? '<span class="badge" style="background:#eef4ff;color:#4a6fa5" title="Одна сдача на рабочую группу">👥 групповое</span>' : '';
   const modeBadge = a.mode === 'personal' ? '<span class="badge" style="background:var(--pale-blue,#e6f1fb);color:var(--accent3,#3a5ba0)">personal</span>' : '<span class="badge b-group">common</span>';
   return '<div class="card" style="padding:.7rem 1rem;margin-bottom:.5rem;background:var(--card,#fff)">'
     + '<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:.5rem;margin-bottom:.3rem">'
     + '<strong style="font-family:\'Playfair Display\',serif;font-size:1rem">' + hwEscape(a.title) + '</strong>'
-    + modeBadge + strictBadge
+    + modeBadge + strictBadge + groupBadge
     + '<span style="flex:1"></span>'
     + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text3)">дедлайн: ' + deadline + '</span>'
     + '</div>'
@@ -1776,6 +1780,7 @@ function hwRenderCard(a) {
     + (a.mode === 'personal' ? '<div style="font-size:.78rem;color:var(--text3);margin-bottom:.3rem">Вариантов: ' + (a.variants || []).length + '</div>' : '')
     + '<div style="display:flex;gap:.4rem;flex-wrap:wrap">'
     + '<button class="btn btn-sm btn-primary" onclick="hwOpenSubmissions(\''+a.id+'\')">Сдачи и оценки →</button>'
+    + '<button class="btn btn-sm" onclick="hwToggleGroupWork(\''+a.id+'\')" title="Групповое: один загружает отчёт за всю рабочую группу. Уже сданные файлы не трогаются.">' + (a.groupWork ? '👤 сделать индивидуальным' : '👥 сделать групповым') + '</button>'
     + '<button class="btn btn-sm" onclick="hwDelete(\''+a.id+'\')">🗑 Удалить</button>'
     + '</div>'
     + '</div>';
@@ -1804,6 +1809,7 @@ function hwOpenCreateForm() {
   document.getElementById('hwFormDesc').value = '';
   document.getElementById('hwFormDeadline').value = '';
   document.getElementById('hwFormStrict').checked = false;
+  document.getElementById('hwFormGroup').checked = false;
   document.querySelectorAll('input[name="hwMode"]').forEach(r => r.checked = (r.value === 'common'));
   document.getElementById('hwFormCommonFiles').value = '';
   document.getElementById('hwVariantsList').innerHTML = '';
@@ -1848,6 +1854,7 @@ async function hwSubmitForm() {
   const desc = document.getElementById('hwFormDesc').value;
   const dl = document.getElementById('hwFormDeadline').value; // 'YYYY-MM-DDTHH:mm' в локальном часовом поясе браузера
   const strict = document.getElementById('hwFormStrict').checked;
+  const groupWork = document.getElementById('hwFormGroup').checked;
   const mode = document.querySelector('input[name="hwMode"]:checked').value;
   if (!cid) { st.textContent = 'Выберите курс'; return; }
   if (!title) { st.textContent = 'Введите название'; return; }
@@ -1876,7 +1883,7 @@ async function hwSubmitForm() {
   btn.disabled = true; st.textContent = 'создаю…';
   const res = await CFDHomework.createAssignment(
     cid,
-    { title, description: desc, mode, deadlineAt, deadlineTz: 'Europe/Moscow', strictDeadline: strict, variants: variants },
+    { title, description: desc, mode, deadlineAt, deadlineTz: 'Europe/Moscow', strictDeadline: strict, groupWork: groupWork, variants: variants },
     filesCommon, variantsFiles,
     p => { st.textContent = 'загрузка файлов: ' + Math.round(p * 100) + '%'; }
   );
@@ -1885,6 +1892,20 @@ async function hwSubmitForm() {
   st.textContent = '✓ создано';
   hwCloseForm();
   document.getElementById('hwCourseFilter').value = cid;
+  renderHomeworkTab();
+}
+
+async function hwToggleGroupWork(aid) {
+  const a = (window._hwAssignments || []).find(x => x.id === aid);
+  if (!a) return;
+  const next = !a.groupWork;
+  const msg = next
+    ? 'Сделать «' + a.title + '» групповым?\n\nСтуденты будут загружать отчёт один раз на рабочую группу — он появится у всех её членов. Уже загруженные личные файлы остаются на месте и видны.'
+    : 'Сделать «' + a.title + '» индивидуальным?\n\nОбщие файлы групп останутся в хранилище, но студенты их больше не увидят в карточке (в таблице сдач у преподавателя они не показываются).';
+  if (!confirm(msg)) return;
+  const r = await CFDHomework.updateAssignment(aid, { groupWork: next });
+  if (!r.ok) { alert('Ошибка: ' + r.error); return; }
+  a.groupWork = next;
   renderHomeworkTab();
 }
 
@@ -1928,7 +1949,13 @@ function hwCloseSubs() { document.getElementById('hwSubsWrap').style.display = '
 async function renderHwSubmissionsTable(aid) {
   const a = window._hwCurrentAssignment;
   if (!a) return;
-  const [subs, grades] = await Promise.all([ CFDHomework.listSubmissions(aid, a.courseId), CFDHomework.listGrades(aid, a.courseId) ]);
+  const [rawSubs, grades] = await Promise.all([ CFDHomework.listSubmissions(aid, a.courseId), CFDHomework.listGrades(aid, a.courseId) ]);
+  // Групповое задание: к строке студента подмешивается общая сдача его
+  // рабочей группы (личные файлы, если были, тоже остаются в строке).
+  const grpSubs = rawSubs.__groups || {};
+  const isGroupHw = !!a.groupWork;
+  const subs = {};
+  Object.defineProperty(subs, '__groups', { value: grpSubs, enumerable: false });
   window._hwSubsCache = subs;
   window._hwGradesCache = grades;
   // Список кому показывать: студенты с approved-enrollment на этот курс.
@@ -1956,6 +1983,20 @@ async function renderHwSubmissionsTable(aid) {
     enrolled.push(u);
   });
   enrolled.sort((x, y) => (x.fio || x.email || '').localeCompare(y.fio || y.email || '', 'ru'));
+  const gidOf = (u) => ((u.courseGroups || {})[a.courseId]) || '';
+  if (isGroupHw) {
+    // Сначала по номеру группы, без группы — в конце.
+    enrolled.sort((x, y) => (gidOf(x) || 'zzz').localeCompare(gidOf(y) || 'zzz') || (x.fio || x.email || '').localeCompare(y.fio || y.email || '', 'ru'));
+  }
+  // Сдача для показа: у группового — слияние личной и общей групповой.
+  Object.keys(rawSubs).forEach(uid => { subs[uid] = rawSubs[uid]; });
+  if (isGroupHw) {
+    enrolled.forEach(u => {
+      const m = CFDHomework.mergeGroupSubmission(rawSubs[u.uid] || null, grpSubs[gidOf(u)] || null);
+      if (m && ((m.files || []).length + (m.links || []).length + (m.reviewedFiles || []).length)) subs[u.uid] = m;
+      else if (m && rawSubs[u.uid]) subs[u.uid] = m;
+    });
+  }
 
   let submittedCnt = 0, gradedCnt = 0;
   enrolled.forEach(u => { if (subs[u.uid]) submittedCnt++; if (grades[u.uid]) gradedCnt++; });
@@ -1981,7 +2022,8 @@ async function renderHwSubmissionsTable(aid) {
           const annot = isPdf
             ? ' <button onclick="hwOpenAnnotator(\''+aid+'\',\''+u.uid+'\','+fi+')" title="Проверить: пометки маркером и вернуть студенту" style="background:var(--pale-cream,#fdf9f0);border:1px solid #c8bfa8;color:var(--st-amber,#5a4a2a);cursor:pointer;padding:1px 5px;margin-right:.4rem;font-size:.72rem;border-radius:3px">✏️ Проверить</button>'
             : '';
-          const by = f.uploadedBy ? '<span title="загружено преподавателем: ' + hwEscape(f.uploadedBy) + '" style="font-size:.68rem;color:var(--text3);margin-right:.2rem">(преп.)</span>' : '';
+          const by = f.uploadedBy ? '<span title="загружено преподавателем: ' + hwEscape(f.uploadedBy) + '" style="font-size:.68rem;color:var(--text3);margin-right:.2rem">(преп.)</span>'
+            : (isGroupHw ? hwGroupNote(f) : '');
           const rm = '<button onclick="hwAdminRemoveFile(\''+aid+'\',\''+u.uid+'\','+fi+')" title="Удалить файл из сдачи студента" style="background:none;border:none;color:#c44;cursor:pointer;padding:0 .2rem;margin-right:.35rem;font-size:.85rem">×</button>';
           return dl + by + annot + rm;
         }).join('')
@@ -1997,6 +2039,7 @@ async function renderHwSubmissionsTable(aid) {
     const linksPart = (s && s.links && s.links.length)
       ? s.links.map((l, li) =>
           '<a href="'+l.url+'" target="_blank" style="color:var(--accent3);margin-right:.25rem;font-size:.78rem" title="'+hwEscape(l.url)+'">🔗 '+hwEscape(l.name || l.url)+'</a>'
+          + (isGroupHw ? hwGroupNote(l) : '')
           + ' <button onclick="hwOpenAnnotatorLink(\''+aid+'\',\''+u.uid+'\','+li+')" title="Проверить: скачать PDF по ссылке, пометки маркером и вернуть студенту" style="background:var(--pale-cream,#fdf9f0);border:1px solid #c8bfa8;color:var(--st-amber,#5a4a2a);cursor:pointer;padding:1px 5px;margin-right:.4rem;font-size:.72rem;border-radius:3px">✏️ Проверить</button>'
           + '<button onclick="hwAdminRemoveLink(\''+aid+'\',\''+u.uid+'\','+li+')" title="Удалить ссылку из сдачи студента" style="background:none;border:none;color:#c44;cursor:pointer;padding:0 .2rem;margin-right:.35rem;font-size:.85rem">×</button>'
         ).join('')
@@ -2035,15 +2078,23 @@ async function renderHwSubmissionsTable(aid) {
     }
     const zVal = (g.grade !== undefined && g.grade !== null) ? g.grade : '';
     const cVal = g.comment || '';
-    return '<tr>'
+    const myGid = gidOf(u);
+    const grpCell = isGroupHw
+      ? '<div style="margin-top:.15rem;font-size:.72rem;' + (myGid ? 'color:#4a6fa5' : 'color:var(--st-red,#a33)') + '">'
+        + (myGid ? '👥 гр. ' + hwEscape(myGid.replace(/^group_/, '')) : 'нет раб. группы') + '</div>'
+      : '';
+    const toGroupBtn = (isGroupHw && myGid)
+      ? ' <button onclick="hwGradeWholeGroup(\''+aid+'\',\''+u.uid+'\')" title="Поставить эту оценку и комментарий всем членам группы" style="background:none;border:1px solid var(--border);border-radius:3px;cursor:pointer;font-size:.68rem;padding:0 .3rem;color:#4a6fa5">⇉ группе</button>'
+      : '';
+    return '<tr' + (isGroupHw && myGid ? ' data-gid="' + myGid + '"' : '') + '>'
       + '<td style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text3);text-align:right;padding-right:.4rem">' + _num + '.</td>'
-      + '<td style="font-weight:600">' + hwEscape(u.fio || u.email) + '</td>'
+      + '<td style="font-weight:600">' + hwEscape(u.fio || u.email) + grpCell + '</td>'
       + '<td style="font-size:.78rem">' + hwEscape(u.email || '') + '</td>'
       + '<td style="font-size:.78rem">' + hwEscape(u.studyGroup || '—') + '</td>'
       + '<td>' + variantCell + '</td>'
       + '<td>' + filesHtml + '</td>'
       + '<td style="white-space:nowrap;font-size:.72rem;color:var(--text2)">' + submittedAt + lateBadge + '</td>'
-      + '<td><input type="number" min="0" max="100" value="'+zVal+'" class="grade-input" id="hwG-'+aid+'-'+u.uid+'" oninput="hwDebounceGrade(\''+aid+'\',\''+u.uid+'\',\''+a.courseId+'\')"></td>'
+      + '<td style="white-space:nowrap"><input type="number" min="0" max="100" value="'+zVal+'" class="grade-input" id="hwG-'+aid+'-'+u.uid+'" oninput="hwDebounceGrade(\''+aid+'\',\''+u.uid+'\',\''+a.courseId+'\')">' + toGroupBtn + '</td>'
       + '<td><input type="text" value="'+hwEscape(cVal).replace(/"/g,'&quot;')+'" class="comment-input" id="hwC-'+aid+'-'+u.uid+'" placeholder="Комментарий" oninput="hwDebounceGrade(\''+aid+'\',\''+u.uid+'\',\''+a.courseId+'\')"></td>'
       + '</tr>';
   }).join('');
@@ -2068,6 +2119,36 @@ async function renderHwSubmissionsTable(aid) {
     + '<tbody>' + (rows || emptyRow) + '</tbody>'
     + '</table>'
     + '</div>';
+}
+
+// Подпись у файла/ссылки группового задания: общий (кто загрузил) или личный.
+function hwGroupNote(x) {
+  if (x._group) return '<span title="общая сдача группы" style="font-size:.68rem;color:#4a6fa5;margin-right:.2rem">(группа' + (x.byFio ? ' · ' + hwEscape(String(x.byFio).split(' ')[0]) : '') + ')</span>';
+  return '<span title="личная сдача студента" style="font-size:.68rem;color:var(--text3);margin-right:.2rem">(личн.)</span>';
+}
+
+// Скопировать оценку и комментарий студента всем членам его рабочей группы.
+async function hwGradeWholeGroup(aid, uid) {
+  const a = window._hwCurrentAssignment;
+  if (!a) return;
+  const zEl = document.getElementById('hwG-' + aid + '-' + uid);
+  const cEl = document.getElementById('hwC-' + aid + '-' + uid);
+  if (!zEl || zEl.value === '') { alert('Сначала поставьте оценку в этой строке'); return; }
+  const grade = Math.max(0, Math.min(100, parseInt(zEl.value, 10)));
+  const comment = cEl ? cEl.value : '';
+  const row = zEl.closest('tr');
+  const gid = row && row.getAttribute('data-gid');
+  if (!gid) return;
+  const rows = Array.from(document.querySelectorAll('#hwSubsTable tr[data-gid="' + gid + '"]'));
+  const uids = rows.map(r => { const i = r.querySelector('input.grade-input'); return i ? i.id.slice(('hwG-' + aid + '-').length) : null; }).filter(Boolean);
+  if (!confirm('Поставить ' + grade + (comment ? ' и комментарий' : '') + ' всем членам группы ' + gid.replace(/^group_/, '') + ' (' + uids.length + ' чел.)?')) return;
+  for (const id of uids) {
+    const r = await CFDHomework.setGrade(aid, id, a.courseId, grade, comment);
+    const z = document.getElementById('hwG-' + aid + '-' + id), c = document.getElementById('hwC-' + aid + '-' + id);
+    if (r.ok) { if (z) z.value = grade; if (c) c.value = comment; }
+    const tr = z && z.closest('tr');
+    if (tr) { tr.style.background = r.ok ? 'rgba(26,107,90,0.12)' : 'rgba(196,68,68,0.15)'; setTimeout(() => { tr.style.background = ''; }, 900); }
+  }
 }
 
 async function hwSetVariant(aid, uid, idx) {
@@ -2104,8 +2185,8 @@ async function hwAdminRemoveFile(aid, uid, fi) {
   const f = s && s.files && s.files[fi];
   if (!f) { alert('Файл не найден'); return; }
   const u = allUsers.find(x => x.uid === uid) || {};
-  if (!confirm('Удалить файл «' + f.name + '» из сдачи ' + (u.fio || u.email || uid) + '?\n\nФайл будет удалён без возможности восстановления.')) return;
-  const r = await CFDHomework.removeSubmissionFile(aid, uid, f);
+  if (!confirm('Удалить файл «' + f.name + '» из ' + (f._group ? 'общей сдачи группы (у всех её членов)' : 'сдачи ' + (u.fio || u.email || uid)) + '?\n\nФайл будет удалён без возможности восстановления.')) return;
+  const r = await CFDHomework.removeSubmissionFile(aid, uid, f, f._doc || null);
   if (!r.ok) { alert('Ошибка: ' + r.error); return; }
   await renderHwSubmissionsTable(aid);
 }
@@ -2116,8 +2197,8 @@ async function hwAdminRemoveLink(aid, uid, li) {
   const l = s && s.links && s.links[li];
   if (!l) { alert('Ссылка не найдена'); return; }
   const u = allUsers.find(x => x.uid === uid) || {};
-  if (!confirm('Удалить ссылку «' + (l.name || l.url) + '» из сдачи ' + (u.fio || u.email || uid) + '?')) return;
-  const r = await CFDHomework.removeSubmissionLink(aid, uid, l.url);
+  if (!confirm('Удалить ссылку «' + (l.name || l.url) + '» из ' + (l._group ? 'общей сдачи группы' : 'сдачи ' + (u.fio || u.email || uid)) + '?')) return;
+  const r = await CFDHomework.removeSubmissionLink(aid, uid, l.url, l._doc || null);
   if (!r.ok) { alert('Ошибка: ' + r.error); return; }
   await renderHwSubmissionsTable(aid);
 }
@@ -2128,7 +2209,7 @@ async function hwAdminRemoveReviewed(aid, uid, ri) {
   const f = s && s.reviewedFiles && s.reviewedFiles[ri];
   if (!f) { alert('Файл не найден'); return; }
   if (!confirm('Удалить проверенный файл «' + f.name + '»? Студент перестанет его видеть.')) return;
-  const r = await CFDHomework.removeReviewedFile(aid, uid, f.path);
+  const r = await CFDHomework.removeReviewedFile(aid, uid, f.path, f._doc || null);
   if (!r.ok) { alert('Ошибка: ' + r.error); return; }
   await renderHwSubmissionsTable(aid);
 }
@@ -2216,7 +2297,7 @@ async function hwOpenAnnotatorLink(aid, uid, linkIdx) {
       assignment: { id: aid, courseId: a.courseId, title: a.title || aid },
       student: { uid: u.uid, fio: u.fio || '', email: u.email || '', studyGroup: u.studyGroup || '' },
       submission: s,
-      sourceFile: { name: name || 'submission.pdf' },
+      sourceFile: { name: name || 'submission.pdf', _doc: link._doc, _group: link._group },
       sourceBlob: blob,
       onDone: async function () {
         window._hwSubsCache = await CFDHomework.listSubmissions(aid, a.courseId);

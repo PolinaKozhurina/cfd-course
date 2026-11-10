@@ -1258,12 +1258,19 @@
       var outName = "reviewed_" + origName.replace(/\.pdf$/i, "") + ".pdf";
       var blob = pdf.output("blob");
       var file = new File([blob], outName, { type: "application/pdf" });
+      // Работа из общей сдачи группы: проверенный файл кладём в каталог
+      // группы и в общую сдачу — его увидят все члены группы.
+      var sub = this.opts.submission || {};
+      var sf = this.opts.sourceFile || {};
+      var toGroup = !!(sf._group && sub._groupDir);
       var meta = await CFDHomework.uploadReviewedFile(
-        this.opts.assignment.id, this.opts.assignment.courseId, this.opts.student.uid,
-        this.opts.student.fio || "", file,
+        this.opts.assignment.id, this.opts.assignment.courseId,
+        toGroup ? sub._groupDir : this.opts.student.uid,
+        toGroup ? "" : (this.opts.student.fio || ""), file,
         function (p) { self._setStatus("Загрузка… " + Math.round(p * 100) + "%"); }
       );
-      var r = await CFDHomework.addReviewedFile(this.opts.assignment.id, this.opts.student.uid, meta, "");
+      var r = await CFDHomework.addReviewedFile(this.opts.assignment.id, this.opts.student.uid, meta, "",
+        sf._doc || sub._reviewDoc || null);
       if (!r.ok) throw new Error(r.error);
       this._setStatus("✓ Отправлено студенту");
       setTimeout(function () {

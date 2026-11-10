@@ -16,6 +16,16 @@
 
   function nowTs() { return firebase.firestore.FieldValue.serverTimestamp(); }
   function subDocId(aid, uid) { return aid + "_" + uid; }
+  // Общая сдача рабочей группы: '{aid}_group_NN' (gid = users.courseGroups[cid]).
+  function groupSubId(aid, gid) { return aid + "_" + gid; }
+  // Документ сдачи: общий для группы, если задан gid, иначе личный.
+  function targetRef(aid, uid, gid) {
+    return db.collection("submissions").doc(gid ? groupSubId(aid, gid) : subDocId(aid, uid));
+  }
+  async function myFio(uid) {
+    try { const d = await db.collection("users").doc(uid).get(); return d.exists ? (d.data().fio || d.data().email || "") : ""; }
+    catch (_) { return ""; }
+  }
   function slugify(s) {
     return String(s || "")
       .normalize("NFD").replace(/[̀-ͯ]/g, "")
@@ -120,6 +130,7 @@
           deadlineAt: data.deadlineAt || null,     // Timestamp или null
           deadlineTz: data.deadlineTz || "Europe/Moscow",
           strictDeadline: !!data.strictDeadline,
+          groupWork: !!data.groupWork,
           filesCommon: commonUploads,
           variants: variantsOut,
           assignedVariants: data.assignedVariants || {},
@@ -206,7 +217,8 @@
     // Загрузить один файл сдачи → Cloudflare Worker → приватный GitHub-репо.
     // Возвращает { path, name, size, uploadedAt } (без прямой url — доступ
     // через downloadFile()).
-    uploadSubmissionFile: async function (aid, cid, file, onProgress) {
+    // groupId — групповое задание: файл ляжет в общий каталог группы.
+    uploadSubmissionFile: async function (aid, cid, file, onProgress, groupId) {
       const me = auth.currentUser;
       if (!me) throw new Error("Не авторизован");
       // Форс-обновление токена — иначе Worker получит email_verified=false из старого токена.
@@ -237,6 +249,7 @@
         body: JSON.stringify({
           token: token, aid: aid, cid: cid, fio: fio,
           filename: file.name, base64: base64, size: file.size,
+          groupId: groupId || "",
         }),
       });
       if (typeof onProgress === "function") onProgress(0.95);
@@ -368,7 +381,9 @@
     },
 
     // Записать/обновить submission (после загрузки файлов).
-    submit: async function (aid, cid, files, note) {
+    // gid — групповое задание: файлы пишутся в общую сдачу группы
+    // ('{aid}_group_NN'), у каждого файла отметка, кто загрузил (byUid/byFio).
+    submit: async function (aid, cid, files, note, gid) {
       const me = auth.currentUser;
       if (!me) return { ok: false, error: "Не авторизован" };
       // Форсируем обновление ID-токена: Firebase кэширует его ~1 час,
@@ -376,7 +391,11 @@
       // email_verified=false — Firestore-правило isVerified() отбивает.
       try { await me.reload(); await me.getIdToken(true); } catch (_) {}
       if (!me.emailVerified) return { ok: false, error: "Подтвердите email (ссылка в письме) и обновите страницу" };
-      const ref = db.collection("submissions").doc(subDocId(aid, me.uid));
+      const ref = targetRef(aid, me.uid, gid);
+      if (gid) {
+        const fio = await myFio(me.uid);
+        files = (files || []).map(f => Object.assign({}, f, { byUid: me.uid, byFio: fio }));
+      }
       try {
         const snap = await ref.get();
         if (snap.exists) {
@@ -388,7 +407,11 @@
             updatedAt: nowTs(),
           });
         } else {
-          await ref.set({
+          await ref.set(gid ? {
+            assignmentId: aid, courseId: cid, groupId: gid, isGroup: true,
+            files: files || [], links: [], note: note || "",
+            submittedAt: nowTs(), updatedAt: nowTs(),
+          } : {
             assignmentId: aid,
             uid: me.uid,
             courseId: cid,
@@ -403,7 +426,7 @@
     },
 
     // Добавить ссылку на облако (Google Drive / Я.Диск / … — что угодно).
-    addSubmissionLink: async function (aid, cid, url, name) {
+    addSubmissionLink: async function (aid, cid, url, name, gid) {
       const me = auth.currentUser;
       if (!me) return { ok: false, error: "Не авторизован" };
       try { await me.reload(); await me.getIdToken(true); } catch (_) {}
@@ -411,7 +434,8 @@
       url = String(url || "").trim();
       if (!/^https?:\/\//i.test(url)) return { ok: false, error: "Ссылка должна начинаться с http(s)://" };
       const entry = { url: url, name: (name || url).trim().slice(0, 200), addedAt: new Date().toISOString() };
-      const ref = db.collection("submissions").doc(subDocId(aid, me.uid));
+      if (gid) { entry.byUid = me.uid; entry.byFio = await myFio(me.uid); }
+      const ref = targetRef(aid, me.uid, gid);
       try {
         const snap = await ref.get();
         if (snap.exists) {
@@ -419,7 +443,11 @@
           const links = (cur.links || []).concat([entry]);
           await ref.update({ links: links, updatedAt: nowTs() });
         } else {
-          await ref.set({
+          await ref.set(gid ? {
+            assignmentId: aid, courseId: cid, groupId: gid, isGroup: true,
+            files: [], links: [entry], note: "",
+            submittedAt: nowTs(), updatedAt: nowTs(),
+          } : {
             assignmentId: aid, uid: me.uid, courseId: cid,
             files: [], links: [entry], note: "",
             submittedAt: nowTs(), updatedAt: nowTs(),
@@ -430,8 +458,9 @@
     },
 
     // Удалить одну ссылку из своей сдачи.
-    removeSubmissionLink: async function (aid, uid, url) {
-      const ref = db.collection("submissions").doc(subDocId(aid, uid));
+    // docId — явный документ (общая сдача группы); по умолчанию личная.
+    removeSubmissionLink: async function (aid, uid, url, docId) {
+      const ref = db.collection("submissions").doc(docId || subDocId(aid, uid));
       try {
         const snap = await ref.get();
         if (!snap.exists) return { ok: false, error: "no submission" };
@@ -444,8 +473,8 @@
 
     // Удалить один файл из своей сдачи (студент) или чужой (admin).
     // Удаляет файл и на Worker-е (в приватном GitHub-репо), и в Firestore.
-    removeSubmissionFile: async function (aid, uid, fileEntry) {
-      const ref = db.collection("submissions").doc(subDocId(aid, uid));
+    removeSubmissionFile: async function (aid, uid, fileEntry, docId) {
+      const ref = db.collection("submissions").doc(docId || (fileEntry && fileEntry._doc) || subDocId(aid, uid));
       try {
         const snap = await ref.get();
         if (!snap.exists) return { ok: false, error: "no submission" };
@@ -541,10 +570,11 @@
     // проставляет reviewedAt/reviewedBy — можно потом отсортировать/показать.
     // reviewComment — опциональная короткая приписка к проверенному файлу
     // (кладётся в fileEntry.comment).
-    addReviewedFile: async function (aid, targetUid, fileEntry, reviewComment) {
+    // docId — документ, куда писать (общая сдача группы); по умолчанию личная.
+    addReviewedFile: async function (aid, targetUid, fileEntry, reviewComment, docId) {
       const me = auth.currentUser;
       if (!me) return { ok: false, error: "Не авторизован" };
-      const ref = db.collection("submissions").doc(subDocId(aid, targetUid));
+      const ref = db.collection("submissions").doc(docId || subDocId(aid, targetUid));
       const entry = Object.assign({}, fileEntry, {
         uploadedBy: me.email,
         comment: reviewComment || "",
@@ -587,8 +617,8 @@
     },
 
     // Убрать один проверенный файл (и с Worker-а, и из Firestore).
-    removeReviewedFile: async function (aid, targetUid, path) {
-      const ref = db.collection("submissions").doc(subDocId(aid, targetUid));
+    removeReviewedFile: async function (aid, targetUid, path, docId) {
+      const ref = db.collection("submissions").doc(docId || subDocId(aid, targetUid));
       try {
         const snap = await ref.get();
         if (!snap.exists) return { ok: false, error: "нет сдачи" };
@@ -679,9 +709,58 @@
         let q = db.collection("submissions").where("assignmentId", "==", aid);
         if (cid) q = q.where("courseId", "==", cid);
         const snap = await q.get();
-        const out = {}; snap.forEach(d => { out[d.data().uid] = d.data(); });
+        const out = {}; const groups = {};
+        snap.forEach(d => {
+          const x = d.data();
+          if (x.isGroup && x.groupId) groups[x.groupId] = Object.assign({ _id: d.id }, x);
+          else if (x.uid) out[x.uid] = Object.assign({ _id: d.id }, x);
+        });
+        // Общие сдачи групп — неперечисляемым полем, чтобы не мешать
+        // перебору сдач по uid.
+        Object.defineProperty(out, "__groups", { value: groups, enumerable: false });
         return out;
       } catch (e) { console.warn("listSubmissions:", e); return {}; }
+    },
+
+    // Слить личную сдачу студента с общей сдачей его группы в один объект
+    // для показа. У каждого файла/ссылки/проверенного файла пометка _doc —
+    // из какого документа он (для удаления), у групповых — _group: true.
+    // _reviewDoc — куда класть проверенный файл, _groupDir — каталог группы
+    // в хранилище (grp_group_NN), чтобы проверенный файл видели все члены.
+    mergeGroupSubmission: function (indiv, grp) {
+      if (!indiv && !grp) return null;
+      const tag = (arr, doc, isG) => (arr || []).map(x => Object.assign({}, x, { _doc: doc, _group: !!isG }));
+      const gId = grp ? (grp._id || groupSubId(grp.assignmentId, grp.groupId)) : null;
+      const iId = indiv ? (indiv._id || subDocId(indiv.assignmentId, indiv.uid)) : null;
+      const m = Object.assign({}, indiv || {}, grp ? { groupId: grp.groupId } : {});
+      m.files = tag(grp && grp.files, gId, true).concat(tag(indiv && indiv.files, iId, false));
+      m.links = tag(grp && grp.links, gId, true).concat(tag(indiv && indiv.links, iId, false));
+      m.reviewedFiles = tag(grp && grp.reviewedFiles, gId, true).concat(tag(indiv && indiv.reviewedFiles, iId, false));
+      m.submittedAt = (indiv && indiv.submittedAt) || (grp && grp.submittedAt) || null;
+      m.updatedAt = (grp && grp.updatedAt) || (indiv && indiv.updatedAt) || null;
+      m._reviewDoc = gId || iId;
+      m._groupDir = grp ? "grp_" + grp.groupId : null;
+      m._hasGroup = !!grp;
+      return m;
+    },
+
+    // Номер рабочей группы студента на курсе ('group_NN') или "".
+    getMyGroupId: async function (cid) {
+      const me = auth.currentUser;
+      if (!me) return "";
+      try {
+        const d = await db.collection("users").doc(me.uid).get();
+        return (d.exists && (d.data().courseGroups || {})[cid]) || "";
+      } catch (_) { return ""; }
+    },
+
+    // Общая сдача группы по заданию (или null).
+    getGroupSubmission: async function (aid, gid) {
+      if (!gid) return null;
+      try {
+        const s = await db.collection("submissions").doc(groupSubId(aid, gid)).get();
+        return s.exists ? Object.assign({ _id: s.id }, s.data()) : null;
+      } catch (_) { return null; }
     },
 
     listGrades: async function (aid, cid) {
@@ -700,7 +779,7 @@
       if (!me) return null;
       try {
         const s = await db.collection("submissions").doc(subDocId(aid, me.uid)).get();
-        return s.exists ? s.data() : null;
+        return s.exists ? Object.assign({ _id: s.id }, s.data()) : null;
       } catch (_) { return null; }
     },
 

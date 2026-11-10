@@ -211,7 +211,7 @@ td{padding:5px 10px;border:1px solid var(--border)}
 <script src="js/auth.js?v=20260907g"></script>
 <script src="js/enrollments.js?v=20260907g"></script>
 <script src="js/workgroups.js?v=20260907g"></script>
-<script src="js/homework.js?v=20261028"></script>
+<script src="js/homework.js?v=20261110a"></script>
 <script src="js/attendance.js?v=20260907g"></script>
 <script src="js/labs.js?v=20261018"></script>
 <script src="js/update-check.js?v=20260907g"></script>
@@ -515,14 +515,32 @@ td{padding:5px 10px;border:1px solid var(--border)}
       const box = block.querySelector('.hwByCourse');
       if (!list.length) { box.innerHTML = '<div style="color:var(--text3);font-size:.85rem;font-style:italic">домашек по этому курсу пока нет</div>'; continue; }
       box.innerHTML = '';
+      // Рабочая группа на курсе — для групповых заданий (одна сдача на группу).
+      let grpCtx = null;
+      if (list.some(a => a.groupWork)) {
+        const gid = await CFDHomework.getMyGroupId(c.id);
+        let det = null;
+        if (gid && window.CFDGroups && CFDGroups.getGroupDetails) {
+          try { det = await CFDGroups.getGroupDetails(c.id); } catch (_) {}
+        }
+        grpCtx = { gid: gid, details: det };
+      }
       for (const a of list) {
-        const [sub, grade] = await Promise.all([ CFDHomework.getMySubmission(a.id), CFDHomework.getMyGrade(a.id) ]);
-        box.appendChild(hwRenderStudentCard(a, sub, grade, user));
+        const [own, grade] = await Promise.all([ CFDHomework.getMySubmission(a.id), CFDHomework.getMyGrade(a.id) ]);
+        let sub = own;
+        if (a.groupWork && grpCtx && grpCtx.gid) {
+          const gs = await CFDHomework.getGroupSubmission(a.id, grpCtx.gid);
+          sub = CFDHomework.mergeGroupSubmission(own, gs);
+        } else if (a.groupWork) {
+          sub = CFDHomework.mergeGroupSubmission(own, null);
+        }
+        box.appendChild(hwRenderStudentCard(a, sub, grade, user, a.groupWork ? (grpCtx || { gid: '' }) : null));
       }
     }
   }
 
-  function hwRenderStudentCard(a, sub, grade, user) {
+  // grp — для группового задания: { gid: 'group_NN' | '', details: CFDGroups.getGroupDetails }.
+  function hwRenderStudentCard(a, sub, grade, user, grp) {
     const card = document.createElement('div');
     card.className = 'card';
     card.style.padding = '.7rem 1rem';
@@ -533,7 +551,30 @@ td{padding:5px 10px;border:1px solid var(--border)}
     const left = hwLocalLeft(a.deadlineAt, subMs);
     const isLate = a.deadlineAt && a.deadlineAt.toMillis() < Date.now();
     const strict = !!a.strictDeadline;
-    const canSubmit = !isLate || !strict;
+    const isGroupHw = !!grp;
+    const myGid = isGroupHw ? (grp.gid || '') : '';
+    // Групповое задание без рабочей группы: сдавать некуда.
+    const canSubmit = (!isLate || !strict) && (!isGroupHw || !!myGid);
+    let groupHtml = '';
+    if (isGroupHw) {
+      if (myGid) {
+        const num = myGid.replace(/^group_/, '');
+        const names = (grp.details && grp.details.members || []).map(m => hwEsc(String(m.fio || '').split(' ')[0] || m.fio)).join(', ');
+        groupHtml = '<div style="background:#eef4ff;border-left:3px solid #4a6fa5;padding:.4rem .7rem;border-radius:4px;margin-bottom:.4rem;font-size:.85rem">'
+          + '👥 <strong>Групповое задание · группа ' + hwEsc(num) + '</strong>' + (names ? ': ' + names : '')
+          + '<div style="font-size:.78rem;color:var(--text2);margin-top:.15rem">Отчёт загружает один участник — он сразу появляется у всей группы. Оценку ставит преподаватель каждому.</div>'
+          + '</div>';
+      } else {
+        groupHtml = '<div style="background:#faeeda;color:#854f0b;padding:.4rem .7rem;border-radius:4px;margin-bottom:.4rem;font-size:.85rem">'
+          + '👥 Групповое задание, но вы не состоите в рабочей группе этого курса. Вступите в группу (раздел «Мои рабочие группы») или напишите преподавателю.</div>';
+      }
+    }
+    // Подпись «кто загрузил» у файла/ссылки групповой сдачи.
+    const byNote = (x) => {
+      if (!isGroupHw) return '';
+      if (x._group) return x.byFio ? ' <span style="font-size:.72rem;color:var(--text3)">· загрузил(а) ' + hwEsc(String(x.byFio).split(' ')[0]) + '</span>' : '';
+      return ' <span style="font-size:.72rem;color:var(--text3)">· личная сдача</span>';
+    };
     let variantHtml = '';
     if (a.mode === 'personal') {
       const idx = (a.assignedVariants || {})[user.uid];
@@ -588,18 +629,20 @@ td{padding:5px 10px;border:1px solid var(--border)}
           }
           return html;
         })()
+      + groupHtml
       + variantHtml
       + commonFilesHtml
-      + (submittedLinks.length ? '<div style="font-size:.85rem;margin-top:.4rem"><span style="color:var(--text2)">Мои ссылки:</span><ul style="list-style:none;padding:0;margin:.2rem 0">' + submittedLinks.map((l,i) =>
+      + (submittedLinks.length ? '<div style="font-size:.85rem;margin-top:.4rem"><span style="color:var(--text2)">' + (isGroupHw ? 'Ссылки группы:' : 'Мои ссылки:') + '</span><ul style="list-style:none;padding:0;margin:.2rem 0">' + submittedLinks.map((l,i) =>
           '<li style="padding:2px 0">'
           + '🔗 <a href="'+l.url+'" target="_blank" style="color:var(--accent3);word-break:break-all">'+hwEsc(l.name || l.url)+'</a>'
+          + byNote(l)
           + (!canSubmit ? '' : ' <button data-rml="'+i+'" title="убрать" style="background:none;border:none;color:#c44;cursor:pointer">×</button>')
           + '</li>'
         ).join('') + '</ul></div>' : '')
-      + (submittedFiles.length ? '<div style="font-size:.82rem;margin-top:.4rem"><span style="color:var(--text2)">Мои файлы:</span> ' + submittedFiles.map((f,i) =>
+      + (submittedFiles.length ? '<div style="font-size:.82rem;margin-top:.4rem"><span style="color:var(--text2)">' + (isGroupHw ? 'Файлы группы:' : 'Мои файлы:') + '</span> ' + submittedFiles.map((f,i) =>
           '<span style="display:inline-block;margin-right:.4rem">'
           + '<button data-dl="'+i+'" style="background:none;border:none;color:var(--accent3);cursor:pointer;padding:0;font-size:.82rem;text-decoration:underline">📎 '+hwEsc(f.name)+'</button>'
-          + (f.uploadedBy ? ' <span style="font-size:.72rem;color:var(--text3)">(загружено преподавателем)</span>' : '')
+          + (f.uploadedBy ? ' <span style="font-size:.72rem;color:var(--text3)">(загружено преподавателем)</span>' : byNote(f))
           + (!canSubmit ? '' : ' <button data-rmf="'+i+'" title="убрать" style="background:none;border:none;color:#c44;cursor:pointer">×</button>')
           + '</span>'
         ).join('') + '</div>' : '')
@@ -633,7 +676,7 @@ td{padding:5px 10px;border:1px solid var(--border)}
             + '<button class="btn btn-primary" data-hw-submit>Добавить</button>'
             + '<span data-hw-status2 style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text3)"></span>'
             + '</div></div>'
-          : '<div style="margin-top:.4rem;font-size:.85rem;color:#c44">Приём закрыт (строгий дедлайн).</div>');
+          : (isGroupHw && !myGid ? '' : '<div style="margin-top:.4rem;font-size:.85rem;color:#c44">Приём закрыт (строгий дедлайн).</div>'));
     // Обработчики: загрузка файлов через Worker
     const stFile = card.querySelector('[data-hw-status]');
     const btnUpload = card.querySelector('[data-hw-upload]');
@@ -647,10 +690,10 @@ td{padding:5px 10px;border:1px solid var(--border)}
           stFile.textContent = 'загрузка ' + (i+1) + '/' + files.length + '…';
           const meta = await CFDHomework.uploadSubmissionFile(a.id, a.courseId, files[i], p => {
             stFile.textContent = 'файл ' + (i+1) + '/' + files.length + ': ' + Math.round(p*100) + '%';
-          });
+          }, myGid || '');
           uploaded.push(meta);
         }
-        const r = await CFDHomework.submit(a.id, a.courseId, uploaded);
+        const r = await CFDHomework.submit(a.id, a.courseId, uploaded, undefined, myGid || '');
         if (!r.ok) throw new Error(r.error);
         stFile.textContent = '✓ загружено';
         setTimeout(renderMyHomework, 500);
@@ -667,7 +710,7 @@ td{padding:5px 10px;border:1px solid var(--border)}
       const name = card.querySelector('[data-hw-name]').value.trim();
       if (!url) { stLink.textContent = 'вставьте ссылку'; return; }
       btnSubmit.disabled = true; stLink.textContent = 'добавляю…';
-      const r = await CFDHomework.addSubmissionLink(a.id, a.courseId, url, name);
+      const r = await CFDHomework.addSubmissionLink(a.id, a.courseId, url, name, myGid || '');
       if (!r.ok) { stLink.textContent = '✗ ' + r.error; btnSubmit.disabled = false; return; }
       stLink.textContent = '✓ добавлено';
       setTimeout(renderMyHomework, 400);
@@ -687,8 +730,9 @@ td{padding:5px 10px;border:1px solid var(--border)}
     card.querySelectorAll('[data-rmf]').forEach(b => {
       b.onclick = async function () {
         const i = parseInt(b.getAttribute('data-rmf'), 10);
-        if (!confirm('Убрать этот файл из сдачи?')) return;
-        const r = await CFDHomework.removeSubmissionFile(a.id, user.uid, submittedFiles[i]);
+        const f = submittedFiles[i];
+        if (!confirm(f._group ? 'Убрать этот файл из сдачи всей группы?' : 'Убрать этот файл из сдачи?')) return;
+        const r = await CFDHomework.removeSubmissionFile(a.id, user.uid, f, f._doc || null);
         if (!r.ok) { alert(r.error); return; }
         renderMyHomework();
       };
@@ -743,8 +787,9 @@ td{padding:5px 10px;border:1px solid var(--border)}
     card.querySelectorAll('[data-rml]').forEach(b => {
       b.onclick = async function () {
         const i = parseInt(b.getAttribute('data-rml'), 10);
-        if (!confirm('Убрать эту ссылку из сдачи?')) return;
-        const r = await CFDHomework.removeSubmissionLink(a.id, user.uid, submittedLinks[i].url);
+        const l = submittedLinks[i];
+        if (!confirm(l._group ? 'Убрать эту ссылку из сдачи всей группы?' : 'Убрать эту ссылку из сдачи?')) return;
+        const r = await CFDHomework.removeSubmissionLink(a.id, user.uid, l.url, l._doc || null);
         if (!r.ok) { alert(r.error); return; }
         renderMyHomework();
       };

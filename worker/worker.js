@@ -21,7 +21,7 @@
 const CACHE_JWKS_TTL_SEC = 3600;
 // Версия кода воркера: видна в GET /health → проверка, что Cloudflare
 // выкатил свежий коммит (Workers Builds деплоит при каждом push в master).
-const WORKER_VERSION = "2026-09-07.5";
+const WORKER_VERSION = "2026-11-10.1";
 
 export default {
   async fetch(request, env, ctx) {
@@ -107,7 +107,16 @@ async function handleUpload(request, env) {
   if (!claims.email_verified) return json({ ok: false, error: "email not verified" }, env, 403);
 
   const uidSlug = claims.user_id || claims.sub;
-  const studentDir = uidSlug + (fio ? "_" + fio : "");
+  // Групповая сдача: файл кладётся в общий каталог группы grp_group_NN,
+  // если загружающий действительно состоит в этой группе курса.
+  const groupId = String(body.groupId || "");
+  let studentDir = uidSlug + (fio ? "_" + fio : "");
+  if (groupId) {
+    if (!/^group_[0-9A-Za-z]+$/.test(groupId)) return json({ ok: false, error: "bad groupId" }, env, 400);
+    const groups = await fetchCourseGroups(uidSlug, env).catch(() => ({}));
+    if (groups[cid] !== groupId) return json({ ok: false, error: "вы не состоите в группе " + groupId + " этого курса" }, env, 403);
+    studentDir = "grp_" + groupId;
+  }
   const path = cid + "/" + aid + "/" + studentDir + "/" + Date.now() + "_" + filename;
 
   // Проверка существования — если да, забираем sha (перезапись)
@@ -788,6 +797,13 @@ async function authorizePath(claims, path, env) {
   const studentDir = parts[2] || "";
   const uid = claims.user_id || claims.sub;
   if (uid && studentDir.startsWith(uid)) return true;
+  // Общий каталог группы: grp_group_NN — доступ членам этой группы курса.
+  if (uid && studentDir.indexOf("grp_") === 0) {
+    try {
+      const groups = await fetchCourseGroups(uid, env);
+      if (groups[parts[0]] === studentDir.slice(4)) return true;
+    } catch (_) {}
+  }
   // Курсовой admin — файлы сдач своего курса (первый сегмент пути = cid).
   return await authorizeAdminForCourse(claims, parts[0], env);
 }
@@ -845,6 +861,33 @@ async function fetchManagedCourses(uid, env) {
   }
   _managedCache.set(uid, { courses: courses, exp: Date.now() + 60 * 1000 });
   return courses;
+}
+
+// users/{uid}.courseGroups → { cid: 'group_NN' }. Кэш 60 с, как у managedCourses.
+const _groupsCache = new Map();
+async function fetchCourseGroups(uid, env) {
+  if (!uid) return {};
+  const hit = _groupsCache.get(uid);
+  if (hit && hit.exp > Date.now()) return hit.groups;
+  if (!env.FIREBASE_ADMIN_SA_JSON || !env.FIREBASE_PROJECT_ID) return {};
+  const sa = JSON.parse(env.FIREBASE_ADMIN_SA_JSON);
+  const accessToken = await getGoogleAccessToken(sa);
+  const resp = await fetch(
+    "https://firestore.googleapis.com/v1/projects/" + env.FIREBASE_PROJECT_ID
+      + "/databases/(default)/documents/users/" + encodeURIComponent(uid),
+    { headers: { Authorization: "Bearer " + accessToken } }
+  );
+  const groups = {};
+  if (resp.ok) {
+    const doc = await resp.json();
+    const f = (doc && doc.fields) || {};
+    const m = (f.courseGroups && f.courseGroups.mapValue && f.courseGroups.mapValue.fields) || {};
+    Object.keys(m).forEach(k => { if (m[k] && m[k].stringValue) groups[k] = m[k].stringValue; });
+  } else if (resp.status !== 404) {
+    throw new Error("firestore users/" + uid + " " + resp.status);
+  }
+  _groupsCache.set(uid, { groups: groups, exp: Date.now() + 60 * 1000 });
+  return groups;
 }
 
 function extractBearer(request) {

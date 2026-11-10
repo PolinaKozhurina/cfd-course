@@ -490,7 +490,30 @@ service cloud.firestore {
             || request.time <= a.deadlineAt;
       }
 
-      allow read: if isAuth() && (isOwnSub() || adminCanManageCourse(resource.data.get('courseId', '')));
+      // Групповая сдача: ключ '{aid}_group_NN' (одна на рабочую группу курса),
+      // поля { assignmentId, courseId, groupId:'group_NN', isGroup:true,
+      //   files[], links[], reviewedFiles[] }. Читают и пишут члены группы —
+      // те, у кого users.courseGroups[courseId] == groupId.
+      function isGroupSub()  { return docId.split('_').size() == 3 && docId.split('_')[1] == 'group'; }
+      function subGroupId()  { return 'group_' + docId.split('_')[2]; }
+      function inSubGroup(cid) {
+        return isAuth() && cid != ''
+          && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && callerDoc().get('courseGroups', {}).get(cid, '') == subGroupId();
+      }
+
+      allow read: if isAuth() && (
+                    isOwnSub()
+                    || (isGroupSub() && (resource == null || inSubGroup(resource.data.get('courseId', ''))))
+                    || adminCanManageCourse(resource.data.get('courseId', '')));
+
+      allow create: if isVerified()
+                    && isGroupSub()
+                    && request.resource.data.assignmentId == subAid()
+                    && request.resource.data.groupId == subGroupId()
+                    && request.resource.data.get('isGroup', false) == true
+                    && inSubGroup(request.resource.data.get('courseId', ''))
+                    && deadlineOk();
 
       allow create: if isVerified()
                     && isOwnSub()
@@ -506,6 +529,14 @@ service cloud.firestore {
          && request.resource.data.uid == request.auth.uid
          && request.resource.data.assignmentId == resource.data.assignmentId
          && request.resource.data.courseId    == resource.data.courseId
+         && deadlineOk())
+        // член группы дозаливает общую сдачу (проверенные файлы не трогает)
+        || (isVerified() && isGroupSub()
+         && inSubGroup(resource.data.get('courseId', ''))
+         && request.resource.data.assignmentId == resource.data.assignmentId
+         && request.resource.data.courseId    == resource.data.courseId
+         && request.resource.data.groupId     == resource.data.groupId
+         && request.resource.data.get('reviewedFiles', []) == resource.data.get('reviewedFiles', [])
          && deadlineOk())
         // admin помечает syncedAt / manualStatus
         || adminCanManageCourse(resource.data.get('courseId', ''));

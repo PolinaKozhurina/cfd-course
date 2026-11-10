@@ -1,119 +1,386 @@
 <!doctype html>
-<html>
+<html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Анализ разностной схемы</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+  MathJax = { chtml: { scale: 1.05 }, options: { enableMenu: false } };
+</script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-chtml.js"></script>
 <style>
-  body { font-family: sans-serif; margin: 20px; }
-  td { padding: 2px; text-align: center; }
-  input { width: 75px; }
+  :root {
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --text: #1d2433;
+    --muted: #6b7489;
+    --line: #e3e7f0;
+    --accent: #4f6bed;
+    --accent-soft: #e8ecfd;
+    --good: #1f9d6b;
+    --bad: #d64545;
+    --shadow: 0 1px 2px rgba(20, 30, 60, .06), 0 6px 20px rgba(20, 30, 60, .06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151c;
+      --card: #1b1f29;
+      --text: #e6e9f0;
+      --muted: #8d95a8;
+      --line: #2c3240;
+      --accent: #7b91ff;
+      --accent-soft: #252c47;
+      --good: #3cc68f;
+      --bad: #ff6b6b;
+      --shadow: none;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 Inter, system-ui, sans-serif;
+  }
+  .page { max-width: 1240px; margin: 0 auto; padding: 28px 16px 60px; }
+  h1 { font-size: 26px; font-weight: 700; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); margin: 0 0 24px; }
+
+  .layout { display: grid; grid-template-columns: 460px 1fr; gap: 20px; align-items: start; }
+  .layout > * { min-width: 0; }
+  @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 18px 20px;
+    margin-bottom: 20px;
+  }
+  .card h2 {
+    font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 12px;
+  }
+  .hint { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+
+  /* --- шаблон --- */
+  svg { width: 100%; height: auto; display: block; user-select: none; }
+  .gridline { stroke: var(--line); stroke-width: 1; }
+  .axis-label { fill: var(--muted); font-size: 12px; }
+  .node { cursor: pointer; }
+  .node .dot { fill: var(--card); stroke: var(--muted); stroke-width: 1.5; transition: all .12s; }
+  .node .hit { fill: transparent; stroke: none; }
+  .node:hover .dot { stroke: var(--accent); stroke-width: 2.5; }
+  .node.on .dot { fill: var(--accent); stroke: var(--accent); }
+  .node.center .dot { stroke-dasharray: 3 2; }
+  .node.on.center .dot { stroke-dasharray: none; }
+  .coef-label { fill: var(--accent); font-size: 11px; font-weight: 600; pointer-events: none; }
+
+  /* --- коэффициенты --- */
+  .coef-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .coef-name { width: 72px; font-size: 14px; }
+  .coef-row input {
+    flex: 1; padding: 7px 10px; font: inherit; color: var(--text);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  }
+  .coef-row input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  .remove { border: none; background: none; color: var(--muted); font-size: 18px; cursor: pointer; }
+  .remove:hover { color: var(--bad); }
+  .empty { color: var(--muted); font-size: 14px; }
+
+  /* --- кнопки --- */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    padding: 6px 12px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer;
+    background: var(--accent-soft); color: var(--accent); border: none;
+  }
+  .chip:hover { filter: brightness(.95); }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn {
+    padding: 10px 18px; border-radius: 10px; font: inherit; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card); color: var(--text);
+  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn:hover { filter: brightness(1.05); }
+  .btn:disabled { opacity: .5; cursor: wait; }
+
+  /* --- статус --- */
+  .status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; margin-top: 12px; }
+  .spinner {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid var(--line); border-top-color: var(--accent);
+    animation: spin .8s linear infinite;
+  }
+  .status.idle .spinner { display: none; }
+  .status.error { color: var(--bad); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* --- результаты --- */
+  .badges { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  @media (max-width: 600px) { .badges { grid-template-columns: 1fr; } }
+  .badge { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .badge .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .badge .value { font-size: 22px; font-weight: 700; margin-top: 2px; }
+  .formula { overflow-x: auto; padding: 4px 0; }
+  .props { width: 100%; border-collapse: collapse; }
+  .props td { padding: 10px 0; border-top: 1px solid var(--line); vertical-align: top; }
+  .props td:first-child { color: var(--muted); padding-right: 16px; width: 55%; }
+  .message { background: var(--accent-soft); color: var(--text); border-radius: 10px; padding: 12px 14px; margin-bottom: 20px; }
+  .placeholder { color: var(--muted); text-align: center; padding: 60px 20px; }
 </style>
 </head>
 <body>
+<div class="page">
+  <h1>Анализ разностной схемы</h1>
+  <p class="subtitle">Уравнение \(u_t + a\,u_x = 0\), число Куранта \(\sigma = a\tau/h\) (в полях пишется как <b>s</b>).
+     Схема: \(\sum c_{k,m}\, y_{j+k}^{\,n+m} = 0\).</p>
 
-<h2>Анализ разностной схемы для u<sub>t</sub> + a u<sub>x</sub> = 0</h2>
-<p>В клетке — коэффициент при y<sub>j+k</sub><sup>n+m</sup>, схема: сумма = 0.
-   Число Куранта — <b>s</b> = aτ/h. Пустая клетка — узла нет.
-   Для МНК в клетку достаточно поставить <b>*</b>.</p>
+  <div class="layout">
+    <!-- ===== левая колонка: ввод ===== -->
+    <div>
+      <div class="card">
+        <h2>Шаблон</h2>
+        <svg id="stencil"></svg>
+        <p class="hint">Щелчок по точке добавляет или убирает узел. Пунктиром отмечен узел \((j, n)\).</p>
+      </div>
 
-<table border="1" id="grid"></table>
-<br>
-<button onclick="runAnalyze()">Анализ схемы</button>
-<button onclick="runMnk()">МНК: подобрать коэффициенты</button>
-<p id="status">Загрузка Python…</p>
-<div id="out"></div>
+      <div class="card">
+        <h2>Коэффициенты</h2>
+        <div id="coefs"></div>
+        <p class="hint">Например <b>s^2-1</b> или <b>-s/2</b>. Для МНК коэффициенты можно не заполнять.</p>
+      </div>
+
+      <div class="card">
+        <h2>Готовые схемы</h2>
+        <div class="chips" id="presets"></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" id="btnAnalyze" onclick="runAnalyze()">Анализ схемы</button>
+        <button class="btn" id="btnMnk" onclick="runMnk()">МНК: подобрать коэффициенты</button>
+        <button class="btn" onclick="clearAll()">Очистить</button>
+      </div>
+      <div class="status" id="status"><div class="spinner"></div><span>Загрузка Python…</span></div>
+    </div>
+
+    <!-- ===== правая колонка: результат ===== -->
+    <div id="result">
+      <div class="card placeholder">Поставьте узлы на шаблоне и нажмите «Анализ схемы» или «МНК».</div>
+    </div>
+  </div>
+</div>
 
 <script>
-// ---------- 1. Таблица шаблона ----------
+// =====================================================================
+// 1. Состояние: выбранные узлы и их коэффициенты  {"k,m": "текст"}
+// =====================================================================
 const XS = [-4, -3, -2, -1, 0, 1, 2, 3, 4];   // сдвиги по x
-const TS = [2, 1, 0, -1, -2];                // слои по времени
+const TS = [2, 1, 0, -1, -2];                // слои по времени (сверху вниз)
+let nodes = {};
 
-function label(base, d) {
+const PRESETS = {
+  'Уголок':          { '0,1': '1', '0,0': 's-1', '-1,0': '-s' },
+  'Лакс–Фридрихс':   { '0,1': '1', '1,0': 's/2-1/2', '-1,0': '-s/2-1/2' },
+  'Лакс–Вендрофф':   { '0,1': '1', '0,0': 's^2-1', '1,0': 's/2-s^2/2', '-1,0': '-s/2-s^2/2' },
+  'Крест':           { '0,1': '1', '0,-1': '-1', '1,0': 's', '-1,0': '-s' },
+  'Кранк–Николсон':  { '0,1': '1', '0,0': '-1', '1,1': 's/4', '-1,1': '-s/4', '1,0': 's/4', '-1,0': '-s/4' },
+  'Центральная явная': { '0,1': '1', '0,0': '-1', '1,0': 's/2', '-1,0': '-s/2' },
+};
+
+function sub(base, d) {               // "j", 1 -> "j+1"
   return d === 0 ? base : base + (d > 0 ? '+' : '') + d;
 }
 
-function buildGrid() {
-  let html = '<tr><td></td>' + XS.map(k => `<td>${label('j', k)}</td>`).join('') + '</tr>';
-  for (const m of TS) {
-    html += `<tr><td>${label('n', m)}</td>`;
-    for (const k of XS) html += `<td><input id="c_${k}_${m}"></td>`;
-    html += '</tr>';
-  }
-  document.getElementById('grid').innerHTML = html;
+// =====================================================================
+// 2. Шаблон на сетке (SVG)
+// =====================================================================
+const STEP = 52, LEFT = 44, TOP = 30;
+
+function drawStencil() {
+  const W = LEFT + STEP * (XS.length - 1) + 30;
+  const H = TOP + STEP * (TS.length - 1) + 36;
+  let svg = '';
+
+  TS.forEach((m, row) => {            // горизонтальные линии — слои
+    const y = TOP + row * STEP;
+    svg += `<line class="gridline" x1="${LEFT}" x2="${W - 30}" y1="${y}" y2="${y}"/>`;
+    svg += `<text class="axis-label" x="6" y="${y + 4}">${sub('n', m)}</text>`;
+  });
+  XS.forEach((k, col) => {            // вертикальные линии — узлы по x
+    const x = LEFT + col * STEP;
+    svg += `<line class="gridline" x1="${x}" x2="${x}" y1="${TOP}" y2="${H - 36}"/>`;
+    svg += `<text class="axis-label" x="${x}" y="${H - 12}" text-anchor="middle">${sub('j', k)}</text>`;
+  });
+
+  TS.forEach((m, row) => XS.forEach((k, col) => {
+    const key = `${k},${m}`, x = LEFT + col * STEP, y = TOP + row * STEP;
+    const on = key in nodes;
+    const cls = 'node' + (on ? ' on' : '') + (k === 0 && m === 0 ? ' center' : '');
+    svg += `<g class="${cls}" onclick="toggleNode('${key}')">
+              <circle class="dot" cx="${x}" cy="${y}" r="${on ? 9 : 6}"/>
+              <circle class="hit" cx="${x}" cy="${y}" r="18"/>
+            </g>`;
+    if (on && nodes[key]) {
+      const text = nodes[key].length > 7 ? nodes[key].slice(0, 6) + '…' : nodes[key];
+      svg += `<text class="coef-label" x="${x}" y="${y - 15}" text-anchor="middle">${escapeHtml(text)}</text>`;
+    }
+  }));
+
+  const el = document.getElementById('stencil');
+  el.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  el.innerHTML = svg;
 }
 
-// заполненные клетки -> {"k,m": "текст"}
-function readGrid() {
-  const cells = {};
-  for (const k of XS) for (const m of TS) {
-    const v = document.getElementById(`c_${k}_${m}`).value.trim();
-    if (v) cells[`${k},${m}`] = v;
-  }
-  return cells;
+function toggleNode(key) {
+  if (key in nodes) delete nodes[key]; else nodes[key] = '';
+  render();
+  if (key in nodes) document.getElementById('in_' + key)?.focus();
 }
 
-// {"k,m": "текст"} -> в клетки
-function writeGrid(cells) {
-  for (const key in cells) {
-    const [k, m] = key.split(',');
-    document.getElementById(`c_${k}_${m}`).value = cells[key];
+// =====================================================================
+// 3. Список коэффициентов
+// =====================================================================
+function drawCoefs() {
+  const keys = Object.keys(nodes).sort((a, b) => {
+    const [ka, ma] = a.split(',').map(Number), [kb, mb] = b.split(',').map(Number);
+    return mb - ma || ka - kb;        // сначала верхний слой, внутри — слева направо
+  });
+  if (keys.length === 0) {
+    document.getElementById('coefs').innerHTML = '<div class="empty">Узлов пока нет.</div>';
+    return;
   }
+  document.getElementById('coefs').innerHTML = keys.map(key => {
+    const [k, m] = key.split(',').map(Number);
+    return `<div class="coef-row">
+              <span class="coef-name">\\(y_{${sub('j', k)}}^{${sub('n', m)}}\\)</span>
+              <input id="in_${key}" value="${escapeHtml(nodes[key])}" placeholder="коэффициент"
+                     oninput="nodes['${key}'] = this.value; drawStencil()">
+              <button class="remove" title="Убрать узел" onclick="toggleNode('${key}')">×</button>
+            </div>`;
+  }).join('');
+  MathJax.typesetPromise?.([document.getElementById('coefs')]);
 }
 
-// ---------- 2. Python в браузере ----------
+function render() {
+  drawStencil();
+  drawCoefs();
+}
+
+function loadPreset(name) {
+  nodes = { ...PRESETS[name] };
+  render();
+}
+
+function clearAll() {
+  nodes = {};
+  render();
+  document.getElementById('result').innerHTML =
+    '<div class="card placeholder">Поставьте узлы на шаблоне и нажмите «Анализ схемы» или «МНК».</div>';
+}
+
+// =====================================================================
+// 4. Python в браузере (Pyodide)
+// =====================================================================
 let py = null;
 
 async function startPython() {
+  setBusy(true, 'Загрузка Python…');
   py = await loadPyodide();
   await py.loadPackage(['sympy', 'numpy']);
-  py.runPython(await (await fetch('core.py')).text());   // ядро расчёта
-  py.runPython(await (await fetch('web.py')).text());    // функции для страницы
-  setStatus('Готово.');
+  py.runPython(await (await fetch('core.py')).text());   // математика
+  py.runPython(await (await fetch('web.py')).text());    // связка со страницей
+  setBusy(false, 'Готово.');
 }
 
-// вызвать функцию из web.py: на вход — ячейки, на выход — JSON
 async function callPython(funcName, cells) {
-  if (!py) { setStatus('Python ещё загружается…'); return null; }
-  setStatus('Считаю…');
+  if (!py) return null;
+  setBusy(true, 'Считаю…');
   await new Promise(r => setTimeout(r, 50));   // дать браузеру обновить надпись
   try {
-    const answer = py.globals.get(funcName)(JSON.stringify(cells));
-    setStatus('Готово.');
-    return JSON.parse(answer);
+    const answer = JSON.parse(py.globals.get(funcName)(JSON.stringify(cells)));
+    setBusy(false, 'Готово.');
+    return answer;
   } catch (e) {
-    setStatus('Ошибка: ' + e.message.split('\n').slice(-2).join(' '));
+    setBusy(false, 'Ошибка: ' + e.message.trim().split('\n').pop(), true);
     return null;
   }
 }
 
-// ---------- 3. Кнопки ----------
+// =====================================================================
+// 5. Кнопки
+// =====================================================================
 async function runAnalyze() {
-  const res = await callPython('analyze_cells', readGrid());
+  const empty = Object.keys(nodes).filter(k => !nodes[k].trim());
+  if (Object.keys(nodes).length === 0) return setBusy(false, 'Поставьте узлы на шаблоне.', true);
+  if (empty.length) return setBusy(false, 'Заполните все коэффициенты или нажмите «МНК».', true);
+  const res = await callPython('analyze_cells', nodes);
   if (res) showResult(res);
 }
 
 async function runMnk() {
-  const res = await callPython('mnk_cells', readGrid());
+  if (Object.keys(nodes).length === 0) return setBusy(false, 'Поставьте узлы на шаблоне.', true);
+  const cells = {};
+  for (const key in nodes) cells[key] = '*';
+  const res = await callPython('mnk_cells', cells);
   if (!res) return;
-  if (res.cells) writeGrid(res.cells);
-  showResult(res.rows);
+  if (res.cells) { nodes = res.cells; render(); }
+  showResult(res);
 }
 
-// ---------- 4. Вывод ----------
-function showResult(rows) {
-  document.getElementById('out').innerHTML =
-    '<hr>' + rows.map(([title, text]) => `<h3>${title}</h3><p>${text}</p>`).join('');
-  MathJax.typeset();
+// =====================================================================
+// 6. Вывод результата
+// =====================================================================
+function showResult(res) {
+  let html = '';
+  if (res.message) html += `<div class="message">${res.message}</div>`;
+
+  const r = res.report;
+  if (r) {
+    html += `
+      <div class="badges">
+        <div class="badge"><div class="label">Порядок на решениях</div><div class="value">${r.order}</div></div>
+        <div class="badge"><div class="label">Ведущая ошибка</div><div class="value">${r.kind}</div></div>
+        <div class="badge"><div class="label">Устойчива при <span style="text-transform:none">σ</span></div>
+          <div class="value" style="color:${r.stability && r.stability.startsWith('[') ? 'var(--good)' : 'var(--bad)'}">
+            ${r.stability ?? '—'}</div></div>
+      </div>
+      <div class="card"><h2>Первое дифференциальное приближение, Г-форма</h2>
+        <div class="formula">\\[ ${r.gamma} \\]</div></div>
+      <div class="card"><h2>Первое дифференциальное приближение, П-форма</h2>
+        <div class="formula">\\[ ${r.pi} \\]</div></div>
+      <div class="card"><h2>Свойства</h2>
+        <table class="props">${r.props.map(([t, v]) => `<tr><td>${t}</td><td>${v}</td></tr>`).join('')}</table>
+        <p class="hint">Устойчивость — спектральный признак, проверен численно для σ ≤ 3 с шагом 0.02.</p></div>`;
+  }
+  const box = document.getElementById('result');
+  box.innerHTML = html;
+  MathJax.typesetPromise([box]);
 }
 
-function setStatus(text) {
-  document.getElementById('status').textContent = text;
+// =====================================================================
+// 7. Мелочи
+// =====================================================================
+function setBusy(busy, text, error = false) {
+  const st = document.getElementById('status');
+  st.className = 'status' + (busy ? '' : ' idle') + (error ? ' error' : '');
+  st.querySelector('span').textContent = text;
+  document.getElementById('btnAnalyze').disabled = busy;
+  document.getElementById('btnMnk').disabled = busy;
 }
 
-buildGrid();
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+document.getElementById('presets').innerHTML =
+  Object.keys(PRESETS).map(name => `<button class="chip" onclick="loadPreset('${name}')">${name}</button>`).join('');
+render();
 startPython();
 </script>
 </body>

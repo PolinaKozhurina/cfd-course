@@ -312,96 +312,6 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
 </section>
 
 <section class="slide">
-  <div class="slide-num">Разбор · Лабораторные 6 и 7</div>
-<h2>Разбор лабораторных 6 и 7</h2>
-<p class="lead">Лабораторная 6 закрыта, лабораторная 7 ещё принимается. Ниже — ошибки, которые встретились в программах. Большинство из них не связаны с численным методом: это ошибки работы с памятью и с плавающей точкой, которые дают неверный ответ без всякого сообщения.</p>
-<table class="cmp big"><thead><tr><th>Тема</th><th>Где</th></tr></thead><tbody>
-<tr><td>размеры массивов и массивы переменной длины</td><td>лабораторная 6, задача 2</td></tr>
-<tr><td>неинициализированные переменные, знак операции</td><td>лабораторная 6, задача 2</td></tr>
-<tr><td><code>abs</code> и <code>std::fabs</code>; накопление шага</td><td>лабораторные 6 и 7</td></tr>
-<tr><td>середина отрезка, оценка Ру́нге и повторные вычисления в адаптивном методе</td><td>лабораторная 7, задача 1</td></tr>
-</tbody></table>
-<p class="bridge">Начнём с памяти.</p>
-</section>
-
-<section class="slide">
-  <div class="slide-num">Разбор · Лабораторная 6, задача 2</div>
-<h2>Размер массива</h2>
-<p class="lead">В задаче \(N\le160\) узлов на грубой сетке, \(4N\le640\) на мелкой, а число шагов по времени \(n=\lceil aTN^2\rceil\) достигает \(4\cdot10^5\).</p>
-<div class="cmp2">
-  <div class="bad"><div class="lbl">Неверная запись</div><pre class="code">int n = time_steps(N, a, T);
-double u_tmp[n];      <span class="cm">// n — число шагов</span>
-...
-double u1[100], u2[100], u4[100];
-transport_run(4*N, a, T, S, u0, u4);</pre><div class="c">Первый массив на стеке занимает до 3 МБ при стеке 1 МБ; во втором при \(N=160\) пишется 640 элементов в буфер на 100.</div></div>
-  <div class="good"><div class="lbl">Верная запись</div><pre class="code">double u_new[640];    <span class="cm">// по числу узлов</span>
-...
-double u1[160], u2[320], u4[640];
-transport_run(4*N, a, T, S, u0, u4);</pre><div class="c">Размер определяется наибольшей сеткой из условия.</div></div>
-</div>
-<div class="rule"><strong>Правило.</strong> Размер массива — число узлов наибольшей сетки, а не число шагов по времени. Массивы переменной длины <code>double u[n]</code> не входят в стандарт C++; выход за границу массива ничем не сообщается и портит соседние данные.</div>
-<p class="bridge">Вторая группа ошибок — в правой части схемы.</p>
-</section>
-
-<section class="slide">
-  <div class="slide-num">Разбор · Лабораторная 6, задача 2</div>
-<h2>Правая часть: инициализация и операция</h2>
-<p class="lead">Правая часть (6.22): \(f_i=-\dfrac ah\sum_jw_ju_{i+s_j}\), индекс берётся по модулю \(N\).</p>
-<div class="cmp2">
-  <div class="bad"><div class="lbl">Неверная запись</div><pre class="code">double h, sum;          <span class="cm">// h не задано</span>
-...
-sum += S.w[j] + u[k];   <span class="cm">// сложение</span>
-f[i] = -a / h * sum;</pre><div class="c">Значение <code>h</code> не определено; вес прибавляется к значению, а не умножается на него.</div></div>
-  <div class="good"><div class="lbl">Верная запись</div><pre class="code">double h = 1.0 / N;
-...
-sum += S.w[j] * u[(i + S.s[j] + N) % N];
-f[i] = -a / h * sum;</pre><div class="c">Слагаемое <code>+ N</code> делает индекс неотрицательным при \(s_j\ge-N\).</div></div>
-</div>
-<div class="rule"><strong>Правило.</strong> Каждую переменную задают при объявлении. Остаток <code>%</code> от отрицательного числа в C++ отрицателен, поэтому к индексу прибавляют \(N\). Сборка с предупреждениями (<code>-Wall</code>) сообщает о неинициализированных переменных.</div>
-<p class="bridge">Следующая пара ошибок связана с числами с плавающей точкой.</p>
-</section>
-
-<section class="slide">
-  <div class="slide-num">Разбор · Лабораторные 6 и 7</div>
-<h2>Модуль числа и узлы сетки</h2>
-<div class="cmp2">
-  <div class="bad"><div class="lbl">Неверная запись</div><pre class="code">double d = abs(u[i] - v[i]);
-...
-double x = a;
-for (int i = 1; i &lt; n; ++i) {
-    x += h;               <span class="cm">// накопление</span>
-    s += f(x);
-}</pre><div class="c">В зависимости от подключённых заголовков <code>abs</code> может оказаться целочисленной и отбросить дробную часть; шаг \(h\) накапливает ошибку округления.</div></div>
-  <div class="good"><div class="lbl">Верная запись</div><pre class="code">double d = std::fabs(u[i] - v[i]);
-...
-for (int i = 1; i &lt; n; ++i)
-    s += f(a + i * h);   <span class="cm">// узел заново</span></pre><div class="c">Ошибка узла \(a+ih\) — одно округление, а не \(i\).</div></div>
-</div>
-<div class="rule"><strong>Правило.</strong> Для чисел с плавающей точкой — <code>std::fabs</code>. Узел сетки вычисляют по формуле \(x_i=a+ih\), а не прибавлением шага: при \(n=10^7\) накопленная ошибка в последнем узле достигает \(10^{-10}\).</div>
-<p class="bridge">Последний слайд разбора — адаптивный метод Си́мпсона.</p>
-</section>
-
-<section class="slide">
-  <div class="slide-num">Разбор · Лабораторная 7, задача 1</div>
-<h2>Адаптивный метод Си́мпсона</h2>
-<div class="cmp2">
-  <div class="bad"><div class="lbl">Неверная запись</div><pre class="code">double S  = simpson(f, a, b, n);
-double Sl = simpson(f, a, (b-a)/2, n);
-double D  = (S + Sl + Sr) / 15;
-...
-double w[3] = {-5.0/9, 8.0/9, 5.0/9};</pre><div class="c">\((b-a)/2\) — половина длины, а не середина; в оценке Ру́нге нужна разность; значения на концах вычисляются заново на каждом уровне; вес Га́усса со знаком минус.</div></div>
-  <div class="good"><div class="lbl">Верная запись</div><pre class="code">double m = 0.5 * (a + b), fm = f(m);
-double l = 0.5 * (a + m), fl = f(l);
-double L = (m - a) / 6 * (fa + 4*fl + fm);
-double D = (L + R - S) / 15;
-...
-const double w[3] = {5.0/9, 8.0/9, 5.0/9};</pre><div class="c">\(f_a,f_m,f_b\) передаются в рекурсию; новые значения — только \(f_l\), \(f_r\).</div></div>
-</div>
-<div class="rule"><strong>Правило.</strong> Середина отрезка — полусумма концов. Оценка ошибки по Ру́нге — разность двух приближений, делённая на \(2^p-1\). Значения функции, уже вычисленные на отрезке, передаются в рекурсию. Все веса формулы Га́усса положительны; на отрезке длины \(h\) они умножаются на \(h/2\).</div>
-<p class="bridge">Теперь — новая тема.</p>
-</section>
-
-<section class="slide">
   <div class="roadmap"><span class="b on" title="Постановка">I. Постановка</span><span class="b " title="Метод">II</span><span class="b " title="Случайные числа">III</span><span class="b " title="Погрешность">IV</span><span class="b " title="Моделирование">V</span><span class="here">§8.0. План занятия</span></div>
 <h2>План занятия</h2>
 <p class="lead">Занятие идёт от интеграла к моделированию: метод строится на задаче о многомерном интеграле, а затем обобщается на любые случайные процессы.</p>
@@ -818,7 +728,7 @@ double uniform() {                           // число из [0, 1)
   <a href="w08.html" class="back" title="К тексту лекции">← к тексту</a>
   <div class="center">
     <button id="btnPrev" onclick="prev()">◀ назад</button>
-    <span class="counter" id="counter">1 / 40</span>
+    <span class="counter" id="counter">1 / 35</span>
     <button id="btnNext" onclick="next()">вперёд ▶</button>
   </div>
   <a href="w08-lab.html" class="back" title="Лабораторная работа">Лаба 8 →</a>

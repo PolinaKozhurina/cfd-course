@@ -417,22 +417,22 @@ const double w[3] = {5.0/9, 8.0/9, 5.0/9};</pre><div class="c">\(f_a,f_m,f_b\) �
 
 <section class="slide">
   <div class="roadmap"><span class="b on" title="Постановка">I. Постановка</span><span class="b " title="Метод">II</span><span class="b " title="Случайные числа">III</span><span class="b " title="Погрешность">IV</span><span class="b " title="Моделирование">V</span><span class="here">§8.0. Постановка</span></div>
-<h2>Постановка: что дано</h2>
-<div class="problem"><b>Дано</b> функция \(f\) на ограниченной области \(D\subset\mathbb R^d\) и программа, вычисляющая \(f(x)\) в любой точке; размерность \(d\) может составлять десятки и сотни.<br><b>Найти</b> приближённое значение \(I=\int_Df\,dx\) и оценку погрешности.</div>
-<p>Составная формула порядка \(p\) на сетке с шагом \(h\) использует \(N=h^{-d}\) значений, поэтому (7.12):</p>
-<div class="eq tight">\[E_{\text{кв}}\sim h^p=N^{-p/d}.\]</div>
-<table class="cmp big tight"><thead><tr><th>\(d\)</th><th>1</th><th>3</th><th>6</th><th>10</th></tr></thead><tbody>
-<tr><td>узлов на ось при \(N=10^6\)</td><td>\(10^6\)</td><td>100</td><td>10</td><td>4</td></tr>
-<tr><td>ошибка трапеций</td><td>\(10^{-12}\)</td><td>\(10^{-4}\)</td><td>\(10^{-2}\)</td><td>\(6\cdot10^{-2}\)</td></tr></tbody></table>
-<p>Путь частицы в веществе состоит из случайного числа отрезков, и вероятность её выхода из слоя есть интеграл, размерность которого вообще не ограничена (§&nbsp;8.6).</p>
-<p class="bridge">Нужен метод, у которого цена точности не растёт с размерностью.</p>
+<h2>Постановка: проклятие размерности</h2>
+<div class="problem"><b>Дано</b> \(f\) на \(D=[0,1]^d\), программа для \(f(x)\); \(d\) — десятки и сотни.<br><b>Найти</b> \(I=\int_Df\,dx\) и оценку погрешности.</div>
+<p>Формула-произведение порядка \(p\): \(N=n^d\) узлов, \(h=N^{-1/d}\); ошибка — сумма \(d\) ошибок по осям (теорема 1):</p>
+<div class="eq tight">\[|E|\le C\,h^p\sum_{k=1}^d\max\Bigl|\frac{\partial^pf}{\partial x_k^p}\Bigr|\le C\,d\,M\,N^{-p/d}\quad\Rightarrow\quad N(\varepsilon)\approx\Bigl(\frac{CdM}{\varepsilon}\Bigr)^{d/p}.\]</div>
+<div class="rule"><strong>Определение 1.</strong> <em>Проклятие размерности</em> — экспоненциальный рост с размерностью \(d\) числа значений \(N(\varepsilon)\), нужного для точности \(\varepsilon\).</div>
+<table class="cmp big tight"><thead><tr><th>\(E\le10^{-3}\), средние точки</th><th>\(d=1\)</th><th>3</th><th>6</th><th>10</th><th>20</th></tr></thead><tbody>
+<tr><td>узлов на ось / значений \(N\)</td><td>7 / 7</td><td>12 / \(1{,}7\cdot10^3\)</td><td>16 / \(1{,}7\cdot10^7\)</td><td>21 / \(1{,}7\cdot10^{13}\)</td><td>29 / \(1{,}8\cdot10^{29}\)</td></tr>
+<tr><td>время при \(10^9\) знач./с</td><td>—</td><td>—</td><td>0,02 с</td><td>4,6 ч</td><td>\(6\cdot10^{12}\) лет</td></tr></tbody></table>
+<p class="bridge">Нужен метод, у которого цена точности не растёт экспоненциально с размерностью.</p>
 </section>
 
 <section class="slide">
   <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Метод">II. Метод</span><span class="b " title="Случайные числа">III</span><span class="b " title="Погрешность">IV</span><span class="b " title="Моделирование">V</span><span class="here">§8.1. Ожидание и дисперсия</span></div>
 <h2>Математическое ожидание и дисперсия</h2>
 <p class="lead">Пусть случайная величина \(X\) со значениями в \(D\) имеет плотность \(p(x)\ge0\), \(\int_Dp\,dx=1\).</p>
-<div class="definition" data-num="1"><em style="color:inherit;font-weight:600">математическое ожидание и дисперсия.</em> Для функции \(g\)
+<div class="definition" data-num="2"><em style="color:inherit;font-weight:600">математическое ожидание и дисперсия.</em> Для функции \(g\)
 \[\mathsf E\,g(X)=\int_Dg(x)\,p(x)\,dx,\tag{8.1}\]
 \[\mathsf D\,g(X)=\mathsf E\bigl(g(X)-\mathsf E\,g(X)\bigr)^2=\mathsf E\,g(X)^2-\bigl(\mathsf E\,g(X)\bigr)^2.\tag{8.2}\]
 Величину \(\sigma=\sqrt{\mathsf D\,g(X)}\) называют среднеквадратичным отклонением.</div>
@@ -445,7 +445,7 @@ const double w[3] = {5.0/9, 8.0/9, 5.0/9};</pre><div class="c">\(f_a,f_m,f_b\) �
 <h2>Интеграл как математическое ожидание</h2>
 <p class="lead">Возьмём \(X\) равномерно распределённой в \(D\): \(p=1/|D|\), где \(|D|\) — объём области. По (8.1)</p>
 <div class="eq tight">\[I=\int_Df\,dx=|D|\,\mathsf E f(X).\tag{8.3}\]</div>
-<div class="definition" data-num="2"><em style="color:inherit;font-weight:600">оценка Монте-Карло.</em> Пусть \(X_1,\ldots,X_N\) — независимые точки, равномерно распределённые в \(D\). Оценкой Монте-Карло интеграла называют
+<div class="definition" data-num="3"><em style="color:inherit;font-weight:600">оценка Монте-Карло.</em> Пусть \(X_1,\ldots,X_N\) — независимые точки, равномерно распределённые в \(D\). Оценкой Монте-Карло интеграла называют
 \[I_N=\frac{|D|}{N}\sum_{i=1}^Nf(X_i).\tag{8.4}\]</div>
 <p>Оценка <em>несмещённая</em>: по линейности ожидания \(\mathsf EI_N=\frac{|D|}N\sum_i\mathsf Ef(X_i)=I\). В среднем по многим повторениям ошибка равна нулю, в отдельном расчёте она случайна.</p>
 <p class="bridge">Посмотрим на метод на рисунке.</p>
@@ -490,7 +490,7 @@ const double w[3] = {5.0/9, 8.0/9, 5.0/9};</pre><div class="c">\(f_a,f_m,f_b\) �
 <section class="slide">
   <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b on" title="Метод">II. Метод</span><span class="b " title="Случайные числа">III</span><span class="b " title="Погрешность">IV</span><span class="b " title="Моделирование">V</span><span class="here">§8.2. Дисперсия оценки</span></div>
 <h2>Дисперсия оценки</h2>
-<div class="theorem" data-num="1"><em style="color:inherit;font-weight:600">дисперсия оценки.</em> Пусть \(\sigma^2=\mathsf Df(X)\) конечна. Тогда
+<div class="theorem" data-num="2"><em style="color:inherit;font-weight:600">дисперсия оценки.</em> Пусть \(\sigma^2=\mathsf Df(X)\) конечна. Тогда
 \[\mathsf DI_N=\frac{|D|^2\sigma^2}{N},\qquad\sqrt{\mathsf E(I_N-I)^2}=\frac{|D|\,\sigma}{\sqrt N}.\tag{8.5}\]</div>
 <p><strong>Доказательство.</strong></p>
 <ol>
@@ -507,7 +507,7 @@ const double w[3] = {5.0/9, 8.0/9, 5.0/9};</pre><div class="c">\(f_a,f_m,f_b\) �
 <h2>Ошибка отдельного расчёта</h2>
 <p class="lead">Гарантированную, но грубую оценку даёт неравенство Чебышёва: для любого \(k>0\)</p>
 <div class="eq tight">\[\mathsf P\Bigl(|I_N-I|\ge k\,\frac{|D|\sigma}{\sqrt N}\Bigr)\le\frac1{k^2}.\tag{8.6}\]</div>
-<div class="theorem" data-num="2"><em style="color:inherit;font-weight:600">центральная предельная теорема.</em> При \(N\to\infty\) распределение величины \(\sqrt N\,(I_N-I)/(|D|\sigma)\) стремится к стандартному нормальному. В частности, при большом \(N\)
+<div class="theorem" data-num="3"><em style="color:inherit;font-weight:600">центральная предельная теорема.</em> При \(N\to\infty\) распределение величины \(\sqrt N\,(I_N-I)/(|D|\sigma)\) стремится к стандартному нормальному. В частности, при большом \(N\)
 \[\mathsf P\Bigl(|I_N-I|<3\,\frac{|D|\sigma}{\sqrt N}\Bigr)\approx0{,}997.\tag{8.7}\]</div>
 <p>Это <em>правило трёх сигм</em>. Неравенство (8.6) при \(k=3\) гарантирует лишь вероятность \(8/9\), зато при любом \(N\).</p>
 <p class="bridge">Остаётся вопрос: откуда взять \(\sigma\)?</p>
@@ -572,7 +572,7 @@ const double w[3] = {5.0/9, 8.0/9, 5.0/9};</pre><div class="c">\(f_a,f_m,f_b\) �
 <h2>Псевдослучайные числа</h2>
 <p class="lead">Компьютер детерминирован: числа получают рекуррентно, \(x_{k+1}=\Phi(x_k)\), \(u_k=x_k/m\in[0,1)\). Начальное значение \(x_0\) называют <em>зерном</em>.</p>
 <p>Требования: равномерность; независимость соседних чисел (пары и тройки равномерно заполняют квадрат и куб); большой период; скорость; воспроизводимость по зерну.</p>
-<div class="definition" data-num="3"><em style="color:inherit;font-weight:600">линейный конгруэнтный генератор.</em> Для целых \(m>0\), \(0\lt a\lt m\), \(0\le c\lt m\)
+<div class="definition" data-num="4"><em style="color:inherit;font-weight:600">линейный конгруэнтный генератор.</em> Для целых \(m>0\), \(0\lt a\lt m\), \(0\le c\lt m\)
 \[x_{k+1}=(a\,x_k+c)\bmod m,\qquad u_k=x_k/m.\tag{8.10}\]
 Период не превосходит \(m\). Пример: \(a=37\), \(c=1\), \(m=256\), \(x_0=1\) дают \(38,127,92,\ldots\) с периодом 256.</div>
 <p class="bridge">Каждая координата распределена равномерно. Посмотрим на пары.</p>
@@ -608,7 +608,7 @@ double uniform() {                           // число из [0, 1)
 <section class="slide">
   <div class="roadmap"><span class="b done" title="Постановка">I</span><span class="b done" title="Метод">II</span><span class="b on" title="Случайные числа">III. Случайные числа</span><span class="b " title="Погрешность">IV</span><span class="b " title="Моделирование">V</span><span class="here">§8.3. Обратная функция</span></div>
 <h2>Метод обратной функции</h2>
-<div class="theorem" data-num="3"><em style="color:inherit;font-weight:600">метод обратной функции.</em> Пусть \(F\) — непрерывная строго возрастающая функция распределения, \(\xi\) равномерно распределена на \((0,1)\). Тогда величина
+<div class="theorem" data-num="4"><em style="color:inherit;font-weight:600">метод обратной функции.</em> Пусть \(F\) — непрерывная строго возрастающая функция распределения, \(\xi\) равномерно распределена на \((0,1)\). Тогда величина
 \[X=F^{-1}(\xi)\tag{8.11}\]
 имеет функцию распределения \(F\).</div>
 <p><strong>Доказательство.</strong> Неравенства \(F^{-1}(\xi)\le x\) и \(\xi\le F(x)\) равносильны, поэтому \(\mathsf P(X\le x)=\mathsf P(\xi\le F(x))=F(x)\). \(\square\)</p>

@@ -165,35 +165,24 @@
         label: "Численные методы",
         semester: "5 семестр · Осень 2026",
         sections: [
-          { title: "Основы и аппроксимация", items: [
-              { href: "nm/w01.html", label: "Зан. 1 Машинная арифметика" },
-              { href: "nm/w02.html", label: "Зан. 2 Ряд Тейлора" }
+          { title: "Основы", items: [
+              { href: "nm/w01.html", label: "§1 Машинная арифметика" },
+              { href: "nm/w02.html", label: "§2 Ряд Тейлора" }
           ]},
-          { title: "Интерполяция", items: [
-              { href: "nm/w03.html", label: "Зан. 3 Полиномы (Лагранж/Ньютон)" },
-              { href: "nm/w04.html", label: "Зан. 4 Чебышёв и сплайны" },
-              { href: "nm/w05.html", label: "Зан. 5 МНК и ортог. базисы" }
+          { title: "Интерполяция и МНК", items: [
+              { href: "nm/w03.html", label: "§3 Полиномиальная интерполяция" },
+              { href: "nm/w04.html", label: "§4 Чебышёв и сплайны" },
+              { href: "nm/w05.html", label: "§5 Метод наименьших квадратов" },
+              { href: "nm/k1-lab.html", label: "Полусеместровое 1 (§1–5)" }
           ]},
           { title: "Дифф., интегрирование, Монте-Карло", items: [
-              { href: "nm/w06.html", label: "Зан. 6 Численное дифференцирование" },
-              { href: "nm/w07.html", label: "Зан. 7 Численное интегрирование" },
-              { href: "nm/w08.html", label: "Зан. 8 Метод Монте-Карло" }
-          ]},
-          { title: "СЛАУ и обусловленность", items: [
-              { href: "nm/w09.html", label: "Зан. 9 Гаусс и LU" },
-              { href: "nm/w10.html", label: "Зан. 10 Холецкий, прогонка" },
-              { href: "nm/w11.html", label: "Зан. 11 Нормы, κ(A)" },
-              { href: "nm/w12.html", label: "Зан. 12 Итерационные методы" }
-          ]},
-          { title: "Собств. числа и оптимизация", items: [
-              { href: "nm/w13.html", label: "Зан. 13 Собств. числа, SVD" },
-              { href: "nm/w14.html", label: "Зан. 14 Нелин. уравнения" },
-              { href: "nm/w15.html", label: "Зан. 15 Оптимизация, ЛП" }
+              { href: "nm/w06.html", label: "§6 Численное дифференцирование" },
+              { href: "nm/w07.html", label: "§7 Численное интегрирование" },
+              { href: "nm/w08.html", label: "§8 Метод Монте-Карло" }
           ]}
         ],
         extras: [
-          { href: "nm/index.html", label: "Обзор курса" },
-          { href: "nm/w16.html", label: "Зачётное занятие" }
+          { href: "nm/index.html", label: "Обзор курса и программа §9–13" }
         ]
       },
       {

@@ -54,6 +54,7 @@ window.CFD_LABS = {
     { id: 'w05', title: 'Лаба 5 · Метод наименьших квадратов', href: 'nm/w05-lab.html', total: 14, pass: 12 },
     { id: 'w06', title: 'Лаба 6 · Разностные формулы и уравнение переноса', href: 'nm/w06-lab.html', total: 2, pass: 2 },
     { id: 'w07', title: 'Лаба 7 · Квадратуры и метод Рунге — Кутты', href: 'nm/w07-lab.html', total: 2, pass: 2 },
+    { id: 'w08', title: 'Лаба 8 · Метод Монте-Карло', href: 'nm/w08-lab.html', total: 2, pass: 2 },
     // standalone: вне цепочки зачётов (не требует зачёта предыдущей и не открывается вместе с ней).
     { id: 'k1', title: 'Полусеместровое задание · §1–§5', href: 'nm/k1-lab.html', total: 3, pass: 2, standalone: true },
   ],

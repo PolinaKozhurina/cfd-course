@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ru" data-course="nm">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="../favicon.ico" type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Лабораторная работа 9 курса «Численные методы»: подключение Eigen, плотные, разреженные и двумерные системы, выбор решателя, разложение один раз, заполнение и переупорядочение.">
+<title>ЧМ · Лаба 9. Готовые решатели: Eigen</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'ams' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+:root{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8;--sidebar-bg:#2b2520;--sidebar-text:#d9cfc0}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.72;color:var(--text);background:var(--bg)}
+.sidebar{position:fixed;left:0;top:38px;bottom:0;width:240px;background:var(--sidebar-bg);color:var(--sidebar-text);padding:1.5rem 1rem;overflow-y:auto;z-index:100;border-right:3px solid var(--accent);font-size:.8rem}
+.sidebar h2{font-family:'Playfair Display',serif;font-size:.85rem;font-weight:700;color:#fff;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.03em}
+.sidebar .g{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--accent);margin:.7rem 0 .15rem;text-transform:uppercase;letter-spacing:.08em}
+.sidebar a{display:block;color:var(--sidebar-text);text-decoration:none;font-size:.76rem;line-height:1.35;padding:.15rem 0 .15rem .5rem;border-left:2px solid transparent;transition:all .15s}
+.sidebar a:hover{color:#fff;border-left-color:var(--accent);background:rgba(180,74,45,.08)}
+.sidebar .sep{height:1px;background:rgba(255,255,255,.07);margin:.4rem 0}
+.main{margin-left:240px;padding:2rem 2.5rem 4rem}
+.main-inner{max-width:960px}
+.lecture-tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;padding:.2rem .5rem;border-radius:3px;display:inline-block;margin-bottom:.5rem;background:#ece9fb;color:#5b54b8}
+.lecture-num{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text3);margin-bottom:.3rem}
+h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;line-height:1.15;margin-bottom:1.5rem;color:var(--text)}
+h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--accent);margin:2rem 0 .8rem;padding-top:.5rem;border-top:1px solid var(--border)}
+h3{font-family:'Source Serif 4',serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:1.5rem 0 .5rem}
+p{margin-bottom:1rem;text-align:justify;hyphens:auto}
+ul,ol{margin:.5rem 0 1rem 1.5rem}
+li{margin:.3rem 0}
+.eq{margin:1.5rem 0;text-align:center;max-width:100%;overflow-x:auto;overflow-y:hidden}
+code{font-family:'JetBrains Mono',monospace;background:var(--bg2);padding:1px 5px;border-radius:3px;font-size:.9em}
+.definition,.condition,.theorem{position:relative;padding:1rem 1.2rem 1rem 3rem;border-radius:6px;margin:1.2rem 0;border:none;overflow:hidden;min-height:10.5rem}
+.definition{background:#e7efe8}
+.condition{background:#f2e5d6}
+.theorem{background:#e0e8f2}
+.definition strong,.condition strong,.theorem strong{color:var(--text)}
+.definition::before,.condition::before,.theorem::before{position:absolute;left:0;top:0;bottom:0;width:2rem;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase}
+.definition::before{background:#d0dfd4;color:#3d6b5a;content:'Определение'}
+.definition[data-num]::before{content:'Определение ' attr(data-num)}
+.condition::before{background:#e5d1b8;color:#8a5236;content:'Условие'}
+.condition[data-num]::before{content:'Условие ' attr(data-num)}
+.theorem::before{background:#c8d5e6;color:#4a5f88;content:'Теорема'}
+.theorem[data-num]::before{content:'Теорема ' attr(data-num)}
+@media(max-width:700px){.definition,.condition,.theorem{padding-left:2.4rem}.definition::before,.condition::before,.theorem::before{width:1.7rem;font-size:.55rem;letter-spacing:.16em}}
+.definition .mini-ex,.condition .mini-ex,.theorem .mini-ex{margin-top:.8rem;padding-top:.55rem;border-top:1px dashed rgba(44,36,25,.25);font-size:.93em}
+.mini-ex b{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--text2);margin-right:.45rem}
+html.dark .definition .mini-ex,html.dark .condition .mini-ex,html.dark .theorem .mini-ex{border-top-color:rgba(236,227,214,.25)}
+.example{background:#e0e8f2;border-left:3px solid #7d95bd;padding:.7rem 1rem;border-radius:0 6px 6px 0;margin:.4rem 0 1.2rem;font-size:.94em;color:var(--text)}
+.example .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#4a5f88;margin-bottom:.35rem}
+.example .lbl mjx-container{text-transform:none;letter-spacing:0}
+.example ul{margin:.2rem 0 0 1.2rem}
+.example li{margin-bottom:.2rem}
+.example.task{background:#f3efe4;border-left-color:#c9a23a}
+.example.task .lbl{color:#8a6a12}
+.example.task .sol{display:block;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);margin:.6rem 0 .2rem}
+.remark{background:#f0f7f4;border-left:3px solid var(--accent2);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:.95rem}
+.remark strong{color:var(--accent2)}
+.warning{background:#fbeee7;border-left:3px solid var(--accent);padding:.8rem 1.2rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:.95rem}
+.warning strong{color:var(--accent)}
+.algo{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.2rem 1.5rem;margin:1.2rem 0}
+.algo ol{margin:.5rem 0 0 1.2rem;font-size:.95rem}
+.algo li{margin:.4rem 0}
+details.proof{background:var(--bg2);border:1px dashed var(--border);border-radius:6px;padding:.5rem 1rem;margin:.8rem 0;font-size:.95rem}
+details.proof summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2)}
+details.proof[open] summary{margin-bottom:.5rem}
+.passport{background:#fff;border:1px solid var(--border);border-left:4px solid var(--accent3);border-radius:0 8px 8px 0;padding:.9rem 1.2rem;margin:1.2rem 0;font-size:.93rem}
+.passport .ttl{font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent3);margin-bottom:.5rem}
+.passport .row{display:grid;grid-template-columns:9.5em 1fr;gap:.6rem;padding:.3rem 0;border-top:1px solid var(--bg3)}
+.passport .row b{color:var(--text2);font-weight:600}
+.passport .good b{color:var(--accent2)}.passport .bad b{color:var(--accent)}
+@media(max-width:700px){.passport .row{grid-template-columns:1fr;gap:.15rem}}
+.figure{margin:1.5rem auto;text-align:center}
+.figure svg{max-width:100%;height:auto}
+.figure .caption{font-size:.82rem;color:var(--text2);margin-top:.5rem;font-style:italic}
+.intbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1.4rem 0}
+.intbox label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text2)}
+.intbox select,.intbox input[type=range],.intbox input[type=number]{font-family:'JetBrains Mono',monospace}
+.intbox select,.intbox input[type=number]{background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:.82rem}
+.intbox canvas{max-width:100%;height:auto;background:#fdf9f3;border-radius:6px;border:1px solid var(--border)}
+.labcta{background:linear-gradient(135deg,#e0e8f2 0%,#e7efe8 100%);border-radius:8px;padding:1rem 1.2rem;margin:1.4rem 0;display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
+.labcta .badge{font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;background:#4a5f88;color:#fff;padding:.35rem .7rem;border-radius:4px;flex:0 0 auto}
+.labcta .text{flex:1;min-width:220px;font-size:.92rem;color:var(--text)}
+.labcta .go{font-family:'JetBrains Mono',monospace;font-size:.78rem;background:var(--accent);color:#fff;padding:.45rem .95rem;border-radius:5px;text-decoration:none;white-space:nowrap;transition:all .15s}
+.labcta .go:hover{background:#8f3a24;transform:translateY(-1px)}
+.lecture-nav{display:flex;justify-content:space-between;gap:1rem;margin-top:3rem;padding-top:1.5rem;border-top:2px solid var(--border);flex-wrap:wrap}
+.lecture-nav a{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent);text-decoration:none;padding:.5rem .8rem;border:1px solid var(--border);border-radius:6px;transition:all .15s;max-width:48%}
+.lecture-nav a:hover{border-color:var(--accent);background:rgba(180,74,45,.05)}
+.nav-prev{text-align:left}.nav-next{text-align:right;margin-left:auto}
+table.dd{border-collapse:collapse;font-size:.9rem;font-family:'JetBrains Mono',monospace}
+table.dd th,table.dd td{padding:.3rem .8rem;border:1px solid var(--border);vertical-align:middle;text-align:center}
+table.dd th{background:var(--bg2);font-weight:500}
+table.dd td.e{border:none;padding:0;height:1.1rem}
+table.dd td[rowspan]{height:2.2rem}
+table.dd .c0{background:#e7efe8}table.dd .c1{background:#e0e8f2}table.dd .c2{background:#f2e5d6}table.dd .c3{background:#fbeee7}
+table.dd td.diag{box-shadow:inset 0 0 0 2px #b8552e;font-weight:600}
+table.cmp{border-collapse:collapse;min-width:520px;font-size:.9rem}
+table.cmp th{text-align:left;padding:.4rem .8rem;border-bottom:2px solid var(--border);background:var(--bg2)}
+table.cmp td{padding:.35rem .8rem;border-bottom:1px solid var(--border)}
+@media(max-width:1000px){.sidebar{display:none}.main{margin-left:0;padding:1.5rem}.comments-wrap{margin-left:0 !important;padding:0 1.5rem 2rem}}
+@media(max-width:720px){body{font-size:16px}h1{font-size:1.55rem}h2{font-size:1.15rem}.main{padding:1.2rem 1rem 3rem;overflow-x:clip}.main-inner [style*="grid-template-columns"]{grid-template-columns:1fr !important}.main-inner *{min-width:0}.main canvas,.main svg{max-width:100%;height:auto}.eq{max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}mjx-container[display="true"]{max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}mjx-container:not([display="true"]){display:inline-block !important;max-width:100%;overflow-x:auto;overflow-y:hidden;vertical-align:-0.3em}}
+.comments-wrap{margin-left:240px;max-width:calc(960px + 5rem);padding:0 2.5rem 2rem}
+#comments-section{max-width:960px}
+html.dark{--bg:#1b1712;--bg2:#231e18;--bg3:#2c261f;--text:#ece3d6;--text2:#bcb0a0;--text3:#8d8173;--accent:#e07a52;--accent2:#46b89c;--accent3:#82a0db;--border:#39322a;--sidebar-bg:#14100c;--sidebar-text:#cabfae}
+html.dark .definition{background:#1e2a24;color:var(--text)}
+html.dark .condition{background:#2a2118;color:var(--text)}
+html.dark .theorem{background:#1a2130;color:var(--text)}
+html.dark .example{background:#1a2130;color:var(--text);border-left-color:#4a5f88}
+html.dark .example .lbl{color:#82a0db}
+html.dark .example.task{background:#2a2416;border-left-color:#c9a23a}
+html.dark .example.task .lbl{color:#e5cd8c}
+html.dark .definition::before{background:#20362d;color:#8fc4ac}
+html.dark .condition::before{background:#3a2a1a;color:#d3a874}
+html.dark .theorem::before{background:#26314a;color:#9fb6dd}
+html.dark .remark{background:#152420}
+html.dark .warning{background:#2a1a13}
+html.dark .algo,html.dark .intbox{background:#231e18}
+html.dark details.proof{background:#231e18}
+html.dark .passport{background:#1e1a15}
+html.dark .figure{background:#f6f1e8;border:1px solid #e2d8c8;border-radius:8px;padding:.7rem .5rem}
+html.dark .figure svg{--bg:#faf8f4;--bg2:#f5f0e8;--bg3:#ede6da;--text:#2c2419;--text2:#6b5d4f;--text3:#9a8d7e;--accent:#b44a2d;--accent2:#1a6b5a;--accent3:#3a5ba0;--border:#d9cfc0;--code-bg:#2b2520;--code-text:#f0e6d8}
+html.dark .figure .caption{color:#6b5d4f}
+html.dark .intbox canvas{background:#f6f1e8}
+html.dark table.dd .c0{background:#1e2a24}html.dark table.dd .c1{background:#1a2130}html.dark table.dd .c2{background:#2a2118}html.dark table.dd .c3{background:#2a1a13}
+@media print{html,html.dark{--bg:#fff;--bg2:#f6f6f4;--bg3:#ececec;--text:#000;--text2:#333;--text3:#555;--accent:#9c3a20;--accent2:#155f50;--accent3:#2f4d8a;--border:#ccc}#cfd-nav,.sidebar,.lecture-nav,.comments-wrap,.intbox,.labcta{display:none !important}body{background:#fff;font-size:11pt;padding-top:0 !important}.main{margin-left:0 !important;padding:0 1rem !important}h1,h2,h3{break-after:avoid;page-break-after:avoid;color:#000}.figure,.theorem,.definition,.condition,.example,.remark,.warning,.algo,.eq,table{break-inside:avoid;page-break-inside:avoid}a{color:#000;text-decoration:none}}
+
+.problem{border-left:4px solid var(--accent3,#3a5ba0);background:rgba(58,91,160,.07);padding:.7rem 1.1rem;border-radius:0 6px 6px 0;margin:.9rem 0;line-height:1.6}
+.problem b{font-family:"JetBrains Mono",monospace;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent3,#3a5ba0);display:inline-block;min-width:5.2em;margin-right:.3rem}
+html.dark .problem{background:rgba(143,168,224,.10);border-left-color:#8fa8e0}html.dark .problem b{color:#8fa8e0}
+code,pre,pre *{font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
+</style>
+<style>.step{color:#b44a2d}html.dark .step{color:#e07a52}</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<nav class="sidebar">
+  <h2>Лаба 9. Eigen</h2>
+  <div class="g">Содержание</div>
+  <a href="#setup">0. Установка</a>
+  <a href="#t1">1. Плотные системы</a>
+  <a href="#t2">2. Неявная схема</a>
+  <a href="#t3">3. Двумерная задача</a>
+  <a href="#var">Варианты</a>
+  <a href="#crit">Критерий сдачи</a>
+  <div class="sep"></div>
+  <div class="g">Навигация</div>
+  <a href="w09.html">← §9. Текст лекции</a>
+  <a href="w09-slides.html">▶ Слайды</a>
+  <a href="index.html">→ Программа курса</a>
+</nav>
+
+<div class="main">
+<div class="main-inner">
+
+<span class="lecture-tag">Численные методы</span>
+<div class="lecture-num">Лабораторная работа 9 · к §9</div>
+<h1>Готовые решатели: Eigen</h1>
+
+<p>Работа выполняется на своём компьютере, а не в браузере: цель — научиться подключать готовую библиотеку и выбирать решатель по свойствам матрицы (§&nbsp;9.6). Сами решатели писать не нужно. Используется библиотека Eigen (§&nbsp;9.7); программы на C++ собираются с оптимизацией.</p>
+
+<div class="problem"><b>Сдать</b> отчёт (PDF) с таблицами и ответами на вопросы и файлы программ <code>.cpp</code> — в профиле, раздел «Домашние задания», работа «Лаба 9».<br><b>Можно</b> любые классы Eigen, стандартную библиотеку C++ (<code>&lt;vector&gt;</code>, <code>&lt;chrono&gt;</code> и т.&nbsp;д.), SciPy — для проверки.<br><b>Нельзя</b> писать собственные разложения: цель работы — пользоваться библиотекой.</div>
+
+<!-- =============================================================== -->
+<h2 id="setup">0. Установка и проверка</h2>
+
+<p>Установите Eigen 3.4 одним из способов из таблицы §&nbsp;9.7 (проще всего — скачать архив с <code>eigen.tuxfamily.org</code> и распаковать). Нужен компилятор C++: на Windows — MSYS2 (<code>pacman -S mingw-w64-ucrt-x86_64-gcc</code>) или Visual Studio, на Linux и macOS — системный <code>g++</code> или <code>clang++</code>. Соберите и запустите проверочную программу:</p>
+
+<div class="algo"><pre style="font-family:'JetBrains Mono',monospace;font-size:.85rem;white-space:pre-wrap;margin:0;font-variant-ligatures:none">#include &lt;iostream&gt;
+#include &lt;Eigen/Dense&gt;
+
+int main() {
+    std::cout &lt;&lt; "Eigen " &lt;&lt; EIGEN_WORLD_VERSION &lt;&lt; "." &lt;&lt; EIGEN_MAJOR_VERSION
+              &lt;&lt; "." &lt;&lt; EIGEN_MINOR_VERSION &lt;&lt; "\n";
+    Eigen::Matrix3d A;
+    A &lt;&lt; 2, 1, 1,
+         4, 3, 3,
+         8, 7, 9;
+    Eigen::Vector3d b(4, 10, 24);
+    Eigen::Vector3d x = A.partialPivLu().solve(b);
+    std::cout &lt;&lt; "x = " &lt;&lt; x.transpose() &lt;&lt; "\n";   // 1 1 1
+}</pre></div>
+
+<div class="algo"><pre style="font-family:'JetBrains Mono',monospace;font-size:.85rem;white-space:pre-wrap;margin:0;font-variant-ligatures:none">g++ -O2 -DNDEBUG -I путь/к/eigen-3.4.0 check.cpp -o check
+./check</pre></div>
+
+<p>Программа должна вывести версию Eigen и решение \(x=(1,1,1)\). Если компилятор сообщает <code>Eigen/Dense: No such file or directory</code>, путь после <code>-I</code> указан неверно: это должна быть папка, внутри которой лежит папка <code>Eigen</code>. Пользователи CMake берут файл <code>CMakeLists.txt</code> из §&nbsp;9.7.</p>
+
+<p>Время во всех заданиях измеряйте так:</p>
+
+<div class="algo"><pre style="font-family:'JetBrains Mono',monospace;font-size:.85rem;white-space:pre-wrap;margin:0;font-variant-ligatures:none">#include &lt;chrono&gt;
+auto t0 = std::chrono::steady_clock::now();
+/* ... измеряемый фрагмент ... */
+double sec = std::chrono::duration&lt;double&gt;(std::chrono::steady_clock::now() - t0).count();</pre></div>
+
+<!-- =============================================================== -->
+<h2 id="t1">Задание 1. Плотные системы и ключи компиляции</h2>
+
+<div class="problem"><b>Дано</b> случайная матрица \(A\) (<code>MatrixXd::Random(n, n)</code>) и вектор \(b\) (<code>VectorXd::Random(n)</code>), \(n=500,\ 1000,\ 2000\).<br><b>Найти</b> время решения \(Ax=b\) разными способами и проверить оценки стоимости §&nbsp;9.1–9.3.</div>
+
+<ol>
+<li>Для каждого \(n\) измерьте отдельно время LU-разложения (<code>PartialPivLU</code>) и время одного <code>solve</code> по готовому разложению; время решения через <code>A.inverse() * b</code>; время разложения Холецкого (<code>LLT</code>) симметричной положительно определённой матрицы \(S=A^{\mathsf T}A+nI\). Для каждого способа вычислите относительную невязку \(\|Ax-b\|/\|b\|\).</li>
+<li>Соберите ту же программу с <code>-O0</code> и с <code>-O2 -DNDEBUG</code> и сравните время LU при \(n=1000\).</li>
+</ol>
+
+<p><strong>В отчёте.</strong> Таблица времён и невязок. Во сколько раз растёт время разложения при удвоении \(n\) и согласуется ли это с оценкой \(\tfrac23n^3\)? Во сколько раз разложение дороже одного <code>solve</code> и почему — сравните с \(\tfrac23n^3\) и \(2n^2\). Во сколько раз <code>LLT</code> быстрее <code>PartialPivLU</code> и почему его нельзя применить к самой \(A\)? Что покажет <code>info()</code>, если всё же применить? Во сколько раз <code>-O2</code> быстрее <code>-O0</code>?</p>
+
+<!-- =============================================================== -->
+<h2 id="t2">Задание 2. Неявная схема: разложение один раз</h2>
+
+<div class="problem"><b>Дано</b> уравнение теплопроводности \(u_t=u_{xx}\) на \([0,1]\), \(u(0,t)=u(1,t)=0\), \(u(x,0)=\sin\pi x\); точное решение \(u=e^{-\pi^2t}\sin\pi x\). Неявная схема примера A §&nbsp;9.0 с \(n\) внутренними узлами, \(h=1/(n+1)\), \(\tau=\sigma h^2\); значения \(n\) и \(\sigma\) — по варианту.<br><b>Найти</b> решение при \(t=T=0{,}05\) (число шагов \(T/\tau\), округлённое до целого) и сравнить способы решения систем на шагах.</div>
+
+<ol>
+<li>Соберите матрицу схемы как <code>SparseMatrix&lt;double&gt;</code> из троек. Выберите решатель по таблице §&nbsp;9.6 и обоснуйте выбор.</li>
+<li><strong>Способ А:</strong> разложение один раз до цикла, в цикле только <code>solve</code>.</li>
+<li><strong>Способ Б:</strong> новый объект решателя и новое разложение на каждом шаге.</li>
+<li><strong>Способ В:</strong> та же матрица как плотная <code>MatrixXd</code>, <code>PartialPivLU</code> один раз до цикла.</li>
+<li>Для способа А найдите ошибку \(\max_i|y_i-u(x_i,T)|\). Повторите расчёт с вдвое меньшими \(h\) и \(\tau\) (то есть \(n\to2n+1\), \(\sigma\to\sigma/2\)) и оцените, во сколько раз уменьшилась ошибка.</li>
+</ol>
+
+<p><strong>В отчёте.</strong> Таблица: число шагов, время способов А, Б, В, ошибка. Объясните, почему А быстрее Б и почему В медленнее А, хотя разложение в обоих выполнено один раз (сравните число операций одного <code>solve</code> для трёхдиагональной и плотной матрицы). Сколько памяти занимала бы плотная матрица при \(n=10^5\)? Какой порядок точности по \(h\) показывает опыт с уменьшением шагов и согласуется ли он со схемой (порядок \(\tau+h^2\))?</p>
+
+<!-- =============================================================== -->
+<h2 id="t3">Задание 3. Двумерная задача: заполнение и переупорядочение</h2>
+
+<div class="problem"><b>Дано</b> уравнение Пуассона \(-\Delta u=f\) в квадрате \([0,1]^2\), \(u=0\) на границе; точное решение \(u=\sin(a\pi x)\sin(b\pi y)\), \(f=(a^2+b^2)\pi^2u\); \(a\), \(b\) — по варианту. Пятиточечная схема на сетке \(m\times m\) внутренних узлов, \(h=1/(m+1)\), номер узла \(k=i\cdot m+j\).<br><b>Найти</b> решение для \(m=50,\ 100,\ 200,\ 400\) и сравнить решатели.</div>
+
+<ol>
+<li>Соберите матрицу из троек (в строке узла: \(4/h^2\) на диагонали, \(-1/h^2\) для каждого из соседей, лежащих внутри квадрата).</li>
+<li>Решите систему тремя решателями: <code>SimplicialLLT&lt;SparseMatrix&lt;double&gt;, Lower, NaturalOrdering&lt;int&gt;&gt;</code> (без переупорядочения), <code>SimplicialLLT&lt;SparseMatrix&lt;double&gt;&gt;</code> (по умолчанию — переупорядочение AMD) и <code>SparseLU&lt;SparseMatrix&lt;double&gt;&gt;</code>.</li>
+<li>Для двух вариантов Холецкого выведите число ненулевых элементов множителя: <code>SparseMatrix&lt;double&gt;(solver.matrixL()).nonZeros()</code>.</li>
+<li>Для каждого \(m\) вычислите относительную невязку и ошибку \(\max_k|y_k-u_k|\).</li>
+</ol>
+
+<p><strong>В отчёте.</strong> Таблица: \(m\), \(n\), число ненулевых в \(A\), в \(L\) без переупорядочения и с ним, время трёх решателей, невязка, ошибка. Как растёт число ненулевых в \(L\) без переупорядочения при удвоении \(m\) и почему (рис.&nbsp;10 §&nbsp;9.4)? Во сколько раз переупорядочение уменьшает время при \(m=400\)? Почему <code>SimplicialLLT</code> быстрее <code>SparseLU</code> для этой матрицы? Невязка мала при всех \(m\) — значит ли это, что ошибка тоже мала? От чего зависит ошибка при больших \(m\)?</p>
+
+<!-- =============================================================== -->
+<h2 id="var">Варианты</h2>
+
+<p>Номер варианта — номер в списке группы.</p>
+
+<div style="overflow-x:auto;margin:.4rem 0 1rem">
+<table class="cmp">
+<thead><tr><th>Вариант</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th></tr></thead>
+<tbody>
+<tr><td>задание 2: \(n\)</td><td>499</td><td>499</td><td>499</td><td>999</td><td>999</td><td>999</td><td>799</td><td>799</td><td>799</td><td>599</td><td>599</td><td>599</td></tr>
+<tr><td>задание 2: \(\sigma\)</td><td>4</td><td>10</td><td>20</td><td>4</td><td>10</td><td>20</td><td>2</td><td>8</td><td>16</td><td>6</td><td>12</td><td>30</td></tr>
+<tr><td>задание 3: \(a\)</td><td>1</td><td>1</td><td>2</td><td>1</td><td>2</td><td>3</td><td>1</td><td>2</td><td>1</td><td>3</td><td>2</td><td>1</td></tr>
+<tr><td>задание 3: \(b\)</td><td>1</td><td>2</td><td>1</td><td>3</td><td>2</td><td>1</td><td>4</td><td>3</td><td>2</td><td>2</td><td>4</td><td>5</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="crit">Критерий сдачи</h2>
+
+<p>Все три программы собираются с оптимизацией и печатают таблицы из заданий; в отчёте — таблицы и ответы на вопросы с опорой на формулы и рисунки §&nbsp;9. При защите нужно показать, как программа собирается, и объяснить выбор решателя в заданиях 2 и 3.</p>
+
+<div class="lecture-nav">
+  <a href="w09.html" class="nav-prev">← §9. Прямые методы</a>
+  <a href="index.html" class="nav-next">Программа курса →</a>
+</div>
+
+</div>
+</div>
+
+<div class="comments-wrap">
+<div id="comments-section" style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid #d9cfc0">
+<h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#b44a2d;margin-bottom:.8rem">Комментарии</h2>
+<div id="comments-list"><p style="color:#9a8d7e;font-size:.85rem;font-style:italic">Пока нет комментариев</p></div>
+<div id="comment-form" style="display:none;margin-top:.8rem">
+<textarea id="comment-text" rows="3" placeholder="Напишите комментарий..." style="width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:.9rem;padding:8px 12px;border:1px solid #d9cfc0;border-radius:6px;background:#fff;color:#2c2419;resize:vertical"></textarea>
+<button onclick="window._postComment()" style="margin-top:.4rem;background:#b44a2d;color:#fff;border:none;padding:6px 18px;border-radius:5px;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer">Отправить</button>
+</div>
+<div id="comment-login"><p style="font-size:.85rem;color:#9a8d7e">Войдите и дождитесь подтверждения профиля, чтобы оставлять комментарии.</p></div>
+</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/comments.js"></script>
+<script src="../js/glossary.js"></script>
+</body>
+</html>

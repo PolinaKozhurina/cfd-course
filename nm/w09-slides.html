@@ -563,6 +563,15 @@ pre.code{background:#2b2520;color:#f0e6d8;padding:.7rem .9rem;border-radius:6px;
 </section>
 
 <section class="slide">
+  <div class="roadmap"><span class="b done" title="Матрицы">I</span><span class="b done" title="Решатели">II</span><span class="b on" title="Разреженные">III. Разреженные</span><span class="b " title="Проверка и выбор">IV</span><span class="b " title="Пакеты">V</span><span class="here">§9.4. Предобуславливание</span></div>
+<h2>Предобуславливание и прямой решатель</h2>
+<p class="lead">В прямом разреженном решателе предобуславливания нет: он не делает итераций, и ускорять в нём нечего. Переупорядочение в фазе анализа меняет только нумерацию неизвестных и уменьшает заполнение, не меняя ни решения, ни обусловленности.</p>
+<p><em>Предобуславливатель</em> — понятие итерационных методов (§&nbsp;10): это легко применяемая матрица \(M\approx A^{-1}\), с которой итерационный метод решает систему \(MAx=Mb\) за меньшее число итераций.</p>
+<p>Самый распространённый предобуславливатель строят разложением этого параграфа, но <em>неполным</em>: в ILU и неполном Холецком заполнение отбрасывают, оставляя элементы только на шаблоне \(A\). Полное разложение — идеальный предобуславливатель, с которым итерационный метод сходится за одну итерацию. Поэтому в PETSc прямой решатель задаётся как предобуславливатель <code>-pc_type lu</code> при методе <code>-ksp_type preonly</code>, то есть без итераций.</p>
+<p class="bridge">Какие разреженные прямые решатели есть в библиотеках?</p>
+</section>
+
+<section class="slide">
   <div class="roadmap"><span class="b done" title="Матрицы">I</span><span class="b done" title="Решатели">II</span><span class="b on" title="Разреженные">III. Разреженные</span><span class="b " title="Проверка и выбор">IV</span><span class="b " title="Пакеты">V</span><span class="here">§9.4. Разреженные решатели</span></div>
 <h2>Разреженные прямые решатели</h2>
 <p class="lead">Разреженные решатели — сложные программы, которые пишут специалисты; ими пользуются как готовыми библиотеками.</p>
@@ -767,7 +776,7 @@ x = F.solve(b)</pre>
 <h2>Большие задачи: PARDISO, MUMPS, PETSc</h2>
 <p><strong>PARDISO</strong> — разреженный прямой решатель, который использует все ядра одного компьютера. Он входит в бесплатную библиотеку Intel oneMKL; из Eigen его вызывают классами <code>PardisoLU</code> и <code>PardisoLLT</code>, из Python — пакетом <code>pypardiso</code>.</p>
 <p><strong>MUMPS</strong> — разреженный прямой решатель для кластеров, работающий через MPI; он решает несимметричные, симметричные и седловые системы. Обычно его подключают через PETSc.</p>
-<p><strong>PETSc</strong> — среда для больших систем на кластерах: распределённые матрицы, итерационные методы и внешние прямые решатели. На ней построены FEniCS и Firedrake. Решатель в PETSc выбирают ключами запуска, а не в коде:</p>
+<p><strong>PETSc</strong> — среда для больших систем на кластерах: распределённые матрицы, итерационные методы и внешние прямые решатели; на ней построены FEniCS и Firedrake. Решатель выбирают ключами запуска: <code>-ksp_type</code> задаёт итерационный метод, <code>-pc_type</code> — предобуславливатель.</p>
 <pre class="code">./configure --download-mumps --download-scalapack --download-metis --download-parmetis
 mpiexec -n 8 ./prog -ksp_type preonly -pc_type lu -pc_factor_mat_solver_type mumps
 mpiexec -n 8 ./prog -ksp_type cg -pc_type gamg          # итерационный, §10</pre>
@@ -790,7 +799,7 @@ mpiexec -n 8 ./prog -ksp_type cg -pc_type gamg          # итерационны
   <a href="w09.html" class="back" title="К тексту лекции">← к тексту</a>
   <div class="center">
     <button id="btnPrev" onclick="prev()">◀ назад</button>
-    <span class="counter" id="counter">1 / 36</span>
+    <span class="counter" id="counter">1 / 37</span>
     <button id="btnNext" onclick="next()">вперёд ▶</button>
   </div>
   <a href="w09-lab.html" class="back" title="Лабораторная работа">Лаба 9 →</a>

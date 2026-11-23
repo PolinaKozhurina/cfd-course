@@ -66,5 +66,6 @@ window.CFD_QUIZZES = {
   nm: [
     { id: 't01', title: 'Тест 1 · Машинная арифметика, ряды, интерполяция (§1–§4)', href: 'nm/test.html?id=t01' },
     { id: 't02', title: 'Тест 2 · Метод наименьших квадратов (§5)', href: 'nm/test.html?id=t02' },
+    { id: 't03', title: 'Тест 3 · Системы линейных уравнений (§9)', href: 'nm/test.html?id=t03' },
   ],
 };

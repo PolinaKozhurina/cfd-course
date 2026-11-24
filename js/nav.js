@@ -107,28 +107,25 @@
               { href: "sem1/s1-12.html", label: "§12 Лагранж" },
               { href: "sem1/s1-13.html", label: "§13 Схема «крест»" },
               { href: "sem1/s1-14.html", label: "§14 Устойч. «крест»" },
-              { href: "sem1/s1-15.html", label: "§15 Метод Годунова" }
+              { href: "sem1/s1-15.html", label: "§15 Метод Годунова" },
+              { href: "sem1/s1-15a.html", label: "§15а Годунов–Колган–Родионов" }
           ]},
-          { title: "Задача Римана", items: [
-              { href: "sem1/s1-16.html", label: "§16 Точная задача" },
-              { href: "sem1/s1-17.html", label: "§17 Точный решатель" },
-              { href: "sem1/s1-18.html", label: "§18 Классификация" },
-              { href: "sem1/s1-19.html", label: "§19 Рое" },
-              { href: "sem1/s1-20.html", label: "§20 Ошер" },
-              { href: "sem1/s1-21.html", label: "§21 HLL" },
-              { href: "sem1/s1-22.html", label: "§22 HLLC" }
+          { title: "Решатели Римана", items: [
+              { href: "sem1/s1-18.html", label: "§16 Классификация" },
+              { href: "sem1/s1-19.html", label: "§17 Рое" },
+              { href: "sem1/s1-20.html", label: "§18 Ошер" },
+              { href: "sem1/s1-21.html", label: "§19 HLL" },
+              { href: "sem1/s1-22.html", label: "§20 HLLC" }
           ]},
           { title: "Высокий порядок", items: [
-              { href: "sem1/s1-23.html", label: "§23 Колган" },
-              { href: "sem1/s1-24.html", label: "§24 Колган–Родионов" },
-              { href: "sem1/s1-25.html", label: "§25 ENO" },
-              { href: "sem1/s1-26.html", label: "§26 WENO" },
-              { href: "sem1/s1-27.html", label: "§27 МакКормак" }
+              { href: "sem1/s1-25.html", label: "§21 ENO" },
+              { href: "sem1/s1-26.html", label: "§22 WENO" },
+              { href: "sem1/s1-27.html", label: "§23 МакКормак" }
           ]},
           { title: "Стабилизация", items: [
-              { href: "sem1/s1-28.html", label: "§28 Диффузия" },
-              { href: "sem1/s1-29.html", label: "§29 Иск. вязкость" },
-              { href: "sem1/s1-30.html", label: "§30 Иск. вязкость II" }
+              { href: "sem1/s1-28.html", label: "§24 Диффузия" },
+              { href: "sem1/s1-29.html", label: "§25 Иск. вязкость" },
+              { href: "sem1/s1-30.html", label: "§26 Иск. вязкость II" }
           ]},
           { title: "Сводка", items: [
               { href: "sem1/comparison.html", label: "Сравнение методов" }

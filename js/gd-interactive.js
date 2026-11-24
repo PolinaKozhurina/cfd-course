@@ -65,14 +65,15 @@ function runSolver(fluxFn, T, params){
     if (rr < 1e-10) rr = 1e-10;
     return {r:rr, u:uu, p:pp, a:Math.sqrt(gamma*pp/rr)};
   }
-  function computeRHS(V){
+  function computeRHS(V, rmode){
+    var rm = rmode || recon;
     applyBC(V);
     var RHS = [new Float64Array(Nt), new Float64Array(Nt), new Float64Array(Nt)];
     for (var i=Ng-1; i<N+Ng; i++){
       var pL = prim(V,i), pR = prim(V,i+1);
       var rL2=pL.r, uL2=pL.u, pL2=pL.p;
       var rR2=pR.r, uR2=pR.u, pR2=pR.p;
-      if (recon === 'muscl'){
+      if (rm === 'muscl'){
         var pIM = prim(V,i-1), pIP = prim(V,i+2);
         var sr1 = minmod(pL.r-pIM.r, pR.r-pL.r);
         var su1 = minmod(pL.u-pIM.u, pR.u-pL.u);
@@ -89,6 +90,43 @@ function runSolver(fluxFn, T, params){
       for (var k=0;k<3;k++){ RHS[k][i] -= F[k]/dx; RHS[k][i+1] += F[k]/dx; }
     }
     return RHS;
+  }
+  // Физический поток F(W) по (15.1)/(15.23) — без задачи Римана
+  function physFlux(r,u,p){
+    var E = p/(gm1*r) + 0.5*u*u, Fm = r*u;
+    return [Fm, Fm*u + p, (p + r*E)*u];
+  }
+  // Схема Годунова–Колгана–Родионова (§15а.9): реконструкция → предиктор без ЗР → корректор с ЗР
+  function gkrStep(dt){
+    applyBC(U);
+    var W = [], S = [], Wh = [], i, k;
+    for (i=0;i<Nt;i++) W.push(prim(U,i));
+    for (i=0;i<Nt;i++){
+      if (i===0 || i===Nt-1){ S.push({r:0,u:0,p:0}); continue; }
+      S.push({ r:minmod(W[i].r-W[i-1].r, W[i+1].r-W[i].r),
+               u:minmod(W[i].u-W[i-1].u, W[i+1].u-W[i].u),
+               p:minmod(W[i].p-W[i-1].p, W[i+1].p-W[i].p) });
+    }
+    for (i=0;i<Nt;i++){
+      // внутренние граничные значения ячейки (15а.13)
+      var Fp = physFlux(W[i].r+0.5*S[i].r, W[i].u+0.5*S[i].u, W[i].p+0.5*S[i].p);
+      var Fm = physFlux(W[i].r-0.5*S[i].r, W[i].u-0.5*S[i].u, W[i].p-0.5*S[i].p);
+      // предиктор (15а.15)
+      var q0 = U[0][i] - dt/dx*(Fp[0]-Fm[0]);
+      var q1 = U[1][i] - dt/dx*(Fp[1]-Fm[1]);
+      var q2 = U[2][i] - dt/dx*(Fp[2]-Fm[2]);
+      var rt = Math.max(q0,1e-10), ut = q1/rt, pt = Math.max(gm1*(q2-0.5*rt*ut*ut),1e-10);
+      // промежуточное значение (15а.16)
+      Wh.push({ r:0.5*(W[i].r+rt), u:0.5*(W[i].u+ut), p:0.5*(W[i].p+pt) });
+    }
+    // корректор: задача Римана на слое n+1/2 (15а.17) и консервативный шаг (15.4)
+    var Fx = [];
+    for (i=Ng-1; i<N+Ng; i++){
+      var rL = Math.max(Wh[i].r+0.5*S[i].r,1e-10), uL = Wh[i].u+0.5*S[i].u, pL = Math.max(Wh[i].p+0.5*S[i].p,1e-10);
+      var rR = Math.max(Wh[i+1].r-0.5*S[i+1].r,1e-10), uR = Wh[i+1].u-0.5*S[i+1].u, pR = Math.max(Wh[i+1].p-0.5*S[i+1].p,1e-10);
+      Fx[i] = fluxFn(rL,uL,pL, rR,uR,pR, gamma, fluxOpts);
+    }
+    for (i=Ng; i<N+Ng; i++) for (k=0;k<3;k++) U[k][i] -= dt/dx*(Fx[i][k]-Fx[i-1][k]);
   }
   // Snapshots
   var Nsnap = 80;
@@ -108,7 +146,13 @@ function runSolver(fluxFn, T, params){
     for (var i=Ng;i<N+Ng;i++){ var p = prim(U,i); var l = Math.abs(p.u) + p.a; if (l>mx) mx = l; }
     var dt = CFL*dx/mx;
     if (t + dt > tend) dt = tend - t;
-    if (recon === 'muscl'){
+    if (recon === 'gkr'){
+      gkrStep(dt);
+    } else if (recon === 'kolgan'){
+      // Годунов–Колган: значения на гранях по minmod, шаг Эйлера (1-й порядок по t)
+      var RK = computeRHS(U, 'muscl');
+      for (var k=0;k<3;k++) for (var i=0;i<Nt;i++) U[k][i] += dt*RK[k][i];
+    } else if (recon === 'muscl'){
       // SSP-RK2
       var R1 = computeRHS(U);
       var U1 = [new Float64Array(Nt), new Float64Array(Nt), new Float64Array(Nt)];
@@ -204,8 +248,9 @@ function buildInteractive(container, cfg){
         '<div style="display:flex;flex-direction:column;gap:3px">'+
           '<label style="font-family:\'JetBrains Mono\',monospace;font-size:.72rem;color:var(--text2)">Реконстр.</label>'+
           '<select id="'+id+'_recon" style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:\'JetBrains Mono\',monospace;font-size:.82rem">'+
+            (cfg.reconOptions ? cfg.reconOptions.map(function(o){ return '<option value="'+o[0]+'"'+(o[2]?' selected':'')+'>'+o[1]+'</option>'; }).join('') :
             '<option value="const">Кусочно-пост. (1-й)</option>'+
-            '<option value="muscl" selected>MUSCL (2-й)</option>'+
+            '<option value="muscl" selected>MUSCL (2-й)</option>')+
           '</select>'+
         '</div>' : '')+
         '<button id="'+id+'_run" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 20px;font-family:\'Source Serif 4\',serif;font-size:.88rem;font-weight:600;cursor:pointer">▶ Запустить '+cfg.schemeLabel+'</button>'+

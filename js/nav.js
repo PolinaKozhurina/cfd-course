@@ -108,7 +108,7 @@
               { href: "sem1/s1-13.html", label: "§13 Схема «крест»" },
               { href: "sem1/s1-14.html", label: "§14 Устойч. «крест»" },
               { href: "sem1/s1-15.html", label: "§15 Метод Годунова" },
-              { href: "sem1/s1-15a.html", label: "§15а Годунов–Колган–Родионов" }
+              { href: "sem1/s1-15a.html", label: "§15а Реконструкция в ячейке" }
           ]},
           { title: "Решатели Римана", items: [
               { href: "sem1/s1-18.html", label: "§16 Классификация" },
